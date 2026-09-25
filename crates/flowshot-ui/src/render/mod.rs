@@ -52,6 +52,7 @@ mod vector;
 
 pub use color::{Color, linear_to_srgb, srgb_to_linear};
 pub use geom::{Point, Rect, Size};
+pub(crate) use geom::{f32_from_i32, f32_from_u32};
 pub use image::{RgbaImage, TextureStore};
 pub use list::{
     ClipCommand, Command, DisplayList, ImageCommand, PathSegment, ShadowSpec, Shape, TextCommand,

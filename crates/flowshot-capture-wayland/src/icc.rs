@@ -38,16 +38,14 @@ mod run;
 pub(crate) mod shm;
 pub(crate) mod wait;
 
-use std::future::Future;
-
 use async_trait::async_trait;
 use flowshot_capture::{
     BackendKind, CaptureBackend, CaptureError, CaptureOpts, CursorStream, Frame, PermissionResult,
 };
 use flowshot_core::geometry::{LogicalRect, OutputInfo};
-use futures::FutureExt;
 
 use crate::error::IccError;
+use crate::worker::spawn_worker;
 
 /// The `ext-image-copy-capture-v1` capture backend.
 ///
@@ -159,47 +157,6 @@ impl CaptureBackend for IccBackend {
                 tracing::warn!(%error, "permission probe capture failed; reporting denied");
                 PermissionResult::Denied
             }
-        }
-    }
-}
-
-/// Runs one blocking capture operation on a dedicated worker thread and
-/// bridges the result into a non-blocking future.
-///
-/// The worker owns the one-shot connection; if the returned future is
-/// dropped (caller cancelled), the worker still runs to completion and its
-/// connection teardown releases every compositor-side resource - the result
-/// is simply discarded.
-fn spawn_worker<T, F>(name: &str, work: F) -> impl Future<Output = Result<T, CaptureError>> + Send
-where
-    T: Send + 'static,
-    F: FnOnce() -> Result<T, IccError> + Send + 'static,
-{
-    let (sender, receiver) = futures::channel::oneshot::channel();
-    let spawned = std::thread::Builder::new()
-        .name(name.to_owned())
-        .spawn(move || {
-            if sender.send(work()).is_err() {
-                tracing::debug!("capture result discarded: the requesting future was cancelled");
-            }
-        });
-    match spawned {
-        Ok(_worker) => futures::future::Either::Left(receiver.map(|received| {
-            received
-                .map_err(|_| CaptureError::Backend {
-                    backend: BackendKind::ExtImageCopyCapture,
-                    source: IccError::Internal(
-                        "the capture worker ended without a result (panic?)",
-                    )
-                    .into(),
-                })?
-                .map_err(CaptureError::from)
-        })),
-        Err(error) => {
-            futures::future::Either::Right(futures::future::ready(Err(CaptureError::Backend {
-                backend: BackendKind::ExtImageCopyCapture,
-                source: IccError::Io(error).into(),
-            })))
         }
     }
 }

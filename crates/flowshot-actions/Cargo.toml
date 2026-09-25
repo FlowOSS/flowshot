@@ -22,5 +22,9 @@ wl-clipboard-rs = { workspace = true }
 ashpd = { workspace = true }
 rfd = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+tracing-subscriber = { workspace = true }
+
 [lints]
 workspace = true

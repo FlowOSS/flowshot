@@ -266,10 +266,26 @@ fn add_ellipse(builder: &mut SvgBuilder, center: Point, rx: f32, ry: f32) {
     let (cx, cy) = (center.x, center.y);
     let (ox, oy) = (rx * KAPPA, ry * KAPPA);
     builder.begin(point(cx - rx, cy));
-    builder.cubic_bezier_to(point(cx - rx, cy - oy), point(cx - ox, cy - ry), point(cx, cy - ry));
-    builder.cubic_bezier_to(point(cx + ox, cy - ry), point(cx + rx, cy - oy), point(cx + rx, cy));
-    builder.cubic_bezier_to(point(cx + rx, cy + oy), point(cx + ox, cy + ry), point(cx, cy + ry));
-    builder.cubic_bezier_to(point(cx - ox, cy + ry), point(cx - rx, cy + oy), point(cx - rx, cy));
+    builder.cubic_bezier_to(
+        point(cx - rx, cy - oy),
+        point(cx - ox, cy - ry),
+        point(cx, cy - ry),
+    );
+    builder.cubic_bezier_to(
+        point(cx + ox, cy - ry),
+        point(cx + rx, cy - oy),
+        point(cx + rx, cy),
+    );
+    builder.cubic_bezier_to(
+        point(cx + rx, cy + oy),
+        point(cx + ox, cy + ry),
+        point(cx, cy + ry),
+    );
+    builder.cubic_bezier_to(
+        point(cx - ox, cy + ry),
+        point(cx - rx, cy + oy),
+        point(cx - rx, cy),
+    );
     builder.end(true);
 }
 
@@ -521,4 +537,3 @@ mod tests {
         assert!(out.vertices.iter().all(|v| v[2..] == accent));
     }
 }
-

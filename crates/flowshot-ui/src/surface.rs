@@ -7,6 +7,7 @@ use crate::adapter::surface_size_fits;
 use crate::crosshair::CrosshairPipeline;
 use crate::error::UiError;
 use crate::gpu::GpuContext;
+use crate::render::{DisplayList, RenderTarget, Renderer};
 
 /// Everything one window's surface needs beyond the shared GPU objects:
 /// which monitor it covers (error context), its initial extent, and the
@@ -65,6 +66,12 @@ impl WindowSurface {
         (self.config.width, self.config.height)
     }
 
+    /// The configured surface texture format (the window renderer's target
+    /// format).
+    pub(crate) const fn format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
+
     /// Reconfigures the surface after a window resize. Zero extents are
     /// ignored (minimized windows); the next valid resize reconfigures.
     ///
@@ -98,17 +105,21 @@ impl WindowSurface {
         Ok(())
     }
 
-    /// Renders one frame: transparent clear plus the crosshair when
-    /// `vertices` is present.
+    /// Renders one frame: the optional backdrop/content display list through
+    /// the window's [`Renderer`], then the crosshair pass on top. Without
+    /// content the frame is a transparent clear plus the crosshair (the
+    /// todo-13 empty-overlay behavior).
     ///
     /// # Errors
     ///
-    /// Returns [`UiError::OutOfMemory`] when presentation exhausts memory;
+    /// Returns [`UiError::OutOfMemory`] when presentation exhausts memory and
+    /// the renderer's [`UiError::RenderTargetTooLarge`] for invalid extents;
     /// transient `Lost`/`Outdated`/`Timeout` states recover in-place and are
     /// reported as `Ok`.
     pub(crate) fn render(
         &self,
         gpu: &GpuContext,
+        content: Option<(&mut Renderer, &DisplayList)>,
         vertices: Option<[[f32; 2]; 4]>,
     ) -> Result<(), UiError> {
         let frame = match self.surface.get_current_texture() {
@@ -125,6 +136,15 @@ impl WindowSurface {
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+        let has_content = content.is_some();
+        if let Some((renderer, list)) = content {
+            let target = RenderTarget {
+                view: &view,
+                width: self.config.width,
+                height: self.config.height,
+            };
+            renderer.render(&gpu.device, &gpu.queue, &target, list)?;
+        }
         if let Some(vertices) = vertices {
             self.crosshair.write_vertices(&gpu.queue, vertices);
         }
@@ -140,7 +160,13 @@ impl WindowSurface {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        // The content pass already cleared and resolved into
+                        // the view; the crosshair pass must preserve it.
+                        load: if has_content {
+                            wgpu::LoadOp::Load
+                        } else {
+                            wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
+                        },
                         store: wgpu::StoreOp::Store,
                     },
                 })],

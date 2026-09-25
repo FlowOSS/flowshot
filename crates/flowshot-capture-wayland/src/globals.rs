@@ -17,7 +17,7 @@ pub(crate) const EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER: &str =
 const EXT_FOREIGN_TOPLEVEL_IMAGE_CAPTURE_SOURCE_MANAGER: &str =
     "ext_foreign_toplevel_image_capture_source_manager_v1";
 /// Interface name of the `wlr-screencopy-unstable-v1` manager.
-const WLR_SCREENCOPY_MANAGER: &str = "zwlr_screencopy_manager_v1";
+pub(crate) const WLR_SCREENCOPY_MANAGER: &str = "zwlr_screencopy_manager_v1";
 /// Interface name of the `xdg-output-unstable-v1` manager.
 pub(crate) const ZXDG_OUTPUT_MANAGER: &str = "zxdg_output_manager_v1";
 /// Interface name of the shared-memory pool factory.

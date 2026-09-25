@@ -112,8 +112,16 @@ impl InputRouter {
     /// The output bound to `slot`, when known.
     #[must_use]
     pub fn output_for(&self, slot: WindowSlot) -> Option<&OutputInfo> {
-        let index = *self.bindings.get(slot.index())?;
-        self.layout.outputs.get(index?)
+        let index = self.output_index_for(slot)?;
+        self.layout.outputs.get(index)
+    }
+
+    /// The layout index of the output bound to `slot`, when known (the
+    /// backdrop's per-output key, plan todo 15).
+    #[must_use]
+    pub fn output_index_for(&self, slot: WindowSlot) -> Option<usize> {
+        let index = self.bindings.get(slot.index()).copied().flatten()?;
+        (index < self.layout.outputs.len()).then_some(index)
     }
 
     /// Replaces the layout and slot bindings wholesale (window spawn).

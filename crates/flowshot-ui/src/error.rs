@@ -181,6 +181,25 @@ pub enum UiError {
     /// A geometry operation inside the input router failed validation.
     #[error("geometry error: {0}")]
     Geometry(#[from] GeometryError),
+
+    /// A captured frame's buffer dimensions disagree with the output geometry
+    /// it claims to cover (backdrop upload guard, plan todo 15).
+    #[error(
+        "frame for output \"{connector}\" is {actual_width}x{actual_height} px but the output \
+          geometry implies {expected_width}x{expected_height} px"
+    )]
+    BackdropFrameMismatch {
+        /// Connector of the offending output.
+        connector: String,
+        /// Frame buffer width in physical pixels.
+        actual_width: u32,
+        /// Frame buffer height in physical pixels.
+        actual_height: u32,
+        /// Expected (post-transform buffer) width in physical pixels.
+        expected_width: u32,
+        /// Expected (post-transform buffer) height in physical pixels.
+        expected_height: u32,
+    },
 }
 
 /// One GPU adapter enumerated at startup, reported inside

@@ -16,6 +16,10 @@ test-drive = []
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
+# Todo 15: the UI talks ONLY to the platform-free capture contract crate
+# (Frame/CaptureBackend/CaptureOpts) - never to the platform capture crate
+# (purity gate, plan todo 13/42).
+flowshot-capture = { path = "../flowshot-capture" }
 winit = { workspace = true }
 wgpu = { workspace = true }
 # Only `futures::executor::block_on` is used: the one-shot wgpu adapter/device
@@ -37,6 +41,8 @@ bytemuck = { workspace = true }
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+bytes = { workspace = true }
+serde_json = { workspace = true }
 # DEV-ONLY reference rasterizer for the cross-rasterizer parity harness and
 # golden fixtures (Oracle r4 F-1: never a runtime CPU fallback).
 tiny-skia = { workspace = true }

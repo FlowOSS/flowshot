@@ -51,6 +51,14 @@
 //! and the long-lived event stream from
 //! [`cursor_events`](flowshot_capture::CaptureBackend::cursor_events).
 //!
+//! [`ScreencopyBackend`] is the `wlr-screencopy-unstable-v1` fallback (rung 2
+//! of the ladder, for niri and pre-0.19 wlroots sessions without ICC). It
+//! reuses the same one-shot connection model, deadline-bounded dispatch, and
+//! `wl_shm` buffers, but the protocol delivers buffers in the output's native
+//! orientation - so there is no inverse remap, only the renderer's `y_invert`
+//! correction - and cursor inclusion is the `overlay_cursor` capture flag
+//! (no cursor stream).
+//!
 //! # Layered cursor position
 //!
 //! [`resolve_cursor_pos`] walks the draft F13 ladder and traces which layer
@@ -89,9 +97,11 @@ mod dispatch;
 mod hyprland_ipc;
 mod icc;
 mod output;
+mod screencopy;
 mod session;
 mod thread;
 mod transform;
+mod worker;
 
 pub mod cursor;
 pub mod desktop;
@@ -101,13 +111,14 @@ pub mod resolve;
 pub mod stitch;
 
 pub use cursor::CursorImage;
-pub use error::{ConnectError, IccError, ProbeError};
+pub use error::{ConnectError, IccError, ProbeError, ScreencopyError};
 pub use globals::{Global, ProtocolGlobals};
 pub use icc::IccBackend;
 pub use resolve::{
     CURSOR_CAPABILITY_DESKTOPS, CursorCapabilities, CursorSource, cursor_capabilities,
     resolve_cursor_pos,
 };
+pub use screencopy::ScreencopyBackend;
 pub use session::SessionSnapshot;
 pub use stitch::CapturedOutputs;
 pub use thread::CaptureThread;

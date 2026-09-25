@@ -17,16 +17,18 @@ use wayland_protocols::ext::image_capture_source::v1::client::ext_output_image_c
 use wayland_protocols::ext::image_copy_capture::v1::client::ext_image_copy_capture_manager_v1::ExtImageCopyCaptureManagerV1;
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_manager_v1::ZxdgOutputManagerV1;
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_v1::ZxdgOutputV1;
+use wayland_protocols_wlr::screencopy::v1::client::zwlr_screencopy_manager_v1::ZwlrScreencopyManagerV1;
 
 use crate::cursor::protocol::{ActiveCursor, CursorSink};
 use crate::desktop::detect_desktop_env;
 use crate::error::ProbeError;
 use crate::globals::{
     EXT_IMAGE_COPY_CAPTURE_MANAGER, EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER, Global,
-    ProtocolGlobals, WL_OUTPUT, WL_SEAT, WL_SHM, ZXDG_OUTPUT_MANAGER,
+    ProtocolGlobals, WL_OUTPUT, WL_SEAT, WL_SHM, WLR_SCREENCOPY_MANAGER, ZXDG_OUTPUT_MANAGER,
 };
 use crate::icc::protocol::ActiveCapture;
 use crate::output::OutputData;
+use crate::screencopy::protocol::ActiveScreencopy;
 
 /// Highest `wl_output` version this crate binds (version 4 adds the `name`
 /// and `description` events).
@@ -45,6 +47,10 @@ const WL_SHM_VERSION: u32 = 1;
 /// cursor session are stable since version 1, so a conservative cap avoids
 /// requesting events this crate does not consume.
 const WL_SEAT_VERSION: u32 = 5;
+/// The `wlr-screencopy-unstable-v1` manager version this crate binds. Version
+/// 3 adds the `buffer_done` event, the constraint-complete signal the v1
+/// backend waits on (plan todo 9: v3 only, no v1/v2 paths).
+const WLR_SCREENCOPY_MANAGER_VERSION: u32 = 3;
 
 /// User data attached to output-scoped proxies (`wl_output`,
 /// `zxdg_output_v1`): the registry name they were bound under.
@@ -94,6 +100,8 @@ pub(crate) struct CaptureState {
     pub icc_manager: Option<ExtImageCopyCaptureManagerV1>,
     /// The bound per-output capture source manager, when advertised.
     pub icc_source_manager: Option<ExtOutputImageCaptureSourceManagerV1>,
+    /// The bound `wlr-screencopy-unstable-v1` manager, when advertised.
+    pub screencopy_manager: Option<ZwlrScreencopyManagerV1>,
     /// The bound `wl_seat`, when advertised (pointer capability gates the
     /// cursor session).
     pub seat: Option<WlSeat>,
@@ -105,6 +113,9 @@ pub(crate) struct CaptureState {
     /// The event sink of the capture currently in flight (one-shot capture
     /// connections only; idle on the long-lived probe thread).
     pub active: ActiveCapture,
+    /// The event sink of the screencopy frame in flight (one-shot screencopy
+    /// capture connections only; idle otherwise).
+    pub screencopy: ActiveScreencopy,
     /// The event sink of the cursor sessions in flight (one-shot cursor
     /// queries and the long-lived cursor stream; idle otherwise).
     pub cursor: ActiveCursor,
@@ -132,10 +143,12 @@ impl CaptureState {
             shm: None,
             icc_manager: None,
             icc_source_manager: None,
+            screencopy_manager: None,
             seat: None,
             seat_has_pointer: false,
             pointer: None,
             active: ActiveCapture::default(),
+            screencopy: ActiveScreencopy::default(),
             cursor: ActiveCursor::default(),
             cursor_layout: Vec::new(),
             cursor_sink: None,
@@ -184,6 +197,15 @@ impl CaptureState {
                 let manager: ExtOutputImageCaptureSourceManagerV1 =
                     registry.bind(global.name, global.version.min(ICC_MANAGER_VERSION), qh, ());
                 self.icc_source_manager = Some(manager);
+            }
+            WLR_SCREENCOPY_MANAGER => {
+                let manager: ZwlrScreencopyManagerV1 = registry.bind(
+                    global.name,
+                    global.version.min(WLR_SCREENCOPY_MANAGER_VERSION),
+                    qh,
+                    (),
+                );
+                self.screencopy_manager = Some(manager);
             }
             WL_SEAT => {
                 let seat: WlSeat =
