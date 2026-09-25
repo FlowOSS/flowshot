@@ -5,6 +5,7 @@
 
 pub mod config;
 pub mod error;
+pub mod geometry;
 pub mod tokens;
 pub mod types;
 
