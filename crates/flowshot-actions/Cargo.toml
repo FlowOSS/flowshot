@@ -1,0 +1,25 @@
+[package]
+name = "flowshot-actions"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/flowoss/flowshot"
+authors = ["FlowShot Contributors"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+flowshot-core = { path = "../flowshot-core" }
+serde = { workspace = true }
+chrono = { workspace = true }
+image = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+wl-clipboard-rs = { workspace = true }
+ashpd = { workspace = true }
+
+[lints]
+workspace = true

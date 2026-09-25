@@ -1,0 +1,25 @@
+[package]
+name = "flowshot-capture-wayland"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/flowoss/flowshot"
+authors = ["FlowShot Contributors"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+flowshot-core = { path = "../flowshot-core" }
+flowshot-capture = { path = "../flowshot-capture" }
+wayland-client = { workspace = true }
+wayland-protocols = { workspace = true }
+wayland-protocols-wlr = { workspace = true }
+calloop = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true
