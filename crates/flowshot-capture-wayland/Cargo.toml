@@ -17,9 +17,13 @@ wayland-protocols = { workspace = true }
 wayland-protocols-wlr = { workspace = true, features = ["client"] }
 calloop = { workspace = true }
 calloop-wayland-source = { workspace = true }
+ashpd = { workspace = true }
+pipewire = { workspace = true }
+tokio = { workspace = true }
 async-trait = { workspace = true }
 bytes = { workspace = true }
 futures = { workspace = true }
+image = { workspace = true }
 nix = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -27,7 +31,6 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
-image = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [lints]

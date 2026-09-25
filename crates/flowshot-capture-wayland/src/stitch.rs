@@ -128,7 +128,10 @@ fn stitched_size(clamped: &LogicalRect) -> Option<(u32, u32)> {
 
 /// Rounds a logical edge to an integer pixel edge (half away from zero),
 /// saturating at the `i32` bounds; non-finite input rounds to `0`.
-fn round_to_i32(value: f64) -> i32 {
+///
+/// Shared with the portal composite geometry ([`crate::portal`]), which
+/// rounds logical output origins into physical composite space the same way.
+pub(crate) fn round_to_i32(value: f64) -> i32 {
     if !value.is_finite() {
         return 0;
     }
