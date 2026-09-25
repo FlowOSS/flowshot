@@ -26,3 +26,14 @@ pub enum ExportError {
     #[error("save directory does not exist: {}", .0.display())]
     DirectoryNotFound(PathBuf),
 }
+
+/// Errors produced during clipboard operations.
+#[derive(Debug, Error)]
+pub enum ClipboardError {
+    /// Wayland data-control transport failure (`wl-clipboard-rs`).
+    #[error("clipboard transport error: {0}")]
+    Transport(#[from] wl_clipboard_rs::copy::Error),
+    /// Encoding the capture for the clipboard failed.
+    #[error("clipboard image encoding error: {0}")]
+    Encode(#[from] ExportError),
+}

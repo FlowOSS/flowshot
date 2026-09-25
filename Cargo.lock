@@ -1240,9 +1240,11 @@ dependencies = [
  "reqwest",
  "rfd",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "tracing-subscriber",
  "wl-clipboard-rs",
 ]
 
@@ -1281,6 +1283,7 @@ dependencies = [
  "tracing-subscriber",
  "wayland-client",
  "wayland-protocols",
+ "wayland-protocols-wlr",
 ]
 
 [[package]]
@@ -1332,11 +1335,14 @@ name = "flowshot-ui"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "bytes",
  "cosmic-text",
+ "flowshot-capture",
  "flowshot-core",
  "futures",
  "image",
  "lyon",
+ "serde_json",
  "thiserror 2.0.21",
  "tiny-skia",
  "tracing",

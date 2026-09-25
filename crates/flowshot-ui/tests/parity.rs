@@ -24,25 +24,32 @@
     clippy::expect_used,
     clippy::float_cmp,
     // Fixture pixel math converts small u32 dimensions/coordinates.
-    clippy::cast_precision_loss
+    clippy::cast_precision_loss,
+    // Dev-only pixel/geometry harness: coordinate casts between i32/u32/usize
+    // over small fixture extents, single-letter point names, and index loops
+    // over parallel pixel/mask buffers are the domain idiom here.
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::field_reassign_with_default,
+    clippy::many_single_char_names,
+    clippy::needless_range_loop,
+    clippy::neg_cmp_op_on_partial_ord,
+    clippy::question_mark
 )]
 
 use std::collections::HashMap;
 use std::sync::Once;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use cosmic_text::{
-    Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, SwashContent,
-};
+use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, SwashContent};
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
 use flowshot_ui::render::{
-    Color, Command, DisplayList, ImageCommand, Point, Rect, Renderer, RenderTarget, RgbaImage,
+    Color, Command, DisplayList, ImageCommand, Point, Rect, RenderTarget, Renderer, RgbaImage,
     ShadowSpec, Shape, TextCommand, TextureId, linear_to_srgb, read_texture_rgba, srgb_to_linear,
 };
-use tiny_skia::{
-    FillRule, LineCap, LineJoin, Paint, Path, PathBuilder, Pixmap, Stroke, Transform,
-};
+use tiny_skia::{FillRule, LineCap, LineJoin, Paint, Path, PathBuilder, Pixmap, Stroke, Transform};
 use tracing_subscriber::layer::{Context, Layer};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry;
@@ -326,10 +333,34 @@ fn ellipse_path(center: Point, radii: (f32, f32)) -> Path {
     let (ox, oy) = (rx * KAPPA, ry * KAPPA);
     let mut builder = PathBuilder::new();
     builder.move_to(cx - rx, cy);
-    flatten_cubic(&mut builder, (cx - rx, cy), (cx - rx, cy - oy), (cx - ox, cy - ry), (cx, cy - ry));
-    flatten_cubic(&mut builder, (cx, cy - ry), (cx + ox, cy - ry), (cx + rx, cy - oy), (cx + rx, cy));
-    flatten_cubic(&mut builder, (cx + rx, cy), (cx + rx, cy + oy), (cx + ox, cy + ry), (cx, cy + ry));
-    flatten_cubic(&mut builder, (cx, cy + ry), (cx - ox, cy + ry), (cx - rx, cy + oy), (cx - rx, cy));
+    flatten_cubic(
+        &mut builder,
+        (cx - rx, cy),
+        (cx - rx, cy - oy),
+        (cx - ox, cy - ry),
+        (cx, cy - ry),
+    );
+    flatten_cubic(
+        &mut builder,
+        (cx, cy - ry),
+        (cx + ox, cy - ry),
+        (cx + rx, cy - oy),
+        (cx + rx, cy),
+    );
+    flatten_cubic(
+        &mut builder,
+        (cx + rx, cy),
+        (cx + rx, cy + oy),
+        (cx + ox, cy + ry),
+        (cx, cy + ry),
+    );
+    flatten_cubic(
+        &mut builder,
+        (cx, cy + ry),
+        (cx - ox, cy + ry),
+        (cx - rx, cy + oy),
+        (cx - rx, cy),
+    );
     builder.close();
     builder.finish().expect("path")
 }
@@ -338,7 +369,9 @@ fn shape_path(shape: &Shape) -> Option<(Path, FillRule)> {
     let mut builder = PathBuilder::new();
     match shape {
         // The renderer fills with the even-odd rule; mirror it.
-        Shape::Rect { rect, radius } => return Some((rect_path(*rect, *radius), FillRule::EvenOdd)),
+        Shape::Rect { rect, radius } => {
+            return Some((rect_path(*rect, *radius), FillRule::EvenOdd));
+        }
         Shape::Ellipse { center, radii } => {
             return Some((
                 ellipse_path(*center, (radii.width, radii.height)),
@@ -414,7 +447,11 @@ fn render_reference(
                 });
                 canvas.coverage(&mask, color.premultiplied_linear());
             }
-            Command::Stroke { shape, width, color } => {
+            Command::Stroke {
+                shape,
+                width,
+                color,
+            } => {
                 let Some((path, _)) = shape_path(shape) else {
                     continue;
                 };
@@ -484,7 +521,9 @@ fn blit_image(canvas: &mut Canvas, command: &ImageCommand, textures: &TextureReg
         return;
     };
     let (tex_w, tex_h) = (*tex_w as f32, *tex_h as f32);
-    let src = command.src.unwrap_or(Rect::from_parts(0.0, 0.0, tex_w, tex_h));
+    let src = command
+        .src
+        .unwrap_or(Rect::from_parts(0.0, 0.0, tex_w, tex_h));
     let dst = command.dst;
     if dst.size.width <= 0.0 || dst.size.height <= 0.0 {
         return;
@@ -497,8 +536,10 @@ fn blit_image(canvas: &mut Canvas, command: &ImageCommand, textures: &TextureReg
         for px in x_start..x_end {
             // Texel-center mapping, bilinear in linear light (GPU samples
             // sRGB textures through linear filters).
-            let u = src.origin.x + (px as f32 + 0.5 - dst.origin.x) * src.size.width / dst.size.width;
-            let v = src.origin.y + (py as f32 + 0.5 - dst.origin.y) * src.size.height / dst.size.height;
+            let u =
+                src.origin.x + (px as f32 + 0.5 - dst.origin.x) * src.size.width / dst.size.width;
+            let v =
+                src.origin.y + (py as f32 + 0.5 - dst.origin.y) * src.size.height / dst.size.height;
             let linear = sample_bilinear(data, tex_w as u32, tex_h as u32, u - 0.5, v - 0.5);
             let in_bounds =
                 px >= 0 && py >= 0 && (px as usize) < canvas.width && (py as usize) < canvas.height;
@@ -604,11 +645,7 @@ fn draw_shadow(canvas: &mut Canvas, rect: Rect, radius: f32, spec: &ShadowSpec) 
     }
 }
 
-fn draw_text(
-    canvas: &mut Canvas,
-    command: &TextCommand,
-    fonts: &mut (FontSystem, SwashCache),
-) {
+fn draw_text(canvas: &mut Canvas, command: &TextCommand, fonts: &mut (FontSystem, SwashCache)) {
     let (font_system, cache) = fonts;
     if !(command.font_size > 0.0) || !(command.line_height > 0.0) {
         return;
@@ -629,7 +666,8 @@ fn draw_text(
     let tint = command.color.premultiplied_linear();
     for run in buffer.layout_runs() {
         for glyph in run.glyphs {
-            let physical = glyph.physical((command.position.x, command.position.y + run.line_y), 1.0);
+            let physical =
+                glyph.physical((command.position.x, command.position.y + run.line_y), 1.0);
             let Some(image) = cache.get_image(font_system, physical.cache_key).as_ref() else {
                 continue;
             };
@@ -652,12 +690,7 @@ fn draw_text(
                         SwashContent::Mask => {
                             let cov =
                                 f32::from(image.data[(dy * ink_w + dx) as usize]) / 255.0 * clip;
-                            [
-                                tint[0] * cov,
-                                tint[1] * cov,
-                                tint[2] * cov,
-                                tint[3] * cov,
-                            ]
+                            [tint[0] * cov, tint[1] * cov, tint[2] * cov, tint[3] * cov]
                         }
                         SwashContent::Color => {
                             let offset = ((dy * ink_w + dx) * 4) as usize;
@@ -778,7 +811,11 @@ fn report(name: &str, gpu: &[u8], reference: &[u8]) -> ParityReport {
     dump(name, gpu, reference);
     println!(
         "PARITY {name}: within2={:.4}% max_diff={} mask={:.2}% max_masked={} max_unmasked={}",
-        report.within2_pct, report.max_diff, report.mask_pct, report.max_masked, report.max_unmasked
+        report.within2_pct,
+        report.max_diff,
+        report.mask_pct,
+        report.max_masked,
+        report.max_unmasked
     );
     report
 }
@@ -903,7 +940,13 @@ fn aa_shapes_match_within_edge_masked_criterion() {
     // plumbing bugs still show up as large regional diffs at any backdrop.
     let mut list = DisplayList::new();
     let full = Rect::from_parts(0.0, 0.0, W as f32, H as f32);
-    list.fill(Shape::Rect { rect: full, radius: 0.0 }, accent());
+    list.fill(
+        Shape::Rect {
+            rect: full,
+            radius: 0.0,
+        },
+        accent(),
+    );
     let dim = Color::dim_from_palette(&tokens().palette).expect("dim token");
     list.dim(full, vec![], dim);
     // Diagonal stroke: the canonical AA gradient evidence.
@@ -1044,7 +1087,13 @@ fn rounded_clip_matches_within_edge_masked_criterion() {
     // clip edges stays inside the 32/255 masked budget on mid-tones.
     let mut list = DisplayList::new();
     let full = Rect::from_parts(0.0, 0.0, W as f32, H as f32);
-    list.fill(Shape::Rect { rect: full, radius: 0.0 }, accent());
+    list.fill(
+        Shape::Rect {
+            rect: full,
+            radius: 0.0,
+        },
+        accent(),
+    );
     let dim = Color::dim_from_palette(&tokens().palette).expect("dim token");
     list.dim(full, vec![], dim);
     list.push_clip(Rect::from_parts(100.0, 80.0, 300.0, 200.0), 24.0);
@@ -1137,5 +1186,3 @@ fn count_ink(image: &[u8], x0: u32, y0: u32, width: u32, height: u32, color: &Co
     }
     count
 }
-
-

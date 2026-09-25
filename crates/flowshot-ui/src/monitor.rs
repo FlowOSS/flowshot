@@ -17,11 +17,57 @@
 //! (true transforms included).
 
 use flowshot_core::geometry::{
-    LogicalRect, OutputInfo, OutputLayout, PhysicalPoint, PhysicalSize, ToLogical, Transform,
+    LogicalRect, OutputInfo, OutputLayout, PhysicalPoint, PhysicalSize, ToLogical, ToPhysical,
+    Transform,
 };
 use winit::monitor::MonitorHandle;
 
 use crate::error::UiError;
+
+/// Sentinel binding for a window whose monitor matches no captured output;
+/// out-of-range indices route to `None` (the router's unbound-slot contract)
+/// and render the letterbox placeholder.
+const UNBOUND: usize = usize::MAX;
+
+/// Binds winit monitors to a capture-provided layout (plan todo 15: the
+/// capture layout supersedes the monitor-derived one - true transforms and
+/// scales included).
+///
+/// Matching is by connector name first (winit reports the Wayland output
+/// name), then by physical origin. Returns the layout clone plus one output
+/// index per monitor ([`UNBOUND`] when no output matches).
+#[must_use]
+pub(crate) fn bindings_for_layout(
+    layout: &OutputLayout,
+    monitors: &[MonitorHandle],
+) -> (OutputLayout, Vec<usize>) {
+    let bindings = monitors
+        .iter()
+        .map(|monitor| match_output(layout, monitor))
+        .collect();
+    (layout.clone(), bindings)
+}
+
+fn match_output(layout: &OutputLayout, monitor: &MonitorHandle) -> usize {
+    let name = monitor.name();
+    if let Some(name) = name.as_deref()
+        && let Some(index) = layout
+            .outputs
+            .iter()
+            .position(|output| output.connector == name)
+    {
+        return index;
+    }
+    let position = monitor.position();
+    layout
+        .outputs
+        .iter()
+        .position(|output| {
+            let origin = output.logical_rect.origin().to_physical(output.scale);
+            origin.x.0 == position.x && origin.y.0 == position.y
+        })
+        .unwrap_or(UNBOUND)
+}
 
 /// Builds the desktop layout from the compositor's monitor report.
 ///

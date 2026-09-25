@@ -13,10 +13,12 @@ use flowshot_core::tokens::DesignTokens;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
 
+use crate::backdrop::{Backdrop, BackdropOptions};
 use crate::crosshair;
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::Action;
+use crate::render::Renderer;
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
 use crate::surface::WindowSurface;
@@ -27,6 +29,9 @@ pub(crate) struct WindowEntry {
     pub window: Arc<Window>,
     pub surface: Option<WindowSurface>,
     pub monitor_name: String,
+    /// The window's own renderer (todo 15): holds THIS output's frozen-frame
+    /// texture, so per-window redraws never thrash a shared MSAA target.
+    pub renderer: Option<Renderer>,
 }
 
 /// The application state driven by the winit event loop.
@@ -41,6 +46,10 @@ pub(crate) struct OverlayApp {
     /// returns it after teardown so the process exits 1, never panics.
     pub fatal_error: Option<UiError>,
     pub crosshair_color: [f32; 4],
+    /// The frozen-frame backdrop (plan todo 15); `None` = the empty overlay
+    /// (todo-13 behavior: transparent clear + crosshair only).
+    pub backdrop: Option<Backdrop>,
+    pub backdrop_options: BackdropOptions,
 }
 
 impl OverlayApp {
@@ -55,6 +64,8 @@ impl OverlayApp {
             gpu: None,
             fatal_error: None,
             crosshair_color,
+            backdrop: None,
+            backdrop_options: BackdropOptions::default(),
         }
     }
 
@@ -104,7 +115,23 @@ impl OverlayApp {
                 let (width, height) = surface.size();
                 crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
             });
-        if let Err(error) = surface.render(gpu, vertices) {
+        // The frozen-frame backdrop (todo 15): this window's 1:1 physical
+        // crop + cursor sprite + dim cutout, rendered below the crosshair.
+        let mut built = match (
+            self.backdrop.as_ref(),
+            entry.renderer.as_mut(),
+            self.core.router().output_index_for(slot),
+        ) {
+            (Some(backdrop), Some(renderer), Some(output_index)) => Some((
+                renderer,
+                backdrop.commands(output_index, surface.size(), &self.backdrop_options),
+            )),
+            _ => None,
+        };
+        let content = built
+            .as_mut()
+            .map(|(renderer, list)| (&mut **renderer, &*list));
+        if let Err(error) = surface.render(gpu, content, vertices) {
             tracing::error!(%error, window = slot.index(), "frame presentation failed");
         }
     }

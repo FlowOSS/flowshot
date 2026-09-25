@@ -128,6 +128,14 @@ pub(crate) fn f32_from_u32(value: u32) -> f32 {
     value as f32
 }
 
+/// `i32` physical-pixel coordinates convert losslessly for every value the
+/// renderer handles (surface extents cap far below f32's exact-integer range
+/// of 2^24).
+#[allow(clippy::cast_precision_loss)]
+pub(crate) fn f32_from_i32(value: i32) -> f32 {
+    value as f32
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::float_cmp)]

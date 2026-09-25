@@ -24,12 +24,18 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-25T02:14:17.216Z",
+      "updated_at": "2026-09-25T16:55:00.572Z",
       "session_ids": [
-        "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm"
+        "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
+        "opencode:ses_f2682611bffehALBv70o1olHyF",
+        "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN",
+        "opencode:ses_f26821fdfffezlLpO4TJZhVm9q"
       ],
       "session_origins": {
-        "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct"
+        "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
+        "opencode:ses_f2682611bffehALBv70o1olHyF": "appended",
+        "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN": "appended",
+        "opencode:ses_f26821fdfffezlLpO4TJZhVm9q": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -56,6 +62,15 @@
           "started_at": "2026-09-25T02:08:21.772Z",
           "status": "running",
           "updated_at": "2026-09-25T02:14:17.217Z"
+        },
+        "todo:9": {
+          "task_key": "todo:9",
+          "task_label": "9",
+          "task_title": "Wayland: wlr-screencopy fallback backend",
+          "session_id": "opencode:ses_f26821fdfffezlLpO4TJZhVm9q",
+          "agent": "Sisyphus-Junior",
+          "category": "deep-low",
+          "updated_at": "2026-09-25T16:55:00.572Z"
         }
       }
     }
@@ -63,12 +78,18 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-25T02:14:17.216Z",
+  "updated_at": "2026-09-25T16:55:00.572Z",
   "session_ids": [
-    "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm"
+    "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
+    "opencode:ses_f2682611bffehALBv70o1olHyF",
+    "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN",
+    "opencode:ses_f26821fdfffezlLpO4TJZhVm9q"
   ],
   "session_origins": {
-    "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct"
+    "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
+    "opencode:ses_f2682611bffehALBv70o1olHyF": "appended",
+    "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN": "appended",
+    "opencode:ses_f26821fdfffezlLpO4TJZhVm9q": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -95,6 +116,15 @@
       "started_at": "2026-09-25T02:08:21.772Z",
       "status": "running",
       "updated_at": "2026-09-25T02:14:17.217Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "Wayland: wlr-screencopy fallback backend",
+      "session_id": "opencode:ses_f26821fdfffezlLpO4TJZhVm9q",
+      "agent": "Sisyphus-Junior",
+      "category": "deep-low",
+      "updated_at": "2026-09-25T16:55:00.572Z"
     }
   },
   "agent": "atlas"

@@ -22,11 +22,18 @@ use crate::error::ExportError;
 /// Callback for user-visible notifications (save success, errors).
 ///
 /// Wired by the daemon (todo 32) to the real notification backend.
+/// The daemon gates every call through `[daemon].notifications` (the
+/// post-capture executor in `crate::clipboard::pipeline` applies the
+/// gate for the whole action run).
 pub trait NotifySink: Send + Sync {
     /// Called after a successful save.
     fn on_saved(&self, path: &Path);
     /// Called when an action fails.
     fn on_error(&self, message: &str);
+    /// Explicit success-toast request (the `notify` action, todo 28).
+    ///
+    /// `saved_path` is `Some` when the capture was also saved to disk.
+    fn on_success(&self, saved_path: Option<&Path>);
 }
 
 /// Callback for file-save dialogs.
@@ -49,6 +56,7 @@ pub struct NullNotifySink;
 impl NotifySink for NullNotifySink {
     fn on_saved(&self, _path: &Path) {}
     fn on_error(&self, _message: &str) {}
+    fn on_success(&self, _saved_path: Option<&Path>) {}
 }
 
 /// Save an image to disk according to the save configuration.
@@ -68,4 +76,21 @@ pub fn save(
     std::fs::write(&target, &bytes)?;
     notify.on_saved(&target);
     Ok(target)
+}
+
+/// Copy the captured image to the clipboard per `[save]` config: the
+/// `copy` action of the post-capture pipeline (`image/png` always,
+/// `image/jpeg` appended when `clipboard_format = 'jpeg'`).
+///
+/// # Errors
+///
+/// Returns [`crate::error::ClipboardError::Encode`] if encoding fails or
+/// [`crate::error::ClipboardError::Transport`] if the clipboard cannot
+/// be taken.
+pub fn copy_to_clipboard(
+    image: &DynamicImage,
+    config: &SaveConfig,
+    clipboard: &crate::clipboard::Clipboard,
+) -> Result<(), crate::error::ClipboardError> {
+    clipboard.copy_capture(image, config)
 }

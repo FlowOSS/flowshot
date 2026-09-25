@@ -7,7 +7,9 @@
 //! copying to clipboard, uploading, pinning, and opening with external
 //! applications.
 
+pub mod clipboard;
 pub mod error;
 pub mod export;
 
-pub use error::ExportError;
+pub use clipboard::Clipboard;
+pub use error::{ClipboardError, ExportError};

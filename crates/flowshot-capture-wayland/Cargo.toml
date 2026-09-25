@@ -14,6 +14,7 @@ flowshot-core = { path = "../flowshot-core" }
 flowshot-capture = { path = "../flowshot-capture" }
 wayland-client = { workspace = true }
 wayland-protocols = { workspace = true }
+wayland-protocols-wlr = { workspace = true, features = ["client"] }
 calloop = { workspace = true }
 calloop-wayland-source = { workspace = true }
 async-trait = { workspace = true }

@@ -182,6 +182,166 @@ impl From<IccError> for CaptureError {
     }
 }
 
+/// Why a `wlr-screencopy-unstable-v1` capture failed.
+///
+/// Every failure of the one-shot screencopy chain (connect, collect, frame
+/// creation, buffer constraints, `wl_shm` allocation, copy, readback) is a
+/// variant here; the [`CaptureError`] conversion maps
+/// [`ScreencopyError::Timeout`] onto [`CaptureError::Timeout`] and everything
+/// else onto [`CaptureError::Backend`] tagged [`BackendKind::WlrScreencopy`].
+///
+/// Unlike [`IccError`], the screencopy `failed` event carries no reason value
+/// and the protocol has no separate session/stopped lifecycle, so those
+/// variants are absent.
+#[derive(Debug, Error)]
+pub enum ScreencopyError {
+    /// The one-shot capture connection to the compositor could not be
+    /// established.
+    #[error("wlr-screencopy could not connect: {0}")]
+    Connect(#[from] ConnectError),
+    /// Registry and output collection on the capture connection failed.
+    #[error("wlr-screencopy session collection failed: {0}")]
+    Collection(#[from] ProbeError),
+    /// A protocol global required for capture was not advertised.
+    #[error("the compositor does not advertise {0}")]
+    MissingProtocol(&'static str),
+    /// The session sees no outputs, so there is nothing to capture.
+    #[error("the Wayland session has no outputs to capture")]
+    NoOutputs,
+    /// No output matches the requested connector name.
+    #[error("no output named {requested}; available connectors: {available:?}")]
+    OutputNotFound {
+        /// The connector name that was requested.
+        requested: String,
+        /// The connector names the session actually advertises.
+        available: Vec<String>,
+    },
+    /// The compositor reported the screencopy frame as failed. The protocol
+    /// carries no reason value, so a retry is the only client recourse.
+    #[error("the compositor failed the screencopy frame")]
+    FrameFailed,
+    /// The frame's single `buffer` event advertised a shared-memory format
+    /// this backend does not support in v1 (`XRGB8888`, `ARGB8888`, or
+    /// `RGBA8888`).
+    #[error("the compositor advertised unsupported shm format {advertised:#010x}")]
+    NoSupportedFormat {
+        /// The raw `wl_shm` format wire value the frame advertised.
+        advertised: u32,
+    },
+    /// The buffer constraints were incomplete: no `buffer_done`, no `buffer`
+    /// event, or a zero dimension.
+    #[error("the screencopy frame reported incomplete buffer constraints")]
+    IncompleteConstraints,
+    /// The captured buffer size does not match the output's native
+    /// (pre-transform) physical size from enumeration. `wlr-screencopy`
+    /// delivers buffers in the output's native orientation, so the guard
+    /// compares against [`OutputInfo::physical_size`], not the post-transform
+    /// [`OutputInfo::buffer_size`].
+    ///
+    /// [`OutputInfo::physical_size`]: flowshot_core::geometry::OutputInfo::physical_size
+    /// [`OutputInfo::buffer_size`]: flowshot_core::geometry::OutputInfo::buffer_size
+    #[error("captured buffer {reported:?} does not match output physical size {expected:?}")]
+    BufferSizeMismatch {
+        /// The size the screencopy frame reported.
+        reported: (u32, u32),
+        /// The native physical size enumeration predicted.
+        expected: (i32, i32),
+    },
+    /// The compositor did not complete a capture phase within its deadline.
+    #[error("wlr-screencopy did not complete within {timeout:?}")]
+    Timeout {
+        /// The per-phase deadline that expired.
+        timeout: Duration,
+    },
+    /// An operating-system call failed (anonymous file creation, sizing,
+    /// polling, or pixel readback).
+    #[error("an OS call failed during screencopy capture: {0}")]
+    Io(#[from] std::io::Error),
+    /// The Wayland connection broke while capture requests or reads were in
+    /// flight.
+    #[error("the Wayland transport failed during screencopy capture: {0}")]
+    Transport(#[from] wayland_client::backend::WaylandError),
+    /// The compositor sent a protocol error or an unparseable message during
+    /// capture.
+    #[error("Wayland protocol error during screencopy capture: {0}")]
+    Protocol(#[from] wayland_client::DispatchError),
+    /// Pixel geometry validation failed while normalizing a captured frame.
+    #[error("screencopy frame geometry is invalid: {0}")]
+    Geometry(#[from] GeometryError),
+    /// The compositor delivered a permission-denial black frame (the
+    /// `Hyprland` enforce-permissions screencopy denial image); capture must
+    /// not proceed and the caller surfaces a notification.
+    #[error("screen capture permission was denied by the compositor")]
+    PermissionDenied,
+    /// An internal invariant was violated (arithmetic overflow, a settled
+    /// state that was not settled).
+    #[error("internal wlr-screencopy error: {0}")]
+    Internal(&'static str),
+}
+
+impl From<ScreencopyError> for CaptureError {
+    fn from(error: ScreencopyError) -> Self {
+        match error {
+            ScreencopyError::Timeout { .. } => CaptureError::Timeout {
+                backend: BackendKind::WlrScreencopy,
+            },
+            other => CaptureError::Backend {
+                backend: BackendKind::WlrScreencopy,
+                source: Box::new(other),
+            },
+        }
+    }
+}
+
+/// The shared infrastructure contract for one-shot capture backend errors.
+///
+/// The deadline-bounded dispatch machinery ([`crate::icc::wait`]) and the
+/// worker-thread bridge ([`crate::worker`]) produce transport, timeout, and
+/// internal failures that are independent of any specific compositor protocol.
+/// This trait lets those helpers stay generic over the concrete backend error
+/// ([`IccError`], [`ScreencopyError`]) so each failure is tagged with the
+/// correct [`BackendKind`] when lifted into a [`CaptureError`].
+pub(crate) trait BackendError:
+    std::error::Error
+    + Send
+    + Sync
+    + 'static
+    + From<std::io::Error>
+    + From<wayland_client::backend::WaylandError>
+    + From<wayland_client::DispatchError>
+{
+    /// The backend this error type reports failures for.
+    const KIND: BackendKind;
+    /// Builds the timeout error for an expired per-phase deadline.
+    fn timeout(timeout: Duration) -> Self;
+    /// Builds an internal-invariant error.
+    fn internal(message: &'static str) -> Self;
+}
+
+impl BackendError for IccError {
+    const KIND: BackendKind = BackendKind::ExtImageCopyCapture;
+
+    fn timeout(timeout: Duration) -> Self {
+        Self::Timeout { timeout }
+    }
+
+    fn internal(message: &'static str) -> Self {
+        Self::Internal(message)
+    }
+}
+
+impl BackendError for ScreencopyError {
+    const KIND: BackendKind = BackendKind::WlrScreencopy;
+
+    fn timeout(timeout: Duration) -> Self {
+        Self::Timeout { timeout }
+    }
+
+    fn internal(message: &'static str) -> Self {
+        Self::Internal(message)
+    }
+}
+
 /// Wraps a `wayland-client` connect failure with an environment-based hint.
 pub(crate) fn socket_connect_error(source: wayland_client::ConnectError) -> ConnectError {
     let hint = connect_hint(

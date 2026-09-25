@@ -21,6 +21,7 @@ use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::InputEvent;
 use crate::monitor;
+use crate::render::Renderer;
 use crate::router::WindowSlot;
 use crate::runtime::UiEvent;
 use crate::surface::{SurfaceSpec, WindowSurface};
@@ -28,8 +29,15 @@ use crate::surface::{SurfaceSpec, WindowSurface};
 impl OverlayApp {
     pub(crate) fn spawn(&mut self, target: &ActiveEventLoop) -> Result<(), UiError> {
         let monitors: Vec<MonitorHandle> = target.available_monitors().collect();
-        let layout = monitor::layout_from_monitors(&monitors)?;
-        let bindings: Vec<usize> = (0..layout.outputs.len()).collect();
+        // The capture-provided layout supersedes the monitor-derived one
+        // (plan todo 15): true transforms and scales from the capture pass.
+        let (layout, bindings) = if let Some(backdrop) = self.backdrop.as_ref() {
+            monitor::bindings_for_layout(backdrop.layout(), &monitors)
+        } else {
+            let layout = monitor::layout_from_monitors(&monitors)?;
+            let bindings: Vec<usize> = (0..layout.outputs.len()).collect();
+            (layout, bindings)
+        };
         self.core.router_mut().install(layout, bindings);
         for (index, handle) in monitors.iter().enumerate() {
             let slot = WindowSlot::new(index);
@@ -54,9 +62,19 @@ impl OverlayApp {
                 window,
                 surface: None,
                 monitor_name,
+                renderer: None,
             });
         }
         self.init_surfaces()?;
+        if let Some(backdrop) = self.backdrop.as_ref() {
+            for (connector, reason) in backdrop.missing() {
+                tracing::error!(
+                    connector,
+                    ?reason,
+                    "frozen frame missing; window shows the letterbox placeholder"
+                );
+            }
+        }
         tracing::info!(windows = self.windows.len(), "overlay windows spawned");
         Ok(())
     }
@@ -87,7 +105,36 @@ impl OverlayApp {
             };
             entry.surface = Some(WindowSurface::new(surface, &gpu, &spec)?);
         }
+        self.init_renderers(&gpu)?;
         self.gpu = Some(gpu);
+        Ok(())
+    }
+
+    /// Builds each window's renderer and uploads the frozen-frame textures
+    /// (plan todo 15). Upload failure is fatal and typed - the overlay never
+    /// presents a silent black frame.
+    fn init_renderers(&mut self, gpu: &GpuContext) -> Result<(), UiError> {
+        let Self {
+            windows,
+            backdrop,
+            core,
+            ..
+        } = self;
+        let Some(backdrop) = backdrop.as_mut() else {
+            return Ok(());
+        };
+        for (index, entry) in windows.iter_mut().enumerate() {
+            let Some(surface) = entry.surface.as_ref() else {
+                continue;
+            };
+            let mut renderer = Renderer::new(&gpu.device, &gpu.queue, surface.format());
+            let slot = WindowSlot::new(index);
+            if let Some(output_index) = core.router().output_index_for(slot) {
+                backdrop.upload_for(output_index, &mut renderer, gpu)?;
+            }
+            backdrop.upload_cursor(&mut renderer, gpu)?;
+            entry.renderer = Some(renderer);
+        }
         Ok(())
     }
 }

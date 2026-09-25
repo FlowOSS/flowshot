@@ -9,9 +9,11 @@
 use winit::event_loop::{EventLoop, EventLoopProxy};
 
 use crate::app::OverlayApp;
+use crate::backdrop::{Backdrop, BackdropOptions, FrozenCapture};
 use crate::error::UiError;
 #[cfg(feature = "test-drive")]
 use crate::input::SyntheticInput;
+use flowshot_core::tokens::DesignTokens;
 
 /// Events sent into the running loop from other threads.
 #[derive(Debug, Clone)]
@@ -97,6 +99,33 @@ impl OverlayRuntime {
             event_loop,
             handle,
             app: OverlayApp::new(),
+        })
+    }
+
+    /// Creates the runtime around a frozen capture (plan todo 15): every
+    /// window renders its output's frozen frame 1:1 as the backdrop, with
+    /// the dim layer, selection cutout, and cursor sprite per `options`.
+    ///
+    /// The capture-provided layout supersedes the winit monitor report
+    /// (true transforms and scales); windows bind to outputs by connector
+    /// name, then physical origin.
+    ///
+    /// # Errors
+    ///
+    /// Same session/event-loop failures as [`Self::new`].
+    pub fn with_capture(capture: FrozenCapture, options: BackdropOptions) -> Result<Self, UiError> {
+        require_display_server()?;
+        let event_loop = EventLoop::<UiEvent>::with_user_event().build()?;
+        let handle = OverlayHandle {
+            proxy: event_loop.create_proxy(),
+        };
+        let mut app = OverlayApp::new();
+        app.backdrop = Some(Backdrop::plan(capture, &DesignTokens::default()));
+        app.backdrop_options = options;
+        Ok(Self {
+            event_loop,
+            handle,
+            app,
         })
     }
 

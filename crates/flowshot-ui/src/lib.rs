@@ -55,11 +55,16 @@ mod runtime;
 mod state;
 mod surface;
 
+pub mod backdrop;
 pub mod error;
 pub mod input;
 pub mod render;
 pub mod router;
 
+pub use backdrop::{
+    Backdrop, BackdropOptions, CursorSprite, FrozenCapture, MissingFrame, PlacedCursor,
+    backdrop_texture_id, capture_frozen, cursor_texture_id,
+};
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
 pub use router::{InputRouter, WindowSlot};
