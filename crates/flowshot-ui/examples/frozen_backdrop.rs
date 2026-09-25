@@ -31,8 +31,10 @@
 //! ```
 //!
 //! With `--features test-drive`, stdin lines inject synthetic events through
-//! the production routing path (`move <slot> <x> <y>`, `press <slot> escape`
-//! - the todo-13 injector protocol).
+//! the production routing path (the todo-13 injector protocol, extended by
+//! todo 16): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
+//! <down|up>`, `mods <slot> <none|shift|ctrl|...[+...]>`, and
+//! `press/release <slot> <escape|enter|left|right|up|down|a|c|q|...>`.
 
 use std::process::ExitCode;
 
@@ -295,7 +297,8 @@ fn spawn_stdin_injector(handle: flowshot_ui::OverlayHandle) {
 #[cfg(feature = "test-drive")]
 fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
     use flowshot_ui::{SyntheticInput, WindowSlot};
-    use winit::keyboard::KeyCode;
+    use winit::event::MouseButton;
+    use winit::keyboard::{KeyCode, ModifiersState};
 
     let mut parts = line.split_whitespace();
     match parts.next()? {
@@ -305,11 +308,53 @@ fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
             let y = parts.next()?.parse::<f64>().ok()?;
             Some(SyntheticInput::pointer_moved(WindowSlot::new(slot), x, y))
         }
+        "btn" => {
+            let slot = parts.next()?.parse::<usize>().ok()?;
+            let button = match parts.next()? {
+                "left" => MouseButton::Left,
+                "right" => MouseButton::Right,
+                "middle" => MouseButton::Middle,
+                _ => return None,
+            };
+            let pressed = match parts.next()? {
+                "down" => true,
+                "up" => false,
+                _ => return None,
+            };
+            Some(SyntheticInput::pointer_button(
+                WindowSlot::new(slot),
+                button,
+                pressed,
+            ))
+        }
+        "mods" => {
+            let slot = parts.next()?.parse::<usize>().ok()?;
+            let mut modifiers = ModifiersState::empty();
+            for part in parts.next()?.split('+') {
+                match part {
+                    "none" | "" => {}
+                    "shift" => modifiers |= ModifiersState::SHIFT,
+                    "ctrl" => modifiers |= ModifiersState::CONTROL,
+                    "alt" => modifiers |= ModifiersState::ALT,
+                    "super" => modifiers |= ModifiersState::SUPER,
+                    _ => return None,
+                }
+            }
+            Some(SyntheticInput::modifiers(WindowSlot::new(slot), modifiers))
+        }
         command @ ("press" | "release") => {
             let slot = parts.next()?.parse::<usize>().ok()?;
             let key = match parts.next()? {
                 "escape" => KeyCode::Escape,
                 "enter" => KeyCode::Enter,
+                "numpadenter" => KeyCode::NumpadEnter,
+                "left" => KeyCode::ArrowLeft,
+                "right" => KeyCode::ArrowRight,
+                "up" => KeyCode::ArrowUp,
+                "down" => KeyCode::ArrowDown,
+                "a" => KeyCode::KeyA,
+                "c" => KeyCode::KeyC,
+                "q" => KeyCode::KeyQ,
                 _ => return None,
             };
             let slot = WindowSlot::new(slot);

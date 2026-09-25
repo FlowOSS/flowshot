@@ -72,8 +72,12 @@ pub struct BackdropOptions {
     /// Whether the cursor sprite composites (false when the frames already
     /// carry a backend-painted cursor).
     pub cursor_visible: bool,
-    /// The current selection in global logical space; the dim cutout
-    /// (todo 16 drives this live).
+    /// The INITIAL selection in global logical space, seeded into the
+    /// selection engine at runtime construction (todo 16); from then on the
+    /// live engine rect drives the dim cutout. Direct [`Backdrop::commands`]
+    /// callers (tests, offscreen verification) consume it as the cutout.
+    ///
+    /// [`Backdrop::commands`]: super::Backdrop::commands
     pub selection: Option<LogicalRect>,
 }
 

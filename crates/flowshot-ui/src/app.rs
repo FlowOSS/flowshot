@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 
 use flowshot_core::geometry::OutputLayout;
 use flowshot_core::tokens::DesignTokens;
@@ -18,7 +19,7 @@ use crate::crosshair;
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::Action;
-use crate::render::Renderer;
+use crate::render::{DisplayList, Renderer};
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
 use crate::surface::WindowSurface;
@@ -82,6 +83,10 @@ impl OverlayApp {
                     tracing::info!("exit requested via input; closing all overlay windows");
                     target.exit();
                 }
+                // Accept/Copy/ColorWheel are binary-layer wiring seams: the
+                // export/clipboard paths land with todos 28/35 and the color
+                // wheel with todo 26; the engine already logged the effect.
+                Action::Accept | Action::Copy | Action::ColorWheel => {}
             }
         }
     }
@@ -115,22 +120,34 @@ impl OverlayApp {
                 let (width, height) = surface.size();
                 crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
             });
-        // The frozen-frame backdrop (todo 15): this window's 1:1 physical
-        // crop + cursor sprite + dim cutout, rendered below the crosshair.
-        let mut built = match (
+        // The frozen-frame backdrop (todo 15) with the LIVE selection cutout
+        // (todo 16: the engine's rect supersedes the construction-time
+        // option, so the dim follows the drag).
+        let options = BackdropOptions {
+            selection: self.core.selection().rect(),
+            ..self.backdrop_options
+        };
+        let mut list = match (
             self.backdrop.as_ref(),
-            entry.renderer.as_mut(),
             self.core.router().output_index_for(slot),
         ) {
-            (Some(backdrop), Some(renderer), Some(output_index)) => Some((
-                renderer,
-                backdrop.commands(output_index, surface.size(), &self.backdrop_options),
-            )),
+            (Some(backdrop), Some(output_index)) => {
+                backdrop.commands(output_index, surface.size(), &options)
+            }
+            _ => DisplayList::new(),
+        };
+        // Selection visuals (outline, grips, HUD) above the backdrop, derived
+        // from the same global rect with this output's own scale - a
+        // spanning selection paints seamlessly in every window it touches.
+        if let Some(output) = self.core.router().output_for(slot) {
+            self.core
+                .selection()
+                .paint_into(&mut list, output, Instant::now());
+        }
+        let content = match (entry.renderer.as_mut(), list.is_empty()) {
+            (Some(renderer), false) => Some((renderer, &list)),
             _ => None,
         };
-        let content = built
-            .as_mut()
-            .map(|(renderer, list)| (&mut **renderer, &*list));
         if let Err(error) = surface.render(gpu, content, vertices) {
             tracing::error!(%error, window = slot.index(), "frame presentation failed");
         }

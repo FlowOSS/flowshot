@@ -13,6 +13,8 @@ use crate::backdrop::{Backdrop, BackdropOptions, FrozenCapture};
 use crate::error::UiError;
 #[cfg(feature = "test-drive")]
 use crate::input::SyntheticInput;
+use crate::selection::SelectionConfig;
+use crate::state::OverlayCore;
 use flowshot_core::tokens::DesignTokens;
 
 /// Events sent into the running loop from other threads.
@@ -108,12 +110,28 @@ impl OverlayRuntime {
     ///
     /// The capture-provided layout supersedes the winit monitor report
     /// (true transforms and scales); windows bind to outputs by connector
-    /// name, then physical origin.
+    /// name, then physical origin. `options.selection` seeds the selection
+    /// engine (todo 16) - from then on the live engine rect drives the dim
+    /// cutout.
     ///
     /// # Errors
     ///
     /// Same session/event-loop failures as [`Self::new`].
     pub fn with_capture(capture: FrozenCapture, options: BackdropOptions) -> Result<Self, UiError> {
+        Self::with_capture_configured(capture, options, SelectionConfig::default())
+    }
+
+    /// [`Self::with_capture`] with explicit selection-engine config (the
+    /// `[editor]` keys: HUD position/hide-time, double-click copy).
+    ///
+    /// # Errors
+    ///
+    /// Same session/event-loop failures as [`Self::new`].
+    pub fn with_capture_configured(
+        capture: FrozenCapture,
+        options: BackdropOptions,
+        config: SelectionConfig,
+    ) -> Result<Self, UiError> {
         require_display_server()?;
         let event_loop = EventLoop::<UiEvent>::with_user_event().build()?;
         let handle = OverlayHandle {
@@ -122,11 +140,19 @@ impl OverlayRuntime {
         let mut app = OverlayApp::new();
         app.backdrop = Some(Backdrop::plan(capture, &DesignTokens::default()));
         app.backdrop_options = options;
+        app.core.selection_mut().configure(config);
+        app.core.selection_mut().set_rect(options.selection);
         Ok(Self {
             event_loop,
             handle,
             app,
         })
+    }
+
+    /// The overlay's headless core before [`Self::run`] (the preselect seam,
+    /// todo 18: seed the selection, cascade flags, or config).
+    pub fn core_mut(&mut self) -> &mut OverlayCore {
+        &mut self.app.core
     }
 
     /// The cross-thread control handle (exit; `test-drive` injection).

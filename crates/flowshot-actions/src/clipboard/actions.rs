@@ -46,6 +46,9 @@ impl From<SaveAction> for Action {
             SaveAction::Save => Self::Save,
             SaveAction::Pin => Self::Pin,
             SaveAction::Upload => Self::Upload,
+            SaveAction::CopyPath => Self::CopyPath,
+            SaveAction::Notify => Self::Notify,
+            SaveAction::OpenWith => Self::OpenWith,
         }
     }
 }

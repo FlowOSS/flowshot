@@ -130,6 +130,15 @@ pub enum SaveAction {
     Pin,
     /// Upload the image to the configured provider.
     Upload,
+    /// Copy the saved file's path (`text/plain` + `text/uri-list`).
+    #[serde(rename = "copy-path")]
+    CopyPath,
+    /// Explicit success-toast request (gated by `[daemon].notifications`).
+    #[serde(rename = "notify")]
+    Notify,
+    /// Open the saved file with the default application (portal).
+    #[serde(rename = "open-with")]
+    OpenWith,
 }
 
 /// `[save]` — output path, file naming, and post-capture actions.
@@ -432,11 +441,25 @@ fn default_toolbar_buttons() -> Vec<String> {
 }
 
 /// `[daemon]` — background daemon behavior.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DaemonConfig {
     /// Show a system tray icon while the daemon runs.
     pub tray: bool,
+    /// Enable desktop notifications for capture events.
+    pub notifications: bool,
+    /// Launch the daemon automatically at system startup.
+    pub startup_launch: bool,
+}
+
+impl Default for DaemonConfig {
+    fn default() -> Self {
+        Self {
+            tray: false,
+            notifications: true,
+            startup_launch: false,
+        }
+    }
 }
 
 /// Root configuration document.
@@ -803,7 +826,7 @@ mod tests {
 
             [save]
             clipboard_format = "jpeg"
-            actions = ["copy", "save", "pin", "upload"]
+            actions = ["copy", "save", "pin", "upload", "copy-path", "notify", "open-with"]
 
             [editor]
             magnifier_shape = "circle"
@@ -819,7 +842,10 @@ mod tests {
                 SaveAction::Copy,
                 SaveAction::Save,
                 SaveAction::Pin,
-                SaveAction::Upload
+                SaveAction::Upload,
+                SaveAction::CopyPath,
+                SaveAction::Notify,
+                SaveAction::OpenWith
             ]
         );
         assert_eq!(config.editor.magnifier_shape, MagnifierShape::Circle);
@@ -857,9 +883,27 @@ mod tests {
     }
 
     #[test]
-    fn from_str_trait_delegates_to_toml_parser() -> Result<(), ConfigError> {
-        let via_trait: Config = "config_version = 2".parse()?;
-        assert_eq!(via_trait, Config::default());
+    fn daemon_config_fields_are_present() -> Result<(), ConfigError> {
+        let text = r"
+            config_version = 2
+            
+            [daemon]
+            tray = true
+            notifications = true
+            startup_launch = true
+        ";
+        let config = Config::from_toml_str(text)?;
+        assert!(config.daemon.tray);
+        assert!(config.daemon.notifications);
+        assert!(config.daemon.startup_launch);
         Ok(())
+    }
+
+    #[test]
+    fn daemon_config_defaults_are_correct() {
+        let config = Config::default();
+        assert!(!config.daemon.tray);
+        assert!(config.daemon.notifications); // Default is true per plan
+        assert!(!config.daemon.startup_launch); // Default is false per plan
     }
 }
