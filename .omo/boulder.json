@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-25T18:38:11.927Z",
+      "updated_at": "2026-09-25T20:16:29.239Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -33,7 +33,9 @@
         "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb",
         "opencode:ses_f2624544bffewmpncj6rhKJ9dk",
         "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
-        "opencode:ses_f2623a70dffeayymekar2QUvpy"
+        "opencode:ses_f2623a70dffeayymekar2QUvpy",
+        "opencode:ses_f25ca0831ffeeiuQyIlefr0i4s",
+        "opencode:ses_f25c9aa9cffe1cKQii1SeCj9Il"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -43,7 +45,9 @@
         "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb": "appended",
         "opencode:ses_f2624544bffewmpncj6rhKJ9dk": "appended",
         "opencode:ses_f262405e8ffeYrtMdoauvmG1oW": "appended",
-        "opencode:ses_f2623a70dffeayymekar2QUvpy": "appended"
+        "opencode:ses_f2623a70dffeayymekar2QUvpy": "appended",
+        "opencode:ses_f25ca0831ffeeiuQyIlefr0i4s": "appended",
+        "opencode:ses_f25c9aa9cffe1cKQii1SeCj9Il": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -86,10 +90,10 @@
           "task_key": "todo:10",
           "task_label": "10",
           "task_title": "Wayland: portal backends (Screenshot + ScreenCast/PipeWire single-frame)",
-          "session_id": "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
+          "session_id": "opencode:ses_f25c9aa9cffe1cKQii1SeCj9Il",
           "agent": "Sisyphus-Junior",
-          "category": "unspecified-low",
-          "updated_at": "2026-09-25T18:37:47.618Z"
+          "category": "visual-engineering",
+          "updated_at": "2026-09-25T20:16:29.239Z"
         }
       }
     }
@@ -97,7 +101,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-25T18:38:11.927Z",
+  "updated_at": "2026-09-25T20:16:29.239Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -106,7 +110,9 @@
     "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb",
     "opencode:ses_f2624544bffewmpncj6rhKJ9dk",
     "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
-    "opencode:ses_f2623a70dffeayymekar2QUvpy"
+    "opencode:ses_f2623a70dffeayymekar2QUvpy",
+    "opencode:ses_f25ca0831ffeeiuQyIlefr0i4s",
+    "opencode:ses_f25c9aa9cffe1cKQii1SeCj9Il"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -116,7 +122,9 @@
     "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb": "appended",
     "opencode:ses_f2624544bffewmpncj6rhKJ9dk": "appended",
     "opencode:ses_f262405e8ffeYrtMdoauvmG1oW": "appended",
-    "opencode:ses_f2623a70dffeayymekar2QUvpy": "appended"
+    "opencode:ses_f2623a70dffeayymekar2QUvpy": "appended",
+    "opencode:ses_f25ca0831ffeeiuQyIlefr0i4s": "appended",
+    "opencode:ses_f25c9aa9cffe1cKQii1SeCj9Il": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -159,10 +167,10 @@
       "task_key": "todo:10",
       "task_label": "10",
       "task_title": "Wayland: portal backends (Screenshot + ScreenCast/PipeWire single-frame)",
-      "session_id": "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
+      "session_id": "opencode:ses_f25c9aa9cffe1cKQii1SeCj9Il",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-low",
-      "updated_at": "2026-09-25T18:37:47.618Z"
+      "category": "visual-engineering",
+      "updated_at": "2026-09-25T20:16:29.239Z"
     }
   },
   "agent": "atlas"

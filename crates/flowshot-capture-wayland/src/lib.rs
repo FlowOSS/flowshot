@@ -59,6 +59,18 @@
 //! correction - and cursor inclusion is the `overlay_cursor` capture flag
 //! (no cursor stream).
 //!
+//! [`PortalScreenshotBackend`] and [`PortalScreenCastBackend`] are the
+//! `org.freedesktop.portal` rungs (5 and 4): universal fallbacks driven over
+//! session `D-Bus` (ashpd) instead of compositor protocols. The Screenshot
+//! portal returns one full-layout composite whose pixel space is DETECTED at
+//! runtime against the enumerated layout, then cropped per output; the
+//! `ScreenCast` portal opens a `PipeWire` remote whose first frame per stream
+//! is the capture (single-frame, one-shot session, no restore token). Portal
+//! availability is a bus check the Wayland registry cannot see:
+//! [`probe_portals_blocking`] feeds [`PortalAvailability`] into the shared
+//! [`CapabilityProbe`](flowshot_capture::CapabilityProbe) so the negotiation
+//! ladder gates the portal rungs like the native ones.
+//!
 //! # Layered cursor position
 //!
 //! [`resolve_cursor_pos`] walks the draft F13 ladder and traces which layer
@@ -97,6 +109,7 @@ mod dispatch;
 mod hyprland_ipc;
 mod icc;
 mod output;
+mod portal;
 mod screencopy;
 mod session;
 mod thread;
@@ -114,6 +127,11 @@ pub use cursor::CursorImage;
 pub use error::{ConnectError, IccError, ProbeError, ScreencopyError};
 pub use globals::{Global, ProtocolGlobals};
 pub use icc::IccBackend;
+pub use portal::{
+    PortalAvailability, PortalDenial, PortalErrorKind, PortalScreenCastBackend,
+    PortalScreenCastError, PortalScreenshotBackend, PortalScreenshotError, probe_portals,
+    probe_portals_blocking,
+};
 pub use resolve::{
     CURSOR_CAPABILITY_DESKTOPS, CursorCapabilities, CursorSource, cursor_capabilities,
     resolve_cursor_pos,

@@ -74,6 +74,7 @@ wl-clipboard-rs = "0.9.3"
 ashpd = "0.10.0"
 zbus = "4.3.1"
 pipewire = "0.10.0"
+resvg = "0.47.0"
 
 # Notifications
 notify-rust = "4.18.0"
