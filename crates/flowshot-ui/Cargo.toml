@@ -9,19 +9,29 @@ authors = ["FlowShot Contributors"]
 [lib]
 crate-type = ["rlib"]
 
+[features]
+# Public synthetic-input seam (`OverlayCore::inject_event`, `OverlayHandle::inject_event`)
+# so mouse paths are QA-able without ydotool (plan todo 13, Metis blocker #1 fallback).
+test-drive = []
+
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
 winit = { workspace = true }
 wgpu = { workspace = true }
-cosmic-text = { workspace = true }
-glyphon = { workspace = true }
-lyon = { workspace = true }
-egui = { workspace = true }
-egui-winit = { workspace = true }
-egui-wgpu = { workspace = true }
-tokio = { workspace = true }
+# Only `futures::executor::block_on` is used: the one-shot wgpu adapter/device
+# request at startup. (Workspace inheritance forbids `default-features = false`
+# overrides, so the full crate is inherited.)
+futures = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+
+# Renderer stacks (cosmic-text/glyphon/lyon) re-enter with todo 14; egui enters
+# with todo 36 version-matched to the winit pin (plan dep guardrail). Keeping
+# them out now avoids duplicate winit/wgpu major versions in the lockfile
+# (deny.toml bans version drift).
+
+[dev-dependencies]
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [lints]
 workspace = true
