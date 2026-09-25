@@ -34,6 +34,19 @@
 //! geometry (connector name, description, logical position and size),
 //! falling back to `wl_output`-only data when `xdg-output` is absent.
 //!
+//! # Capture backends
+//!
+//! [`IccBackend`] implements the shared
+//! [`CaptureBackend`](flowshot_capture::CaptureBackend) trait for
+//! `ext-image-copy-capture-v1`: one-shot per-output capture chains
+//! (source -> session -> constraints -> `wl_shm` buffer -> frame ->
+//! `ready`/`failed`) on dedicated short-lived connections, sequential
+//! multi-output capture stitched per [`OutputLayout`](flowshot_core::geometry::OutputLayout)
+//! for region captures ([`stitch`]), a 10 second per-phase timeout, and the
+//! `Hyprland` permission-denial black-frame mapping ([`error::IccError`]).
+//! v1 captures into `wl_shm` buffers only (no dma-buf); cursor sessions are
+//! todo 8.
+//!
 //! # v1 limitations
 //!
 //! - **Fractional scale**: `wl_output.scale` reports integers only.
@@ -49,11 +62,14 @@
 //!
 //! This is the one `unsafe`-exempt crate in the workspace (later zero-copy
 //! buffer mapping may need it). All current code is safe Rust: zero
-//! `unsafe` blocks.
+//! `unsafe` blocks - capture buffers are anonymous files (`memfd`) read
+//! back with ordinary file I/O instead of memory mapping.
 
 #![warn(missing_docs)]
 
+mod denial;
 mod dispatch;
+mod icc;
 mod output;
 mod session;
 mod thread;
@@ -62,8 +78,11 @@ mod transform;
 pub mod desktop;
 pub mod error;
 pub mod globals;
+pub mod stitch;
 
-pub use error::{ConnectError, ProbeError};
+pub use error::{ConnectError, IccError, ProbeError};
 pub use globals::{Global, ProtocolGlobals};
+pub use icc::IccBackend;
 pub use session::SessionSnapshot;
+pub use stitch::CapturedOutputs;
 pub use thread::CaptureThread;

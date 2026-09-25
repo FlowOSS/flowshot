@@ -9,9 +9,10 @@ use flowshot_capture::{BackendKind, CapabilityProbe, DesktopEnv};
 use serde::Serialize;
 
 /// Interface name of the `ext-image-copy-capture-v1` manager.
-const EXT_IMAGE_COPY_CAPTURE_MANAGER: &str = "ext_image_copy_capture_manager_v1";
+pub(crate) const EXT_IMAGE_COPY_CAPTURE_MANAGER: &str = "ext_image_copy_capture_manager_v1";
 /// Interface name of the per-output capture source manager.
-const EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER: &str = "ext_output_image_capture_source_manager_v1";
+pub(crate) const EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER: &str =
+    "ext_output_image_capture_source_manager_v1";
 /// Interface name of the per-toplevel capture source manager.
 const EXT_FOREIGN_TOPLEVEL_IMAGE_CAPTURE_SOURCE_MANAGER: &str =
     "ext_foreign_toplevel_image_capture_source_manager_v1";
@@ -20,7 +21,7 @@ const WLR_SCREENCOPY_MANAGER: &str = "zwlr_screencopy_manager_v1";
 /// Interface name of the `xdg-output-unstable-v1` manager.
 pub(crate) const ZXDG_OUTPUT_MANAGER: &str = "zxdg_output_manager_v1";
 /// Interface name of the shared-memory pool factory.
-const WL_SHM: &str = "wl_shm";
+pub(crate) const WL_SHM: &str = "wl_shm";
 /// Interface name of the `linux-dmabuf-v1` factory.
 const ZWP_LINUX_DMABUF: &str = "zwp_linux_dmabuf_v1";
 /// Interface name of the fractional-scale manager (current `wp_` spelling).

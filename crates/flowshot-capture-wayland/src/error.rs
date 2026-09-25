@@ -1,7 +1,10 @@
-//! Typed errors for connecting to and probing a Wayland session.
+//! Typed errors for connecting to, probing, and capturing on a Wayland
+//! session.
 
 use std::time::Duration;
 
+use flowshot_capture::{BackendKind, CaptureError};
+use flowshot_core::geometry::GeometryError;
 use thiserror::Error;
 
 /// Why establishing the Wayland capture session failed.
@@ -51,6 +54,132 @@ pub enum ProbeError {
     /// The capture thread exited (or its channel closed) before answering.
     #[error("the Wayland capture thread closed the session before answering")]
     ThreadClosed,
+}
+
+/// Why the compositor reported an `ext-image-copy-capture-v1` frame as
+/// failed; mirrors the protocol's `failure_reason` enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameFailure {
+    /// An unspecified runtime error; the protocol notes the client may retry.
+    Unknown,
+    /// The attached buffer did not match the session's latest constraints;
+    /// the client should re-allocate and retry.
+    BufferConstraints,
+    /// The capture session is no longer available.
+    Stopped,
+}
+
+/// Why an `ext-image-copy-capture-v1` capture failed.
+///
+/// Every failure of the one-shot capture chain (connect, collect, source,
+/// session constraints, buffer allocation, frame copy, readback) is a
+/// variant here; [`CaptureError`] conversion maps [`IccError::Timeout`] onto
+/// [`CaptureError::Timeout`] and everything else onto
+/// [`CaptureError::Backend`] with this error as the source.
+#[derive(Debug, Error)]
+pub enum IccError {
+    /// The one-shot capture connection to the compositor could not be
+    /// established.
+    #[error("ext-image-copy-capture could not connect: {0}")]
+    Connect(#[from] ConnectError),
+    /// Registry and output collection on the capture connection failed.
+    #[error("ext-image-copy-capture session collection failed: {0}")]
+    Collection(#[from] ProbeError),
+    /// A protocol global required for capture was not advertised.
+    #[error("the compositor does not advertise {0}")]
+    MissingProtocol(&'static str),
+    /// The session sees no outputs, so there is nothing to capture.
+    #[error("the Wayland session has no outputs to capture")]
+    NoOutputs,
+    /// No output matches the requested connector name.
+    #[error("no output named {requested}; available connectors: {available:?}")]
+    OutputNotFound {
+        /// The connector name that was requested.
+        requested: String,
+        /// The connector names the session actually advertises.
+        available: Vec<String>,
+    },
+    /// The compositor stopped the capture session before a frame arrived.
+    #[error("the compositor stopped the capture session")]
+    SessionStopped,
+    /// The compositor reported the capture frame as failed.
+    #[error("the compositor failed the capture frame: {reason:?}")]
+    FrameFailed {
+        /// The protocol's failure reason.
+        reason: FrameFailure,
+    },
+    /// The frame failed with a reason value this protocol version does not
+    /// define.
+    #[error("the compositor failed the capture frame with unknown reason {0}")]
+    UnknownFailureReason(u32),
+    /// The session advertised no shared-memory format this backend supports
+    /// in v1 (`XRGB8888`, `ARGB8888`, or `RGBA8888`).
+    #[error("no supported shm format among the advertised {advertised:?}")]
+    NoSupportedFormat {
+        /// The raw `wl_shm` format values the session advertised.
+        advertised: Vec<u32>,
+    },
+    /// The constraint batch was incomplete: no `done`, no buffer size, or a
+    /// zero dimension.
+    #[error("the capture session reported incomplete buffer constraints")]
+    IncompleteConstraints,
+    /// The captured buffer size does not match the output's post-transform
+    /// physical size from enumeration (stale metadata or a mode change
+    /// mid-capture).
+    #[error("captured buffer {reported:?} does not match output buffer size {expected:?}")]
+    BufferSizeMismatch {
+        /// The size the capture session reported.
+        reported: (u32, u32),
+        /// The post-transform size enumeration predicted.
+        expected: (i32, i32),
+    },
+    /// The compositor did not complete a capture phase within its deadline.
+    /// On `Hyprland` this also covers a pending permission popup: the frame
+    /// is withheld until the user decides, and this backend never waits
+    /// longer than the deadline.
+    #[error("ext-image-copy-capture did not complete within {timeout:?}")]
+    Timeout {
+        /// The per-phase deadline that expired.
+        timeout: Duration,
+    },
+    /// An operating-system call failed (anonymous file creation, sizing,
+    /// polling, or pixel readback).
+    #[error("an OS call failed during capture: {0}")]
+    Io(#[from] std::io::Error),
+    /// The Wayland connection broke while capture requests or reads were in
+    /// flight.
+    #[error("the Wayland transport failed during capture: {0}")]
+    Transport(#[from] wayland_client::backend::WaylandError),
+    /// The compositor sent a protocol error or an unparseable message during
+    /// capture.
+    #[error("Wayland protocol error during capture: {0}")]
+    Protocol(#[from] wayland_client::DispatchError),
+    /// Pixel geometry validation failed while normalizing a captured frame.
+    #[error("capture frame geometry is invalid: {0}")]
+    Geometry(#[from] GeometryError),
+    /// The compositor delivered a permission-denial black frame (the
+    /// `Hyprland` enforce-permissions denial image); capture must not
+    /// proceed and the caller surfaces a notification.
+    #[error("screen capture permission was denied by the compositor")]
+    PermissionDenied,
+    /// An internal invariant was violated (arithmetic overflow, a settled
+    /// state that was not settled).
+    #[error("internal ext-image-copy-capture error: {0}")]
+    Internal(&'static str),
+}
+
+impl From<IccError> for CaptureError {
+    fn from(error: IccError) -> Self {
+        match error {
+            IccError::Timeout { .. } => CaptureError::Timeout {
+                backend: BackendKind::ExtImageCopyCapture,
+            },
+            other => CaptureError::Backend {
+                backend: BackendKind::ExtImageCopyCapture,
+                source: Box::new(other),
+            },
+        }
+    }
 }
 
 /// Wraps a `wayland-client` connect failure with an environment-based hint.

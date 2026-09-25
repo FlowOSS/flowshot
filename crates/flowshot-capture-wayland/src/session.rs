@@ -9,13 +9,20 @@ use flowshot_core::geometry::OutputInfo;
 use serde::Serialize;
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::protocol::wl_registry::WlRegistry;
+use wayland_client::protocol::wl_shm::WlShm;
 use wayland_client::{Connection, EventQueue, QueueHandle};
+use wayland_protocols::ext::image_capture_source::v1::client::ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
+use wayland_protocols::ext::image_copy_capture::v1::client::ext_image_copy_capture_manager_v1::ExtImageCopyCaptureManagerV1;
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_manager_v1::ZxdgOutputManagerV1;
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_v1::ZxdgOutputV1;
 
 use crate::desktop::detect_desktop_env;
 use crate::error::ProbeError;
-use crate::globals::{Global, ProtocolGlobals, WL_OUTPUT, ZXDG_OUTPUT_MANAGER};
+use crate::globals::{
+    EXT_IMAGE_COPY_CAPTURE_MANAGER, EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER, Global,
+    ProtocolGlobals, WL_OUTPUT, WL_SHM, ZXDG_OUTPUT_MANAGER,
+};
+use crate::icc::protocol::ActiveCapture;
 use crate::output::OutputData;
 
 /// Highest `wl_output` version this crate binds (version 4 adds the `name`
@@ -24,6 +31,12 @@ const WL_OUTPUT_VERSION: u32 = 4;
 /// Highest `zxdg_output_manager_v1` version this crate binds (version 3 of
 /// the manager hands out version-3 `zxdg_output_v1` objects).
 const ZXDG_OUTPUT_MANAGER_VERSION: u32 = 3;
+/// The `ext-image-copy-capture-v1` manager version this crate binds (the
+/// protocol only has version 1).
+const ICC_MANAGER_VERSION: u32 = 1;
+/// The `wl_shm` version this crate binds (version 1 suffices for pools and
+/// buffers).
+const WL_SHM_VERSION: u32 = 1;
 
 /// User data attached to output-scoped proxies (`wl_output`,
 /// `zxdg_output_v1`): the registry name they were bound under.
@@ -67,6 +80,17 @@ pub(crate) struct CaptureState {
     pub outputs: BTreeMap<u32, TrackedOutput>,
     /// The bound `xdg-output` manager, when advertised.
     pub xdg_output_manager: Option<ZxdgOutputManagerV1>,
+    /// The bound `wl_shm`, when advertised (capture buffer allocation).
+    pub shm: Option<WlShm>,
+    /// The bound `ext-image-copy-capture-v1` manager, when advertised.
+    pub icc_manager: Option<ExtImageCopyCaptureManagerV1>,
+    /// The bound per-output capture source manager, when advertised.
+    pub icc_source_manager: Option<ExtOutputImageCaptureSourceManagerV1>,
+    /// The event sink of the capture currently in flight (one-shot capture
+    /// connections only; idle on the long-lived probe thread).
+    pub active: ActiveCapture,
+    /// Set while a deadline-bounded display round-trip awaits its callback.
+    pub roundtrip_pending: bool,
     /// Desktop environment sniffed once at session start.
     pub desktop: DesktopEnv,
 }
@@ -79,13 +103,18 @@ impl CaptureState {
             globals: Vec::new(),
             outputs: BTreeMap::new(),
             xdg_output_manager: None,
+            shm: None,
+            icc_manager: None,
+            icc_source_manager: None,
+            active: ActiveCapture::default(),
+            roundtrip_pending: false,
             desktop: detect_desktop_env(),
         }
     }
 
     /// Records one advertised global, binding the interfaces output
-    /// enumeration needs. Capture managers are deliberately NOT bound here:
-    /// the backend todos bind them when they create sessions.
+    /// enumeration and the capture backends need. Binding a manager is
+    /// inert: capture sessions are created per capture run, not here.
     pub(crate) fn record_global(
         &mut self,
         registry: &WlRegistry,
@@ -108,6 +137,21 @@ impl CaptureState {
                     (),
                 );
                 self.xdg_output_manager = Some(manager);
+            }
+            WL_SHM => {
+                let shm: WlShm =
+                    registry.bind(global.name, global.version.min(WL_SHM_VERSION), qh, ());
+                self.shm = Some(shm);
+            }
+            EXT_IMAGE_COPY_CAPTURE_MANAGER => {
+                let manager: ExtImageCopyCaptureManagerV1 =
+                    registry.bind(global.name, global.version.min(ICC_MANAGER_VERSION), qh, ());
+                self.icc_manager = Some(manager);
+            }
+            EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER => {
+                let manager: ExtOutputImageCaptureSourceManagerV1 =
+                    registry.bind(global.name, global.version.min(ICC_MANAGER_VERSION), qh, ());
+                self.icc_source_manager = Some(manager);
             }
             _ => {}
         }
