@@ -29,6 +29,7 @@ tracing-subscriber = "0.3.18"
 bytes = "1.7.1"
 
 # Async
+async-trait = "0.1.92"
 tokio = { version = "1.40.0", features = ["full"] }
 tokio-util = "0.7.11"
 futures = "0.3.30"
