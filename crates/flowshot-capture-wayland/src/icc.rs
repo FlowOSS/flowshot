@@ -32,11 +32,11 @@
 //!
 //! [`CaptureThread`]: crate::CaptureThread
 
-mod dispatch;
+pub(crate) mod dispatch;
 pub(crate) mod protocol;
 mod run;
-mod shm;
-mod wait;
+pub(crate) mod shm;
+pub(crate) mod wait;
 
 use std::future::Future;
 
@@ -129,10 +129,11 @@ impl CaptureBackend for IccBackend {
     }
 
     fn cursor_events(&self) -> Option<CursorStream> {
-        // Todo 8 bridges ext-image-copy-capture cursor sessions into the
-        // stream; until then the backend honestly reports no cursor
-        // observation (a degradation, never a capture failure).
-        None
+        // Bridges ext-image-copy-capture-v1 pointer-cursor sessions (one per
+        // output) onto the shared stream from a dedicated event-driven worker;
+        // None only when the worker thread cannot be spawned (a degradation,
+        // never a capture failure).
+        crate::cursor::stream::spawn_cursor_stream()
     }
 
     async fn request_permission(&self) -> PermissionResult {

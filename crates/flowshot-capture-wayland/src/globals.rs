@@ -31,6 +31,9 @@ const WP_FRACTIONAL_SCALE_MANAGER: &str = "wp_fractional_scale_manager_v1";
 const ZWP_FRACTIONAL_SCALE_MANAGER: &str = "zwp_fractional_scale_manager_v1";
 /// Interface name of the core output global.
 pub(crate) const WL_OUTPUT: &str = "wl_output";
+/// Interface name of the core seat global (pointer capability gates the
+/// `ext-image-copy-capture-v1` cursor session; todo 8).
+pub(crate) const WL_SEAT: &str = "wl_seat";
 
 /// One global advertised by the compositor's `wl_registry`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

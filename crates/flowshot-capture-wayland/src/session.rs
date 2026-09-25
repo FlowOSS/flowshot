@@ -8,7 +8,9 @@ use flowshot_capture::{CapabilityProbe, DesktopEnv};
 use flowshot_core::geometry::OutputInfo;
 use serde::Serialize;
 use wayland_client::protocol::wl_output::WlOutput;
+use wayland_client::protocol::wl_pointer::WlPointer;
 use wayland_client::protocol::wl_registry::WlRegistry;
+use wayland_client::protocol::wl_seat::WlSeat;
 use wayland_client::protocol::wl_shm::WlShm;
 use wayland_client::{Connection, EventQueue, QueueHandle};
 use wayland_protocols::ext::image_capture_source::v1::client::ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
@@ -16,11 +18,12 @@ use wayland_protocols::ext::image_copy_capture::v1::client::ext_image_copy_captu
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_manager_v1::ZxdgOutputManagerV1;
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_v1::ZxdgOutputV1;
 
+use crate::cursor::protocol::{ActiveCursor, CursorSink};
 use crate::desktop::detect_desktop_env;
 use crate::error::ProbeError;
 use crate::globals::{
     EXT_IMAGE_COPY_CAPTURE_MANAGER, EXT_OUTPUT_IMAGE_CAPTURE_SOURCE_MANAGER, Global,
-    ProtocolGlobals, WL_OUTPUT, WL_SHM, ZXDG_OUTPUT_MANAGER,
+    ProtocolGlobals, WL_OUTPUT, WL_SEAT, WL_SHM, ZXDG_OUTPUT_MANAGER,
 };
 use crate::icc::protocol::ActiveCapture;
 use crate::output::OutputData;
@@ -37,6 +40,11 @@ const ICC_MANAGER_VERSION: u32 = 1;
 /// The `wl_shm` version this crate binds (version 1 suffices for pools and
 /// buffers).
 const WL_SHM_VERSION: u32 = 1;
+/// The `wl_seat` version this crate binds. Version 5 introduced the
+/// `release` request; the pointer capability and `get_pointer` used by the
+/// cursor session are stable since version 1, so a conservative cap avoids
+/// requesting events this crate does not consume.
+const WL_SEAT_VERSION: u32 = 5;
 
 /// User data attached to output-scoped proxies (`wl_output`,
 /// `zxdg_output_v1`): the registry name they were bound under.
@@ -86,9 +94,27 @@ pub(crate) struct CaptureState {
     pub icc_manager: Option<ExtImageCopyCaptureManagerV1>,
     /// The bound per-output capture source manager, when advertised.
     pub icc_source_manager: Option<ExtOutputImageCaptureSourceManagerV1>,
+    /// The bound `wl_seat`, when advertised (pointer capability gates the
+    /// cursor session).
+    pub seat: Option<WlSeat>,
+    /// Whether the bound seat advertised the pointer capability.
+    pub seat_has_pointer: bool,
+    /// The `wl_pointer` obtained from the seat, created on demand by
+    /// [`CaptureState::ensure_pointer`] for cursor sessions.
+    pub pointer: Option<WlPointer>,
     /// The event sink of the capture currently in flight (one-shot capture
     /// connections only; idle on the long-lived probe thread).
     pub active: ActiveCapture,
+    /// The event sink of the cursor sessions in flight (one-shot cursor
+    /// queries and the long-lived cursor stream; idle otherwise).
+    pub cursor: ActiveCursor,
+    /// Ordered output geometry the cursor sessions map positions against,
+    /// filled before cursor sessions are created.
+    pub cursor_layout: Vec<OutputInfo>,
+    /// When set, cursor session events are forwarded here as they arrive
+    /// (the long-lived cursor stream); one-shot queries leave it `None` and
+    /// read [`CaptureState::cursor`] instead.
+    pub cursor_sink: Option<CursorSink>,
     /// Set while a deadline-bounded display round-trip awaits its callback.
     pub roundtrip_pending: bool,
     /// Desktop environment sniffed once at session start.
@@ -106,7 +132,13 @@ impl CaptureState {
             shm: None,
             icc_manager: None,
             icc_source_manager: None,
+            seat: None,
+            seat_has_pointer: false,
+            pointer: None,
             active: ActiveCapture::default(),
+            cursor: ActiveCursor::default(),
+            cursor_layout: Vec::new(),
+            cursor_sink: None,
             roundtrip_pending: false,
             desktop: detect_desktop_env(),
         }
@@ -152,6 +184,11 @@ impl CaptureState {
                 let manager: ExtOutputImageCaptureSourceManagerV1 =
                     registry.bind(global.name, global.version.min(ICC_MANAGER_VERSION), qh, ());
                 self.icc_source_manager = Some(manager);
+            }
+            WL_SEAT => {
+                let seat: WlSeat =
+                    registry.bind(global.name, global.version.min(WL_SEAT_VERSION), qh, ());
+                self.seat = Some(seat);
             }
             _ => {}
         }
@@ -209,6 +246,25 @@ impl CaptureState {
         for name in self.outputs.keys().copied().collect::<Vec<_>>() {
             self.attach_xdg_output(name, qh);
         }
+    }
+
+    /// Obtains the seat's `wl_pointer` when the seat advertised the pointer
+    /// capability, caching it on the state. Cursor sessions need a pointer
+    /// object; frame captures never call this, so they bind no pointer.
+    ///
+    /// Returns the pointer, or `None` when no seat was advertised or the seat
+    /// lacks the pointer capability (the cursor path degrades to `None`).
+    pub(crate) fn ensure_pointer(&mut self, qh: &QueueHandle<Self>) -> Option<WlPointer> {
+        if let Some(pointer) = &self.pointer {
+            return Some(pointer.clone());
+        }
+        if !self.seat_has_pointer {
+            return None;
+        }
+        let seat = self.seat.clone()?;
+        let pointer: WlPointer = seat.get_pointer(qh, ());
+        self.pointer = Some(pointer.clone());
+        Some(pointer)
     }
 
     /// Assembles the current snapshot, skipping outputs whose reported
