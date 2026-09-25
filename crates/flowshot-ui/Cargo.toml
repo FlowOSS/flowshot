@@ -24,14 +24,24 @@ wgpu = { workspace = true }
 futures = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+# Todo 14 renderer stack: lyon tessellation + cosmic-text shaping/rasterization
+# (single text stack via cosmic-text's SwashCache; no glyphon - see the root
+# Cargo.toml note: no glyphon release pairs with the wgpu 0.20 pin).
+cosmic-text = { workspace = true }
+lyon = { workspace = true }
+bytemuck = { workspace = true }
 
-# Renderer stacks (cosmic-text/glyphon/lyon) re-enter with todo 14; egui enters
-# with todo 36 version-matched to the winit pin (plan dep guardrail). Keeping
-# them out now avoids duplicate winit/wgpu major versions in the lockfile
+# egui enters with todo 36 version-matched to the winit pin (plan dep
+# guardrail); keeping it out avoids duplicate winit/wgpu majors in the lockfile
 # (deny.toml bans version drift).
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+# DEV-ONLY reference rasterizer for the cross-rasterizer parity harness and
+# golden fixtures (Oracle r4 F-1: never a runtime CPU fallback).
+tiny-skia = { workspace = true }
+# PNG encode/decode for parity evidence dumps in tests/examples only.
+image = { workspace = true }
 
 [lints]
 workspace = true

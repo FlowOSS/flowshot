@@ -2,14 +2,12 @@
 #![warn(missing_docs)]
 
 //! Action handlers for `FlowShot`.
+//!
+//! This crate implements the post-capture actions: saving to disk,
+//! copying to clipboard, uploading, pinning, and opening with external
+//! applications.
 
-pub mod actions;
 pub mod error;
+pub mod export;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+pub use error::ExportError;

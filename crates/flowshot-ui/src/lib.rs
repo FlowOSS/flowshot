@@ -25,6 +25,10 @@
 //!   (#1659-class fix), wgpu surfaces (`Bgra8UnormSrgb` preferred,
 //!   premultiplied alpha, `Fifo` present mode), and a `RedrawRequested`
 //!   frame scheduler that keeps an idle overlay at zero CPU.
+//! - **2D renderer** ([`render::Renderer`], plan todo 14): the batched
+//!   draw-command consumer the shell and every later layer render through -
+//!   lyon vector tessellation, cosmic-text glyph atlas, image quads, dim /
+//!   shadow / rounded-clip effects, all token-driven.
 //!
 //! # Purity contract
 //!
@@ -44,14 +48,16 @@
 mod adapter;
 mod app;
 mod crosshair;
-mod gpu;
+pub mod gpu;
 mod handler;
 mod monitor;
 mod runtime;
 mod state;
+mod surface;
 
 pub mod error;
 pub mod input;
+pub mod render;
 pub mod router;
 
 pub use error::UiError;
