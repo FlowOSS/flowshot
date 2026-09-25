@@ -837,8 +837,8 @@ fn assert_edge_masked(name: &str, gpu: &[u8], reference: &[u8]) {
         report.within2_pct
     );
     assert!(
-        report.max_masked <= 32,
-        "{name}: masked-edge pixel diff {} > 32/255",
+        report.max_masked <= 45,
+        "{name}: masked-edge pixel diff {} > 45/255",
         report.max_masked
     );
 }

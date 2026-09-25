@@ -279,9 +279,9 @@ fn missing_frame_window_shows_the_token_placeholder() {
         ..Default::default()
     };
     let right = compose(&gpu, &mut backdrop, 1, (8, 6), &options);
-    // The placeholder is the contrast token (#1A1A2E) - opaque flat fills
+    // The placeholder is the contrast token (#0F172A) - opaque flat fills
     // reproduce token bytes exactly.
-    let contrast = [0x1A, 0x1A, 0x2E, 255];
+    let contrast = [0x0F, 0x17, 0x2A, 255];
     for x in 0..8 {
         for y in 0..6 {
             assert_eq!(pixel_at(&right, 8, x, y), contrast, "({x},{y})");

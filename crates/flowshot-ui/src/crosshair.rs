@@ -230,17 +230,17 @@ mod tests {
 
     #[test]
     fn parse_srgb_hex_accepts_token_accent() {
-        let color = parse_srgb_hex("#2AA198").unwrap();
-        assert!((color[0] - f32::from(0x2Au8) / 255.0).abs() <= TOL);
-        assert!((color[1] - f32::from(0xA1u8) / 255.0).abs() <= TOL);
-        assert!((color[2] - f32::from(0x98u8) / 255.0).abs() <= TOL);
+        let color = parse_srgb_hex("#6366F1").unwrap();
+        assert!((color[0] - f32::from(0x63u8) / 255.0).abs() <= TOL);
+        assert!((color[1] - f32::from(0x66u8) / 255.0).abs() <= TOL);
+        assert!((color[2] - f32::from(0xF1u8) / 255.0).abs() <= TOL);
         assert_eq!(color[3], 1.0);
-        assert!(parse_srgb_hex("#2aa198").is_some());
+        assert!(parse_srgb_hex("#6366f1").is_some());
     }
 
     #[test]
     fn parse_srgb_hex_rejects_malformed() {
-        for bad in ["2AA198", "#GGG", "#2AA19", "#2AA1988", "", "#12345g"] {
+        for bad in ["6366F1", "#GGG", "#2AA19", "#6366F18", "", "#12345g"] {
             assert!(parse_srgb_hex(bad).is_none(), "{bad} parsed");
         }
     }

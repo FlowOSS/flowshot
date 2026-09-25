@@ -69,6 +69,7 @@ pub mod input;
 pub mod render;
 pub mod router;
 pub mod selection;
+pub mod widgets;
 
 pub use backdrop::{
     Backdrop, BackdropOptions, CursorSprite, FrozenCapture, MissingFrame, PlacedCursor,

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=FlowShot
+GenericName=Screenshot Tool
+Comment=Capture, annotate, and share screenshots on modern Linux desktops
+Exec=flowshot capture
+Icon=org.flowoss.FlowShot
+Terminal=false
+Categories=Graphics;Utility;
+Keywords=screenshot;capture;region;annotation;wayland;
+StartupNotify=false
+X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2

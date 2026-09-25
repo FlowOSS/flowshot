@@ -23,9 +23,10 @@ pub struct Palette {
 impl Default for Palette {
     fn default() -> Self {
         Self {
-            // Provisional accent (Solarized cyan); may change before release.
-            accent: "#2AA198".to_owned(),
-            contrast: "#1A1A2E".to_owned(),
+            // Final FlowShot brand accent (Indigo 500).
+            accent: "#6366F1".to_owned(),
+            // Final FlowShot brand contrast (Slate 900).
+            contrast: "#0F172A".to_owned(),
             dim_opacity: 190,
         }
     }
@@ -251,8 +252,8 @@ mod tests {
     #[test]
     fn default_palette_matches_spec() {
         let palette = Palette::default();
-        assert_eq!(palette.accent, "#2AA198");
-        assert_eq!(palette.contrast, "#1A1A2E");
+        assert_eq!(palette.accent, "#6366F1");
+        assert_eq!(palette.contrast, "#0F172A");
         assert_eq!(palette.dim_opacity, 190);
     }
 

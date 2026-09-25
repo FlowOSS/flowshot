@@ -157,12 +157,12 @@ mod tests {
 
     #[test]
     fn parses_token_accent_rgb() {
-        let color = Color::from_hex_token("#2AA198").unwrap_or_else(|| panic!("parse"));
-        assert_eq!(color.r, f32::from(0x2Au8) / 255.0);
-        assert_eq!(color.g, f32::from(0xA1u8) / 255.0);
-        assert_eq!(color.b, f32::from(0x98u8) / 255.0);
+        let color = Color::from_hex_token("#6366F1").unwrap_or_else(|| panic!("parse"));
+        assert_eq!(color.r, f32::from(0x63u8) / 255.0);
+        assert_eq!(color.g, f32::from(0x66u8) / 255.0);
+        assert_eq!(color.b, f32::from(0xF1u8) / 255.0);
         assert_eq!(color.a, 1.0);
-        assert!(Color::from_hex_token("#2aa198").is_some());
+        assert!(Color::from_hex_token("#6366f1").is_some());
     }
 
     #[test]
@@ -175,10 +175,10 @@ mod tests {
     #[test]
     fn rejects_malformed_hex() {
         for bad in [
-            "2AA198",
+            "6366F1",
             "#GGG",
             "#2AA19",
-            "#2AA1988",
+            "#6366F18",
             "",
             "#12345g",
             "#123456789",

@@ -19,6 +19,9 @@ calloop = { workspace = true }
 calloop-wayland-source = { workspace = true }
 ashpd = { workspace = true }
 pipewire = { workspace = true }
+# `p2p` enables the private peer-to-peer connection builder the KWin
+# ScreenShot2 stub tests run on (hermetic unit tests, no session bus).
+zbus = { workspace = true, features = ["p2p"] }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 bytes = { workspace = true }
