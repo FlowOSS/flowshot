@@ -521,7 +521,7 @@ mod tests {
 
     #[test]
     fn colors_come_from_tokens_not_literals() {
-        let accent = Color::from_hex_token("#2AA198")
+        let accent = Color::from_hex_token("#6366F1")
             .unwrap_or_else(|| panic!("token"))
             .premultiplied_linear();
         let mut tess = Tessellator::new();

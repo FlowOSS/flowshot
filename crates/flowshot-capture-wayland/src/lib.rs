@@ -71,6 +71,15 @@
 //! [`CapabilityProbe`](flowshot_capture::CapabilityProbe) so the negotiation
 //! ladder gates the portal rungs like the native ones.
 //!
+//! [`KwinScreenShot2Backend`] is the `org.kde.KWin.ScreenShot2` `D-Bus`
+//! fast path (rung 3, KDE Plasma): `KWin` renders the capture itself and
+//! writes RAW `QImage` bits into a client-supplied pipe fd, with the frame
+//! metadata arriving as the reply vardict (contract pinned to the fetched
+//! `KWin` source - see the `kwin` module). Availability is the session-bus
+//! name-owner check plus interface introspection
+//! ([`probe_kwin_blocking`] -> [`KwinAvailability`]). Verification class:
+//! private-bus stub unit tests only on this machine; live KDE QA deferred.
+//!
 //! # Layered cursor position
 //!
 //! [`resolve_cursor_pos`] walks the draft F13 ladder and traces which layer
@@ -108,6 +117,7 @@ mod denial;
 mod dispatch;
 mod hyprland_ipc;
 mod icc;
+mod kwin;
 mod output;
 mod portal;
 mod screencopy;
@@ -127,6 +137,10 @@ pub use cursor::CursorImage;
 pub use error::{ConnectError, IccError, ProbeError, ScreencopyError};
 pub use globals::{Global, ProtocolGlobals};
 pub use icc::IccBackend;
+pub use kwin::{
+    DecodeError, KwinAvailability, KwinError, KwinInteractiveKind, KwinScreenShot2Backend,
+    probe_kwin, probe_kwin_blocking,
+};
 pub use portal::{
     PortalAvailability, PortalDenial, PortalErrorKind, PortalScreenCastBackend,
     PortalScreenCastError, PortalScreenshotBackend, PortalScreenshotError, probe_portals,
