@@ -2,10 +2,10 @@
 //!
 //! Runs an effective action sequence (see [`super::actions`]) against a
 //! captured image: save (todo 29 export pipeline), clipboard copy,
-//! `copy-path` with the uri-list-appended rule, open-with, and the
-//! `notify` toast — all gated and recorded best-effort. Pin (todo 30)
-//! and upload (todo 31) report [`ActionOutcome::Deferred`] until their
-//! modules land; the daemon (todo 32) drives this executor.
+//! `copy-path` with the uri-list-appended rule, open-with, upload
+//! (todo 31), and the `notify` toast — all gated and recorded
+//! best-effort. Pin (todo 30) reports [`ActionOutcome::Deferred`] until
+//! its module lands; the daemon (todo 32) drives this executor.
 
 use std::fmt::{self, Display};
 use std::path::{Path, PathBuf};
@@ -16,6 +16,7 @@ use image::DynamicImage;
 use super::Clipboard;
 use super::actions::{Action, execution_order};
 use crate::export::{FileDialogSink, NotifySink, open_with_app, save};
+use crate::upload::{UploadHistory, UploadMeta, UploadRecord, Uploader};
 
 /// What happened for one executed action.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,11 +33,16 @@ pub enum ActionOutcome {
     OpenedWith,
     /// `open-with` ran without a successful save: warned + no-op.
     OpenWithNoSave,
+    /// Image uploaded successfully.
+    Uploaded {
+        /// Public URL of the uploaded image.
+        url: String,
+    },
     /// Success toast requested (`notify` action, notifications enabled).
     Notified,
     /// `notify` suppressed by the `[daemon].notifications` gate.
     NotificationGated,
-    /// Action module not landed yet (pin = todo 30, upload = todo 31).
+    /// Action module not landed yet (pin = todo 30).
     Deferred(Action),
     /// Action failed; the sequence continued best-effort.
     Failed {
@@ -70,6 +76,13 @@ pub struct PostCapture<'a> {
     pub dialog: &'a dyn FileDialogSink,
     /// Notification seam (todo 29; wired to `notify-rust` in todo 32).
     pub notify: &'a dyn NotifySink,
+    /// Upload backend (todo 31). `None` = upload action deferred.
+    pub uploader: Option<&'a dyn Uploader>,
+    /// Upload history for recording successful uploads. `None` = skip
+    /// history recording.
+    pub upload_history: Option<&'a UploadHistory>,
+    /// Whether to copy the upload URL to the clipboard after success.
+    pub copy_upload_url: bool,
 }
 
 impl fmt::Debug for PostCapture<'_> {
@@ -77,6 +90,8 @@ impl fmt::Debug for PostCapture<'_> {
         f.debug_struct("PostCapture")
             .field("save_config", &self.save_config)
             .field("notifications_enabled", &self.notifications_enabled)
+            .field("has_uploader", &self.uploader.is_some())
+            .field("copy_upload_url", &self.copy_upload_url)
             .finish_non_exhaustive()
     }
 }
@@ -162,9 +177,12 @@ pub async fn run_post_capture(actions: &[Action], ctx: &PostCapture<'_>) -> Post
                     report.outcomes.push(ActionOutcome::NotificationGated);
                 }
             }
-            Action::Pin | Action::Upload => {
-                tracing::debug!(?action, "action module not landed yet; deferred");
-                report.outcomes.push(ActionOutcome::Deferred(action));
+            Action::Upload => {
+                handle_upload(ctx, &mut report).await;
+            }
+            Action::Pin => {
+                tracing::debug!(action = "pin", "action module not landed yet; deferred");
+                report.outcomes.push(ActionOutcome::Deferred(Action::Pin));
             }
         }
     }
@@ -175,6 +193,50 @@ fn failed(action: Action, err: impl Display) -> ActionOutcome {
     ActionOutcome::Failed {
         action,
         message: err.to_string(),
+    }
+}
+
+async fn handle_upload(ctx: &PostCapture<'_>, report: &mut PostCaptureReport) {
+    let Some(uploader) = ctx.uploader else {
+        tracing::debug!(action = "upload", "no uploader configured; deferred");
+        report
+            .outcomes
+            .push(ActionOutcome::Deferred(Action::Upload));
+        return;
+    };
+    let bytes = match crate::export::encode_png(ctx.image) {
+        Ok(b) => b,
+        Err(err) => {
+            report.outcomes.push(failed(Action::Upload, err));
+            return;
+        }
+    };
+    let meta = UploadMeta {
+        filename: "capture.png".to_owned(),
+    };
+    match uploader.upload(&bytes, &meta).await {
+        Ok(result) => {
+            if let Some(history) = ctx.upload_history {
+                let record = UploadRecord {
+                    url: result.url.clone(),
+                    delete_hash: result.delete_hash,
+                    timestamp: chrono::Utc::now(),
+                    filename: meta.filename,
+                };
+                if let Err(err) = history.append(&record) {
+                    tracing::warn!(%err, "failed to record upload in history");
+                }
+            }
+            if ctx.copy_upload_url
+                && let Err(err) = ctx.clipboard.copy_text(&result.url)
+            {
+                tracing::warn!(%err, "failed to copy upload URL to clipboard");
+            }
+            report
+                .outcomes
+                .push(ActionOutcome::Uploaded { url: result.url });
+        }
+        Err(err) => report.outcomes.push(failed(Action::Upload, err)),
     }
 }
 
@@ -305,6 +367,9 @@ mod tests {
                 clipboard: &self.clipboard,
                 dialog: &self.dialog,
                 notify: &self.notify,
+                uploader: None,
+                upload_history: None,
+                copy_upload_url: false,
             }
         }
     }
@@ -452,7 +517,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn pin_and_upload_are_deferred_until_their_modules_land() {
+    async fn pin_is_deferred_and_upload_deferred_without_uploader() {
         let fixture = Fixture::new(SaveConfig::default(), Ok(None));
         let report = run_post_capture(&[Action::Pin, Action::Upload], &fixture.context()).await;
         assert_eq!(

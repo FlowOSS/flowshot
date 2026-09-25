@@ -24,33 +24,41 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-25T16:55:00.572Z",
+      "updated_at": "2026-09-25T18:38:11.927Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
         "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN",
-        "opencode:ses_f26821fdfffezlLpO4TJZhVm9q"
+        "opencode:ses_f26821fdfffezlLpO4TJZhVm9q",
+        "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb",
+        "opencode:ses_f2624544bffewmpncj6rhKJ9dk",
+        "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
+        "opencode:ses_f2623a70dffeayymekar2QUvpy"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
         "opencode:ses_f2682611bffehALBv70o1olHyF": "appended",
         "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN": "appended",
-        "opencode:ses_f26821fdfffezlLpO4TJZhVm9q": "appended"
+        "opencode:ses_f26821fdfffezlLpO4TJZhVm9q": "appended",
+        "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb": "appended",
+        "opencode:ses_f2624544bffewmpncj6rhKJ9dk": "appended",
+        "opencode:ses_f262405e8ffeYrtMdoauvmG1oW": "appended",
+        "opencode:ses_f2623a70dffeayymekar2QUvpy": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
         "todo:1": {
           "task_key": "todo:1",
           "task_label": "1",
-          "task_title": "Cargo workspace + CI + dependency pins",
-          "session_id": "opencode:ses_f29c5e133ffes0MWC65Dy997bD",
+          "task_title": "In `crates/flowshot-core/src/config.rs`:",
+          "session_id": "opencode:ses_f2623a70dffeayymekar2QUvpy",
           "agent": "Sisyphus-Junior",
           "category": "quick",
           "started_at": "2026-09-25T01:39:47.072Z",
-          "status": "completed",
-          "updated_at": "2026-09-25T01:50:14.031Z",
           "ended_at": "2026-09-25T01:50:14.031Z",
-          "elapsed_ms": 626959
+          "elapsed_ms": 626959,
+          "status": "completed",
+          "updated_at": "2026-09-25T18:38:11.927Z"
         },
         "todo:2": {
           "task_key": "todo:2",
@@ -70,7 +78,18 @@
           "session_id": "opencode:ses_f26821fdfffezlLpO4TJZhVm9q",
           "agent": "Sisyphus-Junior",
           "category": "deep-low",
-          "updated_at": "2026-09-25T16:55:00.572Z"
+          "updated_at": "2026-09-25T18:35:29.666Z",
+          "ended_at": "2026-09-25T18:35:29.666Z",
+          "status": "completed"
+        },
+        "todo:10": {
+          "task_key": "todo:10",
+          "task_label": "10",
+          "task_title": "Wayland: portal backends (Screenshot + ScreenCast/PipeWire single-frame)",
+          "session_id": "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-low",
+          "updated_at": "2026-09-25T18:37:47.618Z"
         }
       }
     }
@@ -78,33 +97,41 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-25T16:55:00.572Z",
+  "updated_at": "2026-09-25T18:38:11.927Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
     "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN",
-    "opencode:ses_f26821fdfffezlLpO4TJZhVm9q"
+    "opencode:ses_f26821fdfffezlLpO4TJZhVm9q",
+    "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb",
+    "opencode:ses_f2624544bffewmpncj6rhKJ9dk",
+    "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
+    "opencode:ses_f2623a70dffeayymekar2QUvpy"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
     "opencode:ses_f2682611bffehALBv70o1olHyF": "appended",
     "opencode:ses_f26823ca6ffe4PQs19NBi0rJWN": "appended",
-    "opencode:ses_f26821fdfffezlLpO4TJZhVm9q": "appended"
+    "opencode:ses_f26821fdfffezlLpO4TJZhVm9q": "appended",
+    "opencode:ses_f2624ba4effeATnSZ0oBU63Hsb": "appended",
+    "opencode:ses_f2624544bffewmpncj6rhKJ9dk": "appended",
+    "opencode:ses_f262405e8ffeYrtMdoauvmG1oW": "appended",
+    "opencode:ses_f2623a70dffeayymekar2QUvpy": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Cargo workspace + CI + dependency pins",
-      "session_id": "opencode:ses_f29c5e133ffes0MWC65Dy997bD",
+      "task_title": "In `crates/flowshot-core/src/config.rs`:",
+      "session_id": "opencode:ses_f2623a70dffeayymekar2QUvpy",
       "agent": "Sisyphus-Junior",
       "category": "quick",
       "started_at": "2026-09-25T01:39:47.072Z",
-      "status": "completed",
-      "updated_at": "2026-09-25T01:50:14.031Z",
       "ended_at": "2026-09-25T01:50:14.031Z",
-      "elapsed_ms": 626959
+      "elapsed_ms": 626959,
+      "status": "completed",
+      "updated_at": "2026-09-25T18:38:11.927Z"
     },
     "todo:2": {
       "task_key": "todo:2",
@@ -124,7 +151,18 @@
       "session_id": "opencode:ses_f26821fdfffezlLpO4TJZhVm9q",
       "agent": "Sisyphus-Junior",
       "category": "deep-low",
-      "updated_at": "2026-09-25T16:55:00.572Z"
+      "updated_at": "2026-09-25T18:35:29.666Z",
+      "ended_at": "2026-09-25T18:35:29.666Z",
+      "status": "completed"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Wayland: portal backends (Screenshot + ScreenCast/PipeWire single-frame)",
+      "session_id": "opencode:ses_f262405e8ffeYrtMdoauvmG1oW",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-low",
+      "updated_at": "2026-09-25T18:37:47.618Z"
     }
   },
   "agent": "atlas"

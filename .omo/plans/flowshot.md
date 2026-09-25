@@ -180,7 +180,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = match within tolerance, both outputs in evidence; failure = cursor-session-unavailable mask -> `None`, no panic, capture still works (assert). Evidence <attemptDir>/task-8-flowshot.txt
   Commit: Y | feat(wayland): ICC cursor session stream + one-shot query
   Recommended task executor category: deep-low - event-driven protocol subtleties with cited sources.
-- [ ] 9. Wayland: wlr-screencopy fallback backend
+- [x] 9. Wayland: wlr-screencopy fallback backend
   What to do: `BackendKind::WlrScreencopy` (v3): `manager.capture_output(with_cursor, wl_output)` -> shm format negotiate -> buffer -> `copy` -> `done(flags)` handling `Y_INVERT` flag -> Frame; one-shot per capture like todo 7; serves niri + pre-0.19 wlroots (draft F4). Must NOT: no dmabuf, no v1/v2 paths.
   Parallelization: Wave 2 | Blocked by: 6 | Blocks: 38
   References: grim main.c algorithm (F28 grep.app: capture_output call L527, state struct); wayland.app/protocols/wlr-screencopy-unstable-v1; shotman screencopy module (git.sr.ht/~whynothugo/shotman, F16).
@@ -228,7 +228,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = oracle shot + frame-time log; failure = missing texture -> magenta placeholder + tracing error (unit via mock texture), evidence. Evidence <attemptDir>/task-14-flowshot.png
   Commit: Y | feat(ui): 2D renderer (vector, text atlas, images, effects)
   Recommended task executor category: deep-low - graphics core with cross-module reach (tokens/text/gpu); all decisions pre-made, references cited.
-- [ ] 15. Overlay: frozen-frame backdrop + stitching + cursor compositing
+- [x] 15. Overlay: frozen-frame backdrop + stitching + cursor compositing
   What to do: capture orchestration entry: on capture request -> negotiate backend (todo 5) -> `capture_outputs(paint_cursor = !hideCursor)` -> place per-output Frames into OutputLayout (todo 3 algebra), upload textures, each monitor window renders ITS physical crop 1:1 (physical-first rule - NEVER rescale; #4871 fix); transform handling: rotated/flipped outputs remapped via todo 3 Transform helper before upload; `hideCursor=true` -> paint_cursors=false (fixes #3582); cursor needed separately (magnifier/mover) -> from cursor stream (todo 8); loading state: dim screen + spinner token if capture >100ms (portal paths); backend failure -> notification + typed exit (no silent black frames). Must NOT: no selection/editor logic here.
   Parallelization: Wave 3 | Blocked by: 14,3,8,(7 or 9 or 10) | Blocks: 16
   References: draft F17 (geometry), F27 (crop-math correct rule), F12 (hide-cursor #3582), F9 (#4871/#1705 fixes); todos 3/7/8/9/10 outputs.
@@ -332,7 +332,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = eyedropper color round-trip; failure = eyedropper click outside selection ignored (unit). Evidence <attemptDir>/task-27-flowshot.png
   Commit: Y | feat(editor): crop/move/eyedropper/grid
   Recommended task executor category: unspecified-low - three small features on finished rails.
-- [ ] 28. Actions: clipboard with daemon ownership (+ GNOME keep-alive)
+- [x] 28. Actions: clipboard with daemon ownership (+ GNOME keep-alive)
   What to do: `flowshot-actions::clipboard`: Wayland-native via wl-clipboard-rs (zwlr_data_control) - daemon holds offer ownership AFTER capture UI exits (cleaner than Flameshot's X11 hosting model, draft F27); image/png always + image/jpeg when [save].clipboard_format='jpeg'; action-set semantics (Amendment #3): post-capture behavior driven by ORDERED [save].actions set {copy, copy-path, save, pin, upload, notify, open-with} - replaces saveAfterCopy/copyPathAfterSave boolean flags; MERGE RULE (Oracle r4 F-5.iv): effective set = configured order first, then flag-implied additions deduped at the end; 'copy-path' executes AFTER the last 'save' in the effective sequence, warn+no-op when no save occurred; [daemon].notifications gates ALL notifications, 'notify' action = explicit success-toast request; text/uri-list appended when 'copy-path' in effective set + saved; GNOME keep-alive path for portal-only environments WITHOUT data-control: lazy mime offer + notify-owner-on-first-access + 500ms safety close (F27 spec, screenshotsaver.cpp L253-270 equivalent) - state-machine unit-tested. VERIFICATION CLASS (Metis #2): Hyprland/wlroots data-control path = LIVE-verified; GNOME keep-alive = unit-level only, live QA deferred, never claimed verified. Must NOT: no arboard (GTK-free), no wl-copy shell-out (F28).
   Parallelization: Wave 5 | Blocked by: 4 | Blocks: 32,38
   References: draft F27 daemon/clipboard spec, F9 (#3329 corruption fix rationale), F21 (wl-clipboard-rs 0.9.3), F28 (wl-paste = sanctioned QA oracle), Metis clipboard directive.

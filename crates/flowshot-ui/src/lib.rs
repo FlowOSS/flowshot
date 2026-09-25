@@ -29,6 +29,14 @@
 //!   draw-command consumer the shell and every later layer render through -
 //!   lyon vector tessellation, cosmic-text glyph atlas, image quads, dim /
 //!   shadow / rounded-clip effects, all token-driven.
+//! - **Selection engine** ([`SelectionState`], plan todo 16): the full
+//!   Flameshot selection behavior spec (draft F27) as a pure state machine -
+//!   drag-create behind a 3px manhattan threshold, 8 token-derived handles,
+//!   Shift mirror / Ctrl aspect resize, 1px keyboard nudges, the 10x10
+//!   minimum, layout clamping, the geometry HUD, and the six-stage Esc
+//!   cascade. The selection lives in global logical space, so ONE rect
+//!   spans every monitor (#4894 restored); the shell feeds it through
+//!   [`OverlayCore`] and paints it per window.
 //!
 //! # Purity contract
 //!
@@ -60,6 +68,7 @@ pub mod error;
 pub mod input;
 pub mod render;
 pub mod router;
+pub mod selection;
 
 pub use backdrop::{
     Backdrop, BackdropOptions, CursorSprite, FrozenCapture, MissingFrame, PlacedCursor,
@@ -69,4 +78,8 @@ pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
 pub use router::{InputRouter, WindowSlot};
 pub use runtime::{OverlayHandle, OverlayRuntime};
+pub use selection::{
+    CascadeState, Effect, EscStep, Handle, HitZone, HudPosition, HudView, SelectionConfig,
+    SelectionEnv, SelectionMetrics, SelectionState, SelectionUpdate,
+};
 pub use state::{CursorTrack, OverlayCore};

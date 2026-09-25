@@ -9,13 +9,14 @@
 use std::time::Instant;
 
 use flowshot_core::geometry::LogicalPoint;
-use winit::event::Ime;
-use winit::keyboard::KeyCode;
+use winit::event::{Ime, MouseButton};
+use winit::keyboard::{KeyCode, ModifiersState};
 
 #[cfg(any(test, feature = "test-drive"))]
 use crate::input::SyntheticInput;
 use crate::input::{Action, ImeStatus, InputEvent, RouteReport};
 use crate::router::{InputRouter, WindowSlot};
+use crate::selection::{Effect, SelectionEnv, SelectionState, SelectionUpdate};
 
 /// Where the pointer last was, in every space the overlay needs.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -43,18 +44,22 @@ pub struct OverlayCore {
     ime: ImeStatus,
     last_commit: Option<String>,
     exit_requested: bool,
+    modifiers: ModifiersState,
+    selection: SelectionState,
 }
 
 impl OverlayCore {
     /// Creates a core around `router`.
     #[must_use]
-    pub const fn new(router: InputRouter) -> Self {
+    pub fn new(router: InputRouter) -> Self {
         Self {
             router,
             cursor: None,
             ime: ImeStatus::Inactive,
             last_commit: None,
             exit_requested: false,
+            modifiers: ModifiersState::empty(),
+            selection: SelectionState::default(),
         }
     }
 
@@ -95,6 +100,30 @@ impl OverlayCore {
         self.exit_requested
     }
 
+    /// The selection interaction engine (plan todo 16).
+    #[must_use]
+    pub const fn selection(&self) -> &SelectionState {
+        &self.selection
+    }
+
+    /// Mutable selection access: the config/preselect seams (todos 18/35)
+    /// and the Esc-cascade stage flags (todos 20/26).
+    pub fn selection_mut(&mut self) -> &mut SelectionState {
+        &mut self.selection
+    }
+
+    /// The current keyboard modifier snapshot.
+    #[must_use]
+    pub const fn modifiers(&self) -> &ModifiersState {
+        &self.modifiers
+    }
+
+    /// Evaluates time-driven selection state (the HUD hide deadline) at
+    /// `now`; `true` when something changed and every window must redraw.
+    pub fn tick(&mut self, now: Instant) -> bool {
+        self.selection.tick(now)
+    }
+
     /// Routes one normalized event: maps coordinates into global logical
     /// space, updates shared state, and returns the effects for the shell.
     ///
@@ -106,17 +135,17 @@ impl OverlayCore {
         match event {
             InputEvent::PointerMoved { x, y } => self.route_motion(slot, *x, *y),
             InputEvent::PointerButton { button, pressed } => {
-                tracing::trace!(window = slot.index(), ?button, pressed, "pointer button");
-                RouteReport {
-                    actions: vec![Action::Redraw(slot)],
-                    ..RouteReport::default()
-                }
+                self.route_button(slot, *button, *pressed)
             }
             InputEvent::Key {
                 code,
                 pressed,
                 repeat,
             } => self.route_key(slot, *code, *pressed, *repeat),
+            InputEvent::Modifiers(modifiers) => {
+                self.modifiers = *modifiers;
+                RouteReport::default()
+            }
             InputEvent::Ime(ime) => {
                 self.apply_ime(ime);
                 RouteReport::default()
@@ -149,11 +178,43 @@ impl OverlayCore {
                 clamped,
             });
         }
-        let actions = global.map_or_else(Vec::new, |_| vec![Action::Redraw(slot)]);
+        let mut actions = Vec::new();
+        if let Some(clamped) = clamped {
+            actions.push(Action::Redraw(slot));
+            let update = self.feed_selection(|selection, env| selection.pointer_move(env, clamped));
+            actions.extend(update_actions(update, self.router.window_count()));
+        }
         RouteReport {
             global_position: global,
             clamped_position: clamped,
             actions,
+        }
+    }
+
+    fn route_button(
+        &mut self,
+        slot: WindowSlot,
+        button: MouseButton,
+        pressed: bool,
+    ) -> RouteReport {
+        tracing::trace!(window = slot.index(), ?button, pressed, "pointer button");
+        let mut actions = vec![Action::Redraw(slot)];
+        // The press position is the last tracked cursor (winit always
+        // delivers motion before buttons; injections must do the same).
+        if let Some(cursor) = self.cursor {
+            let at = cursor.clamped;
+            let update = self.feed_selection(|selection, env| {
+                if pressed {
+                    selection.pointer_press(env, button, at)
+                } else {
+                    selection.pointer_release(env, button, at)
+                }
+            });
+            actions.extend(update_actions(update, self.router.window_count()));
+        }
+        RouteReport {
+            actions,
+            ..RouteReport::default()
         }
     }
 
@@ -170,9 +231,12 @@ impl OverlayCore {
             tracing::trace_span!("input.key_to_map", window = slot.index(), pressed, repeat)
                 .entered();
         let mut actions = Vec::new();
-        if pressed && code == KeyCode::Escape {
-            self.exit_requested = true;
-            actions.push(Action::Exit);
+        if pressed {
+            let update = self.feed_selection(|selection, env| selection.key_press(env, code));
+            if update.effects.contains(&Effect::Exit) {
+                self.exit_requested = true;
+            }
+            actions.extend(update_actions(update, self.router.window_count()));
         }
         tracing::trace!(
             target: "flowshot_ui::latency",
@@ -184,6 +248,21 @@ impl OverlayCore {
             actions,
             ..RouteReport::default()
         }
+    }
+
+    /// Runs one selection-engine call with the freshly built environment
+    /// (the env is `Copy`, so the immutable borrow ends before the engine's
+    /// mutable borrow starts).
+    fn feed_selection(
+        &mut self,
+        call: impl FnOnce(&mut SelectionState, &SelectionEnv) -> SelectionUpdate,
+    ) -> SelectionUpdate {
+        let env = SelectionEnv {
+            bounds: self.router.layout().union_bounds(),
+            modifiers: self.modifiers,
+            now: Instant::now(),
+        };
+        call(&mut self.selection, &env)
     }
 
     fn apply_ime(&mut self, ime: &Ime) {
@@ -207,6 +286,18 @@ impl OverlayCore {
             }
         }
     }
+}
+
+/// Translates a selection update into shell actions: the mapped effects,
+/// plus a redraw of EVERY window when the selection geometry or HUD
+/// changed - a spanning selection (or a HUD anchored to it) can live on any
+/// monitor, not just the event's window.
+fn update_actions(update: SelectionUpdate, window_count: usize) -> Vec<Action> {
+    let mut actions: Vec<Action> = update.effects.into_iter().map(Action::from).collect();
+    if update.changed {
+        actions.extend((0..window_count).map(|index| Action::Redraw(WindowSlot::new(index))));
+    }
+    actions
 }
 
 #[cfg(test)]

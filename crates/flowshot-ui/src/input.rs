@@ -9,7 +9,7 @@
 
 use flowshot_core::geometry::LogicalPoint;
 use winit::event::{Ime, MouseButton};
-use winit::keyboard::KeyCode;
+use winit::keyboard::{KeyCode, ModifiersState};
 
 use crate::router::WindowSlot;
 
@@ -46,6 +46,11 @@ pub enum InputEvent {
         /// `true` when the press is an auto-repeat.
         repeat: bool,
     },
+
+    /// The keyboard modifier snapshot changed (winit delivers modifiers as
+    /// their own event; the selection engine reads the tracked state when
+    /// routing keys and pointer events - plan todo 16).
+    Modifiers(ModifiersState),
 
     /// An input-method event, plumbed through for the text tool (todo 22).
     Ime(Ime),
@@ -110,6 +115,15 @@ impl SyntheticInput {
         }
     }
 
+    /// A modifier-state change event.
+    #[must_use]
+    pub const fn modifiers(slot: WindowSlot, modifiers: ModifiersState) -> Self {
+        Self {
+            slot,
+            event: InputEvent::Modifiers(modifiers),
+        }
+    }
+
     /// An input-method event.
     #[must_use]
     pub const fn ime(slot: WindowSlot, ime: Ime) -> Self {
@@ -127,6 +141,15 @@ pub enum Action {
     Redraw(WindowSlot),
     /// Tear down every window and exit the event loop.
     Exit,
+    /// The selection was accepted (Enter): the binary layer runs the export
+    /// actions (todo 35 wires accept -> export -> teardown).
+    Accept,
+    /// The selection was copied (Ctrl+C or a configured double-click): the
+    /// binary layer runs the clipboard pipeline (todos 28/35).
+    Copy,
+    /// Right-click: open the color wheel at the shared cursor position
+    /// (todo 26 seam).
+    ColorWheel,
 }
 
 /// The outcome of routing one input event.

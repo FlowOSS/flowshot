@@ -136,6 +136,17 @@ pub(crate) fn f32_from_i32(value: i32) -> f32 {
     value as f32
 }
 
+/// `f64` logical coordinates/lengths convert to the renderer's `f32` pixel
+/// space; layout-scale values lose only sub-ulp precision, and an overflow
+/// saturates to ±inf (the renderer skips non-finite geometry with a log).
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "f32 IS the renderer's pixel contract; f64 layout values are far inside its range"
+)]
+pub(crate) fn f32_from_f64(value: f64) -> f32 {
+    value as f32
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::float_cmp)]

@@ -10,6 +10,8 @@
 pub mod clipboard;
 pub mod error;
 pub mod export;
+pub mod upload;
 
 pub use clipboard::Clipboard;
-pub use error::{ClipboardError, ExportError};
+pub use error::{ClipboardError, ExportError, UploadError};
+pub use upload::{Imgur, UploadHistory, UploadMeta, UploadRecord, UploadResult, Uploader};
