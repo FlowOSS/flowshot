@@ -14,35 +14,12 @@ use std::borrow::Cow;
 /// token-only colors in the renderer.
 pub(crate) const FALLBACK_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
-/// Parses a `#RRGGBB` design-token color into premultiplied-alpha RGBA
-/// floats.
+/// Parses a `#RRGGBB` design-token color into RGBA floats (sRGB-encoded,
+/// matching the todo-13 crosshair pipeline's direct-write shading). Delegates
+/// to the renderer's canonical token parser.
 pub(crate) fn parse_srgb_hex(hex: &str) -> Option<[f32; 4]> {
-    let digits = hex.strip_prefix('#')?.as_bytes();
-    if digits.len() != 6 {
-        return None;
-    }
-    let mut channels = [0u8; 3];
-    for (index, channel) in channels.iter_mut().enumerate() {
-        let [hi, lo] = digits.get(index * 2..index * 2 + 2)? else {
-            return None;
-        };
-        *channel = from_hex_digit(*hi)? * 16 + from_hex_digit(*lo)?;
-    }
-    Some([
-        f32::from(channels[0]) / 255.0,
-        f32::from(channels[1]) / 255.0,
-        f32::from(channels[2]) / 255.0,
-        1.0,
-    ])
-}
-
-fn from_hex_digit(digit: u8) -> Option<u8> {
-    match digit {
-        b'0'..=b'9' => Some(digit - b'0'),
-        b'a'..=b'f' => Some(digit - b'a' + 10),
-        b'A'..=b'F' => Some(digit - b'A' + 10),
-        _ => None,
-    }
+    let color = crate::render::Color::from_hex_token(hex)?;
+    Some([color.r, color.g, color.b, color.a])
 }
 
 /// The four crosshair arm endpoints in normalized device coordinates for a

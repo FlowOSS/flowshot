@@ -18,11 +18,12 @@ use winit::window::{Fullscreen, Window, WindowAttributes, WindowId, WindowLevel}
 
 use crate::app::{OverlayApp, WindowEntry};
 use crate::error::UiError;
-use crate::gpu::{GpuContext, SurfaceSpec, WindowSurface};
+use crate::gpu::GpuContext;
 use crate::input::InputEvent;
 use crate::monitor;
 use crate::router::WindowSlot;
 use crate::runtime::UiEvent;
+use crate::surface::{SurfaceSpec, WindowSurface};
 
 impl OverlayApp {
     pub(crate) fn spawn(&mut self, target: &ActiveEventLoop) -> Result<(), UiError> {

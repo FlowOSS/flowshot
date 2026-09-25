@@ -15,10 +15,11 @@ use winit::window::{Window, WindowId};
 
 use crate::crosshair;
 use crate::error::UiError;
-use crate::gpu::{GpuContext, WindowSurface};
+use crate::gpu::GpuContext;
 use crate::input::Action;
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
+use crate::surface::WindowSurface;
 
 /// One per-monitor overlay window and its GPU surface.
 #[derive(Debug)]

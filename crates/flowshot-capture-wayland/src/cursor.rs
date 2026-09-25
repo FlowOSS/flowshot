@@ -22,7 +22,7 @@
 //! Cursor observation is never a capture requirement. A `Hyprland`
 //! `PERMISSION_TYPE_CURSOR_POS` denial leaves the session inert (no position
 //! event), and every failure path collapses to `None` with a warning - see
-//! [`run`].
+//! the private `run` module.
 
 pub(crate) mod dispatch;
 pub mod protocol;
@@ -76,15 +76,17 @@ impl IccBackend {
 
 /// Rounds a global logical point to the nearest integer pixel pair (half away
 /// from zero, saturating), matching `hyprctl cursorpos`'s integer report.
-fn round_pair(logical: LogicalPoint) -> (i32, i32) {
+/// Shared with the Hyprland IPC layer so both position sources round alike.
+pub(crate) fn round_pair(logical: LogicalPoint) -> (i32, i32) {
     (logical.x.to_physical(1.0).0, logical.y.to_physical(1.0).0)
 }
 
 /// Runs one blocking cursor query on a dedicated worker thread and bridges the
 /// result into a non-blocking future, mirroring the frame-capture worker. A
 /// dropped future leaves the worker to finish and tear its one-shot connection
-/// down; a panicked worker closes the channel and yields `None`.
-async fn run_on_worker<T, F>(name: &str, work: F) -> Option<T>
+/// down; a panicked worker closes the channel and yields `None`. Shared with
+/// the layered resolver's Hyprland IPC query.
+pub(crate) async fn run_on_worker<T, F>(name: &str, work: F) -> Option<T>
 where
     T: Send + 'static,
     F: FnOnce() -> Option<T> + Send + 'static,

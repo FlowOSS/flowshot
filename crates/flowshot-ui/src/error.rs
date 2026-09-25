@@ -131,6 +131,53 @@ pub enum UiError {
     #[error("GPU out of memory while presenting a frame")]
     OutOfMemory,
 
+    /// A render target extent is zero or exceeds the device texture limit.
+    #[error(
+        "render target {width}x{height} px is invalid for this device \
+         (max 2D texture dimension: {max} px)"
+    )]
+    RenderTargetTooLarge {
+        /// Requested width in physical pixels.
+        width: u32,
+        /// Requested height in physical pixels.
+        height: u32,
+        /// The device's `max_texture_dimension_2d`.
+        max: u32,
+    },
+
+    /// Uploaded image data does not match the declared texture dimensions.
+    #[error(
+        "texture data length mismatch: {width}x{height} RGBA needs {expected} bytes, got {actual}"
+    )]
+    TextureDataLength {
+        /// Declared texture width in texels.
+        width: u32,
+        /// Declared texture height in texels.
+        height: u32,
+        /// Byte count the declared dimensions require.
+        expected: usize,
+        /// Byte count actually provided.
+        actual: usize,
+    },
+
+    /// An uploaded texture is zero-sized or exceeds the device texture limit.
+    #[error(
+        "texture {width}x{height} px is invalid for this device \
+         (max 2D texture dimension: {max} px)"
+    )]
+    TextureTooLarge {
+        /// Declared texture width in texels.
+        width: u32,
+        /// Declared texture height in texels.
+        height: u32,
+        /// The device's `max_texture_dimension_2d`.
+        max: u32,
+    },
+
+    /// A GPU buffer could not be mapped for readback.
+    #[error("GPU buffer mapping failed during readback: {0}")]
+    BufferMap(#[from] wgpu::BufferAsyncError),
+
     /// A geometry operation inside the input router failed validation.
     #[error("geometry error: {0}")]
     Geometry(#[from] GeometryError),

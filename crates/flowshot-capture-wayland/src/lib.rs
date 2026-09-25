@@ -51,6 +51,19 @@
 //! and the long-lived event stream from
 //! [`cursor_events`](flowshot_capture::CaptureBackend::cursor_events).
 //!
+//! # Layered cursor position
+//!
+//! [`resolve_cursor_pos`] walks the draft F13 ladder and traces which layer
+//! answered: the ICC pointer-cursor session one-shot
+//! ([`CursorSource::IccCursorSession`]), the raw Hyprland IPC socket - never
+//! a spawned `hyprctl` ([`CursorSource::HyprlandIpc`]), and the universal
+//! overlay-first-motion handoff ([`CursorSource::AwaitFirstMotion`]) for
+//! todos 16/18. [`cursor_capabilities`] exports the per-desktop capability
+//! table for the docs build. Desktop detection ([`desktop`]) is the full
+//! `XDG_CURRENT_DESKTOP` + `WAYLAND_DISPLAY` + `HYPRLAND_INSTANCE_SIGNATURE`
+//! sniff with the honest [`DesktopEnv::Other`](flowshot_capture::DesktopEnv)
+//! fallback.
+//!
 //! # v1 limitations
 //!
 //! - **Fractional scale**: `wl_output.scale` reports integers only.
@@ -73,6 +86,7 @@
 
 mod denial;
 mod dispatch;
+mod hyprland_ipc;
 mod icc;
 mod output;
 mod session;
@@ -83,12 +97,17 @@ pub mod cursor;
 pub mod desktop;
 pub mod error;
 pub mod globals;
+pub mod resolve;
 pub mod stitch;
 
 pub use cursor::CursorImage;
 pub use error::{ConnectError, IccError, ProbeError};
 pub use globals::{Global, ProtocolGlobals};
 pub use icc::IccBackend;
+pub use resolve::{
+    CURSOR_CAPABILITY_DESKTOPS, CursorCapabilities, CursorSource, cursor_capabilities,
+    resolve_cursor_pos,
+};
 pub use session::SessionSnapshot;
 pub use stitch::CapturedOutputs;
 pub use thread::CaptureThread;
