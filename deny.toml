@@ -1,0 +1,18 @@
+# This file defines the license policy for the project
+# See https://github.com/EmbarkStudios/cargo-deny for documentation
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode",
+    "MPL-2.0",
+    "Zlib",
+    "GPL-3.0-or-later",
+]
+
+[licenses.private]
+ignore = false

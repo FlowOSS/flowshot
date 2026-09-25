@@ -1,0 +1,22 @@
+[package]
+name = "flowshot-capture"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/flowoss/flowshot"
+authors = ["FlowShot Contributors"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+flowshot-core = { path = "../flowshot-core" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+bytes = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true
