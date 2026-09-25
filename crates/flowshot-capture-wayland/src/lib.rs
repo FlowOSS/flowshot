@@ -44,8 +44,12 @@
 //! multi-output capture stitched per [`OutputLayout`](flowshot_core::geometry::OutputLayout)
 //! for region captures ([`stitch`]), a 10 second per-phase timeout, and the
 //! `Hyprland` permission-denial black-frame mapping ([`error::IccError`]).
-//! v1 captures into `wl_shm` buffers only (no dma-buf); cursor sessions are
-//! todo 8.
+//! v1 captures into `wl_shm` buffers only (no dma-buf). Cursor observation
+//! ([`cursor`]) bridges `ext-image-copy-capture-v1` pointer-cursor sessions
+//! onto the shared [`CursorStream`](flowshot_capture::CursorStream): a one-shot
+//! global-logical [`IccBackend::cursor_pos`], a one-shot [`IccBackend::cursor_image`],
+//! and the long-lived event stream from
+//! [`cursor_events`](flowshot_capture::CaptureBackend::cursor_events).
 //!
 //! # v1 limitations
 //!
@@ -75,11 +79,13 @@ mod session;
 mod thread;
 mod transform;
 
+pub mod cursor;
 pub mod desktop;
 pub mod error;
 pub mod globals;
 pub mod stitch;
 
+pub use cursor::CursorImage;
 pub use error::{ConnectError, IccError, ProbeError};
 pub use globals::{Global, ProtocolGlobals};
 pub use icc::IccBackend;

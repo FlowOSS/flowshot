@@ -7,7 +7,9 @@
 
 use flowshot_core::geometry::Transform;
 use wayland_client::protocol::wl_output::{self, WlOutput};
+use wayland_client::protocol::wl_pointer::{self, WlPointer};
 use wayland_client::protocol::wl_registry::{self, WlRegistry};
+use wayland_client::protocol::wl_seat::{self, Capability, WlSeat};
 use wayland_client::{Connection, Dispatch, QueueHandle};
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_manager_v1::ZxdgOutputManagerV1;
 use wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_v1::{self, ZxdgOutputV1};
@@ -142,5 +144,40 @@ impl Dispatch<ZxdgOutputV1, OutputKey> for CaptureState {
             // #[non_exhaustive].
             zxdg_output_v1::Event::Done | _ => {}
         }
+    }
+}
+
+impl Dispatch<WlSeat, ()> for CaptureState {
+    fn event(
+        state: &mut Self,
+        _proxy: &WlSeat,
+        event: wl_seat::Event,
+        _data: &(),
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+    ) {
+        // The seat name is informational and the generated enum is
+        // #[non_exhaustive]; only the pointer capability matters (it gates the
+        // cursor session).
+        if let wl_seat::Event::Capabilities { capabilities } = event {
+            state.seat_has_pointer = capabilities
+                .into_result()
+                .is_ok_and(|capabilities| capabilities.contains(Capability::Pointer));
+        }
+    }
+}
+
+impl Dispatch<WlPointer, ()> for CaptureState {
+    fn event(
+        _state: &mut Self,
+        _proxy: &WlPointer,
+        _event: wl_pointer::Event,
+        _data: &(),
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+    ) {
+        // Cursor position and hotspot come from the ext-image-copy-capture
+        // cursor session, not from wl_pointer; the pointer object exists only
+        // to create that session, so its events are ignored.
     }
 }
