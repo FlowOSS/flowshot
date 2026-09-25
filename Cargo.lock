@@ -1170,10 +1170,15 @@ dependencies = [
 name = "flowshot-capture-wayland"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "bytes",
  "calloop",
  "calloop-wayland-source",
  "flowshot-capture",
  "flowshot-core",
+ "futures",
+ "image",
+ "nix",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

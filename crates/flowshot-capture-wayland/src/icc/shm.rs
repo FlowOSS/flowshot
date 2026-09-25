@@ -1,0 +1,107 @@
+//! Anonymous shared-memory capture buffers: `memfd` + `wl_shm` pool +
+//! `wl_buffer`, with pixel readback through the file descriptor.
+//!
+//! v1 captures exclusively into `wl_shm` buffers (no dma-buf path). The
+//! backing memory is an anonymous file (`memfd_create`), sized with
+//! `ftruncate`, handed to the compositor through `wl_shm.create_pool` (the
+//! descriptor is duplicated into the socket at send time; the local file
+//! stays open for readback). Pixels are read with ordinary file I/O after
+//! the frame's `ready` event - both mappings go through the same page cache,
+//! so no memory mapping (and no `unsafe`) is needed on the client side.
+
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
+use std::os::fd::AsFd;
+
+use nix::sys::memfd::{MemFdCreateFlag, memfd_create};
+use nix::unistd::ftruncate;
+use wayland_client::QueueHandle;
+use wayland_client::protocol::wl_buffer::WlBuffer;
+use wayland_client::protocol::wl_shm::WlShm;
+use wayland_client::protocol::wl_shm_pool::WlShmPool;
+
+use super::protocol::BufferParams;
+use crate::error::IccError;
+use crate::session::CaptureState;
+
+/// Name of the anonymous capture file, visible in `/proc/<pid>/fd`.
+const MEMFD_NAME: &std::ffi::CStr = c"flowshot-icc";
+
+/// One capture's shared-memory buffer and its Wayland handles.
+///
+/// Dropping the buffer destroys the `wl_buffer` and the `wl_shm_pool`
+/// (one-shot lifecycle: every capture allocates fresh), then closes the
+/// anonymous file.
+#[derive(Debug)]
+pub(crate) struct ShmBuffer {
+    file: File,
+    pool: WlShmPool,
+    buffer: WlBuffer,
+    params: BufferParams,
+}
+
+impl ShmBuffer {
+    /// Creates the anonymous file, sizes it, and registers pool and buffer
+    /// with the compositor.
+    ///
+    /// # Errors
+    ///
+    /// [`IccError::Io`] when `memfd_create`/`ftruncate` fail, and
+    /// [`IccError::Internal`] when the negotiated geometry does not fit the
+    /// protocol's `i32` wire fields.
+    pub(crate) fn allocate(
+        shm: &WlShm,
+        qh: &QueueHandle<CaptureState>,
+        params: &BufferParams,
+    ) -> Result<Self, IccError> {
+        let fd =
+            memfd_create(MEMFD_NAME, MemFdCreateFlag::empty()).map_err(std::io::Error::from)?;
+        let size = i64::try_from(params.size_bytes)
+            .map_err(|_| IccError::Internal("buffer size overflows the wire field"))?;
+        ftruncate(&fd, size).map_err(std::io::Error::from)?;
+        let file = File::from(fd);
+        let size_i32 = i32::try_from(params.size_bytes)
+            .map_err(|_| IccError::Internal("buffer size overflows the pool wire field"))?;
+        let (width, height, stride) = (
+            i32::try_from(params.width).map_err(|_| IccError::Internal("width overflow"))?,
+            i32::try_from(params.height).map_err(|_| IccError::Internal("height overflow"))?,
+            i32::try_from(params.stride).map_err(|_| IccError::Internal("stride overflow"))?,
+        );
+        let pool = shm.create_pool(file.as_fd(), size_i32, qh, ());
+        let buffer = pool.create_buffer(0, width, height, stride, params.shm_format, qh, ());
+        Ok(Self {
+            file,
+            pool,
+            buffer,
+            params: *params,
+        })
+    }
+
+    /// The `wl_buffer` to attach to a capture frame.
+    pub(crate) fn buffer(&self) -> &WlBuffer {
+        &self.buffer
+    }
+
+    /// Reads the whole buffer back from the anonymous file.
+    ///
+    /// Valid after the frame's `ready` event: the compositor wrote the
+    /// pixels through its own mapping of the same page-cache pages.
+    ///
+    /// # Errors
+    ///
+    /// [`IccError::Io`] when the seek or read fails.
+    pub(crate) fn read_pixels(&self) -> Result<Vec<u8>, IccError> {
+        let mut data = vec![0u8; self.params.size_bytes];
+        let mut file = &self.file;
+        file.seek(SeekFrom::Start(0))?;
+        file.read_exact(&mut data)?;
+        Ok(data)
+    }
+}
+
+impl Drop for ShmBuffer {
+    fn drop(&mut self) {
+        self.buffer.destroy();
+        self.pool.destroy();
+    }
+}
