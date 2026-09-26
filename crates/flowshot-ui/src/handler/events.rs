@@ -10,14 +10,34 @@ use std::time::Instant;
 
 use flowshot_core::geometry;
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, WindowEvent};
+use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::keyboard::PhysicalKey;
 use winit::window::WindowId;
 
 use crate::app::OverlayApp;
+use crate::editor::WHEEL_ANGLE_PER_LINE;
 use crate::input::InputEvent;
+use crate::router::WindowSlot;
 use crate::runtime::UiEvent;
+
+/// Converts a winit scroll delta into Qt-style wheel-angle units (a
+/// standard 3-line notch = 120 units, the space the F27
+/// `MOUSE_WHEEL_TRESHOLD = 60` constant is defined in). Pixel deltas
+/// (touchpads) pass through: their magnitude order matches the angle units
+/// (Flameshot's touchpad comment - "value 2 or more, usually 2-8").
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "wheel angles are clamped into the i32 range before the cast"
+)]
+fn wheel_angle(delta: MouseScrollDelta) -> i32 {
+    let raw = match delta {
+        MouseScrollDelta::LineDelta(_, lines) => f64::from(lines) * f64::from(WHEEL_ANGLE_PER_LINE),
+        MouseScrollDelta::PixelDelta(position) => position.y,
+    };
+    let clamped = raw.round().clamp(f64::from(i32::MIN), f64::from(i32::MAX));
+    clamped as i32
+}
 
 impl ApplicationHandler<UiEvent> for OverlayApp {
     fn resumed(&mut self, target: &ActiveEventLoop) {
@@ -93,6 +113,7 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
                 let report = self.core.route(slot, &InputEvent::Ime(ime));
                 self.apply_actions(target, &report.actions);
             }
+            WindowEvent::MouseWheel { delta, .. } => self.route_wheel(target, slot, delta),
             WindowEvent::Resized(size) => {
                 let mut resize_failure = None;
                 if let Some(gpu) = self.gpu.as_ref()
@@ -132,9 +153,8 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
             WindowEvent::Focused(focused) => {
                 tracing::trace!(window = slot.index(), focused, "focus changed");
             }
-            // Remaining variants (touch, wheel, theme, file drops) are
-            // irrelevant at this stage; wheel arrives with the tool layer
-            // (todo 20).
+            // Remaining variants (touch, theme, file drops) are irrelevant
+            // at this stage.
             _ => {}
         }
     }
@@ -171,5 +191,17 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
 
     fn exiting(&mut self, _target: &ActiveEventLoop) {
         tracing::info!(windows = self.windows.len(), "overlay shutting down");
+    }
+}
+
+impl OverlayApp {
+    /// Routes one wheel event as an angle delta (the todo-20 tool-size
+    /// adjuster consumes it; zero deltas are dropped).
+    fn route_wheel(&mut self, target: &ActiveEventLoop, slot: WindowSlot, delta: MouseScrollDelta) {
+        let delta_y = wheel_angle(delta);
+        if delta_y != 0 {
+            let report = self.core.route(slot, &InputEvent::Wheel { delta_y });
+            self.apply_actions(target, &report.actions);
+        }
     }
 }

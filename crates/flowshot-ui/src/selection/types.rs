@@ -10,6 +10,8 @@ use winit::keyboard::ModifiersState;
 
 use crate::input::Action;
 
+use super::EscStep;
+
 /// The config keys the selection engine consumes (`[editor]` group). No
 /// other behavior constant is tunable (plan todo 16 "Must NOT").
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,6 +102,10 @@ pub struct SelectionUpdate {
     /// redraws EVERY window - a spanning selection and its HUD can live on
     /// any monitor).
     pub changed: bool,
+    /// The Esc-cascade step this event popped; `None` for every other key.
+    /// The funnel applies the editor-side reaction (todo 20: deselect the
+    /// tool / object / edit widget) - the cascade ORDER stays owned here.
+    pub esc_step: Option<EscStep>,
 }
 
 impl SelectionUpdate {
@@ -115,7 +121,18 @@ impl SelectionUpdate {
                 "selection effect"
             );
         }
-        Self { effects, changed }
+        Self {
+            effects,
+            changed,
+            esc_step: None,
+        }
+    }
+
+    pub(super) fn esc(step: EscStep, effects: Vec<Effect>) -> Self {
+        Self {
+            esc_step: Some(step),
+            ..Self::with(effects, false)
+        }
     }
 }
 

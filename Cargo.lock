@@ -1454,12 +1454,16 @@ name = "flowshot-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ashpd",
+ "clap",
  "flowshot-actions",
- "flowshot-capture",
  "flowshot-core",
  "notify-rust",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "tracing-subscriber",
+ "url",
  "zbus 4.4.0",
 ]
 
@@ -1470,6 +1474,7 @@ dependencies = [
  "bytemuck",
  "bytes",
  "cosmic-text",
+ "flowshot-actions",
  "flowshot-capture",
  "flowshot-core",
  "futures",

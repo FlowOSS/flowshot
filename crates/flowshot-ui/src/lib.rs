@@ -37,6 +37,13 @@
 //!   cascade. The selection lives in global logical space, so ONE rect
 //!   spans every monitor (#4894 restored); the shell feeds it through
 //!   [`OverlayCore`] and paints it per window.
+//! - **Editor tool framework** ([`EditorState`], plan todo 20): the scene
+//!   bridge every annotation tool (todos 21-27) plugs into - the [`Tool`]
+//!   lifecycle (drawStart/Move/End/pressed) with the F27 [`EditorContext`],
+//!   the exact F27 event-routing priority (picker > right-click > active
+//!   tool > edit commit > object select > selection engine), per-tool size
+//!   dispatch with the digit/wheel adjusters, scene commits as single undo
+//!   units, and the real producers of the Esc cascade's tool/object stages.
 //!
 //! # Purity contract
 //!
@@ -64,8 +71,10 @@ mod state;
 mod surface;
 
 pub mod backdrop;
+pub mod editor;
 pub mod error;
 pub mod input;
+pub mod pins;
 pub mod render;
 pub mod router;
 pub mod selection;
@@ -74,6 +83,10 @@ pub mod widgets;
 pub use backdrop::{
     Backdrop, BackdropOptions, CursorSprite, FrozenCapture, MissingFrame, PlacedCursor,
     backdrop_texture_id, capture_frozen, cursor_texture_id,
+};
+pub use editor::{
+    EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUpdate, EditorView,
+    FramePixels, Tool, ToolCursor, ToolKind, ToolRegistry, ToolShortcuts, register_shape_tools,
 };
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};

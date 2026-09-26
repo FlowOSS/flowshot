@@ -228,6 +228,7 @@ impl SelectionState {
         SelectionUpdate {
             effects: Vec::new(),
             changed,
+            esc_step: None,
         }
     }
 

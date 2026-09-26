@@ -200,6 +200,28 @@ pub enum UiError {
         /// Expected (post-transform buffer) height in physical pixels.
         expected_height: u32,
     },
+
+    // ---- plan todo 30 (pins) ----
+    /// The pin host was asked to run with zero pins.
+    #[error("no pins requested; the pin host needs at least one pin window")]
+    NoPinsRequested,
+
+    /// A pin image buffer is zero-sized or shorter than its declared
+    /// dimensions require (pin spawn guard, plan todo 30).
+    #[error(
+        "pin image {width}x{height} px needs {expected} RGBA bytes, got {actual} \
+          (zero-sized pins are rejected)"
+    )]
+    PinImageInvalid {
+        /// Declared width in physical pixels.
+        width: u32,
+        /// Declared height in physical pixels.
+        height: u32,
+        /// Byte count the declared dimensions require.
+        expected: usize,
+        /// Byte count actually provided.
+        actual: usize,
+    },
 }
 
 /// One GPU adapter enumerated at startup, reported inside

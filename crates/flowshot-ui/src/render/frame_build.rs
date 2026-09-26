@@ -22,7 +22,13 @@ pub(super) enum FlatMode {
     Content,
     ClipPush,
     ClipPop,
+    Invert,
 }
+
+/// The invert blend's source color: unit white, so `src * (1 - dst)` is the
+/// exact per-channel complement (the blend state does the inversion, the
+/// geometry only carries coverage).
+const INVERT_SRC: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
 #[derive(Debug, Clone)]
 pub(super) enum Step {
@@ -87,6 +93,15 @@ impl FrameBuild<'_> {
                 self.tessellator
                     .dim(*bounds, cutouts, color.premultiplied_linear(), self.flat);
                 self.push_flat(start, self.clip_depth, FlatMode::Content);
+            }
+            Command::Invert { rect } => {
+                let start = self.flat.indices.len();
+                let shape = Shape::Rect {
+                    rect: *rect,
+                    radius: 0.0,
+                };
+                self.tessellator.fill_shape(&shape, INVERT_SRC, self.flat);
+                self.push_flat(start, self.clip_depth, FlatMode::Invert);
             }
             Command::Image(command) => self.image(command),
             Command::Shadow { rect, radius, spec } => {

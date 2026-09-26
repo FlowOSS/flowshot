@@ -41,10 +41,19 @@
 use std::collections::HashMap;
 use std::sync::Once;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
 
 use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, SwashContent};
+use flowshot_core::config::{ArrowStyle, ArrowToolConfig, Config, ToolsConfig};
+use flowshot_core::geometry::{
+    LogicalPoint, LogicalRect, OutputInfo, PhysicalSize, Transform as GeoTransform,
+};
 use flowshot_core::tokens::DesignTokens;
+use flowshot_ui::editor::{
+    EditorEnv, EditorState, EditorTools, EditorView, ToolKind, ToolRegistry,
+};
 use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::register_shape_tools;
 use flowshot_ui::render::{
     Color, Command, DisplayList, ImageCommand, Point, Rect, RenderTarget, Renderer, RgbaImage,
     ShadowSpec, Shape, TextCommand, TextureId, linear_to_srgb, read_texture_rgba, srgb_to_linear,
@@ -53,6 +62,8 @@ use tiny_skia::{FillRule, LineCap, LineJoin, Paint, Path, PathBuilder, Pixmap, S
 use tracing_subscriber::layer::{Context, Layer};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry;
+use winit::event::MouseButton;
+use winit::keyboard::ModifiersState;
 
 const W: u32 = 640;
 const H: u32 = 480;
@@ -210,6 +221,21 @@ impl Canvas {
         self.clip_stack.push(self.clip.clone());
         for (slot, value) in self.clip.iter_mut().zip(mask) {
             *slot *= f32::from(*value) / 255.0;
+        }
+    }
+
+    /// The GPU invert blend's reference: per-sample `1 - dst` in linear
+    /// light, MSAA-resolved = coverage-weighted complement; alpha untouched.
+    fn invert_coverage(&mut self, mask: &[u8]) {
+        for index in 0..self.px.len() {
+            let cov = f32::from(mask[index]) / 255.0 * self.clip[index];
+            if cov <= 0.0 {
+                continue;
+            }
+            let pixel = &mut self.px[index];
+            for channel in 0..3 {
+                pixel[channel] += cov * (1.0 - 2.0 * pixel[channel]);
+            }
         }
     }
 
@@ -478,6 +504,13 @@ fn render_reference(
                     pixmap.fill_path(&path, paint, FillRule::EvenOdd, Transform::identity(), None);
                 });
                 canvas.coverage(&mask, color.premultiplied_linear());
+            }
+            Command::Invert { rect } => {
+                let path = rect_path(*rect, 0.0);
+                let mask = mask_from(W, H, |pixmap, paint| {
+                    pixmap.fill_path(&path, paint, FillRule::EvenOdd, Transform::identity(), None);
+                });
+                canvas.invert_coverage(&mask);
             }
             Command::Image(command) => {
                 blit_image(&mut canvas, command, textures);
@@ -1185,4 +1218,330 @@ fn count_ink(image: &[u8], x0: u32, y0: u32, width: u32, height: u32, color: &Co
         }
     }
     count
+}
+
+// ---------------------------------------------------------------------------
+// Todo 21: per-tool golden fixtures (plan acceptance: three per tool -
+// default size, max size, constrained modifier; the pencil and invert third
+// fixtures carry documented deviations: the pencil has no F27 adjustment
+// flags and the invert tool no constrain, so theirs exercise the dense
+// freehand arc under Ctrl and the z-order filter over committed objects).
+// ---------------------------------------------------------------------------
+
+fn golden_editor(config: &Config) -> EditorState {
+    let mut registry = ToolRegistry::new();
+    register_shape_tools(&mut registry);
+    EditorState::new(EditorTools::from_config(config), registry)
+}
+
+fn golden_output() -> OutputInfo {
+    OutputInfo::new(
+        "GOLDEN",
+        "GOLDEN",
+        LogicalRect::from_raw(0.0, 0.0, f64::from(W), f64::from(H)),
+        PhysicalSize::from_raw(W as i32, H as i32),
+        1.0,
+        GeoTransform::Normal,
+    )
+    .expect("valid golden output")
+}
+
+fn lp(point: (f64, f64)) -> LogicalPoint {
+    LogicalPoint::from_raw(point.0, point.1)
+}
+
+fn drag(ed: &mut EditorState, env: &EditorEnv, from: (f64, f64), to: (f64, f64)) {
+    ed.pointer_press(env, MouseButton::Left, lp(from));
+    ed.pointer_move(env, lp(to));
+    ed.pointer_release(env, MouseButton::Left, lp(to));
+}
+
+fn drag_through(ed: &mut EditorState, env: &EditorEnv, points: &[(f64, f64)]) {
+    let Some((first, rest)) = points.split_first() else {
+        return;
+    };
+    ed.pointer_press(env, MouseButton::Left, lp(*first));
+    for point in rest {
+        ed.pointer_move(env, lp(*point));
+    }
+    let last = rest.last().unwrap_or(first);
+    ed.pointer_release(env, MouseButton::Left, lp(*last));
+}
+
+fn ctrl(env: &EditorEnv) -> EditorEnv {
+    EditorEnv {
+        modifiers: ModifiersState::CONTROL,
+        ..*env
+    }
+}
+
+/// Runs one golden fixture: the measured-safe aa-shapes pairing (mid-tone
+/// accent+dim backdrop, contrast-token ink via the fixture config's
+/// `draw_color` - saturated inks on undimmed backdrops exceed the masked
+/// edge budget through honest sRGB-end MSAA quantization, see the aa-shapes
+/// rationale), the closure's tool strokes through the REAL editor event
+/// surface, the scene painted through the production `paint_into` bridge,
+/// then the cross-rasterizer edge-masked assertion.
+fn golden(
+    gpu: &Gpu,
+    name: &str,
+    mut config: Config,
+    build: impl FnOnce(&mut EditorState, &EditorEnv, &mut DisplayList),
+) {
+    let tokens = tokens();
+    config
+        .editor
+        .draw_color
+        .clone_from(&tokens.palette.contrast);
+    let mut ed = golden_editor(&config);
+    let env = EditorEnv {
+        selection: None,
+        modifiers: ModifiersState::empty(),
+        now: Instant::now(),
+        picker_visible: false,
+        mouse: None,
+    };
+    let mut list = DisplayList::new();
+    let full = Rect::from_parts(0.0, 0.0, W as f32, H as f32);
+    list.fill(
+        Shape::Rect {
+            rect: full,
+            radius: 0.0,
+        },
+        accent(),
+    );
+    let dim = Color::dim_from_palette(&tokens.palette).expect("dim token");
+    list.dim(full, vec![], dim);
+    build(&mut ed, &env, &mut list);
+    ed.paint_into(
+        &mut list,
+        &golden_output(),
+        EditorView {
+            mouse: None,
+            selection: None,
+            modifiers: ModifiersState::empty(),
+        },
+    );
+    assert!(
+        ed.scene().object_count() > 0,
+        "{name}: fixture committed nothing"
+    );
+    let textures = TextureRegistry::new();
+    let rendered = render_gpu(gpu, &list, &textures);
+    let reference = render_reference(&list, &textures, &mut fonts());
+    assert_edge_masked(name, &rendered, &reference);
+}
+
+const ZIGZAG: [(f64, f64); 5] = [
+    (80.0, 400.0),
+    (180.0, 120.0),
+    (280.0, 380.0),
+    (380.0, 140.0),
+    (480.0, 400.0),
+];
+
+#[test]
+fn pencil_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    golden(&gpu, "pencil-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Pencil);
+        drag_through(ed, env, &ZIGZAG);
+    });
+    golden(&gpu, "pencil-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Pencil);
+        ed.set_tool_size(50);
+        drag_through(ed, env, &ZIGZAG);
+    });
+    golden(
+        &gpu,
+        "pencil-ctrl-freehand",
+        Config::default(),
+        |ed, env, _| {
+            ed.activate_tool(ToolKind::Pencil);
+            let arc: Vec<(f64, f64)> = (0..=60)
+                .map(|step| {
+                    let t = f64::from(step) / 60.0 * std::f64::consts::PI;
+                    (320.0 - 220.0 * t.cos(), 300.0 - 160.0 * t.sin())
+                })
+                .collect();
+            drag_through(ed, &ctrl(env), &arc);
+        },
+    );
+}
+
+#[test]
+fn line_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    golden(&gpu, "line-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Line);
+        drag(ed, env, (80.0, 400.0), (560.0, 120.0));
+    });
+    golden(&gpu, "line-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Line);
+        ed.set_tool_size(50);
+        drag(ed, env, (80.0, 80.0), (560.0, 400.0));
+    });
+    golden(&gpu, "line-ctrl", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Line);
+        drag(ed, &ctrl(env), (80.0, 400.0), (500.0, 180.0));
+    });
+}
+
+#[test]
+fn arrow_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    golden(&gpu, "arrow-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Arrow);
+        drag(ed, env, (100.0, 380.0), (540.0, 140.0));
+    });
+    golden(&gpu, "arrow-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Arrow);
+        ed.set_tool_size(50);
+        drag(ed, env, (120.0, 100.0), (520.0, 380.0));
+    });
+    golden(&gpu, "arrow-ctrl", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Arrow);
+        drag(ed, &ctrl(env), (100.0, 240.0), (500.0, 200.0));
+    });
+    let curved_reverse = Config {
+        tools: ToolsConfig {
+            arrow: ArrowToolConfig {
+                style: ArrowStyle::Curved,
+                reverse: true,
+            },
+            ..ToolsConfig::default()
+        },
+        ..Config::default()
+    };
+    golden(
+        &gpu,
+        "arrow-curved-reverse",
+        curved_reverse,
+        |ed, env, _| {
+            ed.activate_tool(ToolKind::Arrow);
+            drag(ed, env, (540.0, 380.0), (100.0, 140.0));
+        },
+    );
+}
+
+#[test]
+fn rect_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    golden(&gpu, "rect-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Rectangle);
+        drag(ed, env, (120.0, 120.0), (520.0, 360.0));
+    });
+    golden(&gpu, "rect-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Rectangle);
+        ed.set_tool_size(50);
+        drag(ed, env, (120.0, 120.0), (520.0, 360.0));
+    });
+    golden(&gpu, "rect-ctrl", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Rectangle);
+        drag(ed, &ctrl(env), (120.0, 120.0), (400.0, 220.0));
+    });
+}
+
+#[test]
+fn ellipse_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    golden(&gpu, "ellipse-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Circle);
+        drag(ed, env, (140.0, 140.0), (500.0, 340.0));
+    });
+    golden(&gpu, "ellipse-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Circle);
+        ed.set_tool_size(50);
+        drag(ed, env, (140.0, 140.0), (500.0, 340.0));
+    });
+    golden(&gpu, "ellipse-ctrl", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Circle);
+        drag(ed, &ctrl(env), (140.0, 140.0), (400.0, 240.0));
+    });
+}
+
+#[test]
+fn marker_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    // Two crossing translucent strokes: the overlap double-blends (the
+    // highlighter accumulation the premultiplied pipeline must reproduce).
+    golden(&gpu, "marker-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Marker);
+        drag(ed, env, (80.0, 180.0), (560.0, 260.0));
+        drag(ed, env, (80.0, 260.0), (560.0, 180.0));
+    });
+    golden(&gpu, "marker-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Marker);
+        ed.set_tool_size(50);
+        drag(ed, env, (100.0, 240.0), (540.0, 240.0));
+    });
+    golden(&gpu, "marker-ctrl", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Marker);
+        drag(ed, &ctrl(env), (100.0, 300.0), (480.0, 180.0));
+    });
+}
+
+#[test]
+fn invert_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    let content = |list: &mut DisplayList| {
+        list.fill(
+            Shape::Rect {
+                rect: Rect::from_parts(200.0, 150.0, 240.0, 180.0),
+                radius: 0.0,
+            },
+            contrast(),
+        );
+        list.stroke(
+            Shape::Line {
+                from: Point::new(40.0, 440.0),
+                to: Point::new(600.0, 40.0),
+            },
+            5.0,
+            accent(),
+        );
+    };
+    golden(
+        &gpu,
+        "invert-default",
+        Config::default(),
+        |ed, env, list| {
+            content(list);
+            ed.activate_tool(ToolKind::Invert);
+            drag(ed, env, (160.0, 120.0), (480.0, 360.0));
+        },
+    );
+    golden(&gpu, "invert-full", Config::default(), |ed, env, list| {
+        content(list);
+        ed.activate_tool(ToolKind::Invert);
+        drag(ed, env, (60.0, 60.0), (580.0, 420.0));
+    });
+    // The z-order filter semantics: the inversion applies to the committed
+    // scene object below it, not just the backdrop.
+    golden(
+        &gpu,
+        "invert-over-objects",
+        Config::default(),
+        |ed, env, list| {
+            content(list);
+            ed.activate_tool(ToolKind::Rectangle);
+            drag(ed, env, (180.0, 140.0), (460.0, 340.0));
+            ed.activate_tool(ToolKind::Invert);
+            drag(ed, env, (240.0, 100.0), (520.0, 380.0));
+        },
+    );
 }

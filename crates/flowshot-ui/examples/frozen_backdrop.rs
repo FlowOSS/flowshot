@@ -32,9 +32,14 @@
 //!
 //! With `--features test-drive`, stdin lines inject synthetic events through
 //! the production routing path (the todo-13 injector protocol, extended by
-//! todo 16): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
-//! <down|up>`, `mods <slot> <none|shift|ctrl|...[+...]>`, and
-//! `press/release <slot> <escape|enter|left|right|up|down|a|c|q|...>`.
+//! todos 16/20): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
+//! <down|up>`, `wheel <slot> <angle-delta>`, `mods <slot>
+//! <none|shift|ctrl|...[+...]>`, and `press/release <slot>
+//! <escape|enter|left|right|up|down|a|c|q|p|d|s|r|m|t|b|i|z|delete|0..9|...>`.
+//!
+//! Todo 21: the REAL shape tools (pencil/line/arrow/rect/ellipse/marker/
+//! invert) are registered - the todo-20 line stub is gone; every F12 tool
+//! key now draws its production shape.
 
 use std::process::ExitCode;
 
@@ -92,7 +97,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         return verify_offscreen(capture, index, &path);
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
-    let runtime = runtime?;
+    let mut runtime = runtime?;
+    // Todo 21: the production shape tools (the todo-35 binary layer will do
+    // the same registration).
+    flowshot_ui::register_shape_tools(runtime.core_mut().editor_mut().registry_mut());
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     runtime.run()?;
@@ -327,6 +335,11 @@ fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
                 pressed,
             ))
         }
+        "wheel" => {
+            let slot = parts.next()?.parse::<usize>().ok()?;
+            let delta = parts.next()?.parse::<i32>().ok()?;
+            Some(SyntheticInput::wheel(WindowSlot::new(slot), delta))
+        }
         "mods" => {
             let slot = parts.next()?.parse::<usize>().ok()?;
             let mut modifiers = ModifiersState::empty();
@@ -355,6 +368,28 @@ fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
                 "a" => KeyCode::KeyA,
                 "c" => KeyCode::KeyC,
                 "q" => KeyCode::KeyQ,
+                // Todo 20: tool activation keys (F12 map), undo/redo, delete,
+                // and the digit size adjusters.
+                "p" => KeyCode::KeyP,
+                "d" => KeyCode::KeyD,
+                "s" => KeyCode::KeyS,
+                "r" => KeyCode::KeyR,
+                "m" => KeyCode::KeyM,
+                "t" => KeyCode::KeyT,
+                "b" => KeyCode::KeyB,
+                "i" => KeyCode::KeyI,
+                "z" => KeyCode::KeyZ,
+                "delete" => KeyCode::Delete,
+                "0" => KeyCode::Digit0,
+                "1" => KeyCode::Digit1,
+                "2" => KeyCode::Digit2,
+                "3" => KeyCode::Digit3,
+                "4" => KeyCode::Digit4,
+                "5" => KeyCode::Digit5,
+                "6" => KeyCode::Digit6,
+                "7" => KeyCode::Digit7,
+                "8" => KeyCode::Digit8,
+                "9" => KeyCode::Digit9,
                 _ => return None,
             };
             let slot = WindowSlot::new(slot);

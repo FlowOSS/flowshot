@@ -6,19 +6,48 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/flowoss/flowshot"
 authors = ["FlowShot Contributors"]
 
+[lib]
+name = "flowshot_daemon"
+path = "src/lib.rs"
+
+# Helper binary: supervised foreground daemon (`flowshot daemon` in todo 35's
+# CLI calls into this crate's library). Named flowshot-daemon, NOT flowshot:
+# the `flowshot` binary name belongs to flowshot-cli (fixes the pre-existing
+# output-filename collision between the two placeholder bins).
 [[bin]]
-name = "flowshot"
+name = "flowshot-daemon"
 path = "src/main.rs"
+
+[features]
+# sd_notify(3) READY=1 handshake for systemd user units. Amendment #3: the
+# daemon is INIT-AGNOSTIC - systemd is optional, never a hard dependency
+# (OpenRC/runit/s6/shepherd = packaging roadmap, todo 42).
+systemd = []
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
-flowshot-capture = { path = "../flowshot-capture" }
 flowshot-actions = { path = "../flowshot-actions" }
-zbus = { workspace = true }
+# EXECUTOR DECISION (todo 32): the daemon's OWN bus stays on workspace zbus 4
+# (default features = async-io reactor) driven from a tokio runtime. Source-
+# verified: each zbus-4 connection owns a PRIVATE async-executor + dedicated
+# driver thread, so its futures are drivable from ANY executor (todo-11-proven)
+# without tokio interference. ashpd and notify-rust carry zbus 5 internally
+# (tokio / blocking stacks); a direct zbus 5 edge here would deepen the
+# duplicate family for zero gain. Teardown discipline: zbus-4-async-io has NO
+# drop-time close - the daemon calls Connection::close() explicitly on shutdown.
+zbus = { workspace = true, features = ["p2p"] }
 notify-rust = { workspace = true }
+# OpenURI portal for notification click actions (todo-29/31 pattern).
+ashpd = { workspace = true }
+# Member-manifest addition (todo-31 `url` precedent; already locked via ashpd).
+url = "2.5"
 tokio = { workspace = true }
-anyhow = { workspace = true }
+thiserror = { workspace = true }
 tracing = { workspace = true }
+# Binary-layer only: logging init + top-level error reporting (Amendment #4).
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+anyhow = { workspace = true }
+clap = { workspace = true }
 
 [lints]
 workspace = true

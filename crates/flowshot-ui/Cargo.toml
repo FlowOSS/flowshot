@@ -40,6 +40,10 @@ bytemuck = { workspace = true }
 # (deny.toml bans version drift).
 
 [dev-dependencies]
+# QA-harness composition only (examples/pin_window.rs is the reference
+# PinActionSink bridge): the LIB never imports the Wayland-native actions
+# crate (purity gate) - the real bridge lands in the todo-35 binary layer.
+flowshot-actions = { path = "../flowshot-actions" }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 bytes = { workspace = true }
 serde_json = { workspace = true }
