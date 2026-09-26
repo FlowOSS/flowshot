@@ -76,6 +76,14 @@ impl EditorState {
                 self.toggle_grid();
                 return EditorUpdate::eaten(true);
             }
+            // Magnifier toggle key (todo 17): F12/Flameshot binds no
+            // magnifier key (recognizedShortcuts has no TYPE_MAGNIFIER
+            // row), so L (lens) ships as the unbound-key choice - the
+            // grid-F precedent, documented in the magnifier module.
+            if !repeat && code == KeyCode::KeyL {
+                self.toggle_magnifier();
+                return EditorUpdate::eaten(true);
+            }
             // Z-order keys ship UNBOUND (plan todo 25: panel-driven); when
             // rebound, a duplicate binding loses to the tool key above and
             // auto-repeat never stacks journal entries.

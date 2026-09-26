@@ -28,7 +28,8 @@
 //!     --frame HDMI-A-1=/tmp/frame-hdmi.png --frame DP-3=/tmp/frame-dp3.png \
 //!     [--cursor /tmp/cursor.png --cursor-pos X,Y --hotspot X,Y] \
 //!     [--selection WxH+X+Y] [--no-dim] [--no-cursor] \
-//!     [--toolbar pencil,copy,undo] [--draw-color-toml /tmp/config.toml]
+//!     [--toolbar pencil,copy,undo] [--draw-color-toml /tmp/config.toml] \
+//!     [--magnifier square|circle]
 //! ```
 //!
 //! Todo 26: `--toolbar` re-projects the chrome button order (the config
@@ -57,11 +58,12 @@
 use std::process::ExitCode;
 
 use flowshot_capture::{Frame, FrameBuffer, FrameFormat, OutputRef};
+use flowshot_core::config::MagnifierShape;
 use flowshot_core::geometry::{
     Logical, LogicalPoint, LogicalRect, OutputInfo, PhysicalPoint, PhysicalSize, Transform,
 };
 use flowshot_ui::backdrop::{BackdropOptions, CursorSprite, FrozenCapture, PlacedCursor};
-use flowshot_ui::{FramePixels, OverlayRuntime, ToolKind, UiError};
+use flowshot_ui::{EditorTools, FramePixels, OverlayRuntime, ToolKind, UiError};
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()
@@ -92,6 +94,7 @@ struct Args {
     verify_offscreen: Option<(usize, String)>,
     toolbar: Option<String>,
     draw_color_toml: Option<String>,
+    magnifier: Option<String>,
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -186,6 +189,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("flowshot: draw-color persist failed: {error}");
                 }
             })));
+    }
+    // Todo 17: `--magnifier <square|circle>` projects the `[editor]`
+    // magnifier config (visible from launch); the in-session toggle key is
+    // `l` either way (F12 binds no magnifier key - the grid-F precedent).
+    if let Some(shape) = &args.magnifier {
+        let shape = match shape.as_str() {
+            "circle" => MagnifierShape::Circle,
+            _ => MagnifierShape::Square,
+        };
+        let mut tools = EditorTools::default();
+        tools.editor.magnifier = true;
+        tools.editor.magnifier_shape = shape;
+        runtime.core_mut().editor_mut().configure(tools);
     }
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
@@ -331,6 +347,7 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
             }
             "--toolbar" => args.toolbar = Some(value("--toolbar")?),
             "--draw-color-toml" => args.draw_color_toml = Some(value("--draw-color-toml")?),
+            "--magnifier" => args.magnifier = Some(value("--magnifier")?),
             other => return Err(format!("unknown argument {other}").into()),
         }
     }
@@ -643,6 +660,7 @@ fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
         "z" => KeyCode::KeyZ,
         "g" => KeyCode::KeyG,
         "f" => KeyCode::KeyF,
+        "l" => KeyCode::KeyL,
         "x" => KeyCode::KeyX,
         "delete" => KeyCode::Delete,
         "0" => KeyCode::Digit0,

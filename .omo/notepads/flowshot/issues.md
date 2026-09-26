@@ -73,3 +73,9 @@ First full-workspace `cargo test` after a big compile batch failed `kwin::tests:
 ## 2026-09-26 (todo 26): deferred chrome polish (no plan acceptance line; needs new surface)
 - Tooltips (400ms dwell) + toolbar reveal / panel slide animations (motion tokens D8d): need hover-dwell tracking (chrome has no motion route today) + a per-frame redraw scheduler (OverlayCore::tick only serves the selection HUD deadline). ACTION todo 38 (integration/polish wave): add a chrome motion/tick surface or drop the plan lines explicitly.
 - SizeHud (chrome/hud.rs) is an inert seam: `visible` is never set in production and `rect` never positioned (the plan todo 26 text does not include the notifier box; todo 20 shipped the timing-based digit reset without a visual). ACTION todo 38: wire via a size-change EditorEffect + tick deadline, or delete.
+
+## 2026-09-27 (todo 17): magnifier follow-ups for todo 35/36/38
+- MAGNIFIER SAMPLES THE INSTALLED FRAME ONLY: cursor on an output whose frame is not installed (harness: first --frame output; production: todo-35 stitched-vs-per-output policy) -> magnifier hidden there. Same limitation as the todo-27 eyedropper; todo 35 owns the policy.
+- NO NEUTRAL PALETTE TOKEN: magnifier grid ink (gray 128/96) + readout white text follow the paint_grid/size-HUD hardcoded precedents — todo 36 theming should add neutral/ink tokens and switch both (joins the tray danger-token action).
+- app.rs at 246 pure LOC = WARNING BAND: the todo-35 binary-layer wiring must split before adding lines (render_window is the growth point).
+- Grid toggle (F) is NOT re-projected by editor.configure() while the magnifier toggle (L) IS — inconsistent settings-apply semantics within EditorState; todo 36 (settings surface) should align grid_visible with the magnifier pattern.
