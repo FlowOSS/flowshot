@@ -15,6 +15,8 @@ use flowshot_core::scene::{Point as ScenePoint, ToolObject};
 use crate::render::f32_from_f64;
 
 use super::EditorState;
+use super::effect::PixelEffect;
+use super::undo::{EditorUndo, Snapshot};
 
 impl EditorState {
     /// The annotation scene (objects + z-order).
@@ -25,22 +27,67 @@ impl EditorState {
 
     /// The undo history (depth/limit introspection for the todo-26 panel).
     #[must_use]
-    pub const fn undo_stack(&self) -> &flowshot_core::scene::UndoStack {
+    pub const fn undo_stack(&self) -> &EditorUndo {
         &self.undo
+    }
+
+    /// The baked pixel-overlay layer in paint order (todo 23; the shell
+    /// syncs its textures and the todo-38 export composites it).
+    #[must_use]
+    pub fn pixel_effects(&self) -> &[PixelEffect] {
+        &self.effects
+    }
+
+    /// The current (scene, effects) snapshot - the journal payload.
+    pub(super) fn snapshot(&self) -> Snapshot {
+        (self.scene.clone(), self.effects.clone())
+    }
+
+    /// Restores a full snapshot (the undo/redo application point).
+    pub(super) fn restore(&mut self, snapshot: Snapshot) {
+        (self.scene, self.effects) = snapshot;
+        self.selected = None;
     }
 
     /// Commits a finished object to the scene as ONE undo unit (the
     /// draw-end / edit-commit / todo-25 mutation funnel).
     pub fn commit_object(&mut self, object: Box<dyn ToolObject>) -> usize {
-        let before = self.scene.clone();
+        let before = self.snapshot();
         let id = self.scene.add_object(object);
-        self.undo.push(before, self.scene.clone());
+        self.undo.push(before, self.snapshot());
         tracing::info!(
             target: "flowshot_ui::editor",
             object = self.scene.get_object(id).map_or("?", ToolObject::type_id),
             objects = self.scene.object_count(),
             undo_depth = self.undo.undo_depth(),
             "object committed"
+        );
+        id
+    }
+
+    /// Commits a baked pixel effect as ONE undo unit (the todo-23
+    /// destructive-op funnel; the editor assigns the identity that drives
+    /// the effect's texture id).
+    pub fn commit_effect(&mut self, effect: PixelEffect) -> u64 {
+        let before = self.snapshot();
+        let id = self.next_effect;
+        self.next_effect = self.next_effect.saturating_add(1);
+        let effect = effect.with_id(id);
+        let kind = effect.kind();
+        let rect = effect.rect();
+        self.effects.push(effect);
+        self.undo.push(before, self.snapshot());
+        tracing::info!(
+            target: "flowshot_ui::editor",
+            effect = kind.token(),
+            id,
+            x = rect.x.0,
+            y = rect.y.0,
+            w = rect.width.0,
+            h = rect.height.0,
+            effects = self.effects.len(),
+            undo_depth = self.undo.undo_depth(),
+            "effect committed"
         );
         id
     }
@@ -96,11 +143,11 @@ impl EditorState {
         let Some(id) = self.selected else {
             return false;
         };
-        let before = self.scene.clone();
+        let before = self.snapshot();
         let Some(removed) = self.scene.remove_object(id) else {
             return false;
         };
-        self.undo.push(before, self.scene.clone());
+        self.undo.push(before, self.snapshot());
         self.selected = None;
         tracing::info!(
             target: "flowshot_ui::editor",
@@ -114,15 +161,15 @@ impl EditorState {
     /// One undo step; `true` when the scene changed (silent no-op at the
     /// history start - the core contract).
     pub fn undo(&mut self) -> bool {
-        let Some(scene) = self.undo.undo() else {
+        let Some(snapshot) = self.undo.undo() else {
             tracing::debug!(target: "flowshot_ui::editor", "undo at history start");
             return false;
         };
-        self.scene = scene;
-        self.selected = None;
+        self.restore(snapshot);
         tracing::info!(
             target: "flowshot_ui::editor",
             objects = self.scene.object_count(),
+            effects = self.effects.len(),
             "undo applied"
         );
         true
@@ -130,15 +177,15 @@ impl EditorState {
 
     /// One redo step; `true` when the scene changed.
     pub fn redo(&mut self) -> bool {
-        let Some(scene) = self.undo.redo() else {
+        let Some(snapshot) = self.undo.redo() else {
             tracing::debug!(target: "flowshot_ui::editor", "redo at history end");
             return false;
         };
-        self.scene = scene;
-        self.selected = None;
+        self.restore(snapshot);
         tracing::info!(
             target: "flowshot_ui::editor",
             objects = self.scene.object_count(),
+            effects = self.effects.len(),
             "redo applied"
         );
         true

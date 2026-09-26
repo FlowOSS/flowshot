@@ -284,7 +284,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = golden + live shot; failure = zero-length drag (click w/o move) creates NO object (scene len assert). Evidence <attemptDir>/task-21-flowshot.png
   Commit: Y | feat(editor): pencil/line/arrow/rect/ellipse/marker/invert
   Recommended task executor category: unspecified-high - seven small tools sharing one pattern, fully specified.
-- [ ] 22. Editor: text tool with real IME
+- [x] 22. Editor: text tool with real IME
   What to do: text annotation: winit Ime events (Enabled/Preedit/Commit/Disabled; always-on model D7) -> editing buffer on cosmic-text (cursor, selection, backspace/delete, arrows, home/end, wrap within drag-defined box); point size = tool_size + 8 (BASE_POINT_SIZE parity); commit on Ctrl+Return or click-outside (F27 lifecycle); double-click existing text object re-enters edit preserving old text; styling from side panel (todo 26): family (fontFamily config), bold/italic/underline/strikeout, alignment l/c/r; bounding includes 5px padding (parity); renders identically in editor + export (paint via renderer text layer - single shaping path). Must NOT: no rich-text/markdown; no egui text anywhere in editor.
   Parallelization: Wave 4 | Blocked by: 20,14 | Blocks: 38
   References: draft F27 text spec (constants + lifecycle cites), F26 (iced 0.14 IME reference impl: iced/winit/src/window.rs L189-303 preedit handling), cosmic-text Buffer/SwashCache docs.
@@ -380,7 +380,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = above chain; failure = ksni init without host (unit, no bus) -> no panic, D-Bus service still answers. Evidence <attemptDir>/task-33-flowshot.png
   Commit: Y | feat(shell): SNI tray with parity menu
   Recommended task executor category: quick - small feature on daemon rails.
-- [ ] 34. Shell: global shortcuts (portal + compositor fallback)
+- [x] 34. Shell: global shortcuts (portal + compositor fallback)
   What to do: ashpd GlobalShortcuts portal v2: register configured actions (proposed defaults: Print -> region capture, Shift+Print -> full, Ctrl+Print -> active-monitor; rebindable in settings tab, todo 36); persist portal restore-data in config dir; on FIRST successful registration emit one-time notification + settings deep-link recommending autostart (Oracle r4 F-3: portal hotkeys need daemon residency across logins; wlroots compositor-bind fallback needs NO resident daemon - both documented in todo 40 per-desktop guides); portal absent/denied (bare wlroots, F14) -> fallback: generate paste-ready compositor snippets (hyprland `bind = ,Print,exec,flowshot capture`; sway `bindsym Print exec flowshot capture`) surfaced in settings + docs + `flowshot --print-bind-help`. QA trigger mechanics (Metis #16 EXACT): portal-register Print -> `hyprctl globalshortcuts -j` lists flowshot entries -> `wtype -P Print -p Print` -> overlay appears (hyprctl clients); fallback path tested identically via temporary `hyprctl keyword bind ,F13,exec,flowshot capture` + `wtype -P F13 -p F13` + remove keyword after.
   Parallelization: Wave 6 | Blocked by: 32,2 | Blocks: 38
   References: draft F14 (per-desktop status; XDPH daemon VERIFIED RUNNING on QA machine - Metis), F16 (ashpd GlobalShortcuts API), F12 shortcut defaults, Metis #16.

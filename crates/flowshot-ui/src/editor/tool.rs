@@ -26,6 +26,7 @@ use flowshot_core::scene::{Color, PaintSink, ToolObject, ToolObjectData};
 use winit::event::{Ime, MouseButton};
 use winit::keyboard::{KeyCode, ModifiersState};
 
+use super::effect::PixelEffect;
 use super::kind::ToolKind;
 
 /// The frozen-frame pixel view tools sample from (F27 `CaptureContext`
@@ -181,6 +182,18 @@ pub trait Tool: std::fmt::Debug + Send {
         _ctx: &EditorContext<'_>,
         _at: LogicalPoint,
     ) -> Option<Box<dyn ToolObject>> {
+        None
+    }
+
+    /// Ends the draw session at `at` as a DESTRUCTIVE pixel op (todo 23):
+    /// the returned baked effect is committed to the editor's pixel-overlay
+    /// layer as one undo unit (checked BEFORE [`Tool::draw_end`] - a tool
+    /// implements exactly one of the two channels).
+    fn draw_end_effect(
+        &mut self,
+        _ctx: &EditorContext<'_>,
+        _at: LogicalPoint,
+    ) -> Option<PixelEffect> {
         None
     }
 

@@ -1,11 +1,14 @@
 //! The per-window editor paint bridge (plan todo 20/22).
 //!
 //! [`EditorView`] is the shell-supplied snapshot one window's paint needs;
-//! [`EditorState::paint_into`] appends the scene (paint order), the selected
-//! object's outline, and the active tool's live visuals - the in-progress
-//! stroke, the mouse preview, and (todo 22) the open edit session with its
-//! caret, selection, and IME composition overlay - into the window's
-//! physical-px [`DisplayList`] with the output's own scale.
+//! [`EditorState::paint_into`] appends the baked pixel-effect overlay
+//! (todo 23: image quads above the backdrop, BELOW the scene - Flameshot
+//! bakes redactions into the pixmap under all annotations), the scene
+//! (paint order), the selected object's outline, and the active tool's live
+//! visuals - the in-progress stroke, the mouse preview, and (todo 22) the
+//! open edit session with its caret, selection, and IME composition
+//! overlay - into the window's physical-px [`DisplayList`] with the
+//! output's own scale.
 
 use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo};
 use winit::keyboard::ModifiersState;
@@ -35,6 +38,10 @@ impl EditorState {
     /// in-progress shape / mouse preview / edit session.
     pub fn paint_into(&self, list: &mut DisplayList, output: &OutputInfo, view: EditorView) {
         let family = Some(self.config.editor.font_family.as_str());
+        for effect in &self.effects {
+            let dst = paint::local_rect(output, effect.rect());
+            list.image(effect.texture_id(), dst, None);
+        }
         {
             let mut sink = paint::ListSink::new(list, output, family);
             self.scene.paint(&mut sink);

@@ -6,21 +6,46 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/flowoss/flowshot"
 authors = ["FlowShot Contributors"]
 
+# Library + thin binary split (Amendment #4: anyhow only at the binary top
+# level; the clap surface, dispatch, and wire mapping live in the lib so the
+# todo-38 daemon-side argv re-parse and the tests reuse the same types).
+[lib]
+name = "flowshot_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "flowshot"
 path = "src/main.rs"
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
-flowshot-capture = { path = "../flowshot-capture" }
-flowshot-ui = { path = "../flowshot-ui" }
-flowshot-actions = { path = "../flowshot-actions" }
+# The todo-32 seam: CaptureRequest/CAPTURE_OPTION_KEYS (wire vocabulary),
+# the instance handshake primitives, the Daemon composition root, paths,
+# and the bind-help source for --print-bind-help. flowshot-capture/-ui/
+# -actions re-enter with the todo-38 execution wiring (unused until then -
+# Amendment #3 anti-bloat).
+flowshot-daemon = { path = "../flowshot-daemon" }
+# Same executor decision as the daemon crate (todo 32): workspace zbus 4,
+# futures driven from tokio; connections are closed explicitly (zbus-4
+# async-io has no drop-time close, todo-11 lesson).
+zbus = { workspace = true }
 clap = { workspace = true }
 clap_complete = { workspace = true }
 clap_complete_nushell = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
+thiserror = { workspace = true }
 tracing = { workspace = true }
+# Binary-layer logging init (Amendment #4).
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[dev-dependencies]
+# Man-page generation harness (examples/man_pages.rs + tests); kept out of
+# the shipped binary.
+clap_mangen = { workspace = true }
+proptest = { workspace = true }
+serde = { workspace = true }
+toml = { workspace = true }
 
 [lints]
 workspace = true

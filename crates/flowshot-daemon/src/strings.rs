@@ -50,3 +50,43 @@ pub const AUTOSTART_GENERIC_NAME: &str = "Screenshot Tool";
 
 /// `Comment` field of the autostart `.desktop` entry.
 pub const AUTOSTART_COMMENT: &str = "FlowShot screenshot daemon (session autostart)";
+
+/// `Id` property of the tray item (host-side identification token).
+pub const TRAY_ID: &str = "flowshot";
+
+/// Tray tooltip and `Title` property (plan todo 33: tooltip `FlowShot`).
+pub const TRAY_TITLE: &str = "FlowShot";
+
+/// Tray menu: interactive region capture (F12 parity label).
+pub const MENU_TAKE_SCREENSHOT: &str = "Take Screenshot";
+
+/// Tray menu: full-desktop capture.
+pub const MENU_CAPTURE_FULL: &str = "Capture Full Screen";
+
+/// Tray menu: per-monitor submenu root (children = live-probed outputs).
+pub const MENU_CAPTURE_SCREEN: &str = "Capture Screen";
+
+/// Tray menu: per-monitor submenu placeholder while no output is known.
+pub const MENU_NO_OUTPUTS: &str = "No outputs detected";
+
+/// Tray menu: manual-coordinate launcher dialog (todo 37 surface).
+pub const MENU_CAPTURE_LAUNCHER: &str = "Capture Launcher";
+
+/// Tray menu: settings surface (todo 36).
+pub const MENU_CONFIGURE: &str = "Configure";
+
+/// Tray menu: about entry (v1 = version toast; a full About surface lands
+/// with the todo-36 settings stack - recorded deviation).
+pub const MENU_ABOUT: &str = "About";
+
+/// Tray menu: clean daemon shutdown.
+pub const MENU_QUIT: &str = "Quit";
+
+/// Summary of the About notification (tray `About` entry).
+pub const SUMMARY_ABOUT: &str = "About FlowShot";
+
+/// Body of the About notification for `version`.
+#[must_use]
+pub fn about_body(version: &str) -> String {
+    format!("Version {version}")
+}

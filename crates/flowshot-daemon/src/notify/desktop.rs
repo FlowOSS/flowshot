@@ -175,6 +175,9 @@ fn notification_for(record: &NotificationRecord) -> (Notification, Option<String
             None,
             Urgency::Normal,
         ),
+        NotificationRecord::About(body) => {
+            (strings::SUMMARY_ABOUT, body.clone(), None, Urgency::Low)
+        }
     };
     let mut notification = Notification::new();
     notification
@@ -276,6 +279,9 @@ mod tests {
         let (error, _) = notification_for(&NotificationRecord::Error("x".to_owned()));
         assert_eq!(error.summary, strings::SUMMARY_ERROR);
         assert_eq!(error.body, "x");
+        let (about, _) = notification_for(&NotificationRecord::About(strings::about_body("9.9.9")));
+        assert_eq!(about.summary, strings::SUMMARY_ABOUT);
+        assert_eq!(about.body, "Version 9.9.9");
     }
 
     #[test]

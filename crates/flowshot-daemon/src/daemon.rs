@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use flowshot_core::Config;
+use tokio::sync::Notify;
 use zbus::Connection;
 
 use crate::autostart::Autostart;
@@ -22,6 +23,7 @@ use crate::lifecycle::{Clock, DaemonMode, LifecycleMonitor, LifecyclePolicy, Tok
 use crate::notify::{DesktopNotifier, GatedNotifier, Notifier};
 use crate::shortcut::{Registration, ShortcutOptions, ShortcutWiring};
 use crate::state::DaemonState;
+use crate::tray::{TrayHandle, TrayOptions, TrayWiring};
 
 /// Everything [`Daemon::start`] needs (grouped options object; tests and
 /// the binary override individual fields).
@@ -54,6 +56,10 @@ pub struct DaemonOptions {
     /// so pre-todo-34 callers keep their exact startup behavior; the
     /// binary enables it via [`ShortcutOptions::production`].
     pub shortcuts: ShortcutOptions,
+    /// Tray host configuration (todo 33). Seeded from `[daemon].tray` +
+    /// `[ui].accent_color` by the constructors; the tray module owns the
+    /// `tray` persistence reason from registration onward.
+    pub tray: TrayOptions,
 }
 
 impl DaemonOptions {
@@ -72,7 +78,12 @@ impl DaemonOptions {
     }
 
     fn new(mode: DaemonMode, config: Config) -> Self {
-        let state = Arc::new(DaemonState::new(config.daemon.tray, TokioClock.now()));
+        // The tray flag is seeded FALSE: the todo-33 tray module sets it
+        // only after a successful StatusNotifierWatcher registration (an
+        // enabled config without a host on the bus must not pin the
+        // daemon).
+        let state = Arc::new(DaemonState::new(false, TokioClock.now()));
+        let tray = TrayOptions::from_config(&config);
         Self {
             mode,
             idle_grace: crate::DEFAULT_IDLE_GRACE,
@@ -84,6 +95,7 @@ impl DaemonOptions {
             notifier: None,
             clock: None,
             shortcuts: ShortcutOptions::default(),
+            tray,
         }
     }
 }
@@ -102,6 +114,8 @@ pub enum Startup {
 pub enum ShutdownReason {
     /// The auto-spawned idle grace elapsed with no persistence reason.
     IdleExit,
+    /// The tray menu's `Quit` entry fired (todo 33).
+    Quit,
     /// `SIGINT` (Ctrl-C).
     Interrupted,
     /// `SIGTERM` (the supervisor stopped the unit).
@@ -117,6 +131,8 @@ pub struct Daemon {
     notifier: Arc<dyn Notifier>,
     state: Arc<DaemonState>,
     shortcuts: Registration,
+    tray: TrayHandle,
+    quit: Arc<Notify>,
 }
 
 impl Daemon {
@@ -137,8 +153,7 @@ impl Daemon {
                 options.config.daemon.notifications,
             )) as Arc<dyn Notifier>
         });
-        options.state.set_tray(options.config.daemon.tray);
-
+        let quit = Arc::new(Notify::new());
         let connection = instance::connect(options.bus_address.as_deref()).await?;
         let interface = FlowShotInterface::new(
             Arc::clone(&sink),
@@ -169,9 +184,24 @@ impl Daemon {
         let shortcuts = crate::shortcut::start(
             &options.shortcuts,
             ShortcutWiring {
+                sink: Arc::clone(&sink),
+                state: Arc::clone(&options.state),
+                notifier: Arc::clone(&notifier),
+            },
+        )
+        .await;
+
+        // Todo 33: the tray host shares the daemon's connection; watcher
+        // registration is async inside its own task, so start() is cheap.
+        let tray = crate::tray::start(
+            &options.tray,
+            TrayWiring {
+                connection: connection.clone(),
                 sink,
                 state: Arc::clone(&options.state),
                 notifier: Arc::clone(&notifier),
+                clock: Arc::clone(&clock),
+                quit: Arc::clone(&quit),
             },
         )
         .await;
@@ -190,6 +220,8 @@ impl Daemon {
             notifier,
             state: options.state,
             shortcuts,
+            tray,
+            quit,
         }))
     }
 
@@ -207,12 +239,16 @@ impl Daemon {
             notifier: _notifier,
             state: _state,
             shortcuts,
+            tray,
+            quit,
         } = self;
         let reason = tokio::select! {
             _idle = monitor.run_until_exit() => ShutdownReason::IdleExit,
             signal = shutdown_signal() => signal,
+            () = quit.notified() => ShutdownReason::Quit,
         };
         tracing::info!(reason = ?reason, "daemon shutting down");
+        tray.shutdown().await;
         shortcuts.shutdown().await;
         close_quietly(connection).await;
         Ok(reason)

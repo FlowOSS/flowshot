@@ -81,7 +81,7 @@ impl ToolSizes {
             Some(ToolKind::Text) => self.font,
             Some(ToolKind::Rectangle) => self.rect_radius,
             Some(ToolKind::Marker) => self.marker,
-            Some(ToolKind::Pixelate) => self.pixelate,
+            Some(ToolKind::Pixelate | ToolKind::Blur) => self.pixelate,
             Some(ToolKind::Counter) => self.counter,
             Some(_) | None => self.thickness,
         }
@@ -94,7 +94,7 @@ impl ToolSizes {
             Some(ToolKind::Text) => &mut self.font,
             Some(ToolKind::Rectangle) => &mut self.rect_radius,
             Some(ToolKind::Marker) => &mut self.marker,
-            Some(ToolKind::Pixelate) => &mut self.pixelate,
+            Some(ToolKind::Pixelate | ToolKind::Blur) => &mut self.pixelate,
             Some(ToolKind::Counter) => &mut self.counter,
             Some(_) | None => &mut self.thickness,
         };
