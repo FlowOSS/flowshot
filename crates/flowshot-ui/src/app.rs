@@ -16,7 +16,7 @@ use winit::window::{Window, WindowId};
 
 use crate::backdrop::{Backdrop, BackdropOptions};
 use crate::crosshair;
-use crate::editor::{EditorView, PixelEffect, ToolCursor};
+use crate::editor::{EditorView, MagnifierTexture, MagnifierView, PixelEffect, ToolCursor};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::Action;
@@ -236,6 +236,24 @@ impl OverlayApp {
                 output,
             );
         }
+        // Magnifier (todo 17): the topmost cursor-following view aid. The
+        // zoom texture is CPU-built per frame and must be uploaded before
+        // the list renders (a missing id draws the magenta placeholder).
+        let magnifier = magnifier_pass(&self.core, slot, &mut list, surface.size());
+        if let (Some(renderer), Some(texture)) = (entry.renderer.as_mut(), magnifier.as_ref()) {
+            let image = RgbaImage {
+                width: texture.width,
+                height: texture.height,
+                data: &texture.pixels,
+            };
+            if let Err(error) =
+                renderer
+                    .textures_mut()
+                    .insert(&gpu.device, &gpu.queue, texture.id, &image)
+            {
+                tracing::error!(%error, window = slot.index(), "magnifier texture upload failed");
+            }
+        }
         let content = match (entry.renderer.as_mut(), list.is_empty()) {
             (Some(renderer), false) => Some((renderer, &list)),
             _ => None,
@@ -244,6 +262,29 @@ impl OverlayApp {
             tracing::error!(%error, window = slot.index(), "frame presentation failed");
         }
     }
+}
+
+/// Paints the magnifier (todo 17) into `list` when `slot` owns the cursor
+/// track (the crosshair's slot rule) and returns the CPU-built zoom texture
+/// for upload; `None` paints nothing (hidden, no frame, or the cursor is
+/// outside the installed frame). A free function so the paint borrows
+/// `core` only - `render_window` holds a live `&mut` window borrow.
+fn magnifier_pass(
+    core: &OverlayCore,
+    slot: WindowSlot,
+    list: &mut DisplayList,
+    surface: (u32, u32),
+) -> Option<MagnifierTexture> {
+    let cursor = core.cursor().filter(|cursor| cursor.slot == slot)?;
+    let output = core.router().output_for(slot)?;
+    let local = core.router().to_local(slot, cursor.clamped)?;
+    let view = MagnifierView {
+        surface,
+        cursor_local: local,
+        cursor_global: cursor.clamped,
+    };
+    core.editor()
+        .paint_magnifier(list, output, view, core.chrome().tokens())
 }
 
 /// Syncs one renderer's pixel-effect texture set to the editor's effect

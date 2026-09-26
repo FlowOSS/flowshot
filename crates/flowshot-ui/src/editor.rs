@@ -41,8 +41,11 @@ mod blur;
 mod editing;
 mod effect;
 mod events;
+mod grid;
 mod keys;
 mod kind;
+mod magnifier;
+mod move_selection;
 mod mutate;
 mod outline;
 pub(crate) mod paint;
@@ -69,6 +72,7 @@ mod tests;
 mod wiring_tests;
 
 use editing::Reedit;
+use flowshot_core::config::MagnifierShape;
 use flowshot_core::geometry::LogicalRect;
 use flowshot_core::scene::{Color as SceneColor, Scene};
 use mutate::ObjectMove;
@@ -80,6 +84,10 @@ use paint::parse_draw_color;
 pub use effect::{EffectKind, PixelEffect, effect_texture_id};
 pub use keys::{ToolShortcuts, ZOrderAction, digit_for};
 pub use kind::ToolKind;
+pub use magnifier::{
+    ARM_ALPHA, CURSOR_OFFSET, GRID_MIN_ZOOM, MAG_PIXELS, MagnifierSample, MagnifierTexture,
+    MagnifierView, RENDERED_PX, WINDOW_PX, ZOOM, magnifier_texture_id,
+};
 pub use outline::{DASH_OFF, DASH_ON, OBJECT_OUTLINE_INNER, OBJECT_OUTLINE_OUTER};
 pub use paint::{render_color, scene_color_from_hex};
 pub use registry::{ToolFactory, ToolRegistry};
@@ -106,6 +114,13 @@ pub use zorder::LayerEntry;
 /// The editor state machine: tool registry + active tool, the annotation
 /// scene with its undo history, the object selection, the size dispatch
 /// with both adjusters, and the F27 seams (frame, shortcuts, config).
+// The visibility flags are independent user-facing overlay settings
+// (drawing session, edit widget, grid, magnifier - the `[editor]` config
+// surface); grouping them would obscure the TOML projection.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent config-driven overlay flags, the core EditorConfig pattern"
+)]
 #[derive(Debug)]
 pub struct EditorState {
     registry: ToolRegistry,
@@ -128,6 +143,8 @@ pub struct EditorState {
     widget_present: bool,
     reedit: Option<Reedit>,
     grid_visible: bool,
+    magnifier_visible: bool,
+    magnifier_shape: MagnifierShape,
     move_selection_before: Option<Snapshot>,
 }
 
@@ -145,6 +162,8 @@ impl EditorState {
         let undo = EditorUndo::from_undo_limit(config.editor.undo_limit);
         let sizes = ToolSizes::from_config(&config);
         let grid_visible = config.editor.grid;
+        let magnifier_visible = config.editor.magnifier;
+        let magnifier_shape = config.editor.magnifier_shape;
         Self {
             registry,
             tool: None,
@@ -166,6 +185,8 @@ impl EditorState {
             widget_present: false,
             reedit: None,
             grid_visible,
+            magnifier_visible,
+            magnifier_shape,
             move_selection_before: None,
         }
     }
@@ -176,6 +197,12 @@ impl EditorState {
     pub fn configure(&mut self, config: EditorTools) {
         let undo_limit = config.editor.undo_limit;
         self.color = parse_draw_color(&config.editor.draw_color);
+        // The magnifier projects BOTH config keys (todo 17: "toggled by
+        // [editor].magnifier config + in-session key" - a settings apply is
+        // authoritative over the session toggle; the grid's configure gap
+        // is a todo-27 leftover, not the pattern).
+        self.magnifier_visible = config.editor.magnifier;
+        self.magnifier_shape = config.editor.magnifier_shape;
         self.config = config;
         self.sizes = ToolSizes::from_config(&self.config);
         self.undo
@@ -356,172 +383,5 @@ impl EditorState {
     /// Sets the grid overlay visibility (config seam).
     pub fn set_grid_visible(&mut self, visible: bool) {
         self.grid_visible = visible;
-    }
-
-    /// The move-selection drag delta, when the active tool is Move and a drag
-    /// is in progress (the `OverlayCore` applies this to the selection state
-    /// and contained objects).
-    #[must_use]
-    pub fn move_selection_delta(&mut self) -> Option<(f64, f64)> {
-        if self.active_kind != Some(ToolKind::Move) {
-            return None;
-        }
-        let tool = self.tool.as_mut()?;
-        let move_tool = tool
-            .as_any_mut()
-            .downcast_mut::<tools::MoveSelectionTool>()?;
-        move_tool.take_delta()
-    }
-
-    /// Translates the selection rect and all contained objects by the given
-    /// delta (the move-selection tool's drag seam). Returns true when the
-    /// scene changed.
-    pub fn translate_selection_and_objects(
-        &mut self,
-        selection: &mut crate::selection::SelectionState,
-        dx: f64,
-        dy: f64,
-    ) -> bool {
-        if dx == 0.0 && dy == 0.0 {
-            return false;
-        }
-        // Snapshot on first non-zero delta (todo 25 discipline: backup at first move).
-        // Include the selection rect in the snapshot for move-selection undo.
-        if self.move_selection_before.is_none() {
-            self.move_selection_before = Some(self.snapshot_with_selection(selection.rect()));
-        }
-        let Some(rect) = selection.rect() else {
-            return false;
-        };
-        let new_rect = flowshot_core::geometry::LogicalRect::from_raw(
-            rect.x.0 + dx,
-            rect.y.0 + dy,
-            rect.width.0,
-            rect.height.0,
-        );
-        selection.set_rect(Some(new_rect));
-
-        let mut changed = false;
-        #[allow(
-            clippy::cast_possible_truncation,
-            reason = "selection rect is bounded by screen dimensions"
-        )]
-        let scene_rect = flowshot_core::scene::Rect::new(
-            new_rect.x.0 as f32,
-            new_rect.y.0 as f32,
-            new_rect.width.0 as f32,
-            new_rect.height.0 as f32,
-        );
-        for id in 0..self.scene.object_count() {
-            if let Some(object) = self.scene.get_object(id) {
-                let bounds = object.bounding_rect();
-                // Manual AABB intersection check.
-                let intersects = bounds.x < scene_rect.x + scene_rect.width
-                    && bounds.x + bounds.width > scene_rect.x
-                    && bounds.y < scene_rect.y + scene_rect.height
-                    && bounds.y + bounds.height > scene_rect.y;
-                #[allow(
-                    clippy::cast_possible_truncation,
-                    reason = "delta values are bounded by screen dimensions"
-                )]
-                let delta_x = dx as f32;
-                #[allow(
-                    clippy::cast_possible_truncation,
-                    reason = "delta values are bounded by screen dimensions"
-                )]
-                let delta_y = dy as f32;
-                if intersects
-                    && self.replace_object(id, |data| mutate::translated(data, delta_x, delta_y))
-                {
-                    changed = true;
-                }
-            }
-        }
-        changed
-    }
-
-    /// Commits the move-selection drag as one undo unit (called on release).
-    /// Returns true when an undo unit was recorded.
-    pub fn commit_move_selection(&mut self) -> bool {
-        if self.active_kind != Some(ToolKind::Move) {
-            return false;
-        }
-        let Some(before) = self.move_selection_before.take() else {
-            return false;
-        };
-        self.undo.push(before, self.snapshot());
-        tracing::info!(
-            target: "flowshot_ui::editor",
-            undo_depth = self.undo.undo_depth(),
-            "move-selection committed"
-        );
-        true
-    }
-
-    /// Cancels the armed move-selection drag, rolling the live motions back
-    /// (Esc cascade stage 1 mid-drag; a drag that never moved has nothing to
-    /// roll back).
-    pub fn cancel_move_selection(&mut self) {
-        let Some(before) = self.move_selection_before.take() else {
-            return;
-        };
-        self.restore(before);
-        tracing::debug!(target: "flowshot_ui::editor", "move-selection cancelled");
-    }
-
-    /// Paints the grid overlay (plan todo 27: spacing token, 1px lines,
-    /// drawn UNDER annotations ABOVE backdrop).
-    pub fn paint_grid(
-        &self,
-        list: &mut crate::render::DisplayList,
-        output: &flowshot_core::geometry::OutputInfo,
-    ) {
-        use crate::render::{Color, Shape};
-
-        if !self.grid_visible {
-            return;
-        }
-
-        #[allow(
-            clippy::cast_precision_loss,
-            reason = "grid spacing is a small integer, precision loss is acceptable"
-        )]
-        let spacing = self.config.editor.draw_thickness.max(8) as f32 * 4.0;
-        let color = Color::from_rgba8(128, 128, 128, 64);
-
-        #[allow(
-            clippy::cast_precision_loss,
-            reason = "physical dimensions are bounded, precision loss is acceptable"
-        )]
-        let width = output.physical_size.width.0 as f32;
-        #[allow(
-            clippy::cast_precision_loss,
-            reason = "physical dimensions are bounded, precision loss is acceptable"
-        )]
-        let height = output.physical_size.height.0 as f32;
-
-        let mut x = 0.0;
-        while x < width {
-            list.fill(
-                Shape::Rect {
-                    rect: crate::render::Rect::from_parts(x, 0.0, 1.0, height),
-                    radius: 0.0,
-                },
-                color,
-            );
-            x += spacing;
-        }
-
-        let mut y = 0.0;
-        while y < height {
-            list.fill(
-                Shape::Rect {
-                    rect: crate::render::Rect::from_parts(0.0, y, width, 1.0),
-                    radius: 0.0,
-                },
-                color,
-            );
-            y += spacing;
-        }
     }
 }

@@ -1132,3 +1132,24 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - Move-selection undo: The move-selection tool now properly integrates with the undo system. On the first non-zero delta, it snapshots the scene + selection rect. On release, it pushes a single undo unit. Undo restores both the scene objects and the selection rect to their pre-move state.
 - Routing fix: The Move tool now correctly starts a draw session when no object is at the press position (moving the selection + contained annotations). When an object is at the press, it falls through to SelectObject (moving an individual object). This matches the plan's intent: "move-selection tool (Ctrl+M) = drag entire selection contents-aware".
 - Snapshot extension: The Snapshot type was extended to include the selection rect, enabling move-selection undo to restore both the scene and the selection geometry. This is a minimal change that doesn't break existing code.
+
+## Todo 17: magnifier with pixel grid + hex readout (flowshot-ui::editor::magnifier) — 2026-09-27
+
+**What landed**
+- `editor/magnifier.rs` (constants + MagnifierSample + sample seam + accessors) + `magnifier/{paint,readout,tests}.rs` (all <=221 lib LOC); wiring: EditorState fields (config-seeded, configure()-re-projected), `L` toggle key in events.rs plain branch, app.rs `magnifier_pass` (topmost, cursor-slot window) + per-frame MagnifierTexture upload, harness `--magnifier <shape>` flag + `l` injector key. 18 new tests (474 crate-lib green), LIVE QA 32/32 grim pixel+log asserts, both runs EXIT=0 self-reversed. Evidence task-17-flowshot.{png,txt}.
+- CEILING DEBT PAID: todo 27 left editor.rs at 355 pure LOC — split move_selection.rs (91) + grid.rs (48) out FIRST (pure code moves), editor.rs now 241. MEASURE every file before designing additions (4th confirmation of the todo-22 lesson — and this time the debt was inherited, not created).
+
+**Design ground truth (todo 35/36/38 must know)**
+- MAGNIFIER TEXTURE = CPU-built nearest-zoom buffer under fixed id 1<<14 (atlas 1 / cursor 1<<15 / backdrop 1<<16+i / effects 1<<40+): the renderer's single image sampler is LINEAR — GPU sub-region sampling would smear a 10x pixel grid. The todo-14 `ImageCommand.src` seam stays unused by the magnifier. Shell contract: paint_magnifier returns the texture, app.rs inserts (replace-under-id) BEFORE surface.render.
+- SAMPLING IS POST-EFFECT (todo-23 seam honored): pristine FramePixels + every PixelEffect whose frame_region covers the pixel (later wins). Readout uses the EYEDROPPER'S exact conversion (truncate, origin+scale) — hex readout and eyedropper pick at the same position agree BY CONTRACT.
+- BOTH shapes sample with the square's edge CLAMP + arm-offset shift (Flameshot's circle black-padded screenshot rejected: fabricated black pixels break the readout's real-pixel contract). Arms keep pointing at the cursor's true row/column under clamp (offset ∈ [-8,8] keeps them inside the widget).
+- configure() RE-PROJECTS magnifier visible+shape (settings-apply authoritative over the session toggle). The grid's configure gap (todo 27) is NOT the pattern — todo 36 should align grid_visible the same way.
+- F12/Flameshot binds NO magnifier key (recognizedShortcuts fetched + verified: no TYPE_MAGNIFIER row) — `L` (lens) ships as the documented unbound-key choice (grid-F precedent). Harness key table extended.
+
+**QA methodology (extends todo-25/26)**
+- PARITY MATH NEEDS POSITION-PINNED TESTS: the arm formula bug (`zoom*(ox-half)` vs F27's `zoom*ox - half` = 45px misplacement + ink spilling outside the widget) sailed through unit tests that only COUNTED arm fills — live QA caught it on the first attempt. Count-only asserts prove presence, never geometry; pin exact rects for every parity-copied formula.
+- STRAY REAL INPUT struck again (todo-26 hazard, 2nd occurrence): first launch died to an external Escape mid-choreography. The liveness-guarded injector + one-retry standard is MANDATORY, not optional; fail logs preserved (out1-fail.txt).
+- The harness's tracing goes to STDOUT (fmt() default), wgpu noise to stderr — assert logs against out.txt, not run.log (fs27's `2> run.log` caught only wgpu chatter).
+- Grim settle time: 0.7s after an injected move raced the paint (readout trace landed 0.7s post-inject, grim shot pre-paint) — use >=1.5s before oracle shots.
+- LINEAR-LIGHT BLEND PREDICTIONS MATCH THE LIVE PIPELINE: arm accent@130 over #FF8000 predicted (197,116,179) vs measured (196,116,179); grid gray@96 predicted (219,128,81) == measured EXACTLY. Blend asserts can be computed analytically (premultiplied linear: src*a + dst*(1-a), sRGB re-encode) — no more threshold guessing for overlay ink.
+- Synthetic seeded frames (PIL: gray field + 4 known-color zones) beat real-desktop frames for magnifier QA: every expected byte is known a priori, evidence carries no private screen content, and edge/corner zones make flip asserts byte-exact.

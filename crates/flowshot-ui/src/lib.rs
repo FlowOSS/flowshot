@@ -87,11 +87,11 @@ pub use backdrop::{
 };
 pub use editor::{
     EditKey, EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUndo,
-    EditorUpdate, EditorView, EffectKind, EyedropperTool, FramePixels, LayerEntry,
-    MoveSelectionTool, PixelEffect, PixelateTool, SelectionTool, TEXT_PADDING, TextTool, Tool,
-    ToolCursor, ToolKind, ToolRegistry, ToolShortcuts, ZOrderAction, effect_texture_id,
-    register_counter_tool, register_pixelate_tools, register_selection_tools, register_shape_tools,
-    register_text_tool,
+    EditorUpdate, EditorView, EffectKind, EyedropperTool, FramePixels, LayerEntry, MagnifierSample,
+    MagnifierTexture, MagnifierView, MoveSelectionTool, PixelEffect, PixelateTool, SelectionTool,
+    TEXT_PADDING, TextTool, Tool, ToolCursor, ToolKind, ToolRegistry, ToolShortcuts, ZOrderAction,
+    effect_texture_id, magnifier_texture_id, register_counter_tool, register_pixelate_tools,
+    register_selection_tools, register_shape_tools, register_text_tool,
 };
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};

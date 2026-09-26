@@ -324,7 +324,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = anchor/flip + persistence asserts; failure = selection at extreme corner -> toolbar fully on-screen (geometry unit). Evidence <attemptDir>/task-26-flowshot.png
   Commit: Y | feat(editor): toolbar, color wheel, side panel
   Recommended task executor category: visual-engineering - anchor/flip/animation polish is the deliverable.
-- [ ] 27. Editor: crop/move-selection + eyedropper + grid
+- [x] 27. Editor: crop/move-selection + eyedropper + grid
   What to do: selection-tool button (S) = re-enter selection mode (parity TYPE_SELECTION); move-selection tool (Ctrl+M) = drag entire selection contents-aware (moves selection rect; annotations clipped to selection move with it); eyedropper (G key or right-click-picker "pick from screen"): magnifier-follows mode, click samples frozen-frame pixel -> sets drawColor (+ optional copy hex to clipboard w/ notification - wayshot --color equivalence); grid overlay toggle (config gridVisible + key): spacing token, 1px lines, drawn under annotations above backdrop. Must NOT: no separate crop export mode (selection IS the crop).
   Parallelization: Wave 4 | Blocked by: 20 | Blocks: 38
   References: draft F12 rows 4/12 + TYPE_GRAB_COLOR=G, F27 (picker sampling note), F6 (wayshot --color UX equivalence).
