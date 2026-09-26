@@ -94,9 +94,15 @@ pub fn route_press(route: &PressRoute) -> PressTarget {
 }
 
 fn route_left(route: &PressRoute) -> PressTarget {
-    if route.tool_active && !route.tool_is_move {
+    if route.tool_active {
         // P3 beats P4/P5 - but an active edit widget commits first
         // (Flameshot `startDrawObjectTool` -> `commitCurrentTool`).
+        // The Move tool starts a draw session only when there's no object at
+        // the press (moving the selection); otherwise it falls through to
+        // object select (moving an individual object).
+        if route.tool_is_move && route.object_at {
+            return PressTarget::SelectObject;
+        }
         return if route.text_editing {
             if route.edit_contains {
                 PressTarget::ToolEdit
@@ -275,7 +281,8 @@ mod tests {
                 },
                 PressTarget::ToolDraw,
             ),
-            // P3 exclusion: the move tool falls through to object select...
+            // P3 exclusion: the move tool falls through to object select when an
+            // object is hit (move individual object).
             (
                 PressRoute {
                     tool_active: true,
@@ -285,14 +292,15 @@ mod tests {
                 },
                 PressTarget::SelectObject,
             ),
-            // ...and to the selection engine when no object is hit.
+            // P3: the move tool starts a draw session when no object is hit
+            // (move selection + contained annotations as one unit).
             (
                 PressRoute {
                     tool_active: true,
                     tool_is_move: true,
                     ..base()
                 },
-                PressTarget::Selection,
+                PressTarget::ToolDraw,
             ),
             // P4: with a tool active, a click inside the edit widget goes to
             // the tool; outside commits (and consumes).

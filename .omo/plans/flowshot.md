@@ -300,7 +300,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = determinism + PSNR gates; failure = 1x1 region -> no-op no panic (unit). Evidence <attemptDir>/task-23-flowshot.txt
   Commit: Y | feat(editor): secure pixelate + blur
   Recommended task executor category: quick - single module, algorithm fully specified with constants.
-- [ ] 24. Editor: circle-count tool
+- [x] 24. Editor: circle-count tool
   What to do: numbered step bubbles: click places next count (context counter++), diameter from drawCircleCounterSize, outline toggle drawCircleCounterOutline, fill = current color, number centered contrasting; wheel while hovering a bubble = increment/decrement ITS number (F12 row 10); delete -> core renumber op (todo 4: subsequent bubbles decrement); undo restores via max+1 rule; serializes count field. Must NOT: no renumber logic duplication (core owns it).
   Parallelization: Wave 4 | Blocked by: 20,4 | Blocks: 38
   References: draft F27 circlecount spec (capturewidget L1628-1658 behavior), F12 row 10.

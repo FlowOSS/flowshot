@@ -140,9 +140,9 @@ fn move_drag_is_exactly_one_undo_unit() {
     assert_eq!(after.y, before.y + 20.0);
     assert_eq!(ed.selected_object(), Some(0), "selection survives the drag");
     // One undo restores the PRE-MOVE state; redo re-applies the final one.
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(bounds(&ed, 0), before);
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(bounds(&ed, 0), after);
 }
 
@@ -220,7 +220,7 @@ fn undo_mid_drag_drops_the_drag_without_a_unit() {
             .consumed
     );
     assert_eq!(ed.undo_stack().undo_depth(), 0);
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(bounds(&ed, 0).x, 100.0, "redo restores the COMMITTED place");
 }
 
@@ -259,9 +259,9 @@ fn raise_and_lower_are_single_undo_units() {
     assert!(ed.raise_selected());
     assert_eq!(ed.scene().z_order(), &[1, 0, 2]);
     assert_eq!(ed.undo_stack().undo_depth(), 4);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().z_order(), &[0, 1, 2]);
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(ed.scene().z_order(), &[1, 0, 2]);
     // Edges are silent no-ops recording NOTHING.
     let depth = ed.undo_stack().undo_depth();
@@ -299,7 +299,7 @@ fn to_top_and_to_bottom_jump_in_one_unit() {
     ed.select_layer(1);
     assert!(ed.raise_selected_to_top());
     assert_eq!(ed.scene().z_order(), &[0, 2, 3, 1]);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().z_order(), &[0, 1, 2, 3]);
     ed.select_layer(2);
     assert!(ed.lower_selected_to_bottom());
@@ -324,16 +324,16 @@ fn z_order_interleaves_with_draw_and_delete() {
     assert_eq!(ed.scene().object_count(), 1);
     assert_eq!(ed.scene().z_order(), &[0]);
     // Peel back exactly one op per undo.
-    assert!(ed.undo()); // -> after unit 3
+    assert!(ed.undo().0); // -> after unit 3
     assert_eq!(ed.scene().object_count(), 2);
     assert_eq!(ed.scene().z_order(), &[1, 0]);
-    assert!(ed.undo()); // -> after unit 2
+    assert!(ed.undo().0); // -> after unit 2
     assert_eq!(ed.scene().z_order(), &[0, 1]);
-    assert!(ed.undo()); // -> after unit 1
+    assert!(ed.undo().0); // -> after unit 1
     assert_eq!(ed.scene().object_count(), 1);
-    assert!(ed.undo()); // -> empty
+    assert!(ed.undo().0); // -> empty
     assert_eq!(ed.scene().object_count(), 0);
-    assert!(!ed.undo());
+    assert!(!ed.undo().0);
 }
 
 #[test]
@@ -346,7 +346,7 @@ fn move_layer_reorders_as_one_unit() {
     assert!(ed.move_layer(0, 2));
     assert_eq!(ed.scene().z_order(), &[1, 2, 0, 3]);
     assert_eq!(ed.undo_stack().undo_depth(), depth + 1);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().z_order(), &[0, 1, 2, 3]);
     assert!(ed.move_layer(3, 1));
     assert_eq!(ed.scene().z_order(), &[0, 3, 1, 2]);
@@ -420,11 +420,11 @@ fn undo_limit_evicts_the_oldest_units() {
         ed.commit_object(rect_object(f32::from(x) * 100.0, 0.0, 20.0, 20.0));
     }
     assert_eq!(ed.undo_stack().undo_depth(), 3, "bounded by the config");
-    assert!(ed.undo());
-    assert!(ed.undo());
-    assert!(ed.undo());
+    assert!(ed.undo().0);
+    assert!(ed.undo().0);
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().object_count(), 2, "oldest two are unreachable");
-    assert!(!ed.undo(), "evicted history is gone");
+    assert!(!ed.undo().0, "evicted history is gone");
 }
 
 #[test]
@@ -432,7 +432,7 @@ fn undo_limit_zero_disables_history() {
     let mut ed = editor_with_undo_limit(0);
     ed.commit_object(rect_object(0.0, 0.0, 20.0, 20.0));
     assert_eq!(ed.undo_stack().undo_depth(), 0);
-    assert!(!ed.undo());
+    assert!(!ed.undo().0);
     assert_eq!(ed.scene().object_count(), 1, "mutations still apply");
 }
 
@@ -463,20 +463,20 @@ fn delete_and_undo_roundtrip_through_the_unified_journal() {
     assert!(ed.delete_selected()); // unit 3
     assert_eq!(ed.scene().object_count(), 0);
     assert_eq!(ed.pixel_effects().len(), 1, "the effect is untouched");
-    assert!(ed.undo()); // -> unit 2 state
+    assert!(ed.undo().0); // -> unit 2 state
     assert_eq!(ed.scene().object_count(), 1);
     assert_eq!(ed.pixel_effects().len(), 1);
-    assert!(ed.undo()); // -> unit 1 state
+    assert!(ed.undo().0); // -> unit 1 state
     assert_eq!(ed.scene().object_count(), 0);
     assert_eq!(ed.pixel_effects().len(), 1);
-    assert!(ed.undo()); // -> empty
+    assert!(ed.undo().0); // -> empty
     assert_eq!(ed.pixel_effects().len(), 0);
-    assert!(!ed.undo());
-    assert!(ed.redo() && ed.redo() && ed.redo());
+    assert!(!ed.undo().0);
+    assert!(ed.redo().0 && ed.redo().0 && ed.redo().0);
     assert_eq!(ed.scene().object_count(), 0);
     assert_eq!(ed.pixel_effects().len(), 1);
     assert_eq!(ed.pixel_effects()[0].id(), 0, "identity survives");
-    assert!(!ed.redo());
+    assert!(!ed.redo().0);
 }
 
 #[test]
@@ -503,15 +503,15 @@ fn mutation_sequence_roundtrips_to_an_identical_scene() {
     let final_scene: SceneData = ed.scene().to_data();
     let final_effects = ed.pixel_effects().len();
     for _ in 0..units {
-        assert!(ed.undo());
+        assert!(ed.undo().0);
     }
-    assert!(!ed.undo());
+    assert!(!ed.undo().0);
     assert_eq!(ed.scene().object_count(), 0);
     assert_eq!(ed.pixel_effects().len(), 0);
     for _ in 0..units {
-        assert!(ed.redo());
+        assert!(ed.redo().0);
     }
-    assert!(!ed.redo());
+    assert!(!ed.redo().0);
     assert_eq!(ed.scene().to_data(), final_scene, "identical scene");
     assert_eq!(ed.pixel_effects().len(), final_effects);
 }
@@ -530,8 +530,8 @@ fn mutate_object_is_one_unit_and_validates_the_id() {
         other => other,
     }));
     assert_eq!(ed.undo_stack().undo_depth(), 2);
-    assert!(ed.undo());
-    assert!(ed.redo());
+    assert!(ed.undo().0);
+    assert!(ed.redo().0);
 }
 
 #[test]
@@ -539,8 +539,8 @@ fn undo_and_redo_at_the_ends_are_silent_noops() {
     // Plan failure QA: undo at empty = no crash, no unit, log token
     // "undo at history start" (asserted live).
     let mut ed = editor();
-    assert!(!ed.undo());
-    assert!(!ed.redo());
+    assert!(!ed.undo().0);
+    assert!(!ed.redo().0);
     assert_eq!(ed.undo_stack().undo_depth(), 0);
 }
 
@@ -579,6 +579,14 @@ fn z_keys_ship_unbound_and_dispatch_when_rebound() {
 #[derive(Debug)]
 struct StubPencil;
 impl Tool for StubPencil {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Pencil
     }

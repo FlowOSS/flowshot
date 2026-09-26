@@ -86,6 +86,14 @@ impl StubLineTool {
 }
 
 impl Tool for StubLineTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Pencil
     }
@@ -171,6 +179,14 @@ impl Tool for StubLineTool {
 #[derive(Debug)]
 struct StubClickTool;
 impl Tool for StubClickTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Counter
     }
@@ -192,6 +208,14 @@ impl Tool for StubClickTool {
 #[derive(Debug)]
 struct StubEditTool;
 impl Tool for StubEditTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Text
     }
@@ -225,6 +249,14 @@ impl Tool for StubEditTool {
 #[derive(Debug)]
 struct StubQuietTool;
 impl Tool for StubQuietTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Marker
     }
@@ -240,6 +272,14 @@ impl Tool for StubQuietTool {
 #[derive(Debug)]
 struct StubWheelTool;
 impl Tool for StubWheelTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Circle
     }
@@ -424,14 +464,14 @@ fn undo_redo_roundtrip_restores_the_scene() {
     ed.activate_tool(ToolKind::Pencil);
     stroke(&mut ed, &env, (0.0, 0.0), (50.0, 50.0));
     assert_eq!(ed.scene().object_count(), 1);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().object_count(), 0);
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(ed.scene().object_count(), 1);
     // Ends are silent no-ops.
-    assert!(!ed.redo());
-    assert!(ed.undo());
-    assert!(!ed.undo());
+    assert!(!ed.redo().0);
+    assert!(ed.undo().0);
+    assert!(!ed.undo().0);
 }
 
 #[test]
@@ -470,7 +510,7 @@ fn delete_removes_selected_and_core_renumbers_counters() {
     assert_eq!(ed.scene().counter_counts(), vec![1, 2], "core renumbered");
     assert_eq!(ed.selected_object(), None);
     assert_eq!(ed.undo_stack().undo_depth(), 4, "3 commits + 1 delete");
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().counter_counts(), vec![1, 2, 3], "delete undone");
     // Delete without a selection passes through.
     assert!(!ed.key_press(&env, KeyCode::Delete, false, None).consumed);

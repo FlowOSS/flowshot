@@ -43,10 +43,22 @@ impl EditorState {
         let plain = !ctrl && !shift && !env.modifiers.alt_key() && !env.modifiers.super_key();
         if ctrl && !env.modifiers.alt_key() && !env.modifiers.super_key() {
             if shift && self.shortcuts.is_redo(code) {
-                return EditorUpdate::eaten(self.redo());
+                let (changed, selection) = self.redo();
+                return EditorUpdate {
+                    consumed: true,
+                    effects: Vec::new(),
+                    changed,
+                    restore_selection: selection,
+                };
             }
             if !shift && self.shortcuts.is_undo(code) {
-                return EditorUpdate::eaten(self.undo());
+                let (changed, selection) = self.undo();
+                return EditorUpdate {
+                    consumed: true,
+                    effects: Vec::new(),
+                    changed,
+                    restore_selection: selection,
+                };
             }
         }
         if plain {
@@ -57,6 +69,11 @@ impl EditorState {
             }
             if !repeat && let Some(kind) = self.shortcuts.tool_for_key(code) {
                 self.toggle_tool(kind);
+                return EditorUpdate::eaten(true);
+            }
+            // Grid toggle key (todo 27): unbound by default, rebindable.
+            if !repeat && code == KeyCode::KeyF {
+                self.toggle_grid();
                 return EditorUpdate::eaten(true);
             }
             // Z-order keys ship UNBOUND (plan todo 25: panel-driven); when

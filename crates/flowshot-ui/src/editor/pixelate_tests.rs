@@ -356,6 +356,7 @@ fn journal_mirrors_the_core_undo_stack_semantics() {
                     pixels: vec![n; 4],
                 },
             )],
+            None,
         )
     };
     assert!(!journal.can_undo());
@@ -363,10 +364,10 @@ fn journal_mirrors_the_core_undo_stack_semantics() {
     journal.push(snap(0), snap(1));
     journal.push(snap(1), snap(2));
     assert_eq!(journal.undo_depth(), 2);
-    let (scene, effects) = journal.undo().unwrap();
+    let (scene, effects, _) = journal.undo().unwrap();
     assert_eq!(scene.object_count(), 0);
     assert_eq!(effects[0].pixels(), &[1, 1, 1, 1], "before snapshot");
-    let (_, effects) = journal.redo().unwrap();
+    let (_, effects, _) = journal.redo().unwrap();
     assert_eq!(effects[0].pixels(), &[2, 2, 2, 2], "after snapshot");
     assert!(journal.redo().is_none(), "silent no-op at history end");
     // Push after undo discards the redo tail.

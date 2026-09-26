@@ -142,10 +142,10 @@ fn the_pristine_frame_is_never_modified_and_undo_restores_the_original() {
     stroke(&mut ed, &env(), (8.0, 6.0), (40.0, 30.0));
     assert_eq!(ed.pixel_effects().len(), 1);
     assert_eq!(ed.frame().unwrap().rgba, pristine, "commit: frame pristine");
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert!(ed.pixel_effects().is_empty(), "undo = remove the effect");
     assert_eq!(ed.frame().unwrap().rgba, pristine, "undo: frame pristine");
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(ed.pixel_effects().len(), 1, "redo re-applies the bake");
     assert_eq!(ed.pixel_effects()[0].texture_id(), effect_texture_id(0));
 }
@@ -162,14 +162,14 @@ fn effects_and_scene_objects_undo_in_interleaved_order() {
     ed.activate_tool(ToolKind::Pixelate);
     stroke(&mut ed, &env(), (8.0, 6.0), (40.0, 30.0));
     assert_eq!(ed.undo_stack().undo_depth(), 2);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert!(ed.pixel_effects().is_empty(), "effect undone first");
     assert_eq!(ed.scene().object_count(), 1, "rect survives");
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().object_count(), 0, "rect undone second");
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(ed.scene().object_count(), 1);
-    assert!(ed.redo());
+    assert!(ed.redo().0);
     assert_eq!(ed.pixel_effects().len(), 1);
 }
 
@@ -178,7 +178,7 @@ fn effect_ids_never_reuse_so_retired_textures_stay_retired() {
     let (mut ed, _) = editor_with_frame();
     ed.activate_tool(ToolKind::Pixelate);
     stroke(&mut ed, &env(), (4.0, 4.0), (20.0, 20.0));
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     stroke(&mut ed, &env(), (4.0, 4.0), (24.0, 24.0));
     let effects = ed.pixel_effects();
     assert_eq!(effects.len(), 1);
@@ -311,7 +311,7 @@ fn pixelate_and_blur_bakes_differ_and_honor_the_size_slot() {
     stroke(&mut ed, &env(), (8.0, 8.0), (56.0, 40.0));
     let small = ed.pixel_effects()[0].pixels().to_vec();
     ed.set_tool_size(6);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     stroke(&mut ed, &env(), (8.0, 8.0), (56.0, 40.0));
     let coarse = ed.pixel_effects()[0].pixels().to_vec();
     assert_ne!(small, coarse, "size drives the F27 grid coarseness");

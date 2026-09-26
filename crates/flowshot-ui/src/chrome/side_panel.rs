@@ -43,9 +43,9 @@ pub(super) const LAYER_ICON: f32 = 16.0;
 
 /// The per-tool size-control label - the visibility gate of the plan's
 /// "per-tool options (size sliders ...)": `None` hides the slider (the
-/// selection/move/invert kinds have no size semantics; invert is a region
-/// effect). Rectangle's dispatched slot IS the corner radius (the F27
-/// `drawRectangleSize` naming, Amendment #3), text's IS the font size.
+/// selection/move/invert/eyedropper kinds have no size semantics; invert is
+/// a region effect). Rectangle's dispatched slot IS the corner radius (the
+/// F27 `drawRectangleSize` naming, Amendment #3), text's IS the font size.
 #[must_use]
 pub fn size_label(kind: ToolKind) -> Option<&'static str> {
     match kind {
@@ -55,7 +55,7 @@ pub fn size_label(kind: ToolKind) -> Option<&'static str> {
         ToolKind::Text => Some("Font size"),
         ToolKind::Pixelate | ToolKind::Blur => Some("Block size"),
         ToolKind::Counter => Some("Counter size"),
-        ToolKind::Selection | ToolKind::Move | ToolKind::Invert => None,
+        ToolKind::Selection | ToolKind::Move | ToolKind::Invert | ToolKind::Eyedropper => None,
     }
 }
 

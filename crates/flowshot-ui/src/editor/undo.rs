@@ -14,13 +14,15 @@
 //! contract, and effect snapshots are cheap because the baked buffers are
 //! `Arc`-shared ([`PixelEffect::clone`] bumps refcounts, never pixels).
 
+use flowshot_core::geometry::LogicalRect;
 use flowshot_core::scene::Scene;
 
 use super::effect::PixelEffect;
 
 /// One undoable editor state: the annotation scene plus the baked
-/// pixel-overlay layer, in paint order.
-pub type Snapshot = (Scene, Vec<PixelEffect>);
+/// pixel-overlay layer, in paint order, plus the selection rect (for
+/// move-selection undo).
+pub type Snapshot = (Scene, Vec<PixelEffect>, Option<LogicalRect>);
 
 /// Snapshot-pair undo history over [`Snapshot`]s (the core `UndoStack`
 /// contract, extended payload).

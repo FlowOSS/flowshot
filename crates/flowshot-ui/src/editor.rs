@@ -93,9 +93,10 @@ pub use size::{
 };
 pub use tool::{EditKey, EditorContext, EditorTools, FramePixels, Tool, ToolCursor};
 pub use tools::{
-    ArrowTool, CounterTool, EllipseTool, InvertTool, LineTool, MARKER_ALPHA, MarkerTool,
-    PencilTool, PixelateTool, RDP_EPSILON, RectTool, TEXT_PADDING, TextTool, register_counter_tool,
-    register_pixelate_tools, register_shape_tools, register_text_tool,
+    ArrowTool, CounterTool, EllipseTool, EyedropperTool, InvertTool, LineTool, MARKER_ALPHA,
+    MarkerTool, MoveSelectionTool, PencilTool, PixelateTool, RDP_EPSILON, RectTool, SelectionTool,
+    TEXT_PADDING, TextTool, register_counter_tool, register_pixelate_tools,
+    register_selection_tools, register_shape_tools, register_text_tool,
 };
 pub use types::{EditorEffect, EditorEnv, EditorUpdate};
 pub use undo::{EditorUndo, Snapshot};
@@ -126,6 +127,8 @@ pub struct EditorState {
     frame: Option<FramePixels>,
     widget_present: bool,
     reedit: Option<Reedit>,
+    grid_visible: bool,
+    move_selection_before: Option<Snapshot>,
 }
 
 impl Default for EditorState {
@@ -141,6 +144,7 @@ impl EditorState {
         let color = parse_draw_color(&config.editor.draw_color);
         let undo = EditorUndo::from_undo_limit(config.editor.undo_limit);
         let sizes = ToolSizes::from_config(&config);
+        let grid_visible = config.editor.grid;
         Self {
             registry,
             tool: None,
@@ -161,6 +165,8 @@ impl EditorState {
             frame: None,
             widget_present: false,
             reedit: None,
+            grid_visible,
+            move_selection_before: None,
         }
     }
 
@@ -328,5 +334,194 @@ impl EditorState {
         cascade.set_tool_checked(self.active_kind.is_some());
         cascade.set_object_selected(self.selected.is_some());
         cascade.set_tool_widget_present(self.editing());
+    }
+
+    /// Whether the grid overlay is visible (plan todo 27: `[editor].grid`
+    /// config + toggle key).
+    #[must_use]
+    pub const fn grid_visible(&self) -> bool {
+        self.grid_visible
+    }
+
+    /// Toggles the grid overlay visibility (the configurable key seam).
+    pub fn toggle_grid(&mut self) {
+        self.grid_visible = !self.grid_visible;
+        tracing::info!(
+            target: "flowshot_ui::editor",
+            visible = self.grid_visible,
+            "grid toggled"
+        );
+    }
+
+    /// Sets the grid overlay visibility (config seam).
+    pub fn set_grid_visible(&mut self, visible: bool) {
+        self.grid_visible = visible;
+    }
+
+    /// The move-selection drag delta, when the active tool is Move and a drag
+    /// is in progress (the `OverlayCore` applies this to the selection state
+    /// and contained objects).
+    #[must_use]
+    pub fn move_selection_delta(&mut self) -> Option<(f64, f64)> {
+        if self.active_kind != Some(ToolKind::Move) {
+            return None;
+        }
+        let tool = self.tool.as_mut()?;
+        let move_tool = tool
+            .as_any_mut()
+            .downcast_mut::<tools::MoveSelectionTool>()?;
+        move_tool.take_delta()
+    }
+
+    /// Translates the selection rect and all contained objects by the given
+    /// delta (the move-selection tool's drag seam). Returns true when the
+    /// scene changed.
+    pub fn translate_selection_and_objects(
+        &mut self,
+        selection: &mut crate::selection::SelectionState,
+        dx: f64,
+        dy: f64,
+    ) -> bool {
+        if dx == 0.0 && dy == 0.0 {
+            return false;
+        }
+        // Snapshot on first non-zero delta (todo 25 discipline: backup at first move).
+        // Include the selection rect in the snapshot for move-selection undo.
+        if self.move_selection_before.is_none() {
+            self.move_selection_before = Some(self.snapshot_with_selection(selection.rect()));
+        }
+        let Some(rect) = selection.rect() else {
+            return false;
+        };
+        let new_rect = flowshot_core::geometry::LogicalRect::from_raw(
+            rect.x.0 + dx,
+            rect.y.0 + dy,
+            rect.width.0,
+            rect.height.0,
+        );
+        selection.set_rect(Some(new_rect));
+
+        let mut changed = false;
+        #[allow(
+            clippy::cast_possible_truncation,
+            reason = "selection rect is bounded by screen dimensions"
+        )]
+        let scene_rect = flowshot_core::scene::Rect::new(
+            new_rect.x.0 as f32,
+            new_rect.y.0 as f32,
+            new_rect.width.0 as f32,
+            new_rect.height.0 as f32,
+        );
+        for id in 0..self.scene.object_count() {
+            if let Some(object) = self.scene.get_object(id) {
+                let bounds = object.bounding_rect();
+                // Manual AABB intersection check.
+                let intersects = bounds.x < scene_rect.x + scene_rect.width
+                    && bounds.x + bounds.width > scene_rect.x
+                    && bounds.y < scene_rect.y + scene_rect.height
+                    && bounds.y + bounds.height > scene_rect.y;
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    reason = "delta values are bounded by screen dimensions"
+                )]
+                let delta_x = dx as f32;
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    reason = "delta values are bounded by screen dimensions"
+                )]
+                let delta_y = dy as f32;
+                if intersects
+                    && self.replace_object(id, |data| mutate::translated(data, delta_x, delta_y))
+                {
+                    changed = true;
+                }
+            }
+        }
+        changed
+    }
+
+    /// Commits the move-selection drag as one undo unit (called on release).
+    /// Returns true when an undo unit was recorded.
+    pub fn commit_move_selection(&mut self) -> bool {
+        if self.active_kind != Some(ToolKind::Move) {
+            return false;
+        }
+        let Some(before) = self.move_selection_before.take() else {
+            return false;
+        };
+        self.undo.push(before, self.snapshot());
+        tracing::info!(
+            target: "flowshot_ui::editor",
+            undo_depth = self.undo.undo_depth(),
+            "move-selection committed"
+        );
+        true
+    }
+
+    /// Cancels the armed move-selection drag, rolling the live motions back
+    /// (Esc cascade stage 1 mid-drag; a drag that never moved has nothing to
+    /// roll back).
+    pub fn cancel_move_selection(&mut self) {
+        let Some(before) = self.move_selection_before.take() else {
+            return;
+        };
+        self.restore(before);
+        tracing::debug!(target: "flowshot_ui::editor", "move-selection cancelled");
+    }
+
+    /// Paints the grid overlay (plan todo 27: spacing token, 1px lines,
+    /// drawn UNDER annotations ABOVE backdrop).
+    pub fn paint_grid(
+        &self,
+        list: &mut crate::render::DisplayList,
+        output: &flowshot_core::geometry::OutputInfo,
+    ) {
+        use crate::render::{Color, Shape};
+
+        if !self.grid_visible {
+            return;
+        }
+
+        #[allow(
+            clippy::cast_precision_loss,
+            reason = "grid spacing is a small integer, precision loss is acceptable"
+        )]
+        let spacing = self.config.editor.draw_thickness.max(8) as f32 * 4.0;
+        let color = Color::from_rgba8(128, 128, 128, 64);
+
+        #[allow(
+            clippy::cast_precision_loss,
+            reason = "physical dimensions are bounded, precision loss is acceptable"
+        )]
+        let width = output.physical_size.width.0 as f32;
+        #[allow(
+            clippy::cast_precision_loss,
+            reason = "physical dimensions are bounded, precision loss is acceptable"
+        )]
+        let height = output.physical_size.height.0 as f32;
+
+        let mut x = 0.0;
+        while x < width {
+            list.fill(
+                Shape::Rect {
+                    rect: crate::render::Rect::from_parts(x, 0.0, 1.0, height),
+                    radius: 0.0,
+                },
+                color,
+            );
+            x += spacing;
+        }
+
+        let mut y = 0.0;
+        while y < height {
+            list.fill(
+                Shape::Rect {
+                    rect: crate::render::Rect::from_parts(0.0, y, width, 1.0),
+                    radius: 0.0,
+                },
+                color,
+            );
+            y += spacing;
+        }
     }
 }

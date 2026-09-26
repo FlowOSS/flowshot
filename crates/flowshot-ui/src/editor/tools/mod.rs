@@ -18,10 +18,13 @@
 
 mod arrow;
 mod counter;
+mod eyedropper;
 mod geometry;
+mod move_selection;
 mod path;
 mod pixelate;
 mod point;
+mod selection_tool;
 mod shape;
 mod text;
 mod text_font;
@@ -37,10 +40,13 @@ mod text_tests;
 
 pub use arrow::ArrowTool;
 pub use counter::CounterTool;
+pub use eyedropper::EyedropperTool;
 pub use geometry::RDP_EPSILON;
+pub use move_selection::MoveSelectionTool;
 pub use path::{MARKER_ALPHA, MarkerTool, PencilTool};
 pub use pixelate::PixelateTool;
 pub use point::{InvertTool, LineTool};
+pub use selection_tool::SelectionTool;
 pub use shape::{EllipseTool, RectTool};
 pub use text::{TEXT_PADDING, TextTool};
 
@@ -76,4 +82,11 @@ pub fn register_pixelate_tools(registry: &mut ToolRegistry) {
 /// Registers the todo-24 circle-count tool on `registry`.
 pub fn register_counter_tool(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Counter, || Box::new(CounterTool::default()));
+}
+
+/// Registers the todo-27 selection/move/eyedropper tools on `registry`.
+pub fn register_selection_tools(registry: &mut ToolRegistry) {
+    registry.register(ToolKind::Selection, || Box::new(SelectionTool));
+    registry.register(ToolKind::Move, || Box::new(MoveSelectionTool::default()));
+    registry.register(ToolKind::Eyedropper, || Box::new(EyedropperTool::default()));
 }

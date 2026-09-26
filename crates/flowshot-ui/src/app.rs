@@ -209,6 +209,11 @@ impl OverlayApp {
             }
             _ => DisplayList::new(),
         };
+        // Grid overlay (todo 27: spacing token, 1px lines, UNDER annotations
+        // ABOVE backdrop).
+        if let Some(output) = self.core.router().output_for(slot) {
+            self.core.editor().paint_grid(&mut list, output);
+        }
         // Editor visuals (todo 20: scene objects, the selected-object
         // outline, the active tool's stroke/preview) above the backdrop and
         // BELOW the selection chrome - annotations paint on the frozen

@@ -48,6 +48,14 @@ impl RectTool {
 }
 
 impl Tool for RectTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Rectangle
     }
@@ -117,6 +125,14 @@ impl EllipseTool {
 }
 
 impl Tool for EllipseTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Circle
     }
