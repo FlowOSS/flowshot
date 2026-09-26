@@ -27,6 +27,14 @@ pub struct LineTool {
 }
 
 impl Tool for LineTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Line
     }
@@ -94,6 +102,14 @@ impl InvertTool {
 }
 
 impl Tool for InvertTool {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Invert
     }

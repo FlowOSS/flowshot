@@ -166,5 +166,6 @@ pub fn icon_for_tool(kind: ToolKind) -> Icon {
         ToolKind::Blur => Icon::Contrast,
         ToolKind::Invert => Icon::Contrast,
         ToolKind::Move => Icon::Move,
+        ToolKind::Eyedropper => Icon::Rainbow,
     }
 }

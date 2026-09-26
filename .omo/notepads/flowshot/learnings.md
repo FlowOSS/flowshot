@@ -983,3 +983,152 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 **Verification**: live QA green (3 counters placed, delete #2 -> renumber [1,2], undo -> restore [1,2,3]); all unit tests green (441 tests); clippy clean; fmt clean.
 
 **Evidence**: `.omo/evidence/task-24-flowshot.png` (3-panel montage: 3 counters | after delete | after undo); `.omo/evidence/task-24-flowshot.txt` (updated with live QA log + pixel asserts).
+
+## Todo 27: crop/move-selection + eyedropper + grid (flowshot-ui) — 2026-09-26
+
+**What landed**
+- `editor/tools/selection_tool.rs`: No-op SelectionTool (F12 `TYPE_SELECTION` parity) - signals "selection mode active" to the routing funnel, delegates all pointer handling to the selection engine (todo 16). `is_valid()` returns false, `show_mouse_preview()` returns false.
+- `editor/tools/move_selection.rs`: MoveSelectionTool (F12 `TYPE_MOVESELECTION` parity) - tracks drag start/current positions, `delta()` returns (dx, dy) for the editor to translate selection + contained objects. `draw_end()` returns None (no scene object committed).
+- `editor/tools/eyedropper.rs`: EyedropperTool (F12 `TYPE_GRAB_COLOR` parity) - samples frozen-frame pixel at click position via `sample(frame, at)`. Converts global logical to frame-local physical coordinates, respects frame origin and scale (HiDPI support). Returns None when click is outside frame bounds (plan failure case).
+- `EditorState` gained `grid_visible: bool` field initialized from `[editor].grid` config (already exists in flowshot-core). Methods: `grid_visible()`, `toggle_grid()`, `set_grid_visible()`.
+- `ToolKind::Eyedropper` variant added (default key `G`, icon `Rainbow`, `uses_shared_thickness()` returns false, `size_label()` returns None).
+- `register_selection_tools()` registers Selection, Move, Eyedropper on the tool registry.
+
+**Key patterns that worked**
+- Parity tools as no-ops: SelectionTool is a placeholder that signals mode, not a drawing tool. The selection engine owns the geometry; the tool just occupies the active-tool slot.
+- Delta-based move tracking: MoveSelectionTool tracks the drag delta but does NOT commit a scene object. The editor handles the selection + contained-objects translation via the delta. This separation keeps the tool framework clean (tools commit objects, editor handles selection geometry).
+- Eyedropper sampling with bounds checking: The `sample()` method converts global logical to frame-local physical coordinates, checks bounds, then reads RGBA. Clicks outside the frame return None (plan failure case honored).
+- Grid visibility as editor state: The grid is a config-driven overlay, not a floating widget, so it lives in EditorState (not ChromeState). The `[editor].grid` config key seeds the initial state.
+
+**Gotchas hit**
+- `cast_possible_truncation` + `cast_sign_loss` on f64->u32 casts in eyedropper sampling: allowed with reason "bounds-checked above" (the bounds check ensures the value is non-negative and within frame dimensions).
+- `collapsible_if` on nested if-let in eyedropper `pressed()`: collapsed to let-chain (Edition 2024 syntax: `if let Some(frame) = ctx.frame && let Some(color) = Self::sample(frame, at)`).
+- `doc_markdown` on "FlowShot" in doc comment: backticked to `FlowShot` (CamelCase terms in doc comments must be backticked).
+- `default_constructed_unit_structs` on `SelectionTool::default()`: removed default() call (SelectionTool is a unit struct, just use `SelectionTool`).
+- `unused_mut` on test variable: removed mut from `let mut tool = SelectionTool` (the test doesn't mutate it).
+- Icon selection: Used `Rainbow` icon for Eyedropper (color-related, closest available in the icon set). A dedicated eyedropper icon can be added later without breaking changes.
+
+**Test coverage**
+- `selection_tool::tests`: kind is Selection, is_valid=false, no bounding rect (3 tests)
+- `move_selection::tests`: kind is Move, delta tracking, validity during drag (3 tests)
+- `eyedropper::tests`: exact pixel sampling, bounds checking, origin/scale handling (4 tests)
+- `kind::tests`: updated for Eyedropper variant (default key, shared thickness, id roundtrip)
+- All 456 existing flowshot-ui tests pass + 10 new tests = 466 total
+
+**Verification**: `cargo build -p flowshot-ui` green; `cargo test -p flowshot-ui` 466 tests green; `cargo clippy -p flowshot-ui --all-targets -- -D warnings` zero warnings; `cargo fmt --check` clean.
+
+**Design decisions recorded**
+- SelectionTool as no-op: The selection tool is a PARITY tool that does NOT draw annotations. Its sole purpose is to re-enter selection mode when the user presses `S`. The selection engine (todo 16) owns the selection geometry; this tool is a no-op placeholder that signals "selection mode active" to the routing funnel.
+- MoveSelectionTool delta-based: The move tool tracks the drag delta but does NOT commit a scene object. The editor handles the selection + contained-objects translation via the delta. This separation keeps the tool framework clean.
+- Eyedropper sampling: The eyedropper samples the frozen frame (installed by the shell via `EditorState::install_frame`) at the click position. The sampling converts global logical coordinates to physical pixels in the frame, then reads the RGBA value. Bounds checking ensures clicks outside the frame are ignored.
+- Grid visibility state: The grid visibility is editor state (not chrome state) because it's a config-driven overlay, not a floating widget.
+
+**Future wiring (todo 35)**
+- Ctrl+M key binding activation (currently the tool is registered but the key combo is not wired)
+- Grid toggle key binding (currently the state is tracked but the key is not wired)
+- Move-selection actual translation (editor needs to call selection.translate() + objects.translate() with the delta)
+- Eyedropper draw color application (editor needs to call set_color() with the sampled color)
+- Eyedropper clipboard seam (optional: copy hex to clipboard w/ notification)
+
+## Todo 27: crop/move-selection + eyedropper + grid (flowshot-ui) — 2026-09-26
+
+**What landed**
+- `editor/tools/selection_tool.rs`: No-op SelectionTool (F12 `TYPE_SELECTION` parity) - signals "selection mode active" to the routing funnel, delegates all pointer handling to the selection engine (todo 16). `is_valid()` returns false, `show_mouse_preview()` returns false.
+- `editor/tools/move_selection.rs`: MoveSelectionTool (F12 `TYPE_MOVESELECTION` parity) - tracks drag start/current positions, `delta()` returns (dx, dy) for the editor to translate selection + contained objects. `draw_end()` returns None (no scene object committed).
+- `editor/tools/eyedropper.rs`: EyedropperTool (F12 `TYPE_GRAB_COLOR` parity) - samples frozen-frame pixel at click position via `sample(frame, at)`. Converts global logical to frame-local physical coordinates, respects frame origin and scale (HiDPI support). Returns None when click is outside frame bounds (plan failure case).
+- `EditorState` gained `grid_visible: bool` field initialized from `[editor].grid` config (already exists in flowshot-core). Methods: `grid_visible()`, `toggle_grid()`, `set_grid_visible()`.
+- `ToolKind::Eyedropper` variant added (default key `G`, icon `Rainbow`, `uses_shared_thickness()` returns false, `size_label()` returns None).
+- `register_selection_tools()` registers Selection, Move, Eyedropper on the tool registry.
+- `Tool` trait gained `as_any()` method for downcasting support (enables move-selection delta access and eyedropper color sampling).
+
+**Key patterns that worked**
+- Parity tools as no-ops: SelectionTool is a placeholder that signals mode, not a drawing tool. The selection engine owns the geometry; the tool just occupies the active-tool slot.
+- Delta-based move tracking: MoveSelectionTool tracks the drag delta but does NOT commit a scene object. The editor handles the selection + contained-objects translation via the delta. This separation keeps the tool framework clean.
+- Move-selection integration pattern:
+  1. Route funnel calls `editor.pointer_move()`
+  2. Editor returns consumed=true for Move tool
+  3. Route funnel checks `move_selection_delta()`
+  4. If delta exists, calls `translate_selection_and_objects()`
+  5. Translation updates selection rect and contained objects
+  6. On release, `commit_move_selection()` is called (future: undo unit)
+- Eyedropper integration pattern:
+  1. User presses G to activate Eyedropper tool
+  2. User clicks on frozen frame
+  3. `begin_stroke()` creates fresh EyedropperTool instance
+  4. Tool's `pressed()` samples the frame at click position
+  5. Editor checks `eyedropper.sampled()` after begin_stroke
+  6. If color exists, calls `set_color()` to apply it
+  7. Color persists through DrawColorSink seam (todo 26)
+- Grid paint order: backdrop -> grid -> effects/scene -> chrome (grid is UNDER annotations, ABOVE backdrop)
+- Tool trait as_any() for downcasting: enables tool-specific seams without breaking the trait object pattern
+
+**Gotchas hit**
+- `cast_possible_truncation` + `cast_sign_loss` on f64->u32 casts in eyedropper sampling: allowed with reason "bounds-checked above" (the bounds check ensures the value is non-negative and within frame dimensions).
+- `cast_possible_truncation` on f64->f32 casts in move-selection: allowed with reason "delta values are bounded by screen dimensions".
+- `cast_precision_loss` on u32/i32->f32 casts in grid rendering: allowed with reason "grid spacing/physical dimensions are bounded".
+- `collapsible_if` on nested if-let in eyedropper `pressed()` and move-selection route: collapsed to let-chain (Edition 2024 syntax: `if let Some(frame) = ctx.frame && let Some(color) = Self::sample(frame, at)`).
+- `doc_markdown` on "FlowShot" and "OverlayCore" in doc comments: backticked (CamelCase terms in doc comments must be backticked).
+- `default_constructed_unit_structs` on `SelectionTool::default()`: removed default() call (SelectionTool is a unit struct, just use `SelectionTool`).
+- `unused_mut` on test variable: removed mut from `let mut tool = SelectionTool` (the test doesn't mutate it).
+- `similar_names` on dx_f32/dy_f32: renamed to delta_x/delta_y (clippy flags variables that differ only by a suffix).
+- `items_after_statements` in paint_grid: moved use statements to function top (items exist from the start of the scope, so declaring them after statements is confusing).
+- Icon selection: Used `Rainbow` icon for Eyedropper (color-related, closest available in the icon set). A dedicated eyedropper icon can be added later without breaking changes.
+- Grid toggle key: Used F key (unbound in F12 map). The plan says "check the map; if F12 defines a grid key use it, else pick an unbound key and document". F12 doesn't define a grid key, so F is documented as the grid toggle.
+- Manual AABB intersection check: scene::Rect has no `intersects()` method, so I implemented it manually: `bounds.x < scene_rect.x + scene_rect.width && bounds.x + bounds.width > scene_rect.x && bounds.y < scene_rect.y + scene_rect.height && bounds.y + bounds.height > scene_rect.y`.
+- LogicalRect field access: LogicalRect has direct fields x, y, width, height (not origin/size methods). The geometry module uses `Rect<C>` with generic coordinate type.
+- Scene API: Scene has `object_count()` not `len()`. Use `scene.get_object(id)` to access objects by id.
+
+**Test coverage**
+- `selection_tool::tests`: kind is Selection, is_valid=false, no bounding rect (3 tests)
+- `move_selection::tests`: kind is Move, delta tracking, validity during drag (3 tests)
+- `eyedropper::tests`: exact pixel sampling, bounds checking, origin/scale handling (4 tests)
+- `kind::tests`: updated for Eyedropper variant (default key, shared thickness, id roundtrip)
+- All 456 existing flowshot-ui tests pass + 10 new tests = 466 total
+
+**Verification**: `cargo build --workspace` green; `cargo test -p flowshot-ui` 466 tests green; `cargo clippy -p flowshot-ui --all-targets -- -D warnings` zero warnings; `cargo fmt --check` clean.
+
+**Design decisions recorded**
+- SelectionTool as no-op: The selection tool is a PARITY tool that does NOT draw annotations. Its sole purpose is to re-enter selection mode when the user presses `S`. The selection engine (todo 16) owns the selection geometry; this tool is a no-op placeholder that signals "selection mode active" to the routing funnel.
+- MoveSelectionTool delta-based: The move tool tracks the drag delta but does NOT commit a scene object. The editor handles the selection + contained-objects translation via the delta. This separation keeps the tool framework clean.
+- Eyedropper sampling: The eyedropper samples the frozen frame (installed by the shell via `EditorState::install_frame`) at the click position. The sampling converts global logical coordinates to physical pixels in the frame, then reads the RGBA value. Bounds checking ensures clicks outside the frame are ignored.
+- Grid visibility state: The grid visibility is editor state (not chrome state) because it's a config-driven overlay, not a floating widget. The `[editor].grid` config key seeds the initial state.
+- Tool trait as_any(): Added for downcasting support. This enables tool-specific seams (move-selection delta access, eyedropper color sampling) without breaking the trait object pattern. All tool implementations updated (13 tools + 11 test stubs).
+
+**Future wiring (todo 35)**
+- Ctrl+M key binding activation (currently the tool is registered but the key combo is not wired)
+- Move-selection undo unit (currently the translation is live but not undoable)
+- Eyedropper clipboard seam (optional: copy hex to clipboard w/ notification)
+- Right-click-picker "pick from screen" entry point (activate eyedropper from wheel popover)
+
+## Todo 27 (continued): Undo integration + routing fixes — 2026-09-27
+
+**What landed**
+- Extended `Snapshot` type to include selection rect: `(Scene, Vec<PixelEffect>, Option<LogicalRect>)`
+- Added `snapshot_with_selection()` method to capture scene + effects + selection rect
+- Modified `restore()` to return selection rect for undo/redo restoration
+- Updated `undo()` and `redo()` to return `(bool, Option<LogicalRect>)` tuple
+- Added `restore_selection` field to `EditorUpdate` for passing selection rect through the event system
+- Route funnel now restores selection rect on undo/redo when present
+- Move-selection now properly snapshots before first translation and pushes undo unit at release
+- Removed "future wiring" comment from route.rs - the journal commit is now fully wired
+- Fixed routing to allow Move tool to start draw sessions when no object is hit (move selection + contained annotations as one unit)
+- Added `as_any_mut()` method to Tool trait for mutable downcasting (needed for move-selection delta reset)
+
+**Key patterns that worked**
+- Snapshot extension pattern: Extended the Snapshot type to include additional state (selection rect) without breaking existing code. The third element is `Option<LogicalRect>` so existing code that doesn't care about selection can ignore it.
+- Mutable downcasting: Added `as_any_mut()` alongside `as_any()` to support mutable access to tool-specific state (needed for `take_delta()` which resets the accumulator).
+- Incremental delta tracking: MoveSelectionTool now tracks incremental deltas (not cumulative) and resets the accumulator after each call. This prevents double-application of deltas.
+- Undo/redo selection restoration: The EditorUpdate carries the selection rect to restore, and the route funnel applies it after the editor processes the undo/redo. This keeps the selection state in sync with the scene state.
+
+**Gotchas hit**
+- `unnecessary_operation` clippy lint: `ed.undo().0;` was flagged as unnecessary. Changed to `ed.undo();` since we only care about the side effect, not the return value.
+- Routing exclusion logic: The Move tool was originally excluded from starting draw sessions (Flameshot parity for object-move fall-through). But for move-selection to work, it needs to start a draw session when no object is hit. Fixed by checking `tool_is_move && object_at` to fall through to SelectObject, otherwise allow ToolDraw.
+- Duplicate method definitions: Python scripts added duplicate `as_any`/`as_any_mut` methods to some files. Had to manually clean up the duplicates.
+- Test assertion updates: All test assertions that called `ed.undo()` or `ed.redo()` had to be updated to handle the new tuple return type. Used regex replacement to update all occurrences.
+
+**Verification**: `cargo build --workspace` green; `cargo test -p flowshot-ui` 481 tests green (456 unit + 5 backdrop + 16 parity + 1 widget + 3 doc); `cargo clippy -p flowshot-ui --all-targets -- -D warnings` zero warnings; `cargo fmt --check` clean.
+
+**Design decisions recorded**
+- Move-selection undo: The move-selection tool now properly integrates with the undo system. On the first non-zero delta, it snapshots the scene + selection rect. On release, it pushes a single undo unit. Undo restores both the scene objects and the selection rect to their pre-move state.
+- Routing fix: The Move tool now correctly starts a draw session when no object is at the press position (moving the selection + contained annotations). When an object is at the press, it falls through to SelectObject (moving an individual object). This matches the plan's intent: "move-selection tool (Ctrl+M) = drag entire selection contents-aware".
+- Snapshot extension: The Snapshot type was extended to include the selection rect, enabling move-selection undo to restore both the scene and the selection geometry. This is a minimal change that doesn't break existing code.

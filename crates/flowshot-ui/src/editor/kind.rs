@@ -43,13 +43,15 @@ pub enum ToolKind {
     /// Selection/object mover (todo 25 semantics; falls through to the
     /// selection engine per the Flameshot `startDrawObjectTool` exclusion).
     Move,
+    /// Eyedropper / color picker (todo 27; F12 `TYPE_GRAB_COLOR`).
+    Eyedropper,
 }
 
 impl ToolKind {
     /// Every kind, in the Flameshot toolbar order (`buttonTypeOrder`); the
     /// blur variant trails its pixelate parent (no Flameshot toolbar slot -
-    /// it is a pixelate mode).
-    pub const ALL: [Self; 13] = [
+    /// it is a pixelate mode); eyedropper trails move (todo 27).
+    pub const ALL: [Self; 14] = [
         Self::Pencil,
         Self::Line,
         Self::Arrow,
@@ -63,6 +65,7 @@ impl ToolKind {
         Self::Blur,
         Self::Invert,
         Self::Move,
+        Self::Eyedropper,
     ];
 
     /// The stable config/serde id (F27 type-enum stability).
@@ -82,6 +85,7 @@ impl ToolKind {
             Self::Blur => "blur",
             Self::Invert => "invert",
             Self::Move => "move",
+            Self::Eyedropper => "eyedropper",
         }
     }
 
@@ -106,6 +110,7 @@ impl ToolKind {
             Self::Text => Some(KeyCode::KeyT),
             Self::Pixelate => Some(KeyCode::KeyB),
             Self::Invert => Some(KeyCode::KeyI),
+            Self::Eyedropper => Some(KeyCode::KeyG),
             Self::Blur | Self::Counter | Self::Move => None,
         }
     }
@@ -125,6 +130,7 @@ impl ToolKind {
                 | Self::Pixelate
                 | Self::Blur
                 | Self::Counter
+                | Self::Eyedropper
         )
     }
 }
@@ -168,6 +174,7 @@ mod tests {
             (ToolKind::Text, KeyCode::KeyT),
             (ToolKind::Pixelate, KeyCode::KeyB),
             (ToolKind::Invert, KeyCode::KeyI),
+            (ToolKind::Eyedropper, KeyCode::KeyG),
         ];
         for (kind, key) in expected {
             assert_eq!(kind.default_key(), Some(key));
@@ -199,6 +206,7 @@ mod tests {
                         | ToolKind::Pixelate
                         | ToolKind::Blur
                         | ToolKind::Counter
+                        | ToolKind::Eyedropper
                 )
             );
         }

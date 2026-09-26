@@ -259,10 +259,10 @@ fn toolbar_action(button: &ToolbarButton, editor: &mut EditorState) {
         ToolbarButton::Tool(kind) => editor.activate_tool(*kind),
         ToolbarButton::Action(id) => match id.as_str() {
             "undo" => {
-                editor.undo();
+                let _ = editor.undo();
             }
             "redo" => {
-                editor.redo();
+                let _ = editor.redo();
             }
             _ => tracing::debug!(
                 target: "flowshot_ui::chrome",

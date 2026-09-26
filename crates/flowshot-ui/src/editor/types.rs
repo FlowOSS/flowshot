@@ -62,6 +62,8 @@ pub struct EditorUpdate {
     /// Whether editor visuals changed (every window redraws - scene objects
     /// and outlines span monitors like the selection does).
     pub changed: bool,
+    /// Selection rect to restore (undo/redo of move-selection).
+    pub restore_selection: Option<LogicalRect>,
 }
 
 impl EditorUpdate {
@@ -76,6 +78,7 @@ impl EditorUpdate {
             consumed: false,
             effects: Vec::new(),
             changed,
+            restore_selection: None,
         }
     }
 
@@ -85,6 +88,7 @@ impl EditorUpdate {
             consumed: true,
             effects: Vec::new(),
             changed,
+            restore_selection: None,
         }
     }
 
@@ -101,6 +105,7 @@ impl EditorUpdate {
             consumed: true,
             effects,
             changed,
+            restore_selection: None,
         }
     }
 }

@@ -75,6 +75,7 @@ impl EditorState {
             tool.cancel_edit();
         }
         self.cancel_reedit();
+        self.cancel_move_selection();
         self.tool = None;
         self.active_kind = None;
         self.drawing = false;

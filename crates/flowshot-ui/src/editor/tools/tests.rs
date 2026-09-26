@@ -149,7 +149,7 @@ fn each_stroke_is_exactly_one_undo_unit() {
     stroke(&mut ed, &env, (10.0, 10.0), (60.0, 60.0));
     assert_eq!(ed.scene().object_count(), 3);
     assert_eq!(ed.undo_stack().undo_depth(), 3);
-    assert!(ed.undo());
+    assert!(ed.undo().0);
     assert_eq!(ed.scene().object_count(), 2);
 }
 

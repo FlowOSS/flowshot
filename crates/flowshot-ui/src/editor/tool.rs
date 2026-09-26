@@ -153,6 +153,12 @@ pub struct EditKey<'a> {
 /// commits it to the scene as ONE undo unit, `None` commits nothing (the
 /// zero-length-drag rule of todo 21 lives in the tool's own validity check).
 pub trait Tool: std::fmt::Debug + Send {
+    /// Downcast support (the move-selection tool's delta access seam).
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Mutable downcast support (the move-selection tool's delta reset seam).
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+
     /// The stable kind this tool implements.
     fn kind(&self) -> ToolKind;
 

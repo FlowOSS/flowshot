@@ -38,18 +38,34 @@ impl EditorState {
         &self.effects
     }
 
+    /// The current (scene, effects, selection) snapshot - the journal payload.
+    /// The selection rect is snapshotted for move-selection undo.
+    pub(super) fn snapshot_with_selection(
+        &self,
+        selection: Option<flowshot_core::geometry::LogicalRect>,
+    ) -> Snapshot {
+        (self.scene.clone(), self.effects.clone(), selection)
+    }
+
     /// The current (scene, effects) snapshot - the journal payload.
+    /// Selection rect is None (for non-move-selection operations).
     pub(super) fn snapshot(&self) -> Snapshot {
-        (self.scene.clone(), self.effects.clone())
+        (self.scene.clone(), self.effects.clone(), None)
     }
 
     /// Restores a full snapshot (the undo/redo application point). The
     /// armed object drag is dropped WITHOUT rollback - the restored scene
-    /// already supersedes it.
-    pub(super) fn restore(&mut self, snapshot: Snapshot) {
-        (self.scene, self.effects) = snapshot;
+    /// already supersedes it. Returns the selection rect to restore (if any).
+    pub(super) fn restore(
+        &mut self,
+        snapshot: Snapshot,
+    ) -> Option<flowshot_core::geometry::LogicalRect> {
+        let (scene, effects, selection) = snapshot;
+        self.scene = scene;
+        self.effects = effects;
         self.selected = None;
         self.object_move = None;
+        selection
     }
 
     /// Commits a finished object to the scene as ONE undo unit (the
@@ -168,35 +184,37 @@ impl EditorState {
     }
 
     /// One undo step; `true` when the scene changed (silent no-op at the
-    /// history start - the core contract).
-    pub fn undo(&mut self) -> bool {
+    /// history start - the core contract). Returns the selection rect to
+    /// restore (if any) for move-selection undo.
+    pub fn undo(&mut self) -> (bool, Option<flowshot_core::geometry::LogicalRect>) {
         let Some(snapshot) = self.undo.undo() else {
             tracing::debug!(target: "flowshot_ui::editor", "undo at history start");
-            return false;
+            return (false, None);
         };
-        self.restore(snapshot);
+        let selection = self.restore(snapshot);
         tracing::info!(
             target: "flowshot_ui::editor",
             objects = self.scene.object_count(),
             effects = self.effects.len(),
             "undo applied"
         );
-        true
+        (true, selection)
     }
 
-    /// One redo step; `true` when the scene changed.
-    pub fn redo(&mut self) -> bool {
+    /// One redo step; `true` when the scene changed. Returns the selection
+    /// rect to restore (if any) for move-selection redo.
+    pub fn redo(&mut self) -> (bool, Option<flowshot_core::geometry::LogicalRect>) {
         let Some(snapshot) = self.undo.redo() else {
             tracing::debug!(target: "flowshot_ui::editor", "redo at history end");
-            return false;
+            return (false, None);
         };
-        self.restore(snapshot);
+        let selection = self.restore(snapshot);
         tracing::info!(
             target: "flowshot_ui::editor",
             objects = self.scene.object_count(),
             effects = self.effects.len(),
             "redo applied"
         );
-        true
+        (true, selection)
     }
 }

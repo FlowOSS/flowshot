@@ -42,6 +42,14 @@ const SEL: LogicalRect = LogicalRect::from_raw(50.0, 150.0, 600.0, 450.0);
 #[derive(Debug)]
 struct CounterStub;
 impl Tool for CounterStub {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Counter
     }
@@ -49,6 +57,14 @@ impl Tool for CounterStub {
 #[derive(Debug)]
 struct SelectionStub;
 impl Tool for SelectionStub {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Selection
     }
@@ -56,6 +72,14 @@ impl Tool for SelectionStub {
 #[derive(Debug)]
 struct MoveStub;
 impl Tool for MoveStub {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn kind(&self) -> ToolKind {
         ToolKind::Move
     }

@@ -122,10 +122,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     flowshot_ui::register_text_tool(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_pixelate_tools(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_counter_tool(runtime.core_mut().editor_mut().registry_mut());
+    flowshot_ui::register_selection_tools(runtime.core_mut().editor_mut().registry_mut());
     // Todo 23: the destructive tools bake from the installed editor frame
     // (the pristine read side); the blur variant ships unbound (no F12 key)
     // so QA rebinds it to `v`. Todo 24: the counter tool ships unbound so QA
-    // rebinds it to `n`.
+    // rebinds it to `n`. Todo 27: the move-selection tool ships unbound so QA
+    // rebinds it to `x` (the plan's Ctrl+M is a modified key, which the
+    // shortcut system doesn't support; simple key binding follows the
+    // blur/counter precedent).
     runtime.core_mut().install_frame(editor_frame);
     runtime
         .core_mut()
@@ -137,6 +141,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .editor_mut()
         .shortcuts_mut()
         .rebind(ToolKind::Counter, Some(winit::keyboard::KeyCode::KeyN));
+    runtime
+        .core_mut()
+        .editor_mut()
+        .shortcuts_mut()
+        .rebind(ToolKind::Move, Some(winit::keyboard::KeyCode::KeyX));
     // Todo 25: z-order ships panel-driven with NO default keys (plan); QA
     // rebinds raise/lower to k/j (both off the F12 map) - the blur-rebind
     // precedent. Object move needs no binding: press-drag-release on a
@@ -632,6 +641,9 @@ fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
         "j" => KeyCode::KeyJ,
         "k" => KeyCode::KeyK,
         "z" => KeyCode::KeyZ,
+        "g" => KeyCode::KeyG,
+        "f" => KeyCode::KeyF,
+        "x" => KeyCode::KeyX,
         "delete" => KeyCode::Delete,
         "0" => KeyCode::Digit0,
         "1" => KeyCode::Digit1,

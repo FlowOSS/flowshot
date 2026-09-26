@@ -61,6 +61,20 @@ impl OverlayCore {
             let outcome = self.editor.pointer_move(&env, clamped);
             let consumed = outcome.consumed;
             actions.extend(editor_actions(outcome, self.router.window_count()));
+
+            // Move-selection seam: when the active tool is Move and a drag is
+            // in progress, apply the delta to the selection and contained objects.
+            if let Some((dx, dy)) = self.editor.move_selection_delta()
+                && self
+                    .editor
+                    .translate_selection_and_objects(&mut self.selection, dx, dy)
+            {
+                actions.extend(
+                    (0..self.router.window_count())
+                        .map(|index| Action::Redraw(WindowSlot::new(index))),
+                );
+            }
+
             if !consumed {
                 let update =
                     feed_selection(self, |selection, env| selection.pointer_move(env, clamped));
@@ -110,7 +124,13 @@ impl OverlayCore {
             let outcome = if pressed {
                 self.editor.pointer_press(&env, button, at)
             } else {
-                self.editor.pointer_release(&env, button, at)
+                let result = self.editor.pointer_release(&env, button, at);
+                // Move-selection commit seam: on release, commit the drag as
+                // one undo unit (snapshot before first translation, push at release).
+                if !pressed && button == MouseButton::Left {
+                    self.editor.commit_move_selection();
+                }
+                result
             };
             // The wheel-open effect is applied IN the funnel (the chrome is
             // core-owned state, so the headless path owns the whole picker
@@ -156,6 +176,10 @@ impl OverlayCore {
             let env = self.editor_env();
             let outcome = self.editor.key_press(&env, code, repeat, text);
             let consumed = outcome.consumed;
+            // Restore the selection rect if undo/redo returned one (move-selection).
+            if let Some(rect) = outcome.restore_selection {
+                self.selection.set_rect(Some(rect));
+            }
             actions.extend(editor_actions(outcome, self.router.window_count()));
             if !consumed {
                 // Space toggles the side panel (plan todo 26) between the
