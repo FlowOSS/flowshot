@@ -874,3 +874,27 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - `#[expect(clippy::manual_midpoint)]` with reason is the honest form when parity mandates `0.5*(a+b)` (f32::midpoint rounds differently by 1 ulp on carry).
 - Golden fingerprints over Box-Muller output need ±1 tolerance (sin/cos/ln are per-platform deterministic, not cross-libm exact); determinism acceptance is per-run.
 - Perf: scalar 4K pixelate = 30-36ms release (<50ms gate) — noise gen (2.07M Box-Muller deviates) + 8.3M-px nearest upscale dominate; debug-profile perf asserts need a cfg-split bound (2s) or they false-fail on shared machines.
+
+## Todo 25: undo/redo + z-order wiring (flowshot-ui::editor mutate/zorder/events::pointer) — 2026-09-26
+
+**What landed**
+- `editor/mutate.rs` (translated() 9-variant ToolObjectData shift + replace_object via the CORE to_data/from_data roundtrip + mutate_object property seam + ObjectMove drag state), `editor/zorder.rs` (raise/lower/to-top/to-bottom selected = ONE unit each with a paint-position no-op guard + LayerEntry/layers/select_layer/move_layer = the todo-26 panel model), `editor/events/pointer.rs` (events.rs split at the ceiling: press/move/release execution), `editor/wiring_tests.rs` (24 tests). Routing gained SessionRoute + MoveTarget/ReleaseTarget::Object; ToolShortcuts gained raise/lower Option slots (DEFAULT NONE per plan) + ZOrderAction; harness QA-rebinds raise=k/lower=j (todo-23 blur->v precedent). 444 crate tests green, all gates clean, LIVE QA 29/29 (16 pixel + 13 log), EXIT=0 self-reversed. Evidence task-25-flowshot.{png,txt}.
+
+**Design ground truth (todo 26/27/36/38 must know)**
+- OBJECT MOVE MECHANISM: core ToolObject has NO translate and core is closed to UI tasks -> the move edits ToolObjectData through the core's OWN persistence roundtrip (Scene::to_data -> edit -> from_data): ids, z_order, AND counter numbers preserved by construction. The remove+re-add alternative is a TRAP: remove_object renumbers counters (a moved #2 collides with decremented survivors) and re-add lands top-of-z. from_data's Err arm is unreachable from a valid scene (z_order passes through) but handled warn+false per Amendment #4.
+- F27 move atomicity implemented EXACTLY: press arms (no snapshot), FIRST non-zero motion takes the before-snapshot, motions mutate live (no journal traffic), release pushes ONE pair; click-without-motion records nothing. Cancel semantics differ by caller: deselect/Selection-press = cancel WITH rollback (live motions never reached the journal); restore()/delete = DROP without rollback (the restored scene supersedes / the delete unit captured the post-move scene).
+- Z-ORDER NO-OP GUARD: core raise/lower return false at edges, but raise_to_top/lower_to_bottom return TRUE for any valid id -> z_op compares z_index before/after; a jump that changes nothing records no unit (panel double-click = no journal noise).
+- mutate_object(id, |data| data) is the PUBLIC property-change funnel (the plan's "property change" mutation unit) — todo-26 panel sliders/color writes go through it, NOT through raw scene access.
+- Routing priority now: picker > open draw session > armed object drag > selection engine (SessionRoute data); right-button release never ends a drag; the editor CONSUMES every motion while armed (implicit grab).
+- Key-map order in the plain branch: digits > tool keys > z-actions (duplicate binding: tool wins, documented; config validation = todo 36). Z-actions ignore auto-repeat (discrete); undo/redo DO repeat (todo-20 contract).
+
+**QA oracle calibration (extends todo-22/23 lessons)**
+- Z-ORDER NEEDS TWO-COLOR INK to be pixel-visible: all tools draw the same [editor].draw_color, so rect-over-rect z changes are invisible. Oracle trick: use the INVERT object as the second "color" — a red stroke under an invert region flips red->cyan when the invert paints on top (linear-light complement), giving an exact-equality z band assert. Log tokens (op=/z=/undo_depth=) stay the primary assert.
+- The SELECTION OUTLINE (black 3px + white dotted, painted AFTER the scene) covers the selected object's own stroke — ink asserts on a selected object must either Esc-deselect first (cascade stage 2 = no journal entry, scene untouched) or avoid the bounds edge bands.
+- Assert boxes must clear EVERY neighbor: a "moved-to" band 30px away still caught the ORIGINAL rect's bottom stroke (y+380 row) — compute boxes against all objects' geometry, not just the intended one.
+- grim geometry syntax is "X,Y WxH" (SPACE separator) — the comma form "X,Y,WxH" fails `invalid geometry` (cost one full QA cycle; todo-23's script must have used the space form).
+- The bash tool kills the QA call at output completion (todo-23 lesson held): choreography in ONE script file, artifacts+asserts in a FOLLOW-UP call; the harness subshell writes /tmp/t25-exit.txt so EXIT=0 survives the kill.
+
+**Ceiling discipline (re-confirmed)**
+- editor.rs was AT 250 pure LOC pre-task: moving activate/deactivate/toggle_tool into editing.rs (lifecycle cohesion) bought the headroom for the object_move field + 2 mods. events.rs was 247: the press/move/release half split to events/pointer.rs (child-module pattern per tools/text/) -> 114 + 161. MEASURE every file you touch BEFORE designing additions (todo-22 lesson, third confirmation).
+- clippy fn_params_excessive_bools fired at 4 bools on route_release -> SessionRoute struct (the module's own PressRoute pattern); doc_markdown fires on `undo_limit`-style config keys in //! headers (backtick them).

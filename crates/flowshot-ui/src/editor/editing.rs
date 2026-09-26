@@ -1,4 +1,9 @@
-//! Edit-session event routing and re-edit bookkeeping (plan todo 22).
+//! Tool activation lifecycle and edit-session event routing (plan todo
+//! 20/22; split from the facade at the LOC ceiling).
+//!
+//! Activation/deactivation cancel the tool's own edit widget AND any
+//! pending re-edit (the checkable-button parity: unchecking never leaves a
+//! half-committed edit behind).
 //!
 //! While a tool edit widget is open, keys and IME events belong to the
 //! session (Flameshot's child-widget focus): [`EditorState::editing_key_press`]
@@ -19,6 +24,7 @@ use winit::event::Ime;
 use winit::keyboard::KeyCode;
 
 use super::EditorState;
+use super::kind::ToolKind;
 use super::tool::EditKey;
 use super::types::{EditorEnv, EditorUpdate};
 use super::undo::Snapshot;
@@ -32,6 +38,60 @@ pub(super) struct Reedit {
 }
 
 impl EditorState {
+    /// Checks a tool (creating it from the registry; an unregistered kind
+    /// warn-logs and stays unchecked).
+    pub fn activate_tool(&mut self, kind: ToolKind) {
+        let Some(mut tool) = self.registry.create(kind) else {
+            tracing::warn!(
+                target: "flowshot_ui::editor",
+                tool = kind.id(),
+                "tool not registered; activation ignored"
+            );
+            return;
+        };
+        tool.on_color_changed(self.color);
+        tool.on_size_changed(self.sizes.get(Some(kind)));
+        if let Some(previous) = self.tool.as_mut() {
+            previous.cancel_edit();
+        }
+        self.cancel_reedit();
+        self.tool = Some(tool);
+        self.active_kind = Some(kind);
+        self.drawing = false;
+        self.digits.reset();
+        tracing::info!(target: "flowshot_ui::editor", tool = kind.id(), "tool activated");
+    }
+
+    /// Unchecks the active tool (Esc cascade stage 1 reaction). The tool's
+    /// own edit session is cancelled, but a detached edit-widget flag
+    /// survives until stage 4 (Flameshot parity: unchecking the tool button
+    /// does NOT delete `m_toolWidget` - `deleteToolWidgetOrClose` walks the
+    /// stages independently).
+    pub fn deactivate_tool(&mut self) {
+        let Some(kind) = self.active_kind else {
+            return;
+        };
+        if let Some(tool) = self.tool.as_mut() {
+            tool.cancel_edit();
+        }
+        self.cancel_reedit();
+        self.tool = None;
+        self.active_kind = None;
+        self.drawing = false;
+        self.digits.reset();
+        tracing::info!(target: "flowshot_ui::editor", tool = kind.id(), "tool deactivated");
+    }
+
+    /// Activation-key semantics: re-pressing the active tool's key unchecks
+    /// it (the Flameshot checkable-button toggle).
+    pub fn toggle_tool(&mut self, kind: ToolKind) {
+        if self.active_kind == Some(kind) {
+            self.deactivate_tool();
+        } else {
+            self.activate_tool(kind);
+        }
+    }
+
     /// Key routing while an edit widget is active; `None` when not editing
     /// (the caller runs the normal key map). Ctrl+Return commits (the F27
     /// text lifecycle); everything else goes to the tool's session; keys the

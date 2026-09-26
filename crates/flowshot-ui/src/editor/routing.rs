@@ -117,6 +117,19 @@ fn route_left(route: &PressRoute) -> PressTarget {
     }
 }
 
+/// The drag-session flags shared by the motion and release routing (the
+/// [`PressRoute`] pattern: independent F27 priority conditions as data).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionRoute {
+    /// The color picker (wheel) is visible - cascade stage 5 (todo 26).
+    pub picker_visible: bool,
+    /// A draw session is open (press routed, release pending).
+    pub drawing: bool,
+    /// An object drag is armed (todo 25: select-object press, release
+    /// pending - the Flameshot `TYPE_MOVESELECTION` implicit grab).
+    pub object_move: bool,
+}
+
 /// Who consumes a pointer motion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoveTarget {
@@ -124,19 +137,25 @@ pub enum MoveTarget {
     Picker,
     /// P3: the open draw session extends (`drawMove`).
     ToolDraw,
+    /// P5 drag: the armed object move translates live (todo 25 - one undo
+    /// unit lands at release, F27 "backup at first move, push at release").
+    Object,
     /// P6: the selection engine (region drag; no-op without one).
     Selection,
 }
 
 /// Routes one pointer motion: an open draw session owns every move until
 /// release (the implicit-grab continuity of the todo-13 router feeds it
-/// across monitors); otherwise the selection engine sees it.
+/// across monitors), then an armed object drag; otherwise the selection
+/// engine sees it.
 #[must_use]
-pub fn route_move(picker_visible: bool, drawing: bool) -> MoveTarget {
-    if picker_visible {
+pub fn route_move(route: &SessionRoute) -> MoveTarget {
+    if route.picker_visible {
         MoveTarget::Picker
-    } else if drawing {
+    } else if route.drawing {
         MoveTarget::ToolDraw
+    } else if route.object_move {
+        MoveTarget::Object
     } else {
         MoveTarget::Selection
     }
@@ -149,6 +168,9 @@ pub enum ReleaseTarget {
     Picker,
     /// P3: the open draw session ends (`drawEnd` -> scene commit).
     ToolDraw,
+    /// P5 drag: the armed object move ends (todo 25: ONE undo unit when any
+    /// motion happened).
+    Object,
     /// P6: the selection engine (region release).
     Selection,
 }
@@ -156,11 +178,13 @@ pub enum ReleaseTarget {
 /// Routes one pointer release (left-button only; other buttons pass
 /// through - the editor opens no session for them).
 #[must_use]
-pub fn route_release(picker_visible: bool, drawing: bool, left: bool) -> ReleaseTarget {
-    if picker_visible {
+pub fn route_release(route: &SessionRoute, left: bool) -> ReleaseTarget {
+    if route.picker_visible {
         ReleaseTarget::Picker
-    } else if drawing && left {
+    } else if route.drawing && left {
         ReleaseTarget::ToolDraw
+    } else if route.object_move && left {
+        ReleaseTarget::Object
     } else {
         ReleaseTarget::Selection
     }
@@ -317,13 +341,58 @@ mod tests {
 
     #[test]
     fn move_and_release_follow_the_open_session() {
-        assert_eq!(route_move(false, false), MoveTarget::Selection);
-        assert_eq!(route_move(false, true), MoveTarget::ToolDraw);
-        assert_eq!(route_move(true, true), MoveTarget::Picker);
-        assert_eq!(route_release(false, true, true), ReleaseTarget::ToolDraw);
+        let session = |drawing, object_move| SessionRoute {
+            picker_visible: false,
+            drawing,
+            object_move,
+        };
+        let picker = SessionRoute {
+            picker_visible: true,
+            drawing: true,
+            object_move: true,
+        };
+        assert_eq!(route_move(&session(false, false)), MoveTarget::Selection);
+        assert_eq!(route_move(&session(true, false)), MoveTarget::ToolDraw);
+        assert_eq!(route_move(&picker), MoveTarget::Picker);
+        assert_eq!(
+            route_release(&session(true, false), true),
+            ReleaseTarget::ToolDraw
+        );
         // A right release never ends a draw session.
-        assert_eq!(route_release(false, true, false), ReleaseTarget::Selection);
-        assert_eq!(route_release(false, false, true), ReleaseTarget::Selection);
-        assert_eq!(route_release(true, true, true), ReleaseTarget::Picker);
+        assert_eq!(
+            route_release(&session(true, false), false),
+            ReleaseTarget::Selection
+        );
+        assert_eq!(
+            route_release(&session(false, false), true),
+            ReleaseTarget::Selection
+        );
+        assert_eq!(route_release(&picker, true), ReleaseTarget::Picker);
+    }
+
+    #[test]
+    fn armed_object_drag_owns_moves_and_left_releases() {
+        let both = SessionRoute {
+            picker_visible: false,
+            drawing: true,
+            object_move: true,
+        };
+        let drag = SessionRoute {
+            picker_visible: false,
+            drawing: false,
+            object_move: true,
+        };
+        let picker = SessionRoute {
+            picker_visible: true,
+            ..drag
+        };
+        // The draw session beats an armed drag (they are exclusive by
+        // construction; the table pins the priority anyway).
+        assert_eq!(route_move(&both), MoveTarget::ToolDraw);
+        assert_eq!(route_move(&drag), MoveTarget::Object);
+        assert_eq!(route_release(&drag, true), ReleaseTarget::Object);
+        // A right release never ends the object drag.
+        assert_eq!(route_release(&drag, false), ReleaseTarget::Selection);
+        assert_eq!(route_release(&picker, true), ReleaseTarget::Picker);
     }
 }
