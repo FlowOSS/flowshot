@@ -191,7 +191,7 @@ impl OverlayRuntime {
 /// compositor exports to its clients. `FlowShot` never falls back to X11
 /// (draft F9), so an unset variable is a typed startup error with a hint -
 /// never a silent platform switch. The X11 roadmap phase revisits this probe.
-fn require_display_server() -> Result<(), UiError> {
+pub(crate) fn require_display_server() -> Result<(), UiError> {
     match std::env::var_os("WAYLAND_DISPLAY") {
         Some(value) if !value.is_empty() => Ok(()),
         _ => Err(UiError::NoDisplayServer),

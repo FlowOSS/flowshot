@@ -10,8 +10,10 @@
 pub mod clipboard;
 pub mod error;
 pub mod export;
+pub mod pin;
 pub mod upload;
 
 pub use clipboard::Clipboard;
-pub use error::{ClipboardError, ExportError, UploadError};
+pub use error::{ClipboardError, ExportError, PinError, UploadError};
+pub use pin::{PinImage, PinRecord, PinRegistry, copy_pin, save_pin};
 pub use upload::{Imgur, UploadHistory, UploadMeta, UploadRecord, UploadResult, Uploader};

@@ -22,14 +22,29 @@ use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use flowshot_core::geometry::{LogicalRect, OutputInfo, OutputLayout, PhysicalSize, Transform};
+use flowshot_core::geometry::{
+    LogicalPoint, LogicalRect, OutputInfo, OutputLayout, PhysicalSize, Transform,
+};
+use flowshot_core::scene::{Color as SceneColor, Rect as SceneRect, RectObject};
 use winit::event::MouseButton;
 use winit::keyboard::{KeyCode, ModifiersState};
 
+use crate::editor::{Tool, ToolKind};
 use crate::input::{Action, RouteReport, SyntheticInput};
 use crate::router::{InputRouter, WindowSlot};
 use crate::selection::{Effect, SelectionConfig, SelectionEnv, SelectionState};
 use crate::state::OverlayCore;
+
+/// The minimal registered tool the cascade tests activate (the Esc-cascade
+/// tool stage is editor-driven since todo 20 - it needs a real instance).
+#[derive(Debug)]
+struct CascadeStubTool;
+
+impl Tool for CascadeStubTool {
+    fn kind(&self) -> ToolKind {
+        ToolKind::Pencil
+    }
+}
 
 /// Live-machine fixture: HDMI-A-1 1920x1080 @ 1x at (0,0) + DP-3 2560x1440
 /// @ 1x at logical (1920,0) -> union bounds 4480x1440 (both scales 1, so
@@ -555,7 +570,14 @@ fn case32_ctrl_q_exits_immediately() {
     let mut core = dual_core();
     let slot = WindowSlot::new(0);
     seed(&mut core, rect(100.0, 100.0, 50.0, 50.0));
-    core.selection_mut().cascade_mut().set_tool_checked(true);
+    // Todo 20: the tool-checked cascade stage is editor-driven - a REAL
+    // registered+activated tool occupies it (raw flag pokes are overwritten
+    // by the post-event cascade sync).
+    core.editor_mut()
+        .registry_mut()
+        .register(ToolKind::Pencil, || Box::new(CascadeStubTool));
+    core.editor_mut().activate_tool(ToolKind::Pencil);
+    core.sync_cascade();
     set_mods(&mut core, slot, ModifiersState::CONTROL);
     let report = key(&mut core, slot, KeyCode::KeyQ);
     // Immediate: the cascade is NOT walked.
@@ -610,12 +632,27 @@ fn case34_esc_cascade_walks_all_six_stages_in_order() {
 
     let mut core = dual_core();
     let slot = WindowSlot::new(0);
-    let cascade = core.selection_mut().cascade_mut();
-    cascade.set_tool_checked(true);
-    cascade.set_object_selected(true);
-    cascade.set_panel_visible(true);
-    cascade.set_tool_widget_present(true);
-    cascade.set_picker_visible(true);
+    // Todo 20: stages 1/2/4 are editor-driven (real state), stages 3/5 stay
+    // raw seam flags until todo 26 owns the panel/picker.
+    core.editor_mut()
+        .registry_mut()
+        .register(ToolKind::Pencil, || Box::new(CascadeStubTool));
+    core.editor_mut().activate_tool(ToolKind::Pencil);
+    core.editor_mut().commit_object(Box::new(RectObject::new(
+        SceneRect::new(100.0, 100.0, 50.0, 50.0),
+        SceneColor::new(255, 0, 0, 255),
+        2.0,
+        false,
+    )));
+    core.editor_mut()
+        .select_object_at(LogicalPoint::from_raw(120.0, 120.0));
+    core.editor_mut().set_edit_widget_present(true);
+    {
+        let cascade = core.selection_mut().cascade_mut();
+        cascade.set_panel_visible(true);
+        cascade.set_picker_visible(true);
+    }
+    core.sync_cascade();
 
     let buffer = Arc::new(Mutex::new(Vec::new()));
     let subscriber = tracing_subscriber::fmt()

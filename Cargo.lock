@@ -1470,6 +1470,7 @@ dependencies = [
  "bytemuck",
  "bytes",
  "cosmic-text",
+ "flowshot-actions",
  "flowshot-capture",
  "flowshot-core",
  "futures",

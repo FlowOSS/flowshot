@@ -68,3 +68,27 @@ pub enum UploadError {
     #[error("upload delete portal error: {0}")]
     Portal(String),
 }
+
+// ---- plan todo 30 (pins) ----
+/// Errors produced by the pin action helpers ([`crate::pin`]).
+#[derive(Debug, Error)]
+pub enum PinError {
+    /// The pin pixel buffer does not match its declared dimensions.
+    #[error("pin image {width}x{height} px needs {expected} RGBA bytes, got {actual}")]
+    InvalidBuffer {
+        /// Declared width in physical pixels.
+        width: u32,
+        /// Declared height in physical pixels.
+        height: u32,
+        /// Byte count the declared dimensions require.
+        expected: usize,
+        /// Byte count actually provided.
+        actual: usize,
+    },
+    /// The save pipeline failed (todo-29 export).
+    #[error("pin save failed: {0}")]
+    Export(#[from] ExportError),
+    /// The clipboard hand-off failed (todo-28 clipboard).
+    #[error("pin copy failed: {0}")]
+    Clipboard(#[from] ClipboardError),
+}

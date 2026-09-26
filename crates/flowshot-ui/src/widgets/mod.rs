@@ -18,7 +18,7 @@ pub mod slider;
 pub mod toggle;
 
 pub use button::{Button, ButtonState};
-pub use context_menu::ContextMenu;
+pub use context_menu::{ContextMenu, ContextMenuEntry};
 pub use focus::{FocusRing, FocusTraversal};
 pub use icon_button::IconButton;
 pub use popover::Popover;

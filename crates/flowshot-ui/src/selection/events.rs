@@ -88,9 +88,9 @@ impl SelectionState {
         if code == KeyCode::Escape {
             let step = cascade::advance_cascade(&mut self.cascade);
             return if step == EscStep::Close {
-                SelectionUpdate::with(vec![Effect::Exit], false)
+                SelectionUpdate::esc(step, vec![Effect::Exit])
             } else {
-                SelectionUpdate::unchanged()
+                SelectionUpdate::esc(step, Vec::new())
             };
         }
         let ctrl = env.modifiers.control_key();

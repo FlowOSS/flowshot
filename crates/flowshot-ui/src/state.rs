@@ -1,22 +1,28 @@
 //! Headless overlay state and the central routing entry point.
 //!
-//! [`OverlayCore`] owns the [`InputRouter`] plus the input-derived state every
+//! [`OverlayCore`] owns the [`InputRouter`], the selection engine (todo 16),
+//! the editor tool framework (todo 20), and the input-derived state every
 //! window shares (cursor track, IME status, exit request). It contains no
 //! windowing or GPU handles, so the full input path - coordinate mapping,
-//! Esc teardown, IME plumbing - is unit-testable headlessly through the
-//! `test-drive` seam [`OverlayCore::inject_event`].
+//! the F27 event-routing priority, Esc teardown, IME plumbing - is
+//! unit-testable headlessly through the `test-drive` seam
+//! [`OverlayCore::inject_event`]. The route funnel itself lives in
+//! [`route`](mod@route) (the `selection/events.rs` split discipline).
+
+mod route;
 
 use std::time::Instant;
 
 use flowshot_core::geometry::LogicalPoint;
-use winit::event::{Ime, MouseButton};
-use winit::keyboard::{KeyCode, ModifiersState};
+use winit::event::Ime;
+use winit::keyboard::ModifiersState;
 
+use crate::editor::{EditorState, FramePixels};
 #[cfg(any(test, feature = "test-drive"))]
 use crate::input::SyntheticInput;
-use crate::input::{Action, ImeStatus, InputEvent, RouteReport};
+use crate::input::{ImeStatus, InputEvent, RouteReport};
 use crate::router::{InputRouter, WindowSlot};
-use crate::selection::{Effect, SelectionEnv, SelectionState, SelectionUpdate};
+use crate::selection::SelectionState;
 
 /// Where the pointer last was, in every space the overlay needs.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,7 +43,10 @@ pub struct CursorTrack {
 }
 
 /// Input-derived state shared by all overlay windows.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// (Not `Clone`/`PartialEq`: the editor holds live `dyn Tool` instances -
+/// the headless engines it owns are individually cloneable/compareable.)
+#[derive(Debug)]
 pub struct OverlayCore {
     router: InputRouter,
     cursor: Option<CursorTrack>,
@@ -46,6 +55,7 @@ pub struct OverlayCore {
     exit_requested: bool,
     modifiers: ModifiersState,
     selection: SelectionState,
+    editor: EditorState,
 }
 
 impl OverlayCore {
@@ -60,6 +70,7 @@ impl OverlayCore {
             exit_requested: false,
             modifiers: ModifiersState::empty(),
             selection: SelectionState::default(),
+            editor: EditorState::default(),
         }
     }
 
@@ -112,6 +123,24 @@ impl OverlayCore {
         &mut self.selection
     }
 
+    /// The editor tool framework (plan todo 20).
+    #[must_use]
+    pub const fn editor(&self) -> &EditorState {
+        &self.editor
+    }
+
+    /// Mutable editor access: the tool registry (todos 21-27/35 register
+    /// concrete tools), config, shortcuts, and color seams.
+    pub fn editor_mut(&mut self) -> &mut EditorState {
+        &mut self.editor
+    }
+
+    /// Installs the frozen original frame the editor's tools sample from
+    /// (the todo-23 secure-pixelate input; `None` clears).
+    pub fn install_frame(&mut self, frame: Option<FramePixels>) {
+        self.editor.install_frame(frame);
+    }
+
     /// The current keyboard modifier snapshot.
     #[must_use]
     pub const fn modifiers(&self) -> &ModifiersState {
@@ -125,32 +154,16 @@ impl OverlayCore {
     }
 
     /// Routes one normalized event: maps coordinates into global logical
-    /// space, updates shared state, and returns the effects for the shell.
+    /// space, walks the F27 routing priority (editor first, selection
+    /// engine for what the editor passes through), and returns the effects
+    /// for the shell.
     ///
     /// This is the single funnel every input source passes through - real
     /// winit events and synthetic test-drive injections alike. Crate-internal:
     /// external injection goes through the feature-gated
     /// [`Self::inject_event`] seam.
     pub(crate) fn route(&mut self, slot: WindowSlot, event: &InputEvent) -> RouteReport {
-        match event {
-            InputEvent::PointerMoved { x, y } => self.route_motion(slot, *x, *y),
-            InputEvent::PointerButton { button, pressed } => {
-                self.route_button(slot, *button, *pressed)
-            }
-            InputEvent::Key {
-                code,
-                pressed,
-                repeat,
-            } => self.route_key(slot, *code, *pressed, *repeat),
-            InputEvent::Modifiers(modifiers) => {
-                self.modifiers = *modifiers;
-                RouteReport::default()
-            }
-            InputEvent::Ime(ime) => {
-                self.apply_ime(ime);
-                RouteReport::default()
-            }
-        }
+        route::route(self, slot, event)
     }
 
     /// TEST SEAM (plan todo 13, Metis blocker #1 fallback): injects a
@@ -163,106 +176,6 @@ impl OverlayCore {
     #[cfg(any(test, feature = "test-drive"))]
     pub fn inject_event(&mut self, input: SyntheticInput) -> RouteReport {
         self.route(input.slot, &input.event)
-    }
-
-    fn route_motion(&mut self, slot: WindowSlot, x: f64, y: f64) -> RouteReport {
-        let _span = tracing::trace_span!("input.motion_to_map", window = slot.index()).entered();
-        let global = self.router.to_global(slot, x, y);
-        let clamped = global.map(|point| self.router.clamp_point(point));
-        if let (Some(global), Some(clamped)) = (global, clamped) {
-            self.cursor = Some(CursorTrack {
-                slot,
-                local_x: x,
-                local_y: y,
-                global,
-                clamped,
-            });
-        }
-        let mut actions = Vec::new();
-        if let Some(clamped) = clamped {
-            actions.push(Action::Redraw(slot));
-            let update = self.feed_selection(|selection, env| selection.pointer_move(env, clamped));
-            actions.extend(update_actions(update, self.router.window_count()));
-        }
-        RouteReport {
-            global_position: global,
-            clamped_position: clamped,
-            actions,
-        }
-    }
-
-    fn route_button(
-        &mut self,
-        slot: WindowSlot,
-        button: MouseButton,
-        pressed: bool,
-    ) -> RouteReport {
-        tracing::trace!(window = slot.index(), ?button, pressed, "pointer button");
-        let mut actions = vec![Action::Redraw(slot)];
-        // The press position is the last tracked cursor (winit always
-        // delivers motion before buttons; injections must do the same).
-        if let Some(cursor) = self.cursor {
-            let at = cursor.clamped;
-            let update = self.feed_selection(|selection, env| {
-                if pressed {
-                    selection.pointer_press(env, button, at)
-                } else {
-                    selection.pointer_release(env, button, at)
-                }
-            });
-            actions.extend(update_actions(update, self.router.window_count()));
-        }
-        RouteReport {
-            actions,
-            ..RouteReport::default()
-        }
-    }
-
-    fn route_key(
-        &mut self,
-        slot: WindowSlot,
-        code: KeyCode,
-        pressed: bool,
-        repeat: bool,
-    ) -> RouteReport {
-        // Latency span + elapsed sample feed the todo-38 keypress->map budget.
-        let started = Instant::now();
-        let _span =
-            tracing::trace_span!("input.key_to_map", window = slot.index(), pressed, repeat)
-                .entered();
-        let mut actions = Vec::new();
-        if pressed {
-            let update = self.feed_selection(|selection, env| selection.key_press(env, code));
-            if update.effects.contains(&Effect::Exit) {
-                self.exit_requested = true;
-            }
-            actions.extend(update_actions(update, self.router.window_count()));
-        }
-        tracing::trace!(
-            target: "flowshot_ui::latency",
-            ?code,
-            elapsed_us = u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX),
-            "key routed"
-        );
-        RouteReport {
-            actions,
-            ..RouteReport::default()
-        }
-    }
-
-    /// Runs one selection-engine call with the freshly built environment
-    /// (the env is `Copy`, so the immutable borrow ends before the engine's
-    /// mutable borrow starts).
-    fn feed_selection(
-        &mut self,
-        call: impl FnOnce(&mut SelectionState, &SelectionEnv) -> SelectionUpdate,
-    ) -> SelectionUpdate {
-        let env = SelectionEnv {
-            bounds: self.router.layout().union_bounds(),
-            modifiers: self.modifiers,
-            now: Instant::now(),
-        };
-        call(&mut self.selection, &env)
     }
 
     fn apply_ime(&mut self, ime: &Ime) {
@@ -288,18 +201,6 @@ impl OverlayCore {
     }
 }
 
-/// Translates a selection update into shell actions: the mapped effects,
-/// plus a redraw of EVERY window when the selection geometry or HUD
-/// changed - a spanning selection (or a HUD anchored to it) can live on any
-/// monitor, not just the event's window.
-fn update_actions(update: SelectionUpdate, window_count: usize) -> Vec<Action> {
-    let mut actions: Vec<Action> = update.effects.into_iter().map(Action::from).collect();
-    if update.changed {
-        actions.extend((0..window_count).map(|index| Action::Redraw(WindowSlot::new(index))));
-    }
-    actions
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -311,8 +212,10 @@ mod tests {
     )]
 
     use super::*;
+    use crate::input::Action;
     use flowshot_core::geometry::{LogicalRect, OutputInfo, OutputLayout, PhysicalSize, Transform};
     use winit::event::MouseButton;
+    use winit::keyboard::KeyCode;
 
     /// Dual mixed-DPI fixture: DP-1 1920x1080 @ 1x at (0,0);
     /// DP-2 3840x2160 @ 2x at logical (1920,0).

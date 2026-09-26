@@ -47,6 +47,15 @@ pub enum InputEvent {
         repeat: bool,
     },
 
+    /// The mouse wheel rotated, in angle-delta units (a standard notch is
+    /// ±120; the shell converts winit's line/pixel deltas at
+    /// [`WHEEL_ANGLE_PER_LINE`](crate::editor::WHEEL_ANGLE_PER_LINE) - the
+    /// todo-20 tool-size adjuster consumes this).
+    Wheel {
+        /// Vertical angle delta (positive = away from the user).
+        delta_y: i32,
+    },
+
     /// The keyboard modifier snapshot changed (winit delivers modifiers as
     /// their own event; the selection engine reads the tracked state when
     /// routing keys and pointer events - plan todo 16).
@@ -112,6 +121,15 @@ impl SyntheticInput {
         Self {
             slot,
             event: InputEvent::PointerButton { button, pressed },
+        }
+    }
+
+    /// A mouse-wheel event in angle-delta units (±120 = one standard notch).
+    #[must_use]
+    pub const fn wheel(slot: WindowSlot, delta_y: i32) -> Self {
+        Self {
+            slot,
+            event: InputEvent::Wheel { delta_y },
         }
     }
 

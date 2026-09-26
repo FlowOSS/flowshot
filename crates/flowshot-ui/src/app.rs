@@ -16,6 +16,7 @@ use winit::window::{Window, WindowId};
 
 use crate::backdrop::{Backdrop, BackdropOptions};
 use crate::crosshair;
+use crate::editor::{EditorView, ToolCursor};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::Action;
@@ -110,11 +111,13 @@ impl OverlayApp {
         };
         // The crosshair follows the window that last received motion; during
         // an implicit grab that is the drag-origin window even while the
-        // cursor is logically over a neighbor.
+        // cursor is logically over a neighbor. The active tool may suppress
+        // it (todo 20 cursor change: the tool's own preview is the cursor).
         let vertices = self
             .core
             .cursor()
             .filter(|cursor| cursor.slot == slot)
+            .filter(|_| self.core.editor().cursor_shape() != ToolCursor::Hidden)
             .and_then(|cursor| {
                 let (local_x, local_y) = self.core.router().to_local(slot, cursor.clamped)?;
                 let (width, height) = surface.size();
@@ -136,10 +139,17 @@ impl OverlayApp {
             }
             _ => DisplayList::new(),
         };
-        // Selection visuals (outline, grips, HUD) above the backdrop, derived
-        // from the same global rect with this output's own scale - a
-        // spanning selection paints seamlessly in every window it touches.
+        // Editor visuals (todo 20: scene objects, the selected-object
+        // outline, the active tool's stroke/preview) above the backdrop and
+        // BELOW the selection chrome - annotations paint on the frozen
+        // frame, the selection outline/HUD frame everything.
         if let Some(output) = self.core.router().output_for(slot) {
+            let view = EditorView {
+                mouse: self.core.cursor().map(|cursor| cursor.clamped),
+                selection: self.core.selection().rect(),
+                modifiers: *self.core.modifiers(),
+            };
+            self.core.editor().paint_into(&mut list, output, view);
             self.core
                 .selection()
                 .paint_into(&mut list, output, Instant::now());
