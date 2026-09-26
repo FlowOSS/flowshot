@@ -32,6 +32,7 @@ pub(super) fn draw_step<'pass>(
                 FlatMode::Content => &pipelines.vector.content,
                 FlatMode::ClipPush => &pipelines.vector.clip_push,
                 FlatMode::ClipPop => &pipelines.vector.clip_pop,
+                FlatMode::Invert => &pipelines.vector.invert,
             };
             (
                 pipeline,

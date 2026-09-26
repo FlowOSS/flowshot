@@ -18,6 +18,15 @@
 //!   an unassigned count (`0`) or re-added via [`Scene::restore_object`] are
 //!   numbered with the max+1 rule.
 
+mod arrow;
+mod objects;
+
+#[cfg(test)]
+pub(crate) mod test_support;
+
+pub use arrow::{ARROW_HEAD_HEIGHT, ARROW_HEAD_WIDTH, ArrowObject};
+pub use objects::{InvertObject, LineObject, MarkerObject, PencilPath};
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
@@ -142,12 +151,25 @@ pub trait PaintSink {
     fn fill_rect(&mut self, rect: Rect, color: Color);
     /// Strokes the outline of an axis-aligned rectangle with `width` thickness.
     fn stroke_rect(&mut self, rect: Rect, color: Color, width: f32);
+    /// Strokes a rounded-corner rectangle outline (`radius = 0` is sharp;
+    /// backends clamp the radius to half the smaller side).
+    fn stroke_rounded_rect(&mut self, rect: Rect, radius: f32, color: Color, width: f32);
     /// Fills the ellipse inscribed in `rect`.
     fn fill_ellipse(&mut self, rect: Rect, color: Color);
     /// Strokes the ellipse inscribed in `rect` with `width` thickness.
     fn stroke_ellipse(&mut self, rect: Rect, color: Color, width: f32);
     /// Draws a straight line segment with `width` thickness.
     fn draw_line(&mut self, from: Point, to: Point, color: Color, width: f32);
+    /// Strokes an open polyline through `points` with `width` thickness
+    /// (joined as ONE path - freehand strokes, plan todo 21).
+    fn stroke_polyline(&mut self, points: &[Point], color: Color, width: f32);
+    /// Fills the polygon spanned by `points` (arrow heads, chisel-cap marker
+    /// quads - fewer than 3 points paint nothing).
+    fn fill_polygon(&mut self, points: &[Point], color: Color);
+    /// Inverts the colors of everything painted below `rect` (the
+    /// non-destructive region filter of plan todo 21; backends without an
+    /// inversion capability log and skip).
+    fn invert_region(&mut self, rect: Rect);
     /// Draws `text` with its layout box anchored at `position` (top-left).
     fn draw_text(&mut self, position: Point, text: &str, font_size: f32, color: Color);
 }
@@ -217,6 +239,14 @@ pub enum ToolObjectData {
     Text(TextObject),
     /// A [`CounterObject`].
     Counter(CounterObject),
+    /// A [`PencilPath`].
+    Pencil(PencilPath),
+    /// A [`LineObject`].
+    Line(LineObject),
+    /// A [`MarkerObject`].
+    Marker(MarkerObject),
+    /// An [`InvertObject`].
+    Invert(InvertObject),
 }
 
 impl ToolObjectData {
@@ -229,6 +259,10 @@ impl ToolObjectData {
             Self::Arrow(object) => Box::new(object),
             Self::Text(object) => Box::new(object),
             Self::Counter(object) => Box::new(object),
+            Self::Pencil(object) => Box::new(object),
+            Self::Line(object) => Box::new(object),
+            Self::Marker(object) => Box::new(object),
+            Self::Invert(object) => Box::new(object),
         }
     }
 }
@@ -244,10 +278,15 @@ pub struct RectObject {
     pub stroke_width: f32,
     /// Whether the shape is filled instead of stroked.
     pub filled: bool,
+    /// Corner radius for the stroked outline (`[tools.rectangle].corner_radius`
+    /// via the rect tool; `0` = sharp corners, backends clamp to half the
+    /// smaller side). Ignored when `filled`.
+    #[serde(default)]
+    pub corner_radius: f32,
 }
 
 impl RectObject {
-    /// Creates a stroked rectangle annotation.
+    /// Creates a stroked rectangle annotation with sharp corners.
     #[must_use]
     pub fn new(rect: Rect, color: Color, stroke_width: f32, filled: bool) -> Self {
         Self {
@@ -255,7 +294,15 @@ impl RectObject {
             color,
             stroke_width,
             filled,
+            corner_radius: 0.0,
         }
+    }
+
+    /// Sets the stroke corner radius (builder).
+    #[must_use]
+    pub fn with_corner_radius(mut self, radius: f32) -> Self {
+        self.corner_radius = radius;
+        self
     }
 }
 
@@ -272,7 +319,7 @@ impl ToolObject for RectObject {
         if self.filled {
             sink.fill_rect(self.rect, self.color);
         } else {
-            sink.stroke_rect(self.rect, self.color, self.stroke_width);
+            sink.stroke_rounded_rect(self.rect, self.corner_radius, self.color, self.stroke_width);
         }
     }
 
@@ -326,69 +373,6 @@ impl ToolObject for EllipseObject {
 
     fn to_data(&self) -> ToolObjectData {
         ToolObjectData::Ellipse(self.clone())
-    }
-}
-
-/// An arrow annotation drawn as a shaft plus a two-line head.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ArrowObject {
-    /// Tail of the arrow.
-    pub from: Point,
-    /// Tip of the arrow.
-    pub to: Point,
-    /// Line color.
-    pub color: Color,
-    /// Line thickness.
-    pub thickness: f32,
-}
-
-impl ArrowObject {
-    /// Creates an arrow annotation.
-    #[must_use]
-    pub fn new(from: Point, to: Point, color: Color, thickness: f32) -> Self {
-        Self {
-            from,
-            to,
-            color,
-            thickness,
-        }
-    }
-}
-
-/// Computes the two arrowhead tip-adjacent points for a shaft `from` -> `to`.
-fn arrowhead_points(from: Point, to: Point, size: f32) -> (Point, Point) {
-    let angle = (to.y - from.y).atan2(to.x - from.x);
-    let spread = std::f32::consts::FRAC_PI_6;
-    let left = Point::new(
-        to.x - size * (angle - spread).cos(),
-        to.y - size * (angle - spread).sin(),
-    );
-    let right = Point::new(
-        to.x - size * (angle + spread).cos(),
-        to.y - size * (angle + spread).sin(),
-    );
-    (left, right)
-}
-
-impl ToolObject for ArrowObject {
-    fn type_id(&self) -> &'static str {
-        "arrow"
-    }
-
-    fn bounding_rect(&self) -> Rect {
-        Rect::from_points(self.from, self.to)
-    }
-
-    fn paint(&self, sink: &mut dyn PaintSink) {
-        sink.draw_line(self.from, self.to, self.color, self.thickness);
-        let head_size = (self.thickness * 4.0).max(8.0);
-        let (left, right) = arrowhead_points(self.from, self.to, head_size);
-        sink.draw_line(self.to, left, self.color, self.thickness);
-        sink.draw_line(self.to, right, self.color, self.thickness);
-    }
-
-    fn to_data(&self) -> ToolObjectData {
-        ToolObjectData::Arrow(self.clone())
     }
 }
 
@@ -1009,6 +993,11 @@ mod tests {
             self.calls
                 .push(format!("stroke_rect({rect:?},{color:?},{width})"));
         }
+        fn stroke_rounded_rect(&mut self, rect: Rect, radius: f32, color: Color, width: f32) {
+            self.calls.push(format!(
+                "stroke_rounded_rect({rect:?},{radius},{color:?},{width})"
+            ));
+        }
         fn fill_ellipse(&mut self, rect: Rect, color: Color) {
             self.calls.push(format!("fill_ellipse({rect:?},{color:?})"));
         }
@@ -1019,6 +1008,17 @@ mod tests {
         fn draw_line(&mut self, from: Point, to: Point, color: Color, width: f32) {
             self.calls
                 .push(format!("draw_line({from:?},{to:?},{color:?},{width})"));
+        }
+        fn stroke_polyline(&mut self, points: &[Point], color: Color, width: f32) {
+            self.calls
+                .push(format!("stroke_polyline({points:?},{color:?},{width})"));
+        }
+        fn fill_polygon(&mut self, points: &[Point], color: Color) {
+            self.calls
+                .push(format!("fill_polygon({points:?},{color:?})"));
+        }
+        fn invert_region(&mut self, rect: Rect) {
+            self.calls.push(format!("invert_region({rect:?})"));
         }
         fn draw_text(&mut self, position: Point, text: &str, font_size: f32, color: Color) {
             self.calls.push(format!(
@@ -1463,8 +1463,22 @@ mod tests {
 
     #[test]
     fn bounding_rects_are_sane() {
+        // Todo 21: the arrow head is FILLED geometry scaling from the
+        // thickness (F27 arrowtool math), so the exact bounds now cover the
+        // head corners grown by the shaft's half-width ink - the todo-4 stub
+        // head (two stroked lines inside the endpoint rect) is superseded.
+        // Arrow (0,0)->(10,5) t=2: len ~11.18 < 18+2t, the head consumes the
+        // whole shaft; corners sit at (0,0) +- 7 * unit-normal(-0.447, 0.894).
         let arrow = ArrowObject::new(Point::new(0.0, 0.0), Point::new(10.0, 5.0), RED, 2.0);
-        assert_eq!(arrow.bounding_rect(), Rect::new(0.0, 0.0, 10.0, 5.0));
+        let bounds = arrow.bounding_rect();
+        let expected = Rect::new(-4.130, -7.261, 15.130, 14.522);
+        assert!(
+            (bounds.x - expected.x).abs() < 0.01
+                && (bounds.y - expected.y).abs() < 0.01
+                && (bounds.width - expected.width).abs() < 0.01
+                && (bounds.height - expected.height).abs() < 0.01,
+            "arrow bounds {bounds:?} vs expected {expected:?}"
+        );
 
         let c = CounterObject::new(Point::new(20.0, 20.0), 5.0, RED, 1);
         assert_eq!(c.bounding_rect(), Rect::new(15.0, 15.0, 10.0, 10.0));

@@ -40,12 +40,14 @@
 mod events;
 mod keys;
 mod kind;
+mod outline;
 mod paint;
 mod registry;
 mod routing;
 mod scene_ops;
 mod size;
 mod tool;
+mod tools;
 mod types;
 
 #[cfg(test)]
@@ -62,10 +64,8 @@ use paint::parse_draw_color;
 
 pub use keys::{ToolShortcuts, digit_for};
 pub use kind::ToolKind;
-pub use paint::{
-    DASH_OFF, DASH_ON, OBJECT_OUTLINE_INNER, OBJECT_OUTLINE_OUTER, render_color,
-    scene_color_from_hex,
-};
+pub use outline::{DASH_OFF, DASH_ON, OBJECT_OUTLINE_INNER, OBJECT_OUTLINE_OUTER};
+pub use paint::{render_color, scene_color_from_hex};
 pub use registry::{ToolFactory, ToolRegistry};
 pub use routing::{
     MoveTarget, PressRoute, PressTarget, ReleaseTarget, route_move, route_press, route_release,
@@ -75,6 +75,10 @@ pub use size::{
     WHEEL_ANGLE_PER_LINE, WHEEL_THRESHOLD, WheelAccumulator, stepped,
 };
 pub use tool::{EditorContext, EditorTools, FramePixels, Tool, ToolCursor};
+pub use tools::{
+    ArrowTool, EllipseTool, InvertTool, LineTool, MARKER_ALPHA, MarkerTool, PencilTool,
+    RDP_EPSILON, RectTool, register_shape_tools,
+};
 pub use types::{EditorEffect, EditorEnv, EditorUpdate};
 
 /// Everything one window's editor paint needs beyond the list and output.
@@ -365,7 +369,7 @@ impl EditorState {
             self.scene.paint(&mut sink);
         }
         if let Some(object) = self.selected.and_then(|id| self.scene.get_object(id)) {
-            paint::append_object_outline(list, output, object.bounding_rect());
+            outline::append_object_outline(list, output, object.bounding_rect());
         }
         let (Some(tool), Some(mouse)) = (self.tool.as_ref(), view.mouse) else {
             return;

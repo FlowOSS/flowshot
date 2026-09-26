@@ -86,7 +86,7 @@ pub use backdrop::{
 };
 pub use editor::{
     EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUpdate, EditorView,
-    FramePixels, Tool, ToolCursor, ToolKind, ToolRegistry, ToolShortcuts,
+    FramePixels, Tool, ToolCursor, ToolKind, ToolRegistry, ToolShortcuts, register_shape_tools,
 };
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};

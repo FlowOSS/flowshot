@@ -37,17 +37,14 @@
 //! <none|shift|ctrl|...[+...]>`, and `press/release <slot>
 //! <escape|enter|left|right|up|down|a|c|q|p|d|s|r|m|t|b|i|z|delete|0..9|...>`.
 //!
-//! Todo 20: a DEMO line-stub tool is registered for the pencil kind (the
-//! full pencil is todo 21 - the stub commits one `ArrowObject` per drag and
-//! proves the routing/commit/undo/redo/paint chain end to end).
+//! Todo 21: the REAL shape tools (pencil/line/arrow/rect/ellipse/marker/
+//! invert) are registered - the todo-20 line stub is gone; every F12 tool
+//! key now draws its production shape.
 
 use std::process::ExitCode;
 
 use flowshot_capture::{Frame, FrameBuffer, FrameFormat, OutputRef};
 use flowshot_core::geometry::{Logical, LogicalPoint, LogicalRect, OutputInfo, PhysicalPoint};
-use flowshot_core::scene::{
-    ArrowObject, PaintSink, Point as ScenePoint, Rect as SceneRect, ToolObject,
-};
 use flowshot_ui::backdrop::{BackdropOptions, CursorSprite, FrozenCapture, PlacedCursor};
 use flowshot_ui::{OverlayRuntime, UiError};
 
@@ -101,15 +98,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
     let mut runtime = runtime?;
-    // Todo 20 demo tool: the pencil key ('p') checks a one-line stub that
-    // commits an ArrowObject per drag (the real pencil lands in todo 21).
-    runtime
-        .core_mut()
-        .editor_mut()
-        .registry_mut()
-        .register(flowshot_ui::ToolKind::Pencil, || {
-            Box::new(LineStubTool::default())
-        });
+    // Todo 21: the production shape tools (the todo-35 binary layer will do
+    // the same registration).
+    flowshot_ui::register_shape_tools(runtime.core_mut().editor_mut().registry_mut());
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     runtime.run()?;
@@ -409,77 +400,5 @@ fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
             })
         }
         _ => None,
-    }
-}
-
-/// The todo-20 DEMO tool: a one-line pencil stub (the full pencil is todo
-/// 21). Drag start -> end commits a single [`ArrowObject`] (the scene's
-/// line-capable object today); while hovering it paints a stroke-width
-/// preview dot (the mouse-preview path); a zero-length drag commits
-/// nothing (the todo-21 validity rule, proven at the framework level).
-#[derive(Debug, Default)]
-struct LineStubTool {
-    from: Option<ScenePoint>,
-    to: Option<ScenePoint>,
-}
-
-#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-fn scene_pt(at: LogicalPoint) -> ScenePoint {
-    ScenePoint::new(at.x.0 as f32, at.y.0 as f32)
-}
-
-#[allow(clippy::cast_precision_loss)]
-impl flowshot_ui::Tool for LineStubTool {
-    fn kind(&self) -> flowshot_ui::ToolKind {
-        flowshot_ui::ToolKind::Pencil
-    }
-
-    fn draw_start(&mut self, _ctx: &flowshot_ui::EditorContext<'_>, at: LogicalPoint) {
-        let point = scene_pt(at);
-        self.from = Some(point);
-        self.to = Some(point);
-    }
-
-    fn draw_move(&mut self, _ctx: &flowshot_ui::EditorContext<'_>, at: LogicalPoint) {
-        self.to = Some(scene_pt(at));
-    }
-
-    fn draw_end(
-        &mut self,
-        ctx: &flowshot_ui::EditorContext<'_>,
-        at: LogicalPoint,
-    ) -> Option<Box<dyn ToolObject>> {
-        let from = self.from.take()?;
-        let to = self.to.take().unwrap_or_else(|| scene_pt(at));
-        if from == to {
-            return None;
-        }
-        Some(Box::new(ArrowObject::new(
-            from,
-            to,
-            ctx.color,
-            ctx.tool_size as f32,
-        )))
-    }
-
-    fn paint(&self, ctx: &flowshot_ui::EditorContext<'_>, sink: &mut dyn PaintSink) {
-        // Todo-30 gate unblock: clippy single_match_else -> if-let/else,
-        // behavior-preserving (the todo-15 parity.rs precedent; inert once
-        // the todo-20 owner restyles this stub).
-        if let (Some(from), Some(to)) = (self.from, self.to) {
-            sink.draw_line(from, to, ctx.color, ctx.tool_size as f32);
-        } else {
-            let center = scene_pt(ctx.mouse);
-            let radius = ctx.tool_size as f32;
-            sink.fill_ellipse(
-                SceneRect::new(
-                    center.x - radius,
-                    center.y - radius,
-                    radius * 2.0,
-                    radius * 2.0,
-                ),
-                ctx.color,
-            );
-        }
     }
 }

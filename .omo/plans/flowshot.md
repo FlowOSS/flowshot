@@ -268,7 +268,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = gallery + conformance asserts; failure = popover at screen edge flips inward (oracle shot at corner), evidence. Evidence <attemptDir>/task-19-flowshot.png
   Commit: Y | feat(ui): token-driven micro-widget design system
   Recommended task executor category: visual-engineering - the styling/consistency deliverable per D8.
-- [ ] 20. Editor: tool framework + event routing
+- [x] 20. Editor: tool framework + event routing
   What to do: editor layer bridging scene (todo 4) to overlay input (todo 16): `Tool` trait impls get lifecycle drawStart/drawMove/drawEnd/pressed with EditorContext {frame, selection, color, tool_size, mouse, circle_count, config-ref} (F27 CaptureContext equivalent); event routing priority EXACT per F27: color-picker visible -> right-click (= picker open, except during text edit) -> active tool drawing -> click-outside commits text -> object select at pos; per-tool size dispatch (text = fontSize + BASE 8pt; rect/marker/pixelate/counter independent sizes; others shared drawThickness default 3); digit-key size accumulation clipped [1,50] (maxToolSize parity); wheel = tool size ±1 with 60-delta accumulation threshold (MOUSE_WHEEL_TRESHOLD parity); object selection outline black 3px + white 1px dotted (parity); Delete removes selected w/ counter renumber (core op); tool activation keys per F12 shortcut map (P/D/A/S/R/C/M/T/B/I + configurable); mouse-preview for tools with showMousePreview. Must NOT: no concrete drawing tools here (21-24,27).
   Parallelization: Wave 4 | Blocked by: 16,4,19 | Blocks: 21,22,23,24,25,26,27
   References: draft F27 tool model + interaction priorities + constants (flameshot capturewidget line cites), F12 shortcut table.
@@ -276,7 +276,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = stroke drawn/undone/redone (3 oracle shots); failure = digits '99' clip to 50 (unit + HUD assert). Evidence <attemptDir>/task-20-flowshot.png
   Commit: Y | feat(editor): tool framework, routing, size dispatch
   Recommended task executor category: unspecified-high - central editor plumbing, spec complete.
-- [ ] 21. Editor: shape tools (pencil/line/arrow/rect/ellipse/marker/invert)
+- [x] 21. Editor: shape tools (pencil/line/arrow/rect/ellipse/marker/invert)
   What to do: seven scene-object tools: pencil (freehand polyline, point simplification on drawEnd - Ramer-Douglas-Peucker epsilon = 0.5px), line (Ctrl constrains H/V/45deg), arrow (head geometry scaled from thickness; arrowStyle 0=straight 1=curved quadratic; reverseArrow config flips head), rectangle (stroke + drawRectangleSize corner radius; Ctrl = aspect lock), ellipse (Ctrl = circle lock), marker (alpha ~0.5 blend, width = drawMarkerSize, chisel cap), invert (region color inversion filter object, non-destructive to frame); all: z-ordered scene objects, serde persistence, paint via renderer display lists, bounding_rect exact, copy/clone, per-tool size from dispatch (todo 20), object-selection outline support. Must NOT: no raster effects beyond invert (pixelate = todo 23).
   Parallelization: Wave 4 | Blocked by: 20 | Blocks: 38
   References: draft F12 tool rows 1-7,11 (arrowStyle/reverseArrow/drawMarkerSize semantics), F27 (constrain rules, abstracttwopointtool/abstractpathtool patterns).
@@ -348,7 +348,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = above; failure = unwritable dir -> error notification (busctl monitor assert) + non-zero exit. Evidence <attemptDir>/task-29-flowshot.txt
   Commit: Y | feat(actions): save pipeline, filename patterns, export actions
   Recommended task executor category: quick - fully specified, std + image crate only.
-- [ ] 30. Actions: pin-to-screen with zoom-to-cursor
+- [x] 30. Actions: pin-to-screen with zoom-to-cursor
   What to do: pin windows: separate winit window (image*scale clamped to screen, MIN_SIZE 100 parity), borderless transparent + shadow (MARGIN 7, BLUR_RADIUS 14 tokens); drag = winit `drag_window()` (startSystemMove-equivalent - F27 BORROW, Wayland-correct); wheel zoom STEP 0.03 accumulate-then-commit ANCHORED AT CURSOR (zoom-to-cursor math = MODIFIED fix of Flameshot's center-zoom AVOID); pinch via gesture events when available; rotate 90° (buffer transform, menu + bindable keys); opacity: keys 0-9 -> 1.0..0.1 absolute, context-menu ±0.1; right-click context menu via widget layer (todo 19): copy/save/rotate/opacity/close - copy/save items wired via action-callback traits (modules from todos 28/29; end-to-end asserted in todo 38 flow 8, Oracle r1 #7); pin zoom ALWAYS antialiased (antialiasingPinZoom DROPPED per Amendment #3 - no toggle); geometry PHYSICAL-FIRST - never divide by DPR (#4920 root-cause fix, F27 AVOID); multi-pin: daemon tracks pin registry (feeds the todo-32 persistence reason "pins alive" - smart lifecycle, NOT the dropped autoCloseIdleDaemon flag); always-on-top best-effort (advisory on Wayland - documented; Hyprland float rule snippet shipped in todo 39/40). Must NOT: no layer-shell for pins (v1 overlay policy).
   Parallelization: Wave 5 | Blocked by: 4,19 | Blocks: 38
   References: draft F27 pin spec (all constants + AVOID list), F9 (#4920 fix), F12 pin row.

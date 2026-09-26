@@ -86,22 +86,43 @@ pub(crate) const FLAT_VERTEX_ATTRIBUTES: &[wgpu::VertexAttribute] =
 /// Bytes per flat vertex.
 pub(crate) const FLAT_VERTEX_STRIDE: u64 = 6 * std::mem::size_of::<f32>() as u64;
 
-/// The three flat-color pipelines (content, clip push, clip pop).
-#[derive(Debug)]
-pub(crate) struct VectorPipelines {
-    pub content: wgpu::RenderPipeline,
-    pub clip_push: wgpu::RenderPipeline,
-    pub clip_pop: wgpu::RenderPipeline,
-}
-
 /// Everything that distinguishes one flat-vertex pipeline from another
 /// (shared by the vector, clip, and shadow pipelines).
 pub(crate) struct PipelineSpec<'a> {
     pub format: wgpu::TextureFormat,
     pub sample_count: u32,
     pub write_mask: wgpu::ColorWrites,
+    pub blend: wgpu::BlendState,
     pub depth_stencil: Option<wgpu::DepthStencilState>,
     pub label: &'a str,
+}
+
+/// The invert pipeline's blend state: `src * (1 - dst_color)` per color
+/// channel (with the unit-white source vertex color this is the exact
+/// linear-light complement) while the destination alpha passes through
+/// untouched.
+fn invert_blend() -> wgpu::BlendState {
+    wgpu::BlendState {
+        color: wgpu::BlendComponent {
+            src_factor: wgpu::BlendFactor::OneMinusDst,
+            dst_factor: wgpu::BlendFactor::Zero,
+            operation: wgpu::BlendOperation::Add,
+        },
+        alpha: wgpu::BlendComponent {
+            src_factor: wgpu::BlendFactor::Zero,
+            dst_factor: wgpu::BlendFactor::One,
+            operation: wgpu::BlendOperation::Add,
+        },
+    }
+}
+
+/// The flat-color pipelines (content, clip push/pop, region invert).
+#[derive(Debug)]
+pub(crate) struct VectorPipelines {
+    pub content: wgpu::RenderPipeline,
+    pub clip_push: wgpu::RenderPipeline,
+    pub clip_pop: wgpu::RenderPipeline,
+    pub invert: wgpu::RenderPipeline,
 }
 
 impl VectorPipelines {
@@ -119,10 +140,11 @@ impl VectorPipelines {
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        let spec = |write_mask, depth_stencil, label| PipelineSpec {
+        let spec = |write_mask, blend, depth_stencil, label| PipelineSpec {
             format,
             sample_count,
             write_mask,
+            blend,
             depth_stencil,
             label,
         };
@@ -133,6 +155,7 @@ impl VectorPipelines {
                 &module,
                 &spec(
                     wgpu::ColorWrites::ALL,
+                    wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,
                     Some(content_stencil()),
                     "render-vector-content",
                 ),
@@ -143,6 +166,7 @@ impl VectorPipelines {
                 &module,
                 &spec(
                     wgpu::ColorWrites::empty(),
+                    wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,
                     Some(clip_stencil(wgpu::StencilOperation::IncrementClamp)),
                     "render-clip-push",
                 ),
@@ -153,8 +177,20 @@ impl VectorPipelines {
                 &module,
                 &spec(
                     wgpu::ColorWrites::empty(),
+                    wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,
                     Some(clip_stencil(wgpu::StencilOperation::DecrementClamp)),
                     "render-clip-pop",
+                ),
+            ),
+            invert: build_flat_pipeline(
+                device,
+                &layout,
+                &module,
+                &spec(
+                    wgpu::ColorWrites::ALL,
+                    invert_blend(),
+                    Some(content_stencil()),
+                    "render-vector-invert",
                 ),
             ),
         }
@@ -201,7 +237,7 @@ pub(crate) fn build_flat_pipeline(
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: spec.format,
-                blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                blend: Some(spec.blend),
                 write_mask: spec.write_mask,
             })],
         }),

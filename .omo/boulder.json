@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-25T23:45:57.030Z",
+      "updated_at": "2026-09-26T03:27:02.762Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -39,7 +39,9 @@
         "opencode:ses_f257936a8fferUR62Z2LzgeC1m",
         "opencode:ses_f2578dc11ffexrMP5B3cbiSMbz",
         "opencode:ses_f250a8687ffeV7AW25sfqPGGZS",
-        "opencode:ses_f2509e5adffeVwrcd02i3jxPuM"
+        "opencode:ses_f2509e5adffeVwrcd02i3jxPuM",
+        "opencode:ses_f243fee8bffezk7ZDkzPN3iRSh",
+        "opencode:ses_f243f7a86ffeOiWEHaBAi5UqZl"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -55,7 +57,9 @@
         "opencode:ses_f257936a8fferUR62Z2LzgeC1m": "appended",
         "opencode:ses_f2578dc11ffexrMP5B3cbiSMbz": "appended",
         "opencode:ses_f250a8687ffeV7AW25sfqPGGZS": "appended",
-        "opencode:ses_f2509e5adffeVwrcd02i3jxPuM": "appended"
+        "opencode:ses_f2509e5adffeVwrcd02i3jxPuM": "appended",
+        "opencode:ses_f243fee8bffezk7ZDkzPN3iRSh": "appended",
+        "opencode:ses_f243f7a86ffeOiWEHaBAi5UqZl": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -121,10 +125,10 @@
           "task_key": "todo:17",
           "task_label": "17",
           "task_title": "Overlay: magnifier with pixel grid + hex readout",
-          "session_id": "opencode:ses_f2509e5adffeVwrcd02i3jxPuM",
+          "session_id": "opencode:ses_f243f7a86ffeOiWEHaBAi5UqZl",
           "agent": "Sisyphus-Junior",
           "category": "unspecified-high",
-          "updated_at": "2026-09-25T23:45:57.030Z"
+          "updated_at": "2026-09-26T03:27:02.762Z"
         }
       }
     }
@@ -132,7 +136,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-25T23:45:57.030Z",
+  "updated_at": "2026-09-26T03:27:02.762Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -147,7 +151,9 @@
     "opencode:ses_f257936a8fferUR62Z2LzgeC1m",
     "opencode:ses_f2578dc11ffexrMP5B3cbiSMbz",
     "opencode:ses_f250a8687ffeV7AW25sfqPGGZS",
-    "opencode:ses_f2509e5adffeVwrcd02i3jxPuM"
+    "opencode:ses_f2509e5adffeVwrcd02i3jxPuM",
+    "opencode:ses_f243fee8bffezk7ZDkzPN3iRSh",
+    "opencode:ses_f243f7a86ffeOiWEHaBAi5UqZl"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -163,7 +169,9 @@
     "opencode:ses_f257936a8fferUR62Z2LzgeC1m": "appended",
     "opencode:ses_f2578dc11ffexrMP5B3cbiSMbz": "appended",
     "opencode:ses_f250a8687ffeV7AW25sfqPGGZS": "appended",
-    "opencode:ses_f2509e5adffeVwrcd02i3jxPuM": "appended"
+    "opencode:ses_f2509e5adffeVwrcd02i3jxPuM": "appended",
+    "opencode:ses_f243fee8bffezk7ZDkzPN3iRSh": "appended",
+    "opencode:ses_f243f7a86ffeOiWEHaBAi5UqZl": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -229,10 +237,10 @@
       "task_key": "todo:17",
       "task_label": "17",
       "task_title": "Overlay: magnifier with pixel grid + hex readout",
-      "session_id": "opencode:ses_f2509e5adffeVwrcd02i3jxPuM",
+      "session_id": "opencode:ses_f243f7a86ffeOiWEHaBAi5UqZl",
       "agent": "Sisyphus-Junior",
       "category": "unspecified-high",
-      "updated_at": "2026-09-25T23:45:57.030Z"
+      "updated_at": "2026-09-26T03:27:02.762Z"
     }
   },
   "agent": "atlas"

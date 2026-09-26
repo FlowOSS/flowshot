@@ -7,11 +7,9 @@
 //! edge-conversion discipline as the selection paint (never an averaged
 //! factor; the #4871 physical-first rule).
 //!
-//! The object-selection outline is the F27 parity visual: black 3px solid
-//! under white 1px dotted (`capturewidget.cpp` object outline). The widths
-//! and the Qt-DotLine dash rhythm are BEHAVIOR spec constants (like the
-//! selection engine's 3px drag threshold), not theme tokens; the dot
-//! approximation is 1px on / 2px off at the inner width.
+//! The object-selection outline lives in [`super::outline`] (split at the
+//! 250-LOC ceiling, todo 21); the local-conversion helpers here are shared
+//! with it.
 
 use flowshot_core::geometry::{Logical, OutputInfo, ToPhysical};
 use flowshot_core::scene::{
@@ -22,14 +20,6 @@ use crate::render::{
     Color, DisplayList, Point, Rect, Shape, TextCommand, f32_from_f64, f32_from_i32,
 };
 
-/// Object-selection outline: outer black stroke width, logical px (F27).
-pub const OBJECT_OUTLINE_OUTER: f32 = 3.0;
-/// Object-selection outline: inner white dotted stroke width, logical px.
-pub const OBJECT_OUTLINE_INNER: f32 = 1.0;
-/// Qt `DotLine` dash rhythm at 1px pen width: 1px dot...
-pub const DASH_ON: f32 = 1.0;
-/// ...2px gap.
-pub const DASH_OFF: f32 = 2.0;
 /// The selection engine's text line-height ratio (cosmic-text needs an
 /// explicit line height; same constant as the HUD text).
 const LINE_HEIGHT_RATIO: f32 = 1.2;
@@ -112,6 +102,13 @@ impl<'a> ListSink<'a> {
     fn local_len(&self, logical: f32) -> f32 {
         local_len(f64::from(logical), self.output.scale)
     }
+
+    fn local_points(&self, points: &[ScenePoint]) -> Vec<Point> {
+        points
+            .iter()
+            .map(|point| self.local_point(*point))
+            .collect()
+    }
 }
 
 impl PaintSink for ListSink<'_> {
@@ -130,6 +127,17 @@ impl PaintSink for ListSink<'_> {
             Shape::Rect {
                 rect: self.local_rect(rect),
                 radius: 0.0,
+            },
+            self.local_len(width),
+            render_color(color),
+        );
+    }
+
+    fn stroke_rounded_rect(&mut self, rect: SceneRect, radius: f32, color: SceneColor, width: f32) {
+        self.list.stroke(
+            Shape::Rect {
+                rect: self.local_rect(rect),
+                radius: self.local_len(radius),
             },
             self.local_len(width),
             render_color(color),
@@ -170,6 +178,37 @@ impl PaintSink for ListSink<'_> {
         );
     }
 
+    fn stroke_polyline(&mut self, points: &[ScenePoint], color: SceneColor, width: f32) {
+        if points.len() < 2 {
+            return;
+        }
+        self.list.stroke(
+            Shape::Polyline {
+                points: self.local_points(points),
+                closed: false,
+            },
+            self.local_len(width),
+            render_color(color),
+        );
+    }
+
+    fn fill_polygon(&mut self, points: &[ScenePoint], color: SceneColor) {
+        if points.len() < 3 {
+            return;
+        }
+        self.list.fill(
+            Shape::Polyline {
+                points: self.local_points(points),
+                closed: true,
+            },
+            render_color(color),
+        );
+    }
+
+    fn invert_region(&mut self, rect: SceneRect) {
+        self.list.invert(self.local_rect(rect));
+    }
+
     fn draw_text(&mut self, position: ScenePoint, text: &str, font_size: f32, color: SceneColor) {
         let size = self.local_len(font_size);
         self.list.text(TextCommand {
@@ -184,78 +223,17 @@ impl PaintSink for ListSink<'_> {
     }
 }
 
-/// Appends the F27 object-selection outline (black 3px solid + white 1px
-/// dotted) around a scene-space bounding rect.
-pub(super) fn append_object_outline(list: &mut DisplayList, output: &OutputInfo, rect: SceneRect) {
-    let x0 = local_x(output, f64::from(rect.x));
-    let y0 = local_y(output, f64::from(rect.y));
-    let x1 = local_x(output, f64::from(rect.x + rect.width));
-    let y1 = local_y(output, f64::from(rect.y + rect.height));
-    let local = Rect::from_parts(x0, y0, x1 - x0, y1 - y0);
-    let black = Color::from_rgba8(0, 0, 0, 255);
-    let white = Color::from_rgba8(255, 255, 255, 255);
-    list.stroke(
-        Shape::Rect {
-            rect: local,
-            radius: 0.0,
-        },
-        local_len(f64::from(OBJECT_OUTLINE_OUTER), output.scale),
-        black,
-    );
-    let width = local_len(f64::from(OBJECT_OUTLINE_INNER), output.scale);
-    let period = local_len(f64::from(DASH_ON + DASH_OFF), output.scale).max(width * 2.0);
-    let dash = local_len(f64::from(DASH_ON), output.scale).max(width);
-    for (from, to) in [
-        (
-            Point::new(local.origin.x, local.origin.y),
-            Point::new(local.right(), local.origin.y),
-        ),
-        (
-            Point::new(local.right(), local.origin.y),
-            Point::new(local.right(), local.bottom()),
-        ),
-        (
-            Point::new(local.right(), local.bottom()),
-            Point::new(local.origin.x, local.bottom()),
-        ),
-        (
-            Point::new(local.origin.x, local.bottom()),
-            Point::new(local.origin.x, local.origin.y),
-        ),
-    ] {
-        let (dx, dy) = (to.x - from.x, to.y - from.y);
-        let length = (dx * dx + dy * dy).sqrt();
-        if length.is_nan() || length <= 0.0 {
-            continue;
-        }
-        let (ux, uy) = (dx / length, dy / length);
-        let mut walked = 0.0;
-        while walked < length {
-            let end = (walked + dash).min(length);
-            list.stroke(
-                Shape::Line {
-                    from: Point::new(from.x + ux * walked, from.y + uy * walked),
-                    to: Point::new(from.x + ux * end, from.y + uy * end),
-                },
-                width,
-                white,
-            );
-            walked += period;
-        }
-    }
-}
-
-fn local_x(output: &OutputInfo, global: f64) -> f32 {
+pub(super) fn local_x(output: &OutputInfo, global: f64) -> f32 {
     let offset = Logical(global - output.logical_rect.x.0);
     f32_from_i32(offset.to_physical(output.scale).0)
 }
 
-fn local_y(output: &OutputInfo, global: f64) -> f32 {
+pub(super) fn local_y(output: &OutputInfo, global: f64) -> f32 {
     let offset = Logical(global - output.logical_rect.y.0);
     f32_from_i32(offset.to_physical(output.scale).0)
 }
 
-fn local_len(logical: f64, scale: f64) -> f32 {
+pub(super) fn local_len(logical: f64, scale: f64) -> f32 {
     let factor = if scale.is_finite() && scale > 0.0 {
         scale
     } else {
@@ -356,43 +334,5 @@ mod tests {
             scene.paint(&mut sink);
         }
         assert_eq!(list.len(), 1);
-    }
-
-    #[test]
-    fn object_outline_is_black_solid_plus_white_dots() {
-        let out = output(0.0, 1.0);
-        let mut list = DisplayList::new();
-        append_object_outline(&mut list, &out, SceneRect::new(100.0, 100.0, 30.0, 20.0));
-        let commands: Vec<_> = list.iter().collect();
-        // First: the black 3px solid rect.
-        let Command::Stroke {
-            shape: Shape::Rect { rect, .. },
-            width,
-            color,
-        } = commands[0]
-        else {
-            panic!("outer stroke");
-        };
-        assert_eq!(*rect, Rect::from_parts(100.0, 100.0, 30.0, 20.0));
-        assert_eq!(*width, OBJECT_OUTLINE_OUTER);
-        assert_eq!(*color, Color::from_rgba8(0, 0, 0, 255));
-        // Rest: white 1px dot segments, all axis-aligned on the rect edges.
-        let dots = &commands[1..];
-        assert!(!dots.is_empty());
-        assert!(dots.iter().all(|command| matches!(
-            command,
-            Command::Stroke { shape: Shape::Line { .. }, width, color }
-                if *width == OBJECT_OUTLINE_INNER && *color == Color::from_rgba8(255, 255, 255, 255)
-        )));
-        // Perimeter 100px at a 3px rhythm -> ~34 dots (corners clip short).
-        assert!((25..=34).contains(&dots.len()), "dot count {}", dots.len());
-    }
-
-    #[test]
-    fn degenerate_outline_draws_no_dots_but_keeps_the_box() {
-        let out = output(0.0, 1.0);
-        let mut list = DisplayList::new();
-        append_object_outline(&mut list, &out, SceneRect::new(5.0, 5.0, 0.0, 0.0));
-        assert_eq!(list.len(), 1, "black box only");
     }
 }

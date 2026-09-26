@@ -192,6 +192,15 @@ pub enum Command {
         /// Dim color with token opacity.
         color: Color,
     },
+    /// Inverts everything painted below `rect` (the todo-21 invert tool's
+    /// non-destructive region filter). The complement runs in the renderer's
+    /// linear-light compositing space (`1 - dst` per channel, destination
+    /// alpha preserved), so channel extremes invert exactly while midtones
+    /// follow the sRGB curve - the documented invert colorimetry.
+    Invert {
+        /// The inverted region.
+        rect: Rect,
+    },
     /// Draws an image quad. A missing texture renders the magenta
     /// placeholder and logs a tracing error (todo 14 failure path).
     Image(ImageCommand),
@@ -275,6 +284,11 @@ impl DisplayList {
             cutouts,
             color,
         });
+    }
+
+    /// Inverts everything painted below `rect` (plan todo 21 invert tool).
+    pub fn invert(&mut self, rect: Rect) {
+        self.push(Command::Invert { rect });
     }
 
     /// Draws an uploaded texture into `dst` (optionally a pixel sub-region).
