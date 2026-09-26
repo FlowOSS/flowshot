@@ -43,10 +43,13 @@ impl EditorState {
         (self.scene.clone(), self.effects.clone())
     }
 
-    /// Restores a full snapshot (the undo/redo application point).
+    /// Restores a full snapshot (the undo/redo application point). The
+    /// armed object drag is dropped WITHOUT rollback - the restored scene
+    /// already supersedes it.
     pub(super) fn restore(&mut self, snapshot: Snapshot) {
         (self.scene, self.effects) = snapshot;
         self.selected = None;
+        self.object_move = None;
     }
 
     /// Commits a finished object to the scene as ONE undo unit (the
@@ -116,11 +119,14 @@ impl EditorState {
         hit
     }
 
-    /// Clears the object selection (Esc cascade stage 2, click-elsewhere).
+    /// Clears the object selection (Esc cascade stage 2, click-elsewhere);
+    /// an armed object drag is cancelled with rollback (its live motions
+    /// never reached the journal).
     pub fn deselect_object(&mut self) {
         if self.selected.is_some() {
             tracing::debug!(target: "flowshot_ui::editor", "object deselected");
         }
+        self.cancel_object_move();
         self.selected = None;
     }
 
@@ -149,6 +155,9 @@ impl EditorState {
         };
         self.undo.push(before, self.snapshot());
         self.selected = None;
+        // The delete unit captured the post-move scene; dropping the drag
+        // WITHOUT rollback keeps the journal the single source of truth.
+        self.object_move = None;
         tracing::info!(
             target: "flowshot_ui::editor",
             kind = removed.type_id(),

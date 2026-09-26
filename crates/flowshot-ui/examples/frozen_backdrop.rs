@@ -122,6 +122,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .editor_mut()
         .shortcuts_mut()
         .rebind(ToolKind::Blur, Some(winit::keyboard::KeyCode::KeyV));
+    // Todo 25: z-order ships panel-driven with NO default keys (plan); QA
+    // rebinds raise/lower to k/j (both off the F12 map) - the blur-rebind
+    // precedent. Object move needs no binding: press-drag-release on a
+    // selected object with no draw tool active.
+    runtime
+        .core_mut()
+        .editor_mut()
+        .shortcuts_mut()
+        .rebind_z_order(
+            Some(winit::keyboard::KeyCode::KeyK),
+            Some(winit::keyboard::KeyCode::KeyJ),
+        );
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     runtime.run()?;
@@ -569,6 +581,8 @@ fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
         "b" => KeyCode::KeyB,
         "i" => KeyCode::KeyI,
         "v" => KeyCode::KeyV,
+        "j" => KeyCode::KeyJ,
+        "k" => KeyCode::KeyK,
         "z" => KeyCode::KeyZ,
         "delete" => KeyCode::Delete,
         "0" => KeyCode::Digit0,

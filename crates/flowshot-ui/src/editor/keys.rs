@@ -14,12 +14,24 @@ use winit::keyboard::KeyCode;
 
 use super::kind::ToolKind;
 
+/// A z-order step the key map can dispatch (todo 25; panel-driven by
+/// default - the key slots ship unbound per the plan).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZOrderAction {
+    /// Raise the selected object one step.
+    Raise,
+    /// Lower the selected object one step.
+    Lower,
+}
+
 /// The rebindable editor key map.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolShortcuts {
     bindings: Vec<(ToolKind, KeyCode)>,
     undo: KeyCode,
     redo: KeyCode,
+    raise: Option<KeyCode>,
+    lower: Option<KeyCode>,
 }
 
 impl Default for ToolShortcuts {
@@ -31,6 +43,8 @@ impl Default for ToolShortcuts {
                 .collect(),
             undo: KeyCode::KeyZ,
             redo: KeyCode::KeyZ,
+            raise: None,
+            lower: None,
         }
     }
 }
@@ -80,6 +94,26 @@ impl ToolShortcuts {
     pub fn rebind_undo_redo(&mut self, undo: KeyCode, redo: KeyCode) {
         self.undo = undo;
         self.redo = redo;
+    }
+
+    /// The z-order action a plain (unmodified) key press dispatches;
+    /// `None` while the slots ship unbound (the plan's panel-driven
+    /// default - config/QA rebind only).
+    #[must_use]
+    pub fn z_for_key(&self, code: KeyCode) -> Option<ZOrderAction> {
+        if self.raise == Some(code) {
+            return Some(ZOrderAction::Raise);
+        }
+        if self.lower == Some(code) {
+            return Some(ZOrderAction::Lower);
+        }
+        None
+    }
+
+    /// Rebinds the z-order keys (`None` unbinds - the shipped default).
+    pub fn rebind_z_order(&mut self, raise: Option<KeyCode>, lower: Option<KeyCode>) {
+        self.raise = raise;
+        self.lower = lower;
     }
 }
 

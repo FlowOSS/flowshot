@@ -43,6 +43,7 @@ mod effect;
 mod events;
 mod keys;
 mod kind;
+mod mutate;
 mod outline;
 mod paint;
 mod pixelate;
@@ -55,6 +56,7 @@ mod tools;
 mod types;
 mod undo;
 mod view;
+mod zorder;
 
 #[cfg(test)]
 mod blur_tests;
@@ -62,23 +64,27 @@ mod blur_tests;
 mod pixelate_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod wiring_tests;
 
 use editing::Reedit;
 use flowshot_core::geometry::LogicalRect;
 use flowshot_core::scene::{Color as SceneColor, Scene};
+use mutate::ObjectMove;
 
 use crate::selection::CascadeState;
 
 use paint::parse_draw_color;
 
 pub use effect::{EffectKind, PixelEffect, effect_texture_id};
-pub use keys::{ToolShortcuts, digit_for};
+pub use keys::{ToolShortcuts, ZOrderAction, digit_for};
 pub use kind::ToolKind;
 pub use outline::{DASH_OFF, DASH_ON, OBJECT_OUTLINE_INNER, OBJECT_OUTLINE_OUTER};
 pub use paint::{render_color, scene_color_from_hex};
 pub use registry::{ToolFactory, ToolRegistry};
 pub use routing::{
-    MoveTarget, PressRoute, PressTarget, ReleaseTarget, route_move, route_press, route_release,
+    MoveTarget, PressRoute, PressTarget, ReleaseTarget, SessionRoute, route_move, route_press,
+    route_release,
 };
 pub use size::{
     BASE_POINT_SIZE, DIGIT_RESET_DELAY, DigitAccumulator, MAX_TOOL_SIZE, MIN_TOOL_SIZE, ToolSizes,
@@ -93,6 +99,7 @@ pub use tools::{
 pub use types::{EditorEffect, EditorEnv, EditorUpdate};
 pub use undo::{EditorUndo, Snapshot};
 pub use view::EditorView;
+pub use zorder::LayerEntry;
 
 /// The editor state machine: tool registry + active tool, the annotation
 /// scene with its undo history, the object selection, the size dispatch
@@ -108,6 +115,7 @@ pub struct EditorState {
     next_effect: u64,
     undo: EditorUndo,
     selected: Option<usize>,
+    object_move: Option<ObjectMove>,
     sizes: ToolSizes,
     digits: DigitAccumulator,
     wheel_acc: WheelAccumulator,
@@ -142,6 +150,7 @@ impl EditorState {
             next_effect: 0,
             undo,
             selected: None,
+            object_move: None,
             sizes,
             digits: DigitAccumulator::default(),
             wheel_acc: WheelAccumulator::default(),
@@ -266,60 +275,6 @@ impl EditorState {
     #[must_use]
     pub const fn frame(&self) -> Option<&FramePixels> {
         self.frame.as_ref()
-    }
-
-    /// Checks a tool (creating it from the registry; an unregistered kind
-    /// warn-logs and stays unchecked).
-    pub fn activate_tool(&mut self, kind: ToolKind) {
-        let Some(mut tool) = self.registry.create(kind) else {
-            tracing::warn!(
-                target: "flowshot_ui::editor",
-                tool = kind.id(),
-                "tool not registered; activation ignored"
-            );
-            return;
-        };
-        tool.on_color_changed(self.color);
-        tool.on_size_changed(self.sizes.get(Some(kind)));
-        if let Some(previous) = self.tool.as_mut() {
-            previous.cancel_edit();
-        }
-        self.cancel_reedit();
-        self.tool = Some(tool);
-        self.active_kind = Some(kind);
-        self.drawing = false;
-        self.digits.reset();
-        tracing::info!(target: "flowshot_ui::editor", tool = kind.id(), "tool activated");
-    }
-
-    /// Unchecks the active tool (Esc cascade stage 1 reaction). The tool's
-    /// own edit session is cancelled, but a detached edit-widget flag
-    /// survives until stage 4 (Flameshot parity: unchecking the tool button
-    /// does NOT delete `m_toolWidget` - `deleteToolWidgetOrClose` walks the
-    /// stages independently).
-    pub fn deactivate_tool(&mut self) {
-        let Some(kind) = self.active_kind else {
-            return;
-        };
-        if let Some(tool) = self.tool.as_mut() {
-            tool.cancel_edit();
-        }
-        self.cancel_reedit();
-        self.tool = None;
-        self.active_kind = None;
-        self.drawing = false;
-        self.digits.reset();
-        tracing::info!(target: "flowshot_ui::editor", tool = kind.id(), "tool deactivated");
-    }
-
-    /// Activation-key semantics: re-pressing the active tool's key unchecks
-    /// it (the Flameshot checkable-button toggle).
-    pub fn toggle_tool(&mut self, kind: ToolKind) {
-        if self.active_kind == Some(kind) {
-            self.deactivate_tool();
-        } else {
-            self.activate_tool(kind);
-        }
     }
 
     /// The active tool's edit-widget geometry (todo 22 producer; drives the
