@@ -89,7 +89,8 @@ pub use editor::{
     EditKey, EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUndo,
     EditorUpdate, EditorView, EffectKind, FramePixels, LayerEntry, PixelEffect, PixelateTool,
     TEXT_PADDING, TextTool, Tool, ToolCursor, ToolKind, ToolRegistry, ToolShortcuts, ZOrderAction,
-    effect_texture_id, register_pixelate_tools, register_shape_tools, register_text_tool,
+    effect_texture_id, register_counter_tool, register_pixelate_tools, register_shape_tools,
+    register_text_tool,
 };
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
