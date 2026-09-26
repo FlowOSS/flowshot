@@ -1,0 +1,18 @@
+FlowShot global shortcuts - compositor bind help
+
+The org.freedesktop.portal.GlobalShortcuts portal is unavailable or was
+denied, so FlowShot cannot grab hotkeys itself. Add the binds below to
+your compositor configuration; they invoke the flowshot CLI directly and
+need NO resident daemon.
+
+# KDE Plasma - KGlobalAccel
+KDE normally serves the GlobalShortcuts portal through
+xdg-desktop-portal-kde; reaching this fallback means the portal is missing
+or was denied. Plasma has no paste-ready config snippet - register one
+custom shortcut per action in System Settings -> Keyboard -> Shortcuts
+(stored via KGlobalAccel, the org.kde.kglobalaccel D-Bus service):
+  Print        ->  flowshot capture         (Capture a region)
+  Shift+Print  ->  flowshot capture --full  (Capture the full screen)
+  Ctrl+Print   ->  flowshot capture screen  (Capture the active monitor)
+
+Full per-desktop guide: docs/setup-kde.md

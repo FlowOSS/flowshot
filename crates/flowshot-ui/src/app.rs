@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use flowshot_core::geometry::OutputLayout;
+use flowshot_core::geometry::{LogicalPoint, OutputLayout};
 use flowshot_core::tokens::DesignTokens;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
@@ -52,6 +52,10 @@ pub(crate) struct OverlayApp {
     /// (todo-13 behavior: transparent clear + crosshair only).
     pub backdrop: Option<Backdrop>,
     pub backdrop_options: BackdropOptions,
+    /// The last IME cursor area sent to a window (todo 22: the caret mirror
+    /// for `set_ime_cursor_area`, deduplicated so the compositor is not
+    /// spammed on every event).
+    pub ime_area: Option<(WindowSlot, [i32; 4])>,
 }
 
 impl OverlayApp {
@@ -68,6 +72,7 @@ impl OverlayApp {
             crosshair_color,
             backdrop: None,
             backdrop_options: BackdropOptions::default(),
+            ime_area: None,
         }
     }
 
@@ -95,6 +100,48 @@ impl OverlayApp {
     pub(crate) fn request_redraw(&self, slot: WindowSlot) {
         if let Some(entry) = self.windows.get(slot.index()) {
             entry.window.request_redraw();
+        }
+    }
+
+    /// Mirrors the text-edit caret into the window's IME cursor area so the
+    /// compositor anchors the IME popup at the caret (todo 22; the iced
+    /// `enable_ime` parity - global logical caret rect converted to THIS
+    /// window's local physical px, deduplicated per change).
+    pub(crate) fn sync_ime_area(&mut self, slot: WindowSlot) {
+        let area = self.core.editor().ime_cursor_area().and_then(|rect| {
+            let origin = LogicalPoint::from_raw(rect.x.0, rect.y.0);
+            let (x, y) = self.core.router().to_local(slot, origin)?;
+            let scale = self.core.router().output_for(slot).map_or(1.0, |o| o.scale);
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "caret geometry is clamped into the i32 range before the cast"
+            )]
+            let area = [
+                x.clamp(f64::from(i32::MIN), f64::from(i32::MAX)).round() as i32,
+                y.clamp(f64::from(i32::MIN), f64::from(i32::MAX)).round() as i32,
+                (rect.width.0 * scale).round().max(1.0) as i32,
+                (rect.height.0 * scale).round().max(1.0) as i32,
+            ];
+            Some(area)
+        });
+        let Some(area) = area else {
+            self.ime_area = None;
+            return;
+        };
+        if self.ime_area == Some((slot, area)) {
+            return;
+        }
+        self.ime_area = Some((slot, area));
+        if let Some(entry) = self.windows.get(slot.index()) {
+            tracing::trace!(
+                window = slot.index(),
+                area = ?area,
+                "ime cursor area"
+            );
+            entry.window.set_ime_cursor_area(
+                winit::dpi::PhysicalPosition::new(area[0], area[1]),
+                winit::dpi::PhysicalSize::new(area[2], area[3]),
+            );
         }
     }
 

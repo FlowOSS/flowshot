@@ -443,7 +443,7 @@ fn digits_reach_the_committed_marker_width() {
     let mut ed = editor();
     let t0 = Instant::now();
     ed.activate_tool(ToolKind::Marker);
-    ed.key_press(&env_at(t0), KeyCode::Digit1, false);
+    ed.key_press(&env_at(t0), KeyCode::Digit1, false, None);
     ed.key_press(
         &EditorEnv {
             now: t0 + std::time::Duration::from_millis(50),
@@ -451,6 +451,7 @@ fn digits_reach_the_committed_marker_width() {
         },
         KeyCode::Digit2,
         false,
+        None,
     );
     assert_eq!(ed.tool_size(), 12);
     stroke(&mut ed, &env_at(t0), (0.0, 0.0), (50.0, 0.0));

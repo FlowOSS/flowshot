@@ -21,8 +21,9 @@ use crate::render::{
 };
 
 /// The selection engine's text line-height ratio (cosmic-text needs an
-/// explicit line height; same constant as the HUD text).
-const LINE_HEIGHT_RATIO: f32 = 1.2;
+/// explicit line height; same constant as the HUD text). The todo-22 text
+/// session shares it so the edit preview and the committed paint agree.
+pub(super) const LINE_HEIGHT_RATIO: f32 = 1.2;
 
 /// Converts scene colors into renderer colors (both RGBA; the scene stores
 /// 8-bit sRGB, the renderer normalized sRGB).

@@ -22,9 +22,9 @@
 
 use flowshot_core::config::{Config, EditorConfig, ToolsConfig};
 use flowshot_core::geometry::{LogicalPoint, LogicalRect};
-use flowshot_core::scene::{Color, PaintSink, ToolObject};
-use winit::event::MouseButton;
-use winit::keyboard::ModifiersState;
+use flowshot_core::scene::{Color, PaintSink, ToolObject, ToolObjectData};
+use winit::event::{Ime, MouseButton};
+use winit::keyboard::{KeyCode, ModifiersState};
 
 use super::kind::ToolKind;
 
@@ -127,6 +127,21 @@ pub enum ToolCursor {
     Hidden,
 }
 
+/// A key press routed to the active edit session (the todo-22 text-editing
+/// surface: while a tool edit widget is open, the editor funnel hands every
+/// non-Escape key here BEFORE the normal key map - Flameshot's child-widget
+/// focus parity, so typing `t` inserts text instead of toggling the tool).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EditKey<'a> {
+    /// The physical key.
+    pub code: KeyCode,
+    /// The text the key produced (winit `KeyEvent.text`; `None` for
+    /// non-text keys and IME-consumed presses).
+    pub text: Option<&'a str>,
+    /// Whether the press is an auto-repeat.
+    pub repeat: bool,
+}
+
 /// The annotation-tool contract (F27 `CaptureTool` clean-room equivalent).
 ///
 /// Only [`Tool::kind`] is mandatory; every lifecycle method has a no-op
@@ -223,6 +238,34 @@ pub trait Tool: std::fmt::Debug + Send {
     /// Cancels the active edit widget without committing (Esc mid-edit,
     /// todo 22 failure path).
     fn cancel_edit(&mut self) {}
+
+    /// A key press routed to the active edit session (todo 22): returning
+    /// `true` consumes it (the Flameshot child-widget focus parity - the
+    /// normal key map never sees keys an edit widget ate).
+    fn edit_key(&mut self, _ctx: &EditorContext<'_>, _key: EditKey<'_>) -> bool {
+        false
+    }
+
+    /// A winit IME event routed to the active edit session (todo 22, the
+    /// always-on model of draft D7); returning `true` consumes it.
+    fn ime(&mut self, _ctx: &EditorContext<'_>, _ime: &Ime) -> bool {
+        false
+    }
+
+    /// Takes over an existing committed object for in-place re-editing
+    /// (todo 22: a press on a text object re-enters edit preserving the old
+    /// text); returning `true` opens the edit session and the editor funnel
+    /// replaces the object as ONE undo unit on commit.
+    fn edit_object_data(&mut self, _ctx: &EditorContext<'_>, _data: &ToolObjectData) -> bool {
+        false
+    }
+
+    /// The caret rect in global logical space while editing (the IME
+    /// cursor-area source - the shell mirrors it into
+    /// `Window::set_ime_cursor_area` so the IME popup anchors at the caret).
+    fn caret_rect(&self) -> Option<LogicalRect> {
+        None
+    }
 
     /// The cursor shape while this tool is active.
     fn cursor(&self) -> ToolCursor {

@@ -21,15 +21,22 @@ mod geometry;
 mod path;
 mod point;
 mod shape;
+mod text;
+mod text_font;
+mod text_measure;
+mod text_session;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod text_tests;
 
 pub use arrow::ArrowTool;
 pub use geometry::RDP_EPSILON;
 pub use path::{MARKER_ALPHA, MarkerTool, PencilTool};
 pub use point::{InvertTool, LineTool};
 pub use shape::{EllipseTool, RectTool};
+pub use text::{TEXT_PADDING, TextTool};
 
 use super::kind::ToolKind;
 use super::registry::ToolRegistry;
@@ -44,4 +51,9 @@ pub fn register_shape_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Circle, || Box::new(EllipseTool::default()));
     registry.register(ToolKind::Marker, || Box::new(MarkerTool::default()));
     registry.register(ToolKind::Invert, || Box::new(InvertTool::default()));
+}
+
+/// Registers the todo-22 text tool (IME editing) on `registry`.
+pub fn register_text_tool(registry: &mut ToolRegistry) {
+    registry.register(ToolKind::Text, || Box::new(TextTool::default()));
 }

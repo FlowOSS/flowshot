@@ -169,6 +169,12 @@ fn notification_for(record: &NotificationRecord) -> (Notification, Option<String
             None,
             Urgency::Critical,
         ),
+        NotificationRecord::ShortcutsRegistered => (
+            strings::SUMMARY_SHORTCUTS_REGISTERED,
+            strings::BODY_SHORTCUTS_AUTOSTART_NUDGE.to_owned(),
+            None,
+            Urgency::Normal,
+        ),
     };
     let mut notification = Notification::new();
     notification

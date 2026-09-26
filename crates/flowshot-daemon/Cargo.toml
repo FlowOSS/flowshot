@@ -27,6 +27,10 @@ systemd = []
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
 flowshot-actions = { path = "../flowshot-actions" }
+# Shared `DesktopEnv` vocabulary for the todo-34 shortcut-fallback selection
+# (lightweight workspace member; zero new external crates - all of its deps
+# are already in this crate's graph).
+flowshot-capture = { path = "../flowshot-capture" }
 # EXECUTOR DECISION (todo 32): the daemon's OWN bus stays on workspace zbus 4
 # (default features = async-io reactor) driven from a tokio runtime. Source-
 # verified: each zbus-4 connection owns a PRIVATE async-executor + dedicated
@@ -37,8 +41,20 @@ flowshot-actions = { path = "../flowshot-actions" }
 # drop-time close - the daemon calls Connection::close() explicitly on shutdown.
 zbus = { workspace = true, features = ["p2p"] }
 notify-rust = { workspace = true }
-# OpenURI portal for notification click actions (todo-29/31 pattern).
+# OpenURI portal for notification click actions (todo-29/31 pattern) AND the
+# GlobalShortcuts portal client (todo 34). PINNED API REALITY (0.10.3, source-
+# verified): GlobalShortcuts has NO restore_token/persist_mode (unlike
+# ScreenCast) and exposes neither the session handle nor the handle tokens
+# (pub(crate)) - "restore data" is therefore the re-registration set, see
+# src/shortcut.rs module docs. The session-bus connection is a process-global
+# OnceLock singleton (proxy.rs) - correct in production, and the reason the
+# stub-portal test drives it through DBUS_SESSION_BUS_ADDRESS.
 ashpd = { workspace = true }
+# Restore-data persistence (JSON in the config dir) + `StreamExt` for the
+# portal's Activated signal stream (todo 34). Both pre-locked workspace deps.
+serde = { workspace = true }
+serde_json = { workspace = true }
+futures = { workspace = true }
 # Member-manifest addition (todo-31 `url` precedent; already locked via ashpd).
 url = "2.5"
 tokio = { workspace = true }

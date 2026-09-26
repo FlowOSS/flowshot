@@ -30,6 +30,11 @@ pub enum NotificationRecord {
     Aborted,
     /// Error toast; payload is the message.
     Error(String),
+    /// ONE-TIME nudge after the first successful portal shortcut
+    /// registration (todo 34): recommends autostart + the settings
+    /// surface. Emitted at most once per install (the restore-data file
+    /// carries the notified flag).
+    ShortcutsRegistered,
 }
 
 /// The notification seam: every user-visible toast in the product goes

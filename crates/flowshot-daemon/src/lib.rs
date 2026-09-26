@@ -24,6 +24,12 @@
 //!   toasts with click-action -> `OpenURI` portal, abort + error toasts,
 //!   the `[daemon].notifications` gate, and the `NotifySink` bridge the
 //!   todo-28/29 actions pipeline toasts through;
+//! - [`shortcut`] - global shortcuts (todo 34): the `GlobalShortcuts`
+//!   portal primary path (`ashpd`) with the `Activated` -> [`CommandSink`]
+//!   dispatch, restore-data persistence, the one-time autostart nudge, the
+//!   `shortcuts` persistence reason, and the compositor-bind fallback
+//!   ladder (paste-ready Hyprland/Sway/GNOME snippets, `KGlobalAccel`
+//!   guidance) behind `flowshot --print-bind-help` (todo 35);
 //! - [`autostart`] - `[daemon].startup_launch` -> XDG `.desktop` autostart
 //!   entry;
 //! - [`daemon`] - the composition root ([`Daemon::start`] /
@@ -58,6 +64,7 @@ pub mod lifecycle;
 pub mod notify;
 pub mod paths;
 pub mod request;
+pub mod shortcut;
 pub mod state;
 pub mod strings;
 
@@ -78,6 +85,10 @@ pub use notify::{
     RecordingNotifier,
 };
 pub use request::CaptureRequest;
+pub use shortcut::{
+    ACTIVE_SCREEN, CompositorFlavor, Registration, RestoreData, ShortcutOptions, ShortcutSpec,
+    ShortcutWiring, bind_help, default_shortcuts,
+};
 pub use state::{DaemonState, PersistenceReasons};
 
 use std::time::Duration;
