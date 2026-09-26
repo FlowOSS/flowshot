@@ -57,6 +57,7 @@ fn main() -> anyhow::Result<()> {
     options.idle_grace = Duration::from_secs(args.idle_grace);
     options.bus_address = args.bus_address;
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
+    options.shortcuts = flowshot_daemon::shortcut::ShortcutOptions::production();
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

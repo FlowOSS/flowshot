@@ -1,0 +1,13 @@
+FlowShot global shortcuts - compositor bind help
+
+The org.freedesktop.portal.GlobalShortcuts portal is unavailable or was
+denied, so FlowShot cannot grab hotkeys itself. Add the binds below to
+your compositor configuration; they invoke the flowshot CLI directly and
+need NO resident daemon.
+
+# Hyprland - append to ~/.config/hypr/hyprland.conf, then `hyprctl reload`
+bind = ,Print,exec,flowshot capture
+bind = SHIFT,Print,exec,flowshot capture --full
+bind = CTRL,Print,exec,flowshot capture screen
+
+Full per-desktop guide: docs/setup-hyprland.md

@@ -1,0 +1,25 @@
+FlowShot global shortcuts - compositor bind help
+
+The org.freedesktop.portal.GlobalShortcuts portal is unavailable or was
+denied, so FlowShot cannot grab hotkeys itself. Add the binds below to
+your compositor configuration; they invoke the flowshot CLI directly and
+need NO resident daemon.
+
+# GNOME - custom keybindings via gsettings (equivalently: System Settings
+# -> Keyboard -> Keyboard Shortcuts -> Custom Shortcuts).
+# WARNING: the first command REPLACES the custom-keybindings list; merge it
+# with the output of
+#   gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings
+# when you already have custom bindings.
+gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot2/']"
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot0/ name 'FlowShot: Capture a region'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot0/ command 'flowshot capture'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot0/ binding 'Print'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot1/ name 'FlowShot: Capture the full screen'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot1/ command 'flowshot capture --full'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot1/ binding '<Shift>Print'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot2/ name 'FlowShot: Capture the active monitor'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot2/ command 'flowshot capture screen'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flowshot2/ binding '<Ctrl>Print'
+
+Full per-desktop guide: docs/setup-gnome.md

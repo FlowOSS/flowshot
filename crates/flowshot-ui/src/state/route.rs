@@ -9,7 +9,7 @@
 
 use std::time::Instant;
 
-use winit::event::MouseButton;
+use winit::event::{Ime, MouseButton};
 use winit::keyboard::KeyCode;
 
 use crate::editor::{EditorEnv, EditorUpdate};
@@ -29,16 +29,14 @@ pub(super) fn route(core: &mut OverlayCore, slot: WindowSlot, event: &InputEvent
             code,
             pressed,
             repeat,
-        } => core.route_key(slot, *code, *pressed, *repeat),
+            text,
+        } => core.route_key(slot, *code, *pressed, *repeat, text.as_deref()),
         InputEvent::Wheel { delta_y } => core.route_wheel(*delta_y),
         InputEvent::Modifiers(modifiers) => {
             core.modifiers = *modifiers;
             RouteReport::default()
         }
-        InputEvent::Ime(ime) => {
-            core.apply_ime(ime);
-            RouteReport::default()
-        }
+        InputEvent::Ime(ime) => core.route_ime(ime),
     }
 }
 
@@ -120,6 +118,7 @@ impl OverlayCore {
         code: KeyCode,
         pressed: bool,
         repeat: bool,
+        text: Option<&str>,
     ) -> RouteReport {
         // Latency span + elapsed sample feed the todo-38 keypress->map budget.
         let started = Instant::now();
@@ -129,7 +128,7 @@ impl OverlayCore {
         let mut actions = Vec::new();
         if pressed {
             let env = self.editor_env();
-            let outcome = self.editor.key_press(&env, code, repeat);
+            let outcome = self.editor.key_press(&env, code, repeat, text);
             let consumed = outcome.consumed;
             actions.extend(editor_actions(outcome, self.router.window_count()));
             if !consumed {
@@ -159,6 +158,20 @@ impl OverlayCore {
     fn route_wheel(&mut self, delta_y: i32) -> RouteReport {
         let env = self.editor_env();
         let outcome = self.editor.wheel(&env, delta_y);
+        let actions = editor_actions(outcome, self.router.window_count());
+        RouteReport {
+            actions,
+            ..RouteReport::default()
+        }
+    }
+
+    /// The IME funnel (todo 22): the shared status tracking first, then the
+    /// editor's active edit session (the always-on model of draft D7 -
+    /// winit `Ime` events route here from every window).
+    fn route_ime(&mut self, ime: &Ime) -> RouteReport {
+        self.apply_ime(ime);
+        let env = self.editor_env();
+        let outcome = self.editor.ime_event(&env, ime);
         let actions = editor_actions(outcome, self.router.window_count());
         RouteReport {
             actions,

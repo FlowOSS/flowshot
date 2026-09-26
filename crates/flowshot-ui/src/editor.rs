@@ -37,6 +37,7 @@
 //! - deactivating a tool cancels its edit widget (todo 22 may refine the
 //!   commit-on-switch path).
 
+mod editing;
 mod events;
 mod keys;
 mod kind;
@@ -49,15 +50,15 @@ mod size;
 mod tool;
 mod tools;
 mod types;
+mod view;
 
 #[cfg(test)]
 mod tests;
 
-use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo};
+use editing::Reedit;
+use flowshot_core::geometry::LogicalRect;
 use flowshot_core::scene::{Color as SceneColor, Scene, UndoStack};
-use winit::keyboard::ModifiersState;
 
-use crate::render::DisplayList;
 use crate::selection::CascadeState;
 
 use paint::parse_draw_color;
@@ -74,25 +75,13 @@ pub use size::{
     BASE_POINT_SIZE, DIGIT_RESET_DELAY, DigitAccumulator, MAX_TOOL_SIZE, MIN_TOOL_SIZE, ToolSizes,
     WHEEL_ANGLE_PER_LINE, WHEEL_THRESHOLD, WheelAccumulator, stepped,
 };
-pub use tool::{EditorContext, EditorTools, FramePixels, Tool, ToolCursor};
+pub use tool::{EditKey, EditorContext, EditorTools, FramePixels, Tool, ToolCursor};
 pub use tools::{
     ArrowTool, EllipseTool, InvertTool, LineTool, MARKER_ALPHA, MarkerTool, PencilTool,
-    RDP_EPSILON, RectTool, register_shape_tools,
+    RDP_EPSILON, RectTool, TEXT_PADDING, TextTool, register_shape_tools, register_text_tool,
 };
 pub use types::{EditorEffect, EditorEnv, EditorUpdate};
-
-/// Everything one window's editor paint needs beyond the list and output.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct EditorView {
-    /// The live cursor (global logical) for the mouse preview; `None`
-    /// before the first motion.
-    pub mouse: Option<LogicalPoint>,
-    /// The current selection (tool clamping context at paint time).
-    pub selection: Option<LogicalRect>,
-    /// The modifier snapshot (the painted preview honors the same F27
-    /// constrain conventions as the committed shape).
-    pub modifiers: ModifiersState,
-}
+pub use view::EditorView;
 
 /// The editor state machine: tool registry + active tool, the annotation
 /// scene with its undo history, the object selection, the size dispatch
@@ -114,6 +103,7 @@ pub struct EditorState {
     shortcuts: ToolShortcuts,
     frame: Option<FramePixels>,
     widget_present: bool,
+    reedit: Option<Reedit>,
 }
 
 impl Default for EditorState {
@@ -145,6 +135,7 @@ impl EditorState {
             shortcuts: ToolShortcuts::default(),
             frame: None,
             widget_present: false,
+            reedit: None,
         }
     }
 
@@ -273,6 +264,7 @@ impl EditorState {
         if let Some(previous) = self.tool.as_mut() {
             previous.cancel_edit();
         }
+        self.cancel_reedit();
         self.tool = Some(tool);
         self.active_kind = Some(kind);
         self.drawing = false;
@@ -292,6 +284,7 @@ impl EditorState {
         if let Some(tool) = self.tool.as_mut() {
             tool.cancel_edit();
         }
+        self.cancel_reedit();
         self.tool = None;
         self.active_kind = None;
         self.drawing = false;
@@ -338,6 +331,7 @@ impl EditorState {
         if let Some(tool) = self.tool.as_mut() {
             tool.cancel_edit();
         }
+        self.cancel_reedit();
         tracing::debug!(target: "flowshot_ui::editor", "tool widget deleted");
     }
 
@@ -357,38 +351,5 @@ impl EditorState {
         cascade.set_tool_checked(self.active_kind.is_some());
         cascade.set_object_selected(self.selected.is_some());
         cascade.set_tool_widget_present(self.editing());
-    }
-
-    /// Appends this window's editor visuals to `list`: the scene in paint
-    /// order, the selected object's outline, and the active tool's
-    /// in-progress shape / mouse preview.
-    pub fn paint_into(&self, list: &mut DisplayList, output: &OutputInfo, view: EditorView) {
-        let family = Some(self.config.editor.font_family.as_str());
-        {
-            let mut sink = paint::ListSink::new(list, output, family);
-            self.scene.paint(&mut sink);
-        }
-        if let Some(object) = self.selected.and_then(|id| self.scene.get_object(id)) {
-            outline::append_object_outline(list, output, object.bounding_rect());
-        }
-        let (Some(tool), Some(mouse)) = (self.tool.as_ref(), view.mouse) else {
-            return;
-        };
-        let preview = self.config.mouse_preview && tool.show_mouse_preview();
-        if !self.drawing && !preview {
-            return;
-        }
-        let ctx = EditorContext {
-            frame: self.frame.as_ref(),
-            selection: view.selection,
-            color: self.color,
-            tool_size: self.sizes.get(self.active_kind),
-            mouse,
-            modifiers: view.modifiers,
-            circle_count: self.scene.next_counter_value(),
-            config: &self.config,
-        };
-        let mut sink = paint::ListSink::new(list, output, family);
-        tool.paint(&ctx, &mut sink);
     }
 }

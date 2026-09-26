@@ -80,28 +80,29 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
                 self.apply_actions(target, &report.actions);
             }
             WindowEvent::MouseInput { state, button, .. } => {
-                let report = self.core.route(
+                self.route_sync(
+                    target,
                     slot,
                     &InputEvent::PointerButton {
                         button,
                         pressed: state == ElementState::Pressed,
                     },
                 );
-                self.apply_actions(target, &report.actions);
             }
             WindowEvent::KeyboardInput { event: key, .. } => {
                 let PhysicalKey::Code(code) = key.physical_key else {
                     return;
                 };
-                let report = self.core.route(
+                self.route_sync(
+                    target,
                     slot,
                     &InputEvent::Key {
                         code,
                         pressed: key.state == ElementState::Pressed,
                         repeat: key.repeat,
+                        text: key.text.as_deref().map(str::to_owned),
                     },
                 );
-                self.apply_actions(target, &report.actions);
             }
             WindowEvent::ModifiersChanged(modifiers) => {
                 let report = self
@@ -110,8 +111,7 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
                 self.apply_actions(target, &report.actions);
             }
             WindowEvent::Ime(ime) => {
-                let report = self.core.route(slot, &InputEvent::Ime(ime));
-                self.apply_actions(target, &report.actions);
+                self.route_sync(target, slot, &InputEvent::Ime(ime));
             }
             WindowEvent::MouseWheel { delta, .. } => self.route_wheel(target, slot, delta),
             WindowEvent::Resized(size) => {
@@ -195,6 +195,15 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
 }
 
 impl OverlayApp {
+    /// Routes one input event, applies the shell actions, and mirrors the
+    /// text-edit caret into the window's IME cursor area (todo 22 - keys,
+    /// pointer buttons, and IME events can all move the caret).
+    fn route_sync(&mut self, target: &ActiveEventLoop, slot: WindowSlot, event: &InputEvent) {
+        let report = self.core.route(slot, event);
+        self.apply_actions(target, &report.actions);
+        self.sync_ime_area(slot);
+    }
+
     /// Routes one wheel event as an angle delta (the todo-20 tool-size
     /// adjuster consumes it; zero deltas are dropped).
     fn route_wheel(&mut self, target: &ActiveEventLoop, slot: WindowSlot, delta: MouseScrollDelta) {

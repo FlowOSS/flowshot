@@ -13,6 +13,10 @@ pub const CONFIG_DIR_NAME: &str = "flowshot";
 /// The config file name (plan todo 2: `~/.config/flowshot/flowshot.toml`).
 pub const CONFIG_FILE_NAME: &str = "flowshot.toml";
 
+/// The shortcut restore-data file name (plan todo 34: "persist portal
+/// restore-data in config dir"; contents per [`crate::shortcut::persist`]).
+pub const SHORTCUTS_RESTORE_FILE_NAME: &str = "shortcuts-restore.json";
+
 /// Resolves `$XDG_CONFIG_HOME`, falling back to `$HOME/.config` (the XDG
 /// Base Directory spec default).
 ///
@@ -46,6 +50,25 @@ pub fn default_config_path() -> Result<PathBuf, DaemonError> {
 #[must_use]
 pub fn config_path_in(config_home: &Path) -> PathBuf {
     config_home.join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME)
+}
+
+/// The default shortcut restore-data path:
+/// `<xdg_config_home>/flowshot/shortcuts-restore.json`.
+///
+/// # Errors
+///
+/// [`DaemonError::Env`] when the config home cannot be resolved.
+pub fn default_shortcuts_restore_path() -> Result<PathBuf, DaemonError> {
+    Ok(shortcuts_restore_path_in(&xdg_config_home()?))
+}
+
+/// Pure path composition (the injected-base twin of
+/// [`default_shortcuts_restore_path`]).
+#[must_use]
+pub fn shortcuts_restore_path_in(config_home: &Path) -> PathBuf {
+    config_home
+        .join(CONFIG_DIR_NAME)
+        .join(SHORTCUTS_RESTORE_FILE_NAME)
 }
 
 #[cfg(test)]

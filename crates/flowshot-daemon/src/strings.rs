@@ -30,6 +30,18 @@ pub const ACTION_OPEN_LABEL: &str = "Open";
 /// notification spec.
 pub const ACTION_KEY_DEFAULT: &str = "default";
 
+/// Summary for the ONE-TIME toast after the first successful portal
+/// shortcut registration (plan todo 34, Oracle r4 F-3: portal hotkeys need
+/// daemon residency across logins, so the nudge recommends autostart and
+/// points at the settings surface - the clickable settings deep-link lands
+/// with the todo-36 settings UI; recorded deviation).
+pub const SUMMARY_SHORTCUTS_REGISTERED: &str = "Global shortcuts registered";
+
+/// Body of the one-time shortcut-registration toast.
+pub const BODY_SHORTCUTS_AUTOSTART_NUDGE: &str = "FlowShot global shortcuts are now registered. \
+Enable \"Launch at startup\" in FlowShot settings (run `flowshot settings`) so they keep \
+working across logins.";
+
 /// `Name` field of the autostart `.desktop` entry.
 pub const AUTOSTART_NAME: &str = "FlowShot";
 

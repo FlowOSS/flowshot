@@ -403,13 +403,13 @@ fn unregistered_kind_never_activates() {
 fn activation_key_toggles_like_the_flameshot_button() {
     let mut ed = editor();
     let env = env_at(Instant::now());
-    assert!(ed.key_press(&env, KeyCode::KeyP, false).consumed);
+    assert!(ed.key_press(&env, KeyCode::KeyP, false, None).consumed);
     assert_eq!(ed.active_tool(), Some(ToolKind::Pencil));
-    assert!(ed.key_press(&env, KeyCode::KeyP, false).consumed);
+    assert!(ed.key_press(&env, KeyCode::KeyP, false, None).consumed);
     assert!(!ed.tool_active(), "re-press unchecks");
     // Auto-repeat never re-toggles.
-    ed.key_press(&env, KeyCode::KeyP, false);
-    assert!(!ed.key_press(&env, KeyCode::KeyP, true).consumed);
+    ed.key_press(&env, KeyCode::KeyP, false, None);
+    assert!(!ed.key_press(&env, KeyCode::KeyP, true, None).consumed);
     assert_eq!(ed.active_tool(), Some(ToolKind::Pencil));
 }
 
@@ -444,16 +444,16 @@ fn undo_redo_run_through_the_shortcut_keys() {
         modifiers: ModifiersState::CONTROL,
         ..env
     };
-    assert!(ed.key_press(&undo_env, KeyCode::KeyZ, false).consumed);
+    assert!(ed.key_press(&undo_env, KeyCode::KeyZ, false, None).consumed);
     assert_eq!(ed.scene().object_count(), 0);
     let redo_env = EditorEnv {
         modifiers: ModifiersState::CONTROL | ModifiersState::SHIFT,
         ..env
     };
-    assert!(ed.key_press(&redo_env, KeyCode::KeyZ, false).consumed);
+    assert!(ed.key_press(&redo_env, KeyCode::KeyZ, false, None).consumed);
     assert_eq!(ed.scene().object_count(), 1);
     // Plain 'z' is not a binding: passes through.
-    assert!(!ed.key_press(&env, KeyCode::KeyZ, false).consumed);
+    assert!(!ed.key_press(&env, KeyCode::KeyZ, false, None).consumed);
 }
 
 #[test]
@@ -465,7 +465,7 @@ fn delete_removes_selected_and_core_renumbers_counters() {
     }
     assert_eq!(ed.scene().counter_counts(), vec![1, 2, 3]);
     assert_eq!(ed.select_object_at(at(100.0, 100.0)), Some(1));
-    let delete = ed.key_press(&env, KeyCode::Delete, false);
+    let delete = ed.key_press(&env, KeyCode::Delete, false, None);
     assert!(delete.consumed && delete.changed);
     assert_eq!(ed.scene().counter_counts(), vec![1, 2], "core renumbered");
     assert_eq!(ed.selected_object(), None);
@@ -473,7 +473,7 @@ fn delete_removes_selected_and_core_renumbers_counters() {
     assert!(ed.undo());
     assert_eq!(ed.scene().counter_counts(), vec![1, 2, 3], "delete undone");
     // Delete without a selection passes through.
-    assert!(!ed.key_press(&env, KeyCode::Delete, false).consumed);
+    assert!(!ed.key_press(&env, KeyCode::Delete, false, None).consumed);
 }
 
 // ---------------------------------------------------------------------------
@@ -520,7 +520,7 @@ fn digits_clip_at_fifty_and_reset_the_accumulator() {
     let env = env_at(t0);
     ed.activate_tool(ToolKind::Pencil);
     // Acceptance failure case: '9','9' -> 50.
-    ed.key_press(&env, KeyCode::Digit9, false);
+    ed.key_press(&env, KeyCode::Digit9, false, None);
     assert_eq!(ed.tool_size(), 9);
     ed.key_press(
         &EditorEnv {
@@ -529,6 +529,7 @@ fn digits_clip_at_fifty_and_reset_the_accumulator() {
         },
         KeyCode::Digit9,
         false,
+        None,
     );
     assert_eq!(ed.tool_size(), MAX_TOOL_SIZE);
     // Clip reset: the next digit starts fresh.
@@ -539,6 +540,7 @@ fn digits_clip_at_fifty_and_reset_the_accumulator() {
         },
         KeyCode::Digit3,
         false,
+        None,
     );
     assert_eq!(ed.tool_size(), 3);
     // The tool received the size notifications.
@@ -552,7 +554,7 @@ fn digits_write_to_the_active_tools_dispatch_slot() {
     let env = env_at(t0);
     ed.activate_tool(ToolKind::Marker); // independent slot, default 5
     assert_eq!(ed.tool_size(), 5);
-    ed.key_press(&env, KeyCode::Digit1, false);
+    ed.key_press(&env, KeyCode::Digit1, false, None);
     ed.key_press(
         &EditorEnv {
             now: t0 + Duration::from_millis(50),
@@ -560,6 +562,7 @@ fn digits_write_to_the_active_tools_dispatch_slot() {
         },
         KeyCode::Digit2,
         false,
+        None,
     );
     assert_eq!(ed.tool_size(), 12, "marker slot");
     // The shared thickness slot is untouched.
@@ -573,13 +576,13 @@ fn digits_reset_after_the_notifier_delay() {
     let t0 = Instant::now();
     let env = env_at(t0);
     ed.activate_tool(ToolKind::Pencil);
-    ed.key_press(&env, KeyCode::Digit4, false);
+    ed.key_press(&env, KeyCode::Digit4, false, None);
     assert_eq!(ed.tool_size(), 4);
     let later = EditorEnv {
         now: t0 + DIGIT_RESET_DELAY + Duration::from_millis(1),
         ..env
     };
-    ed.key_press(&later, KeyCode::Digit2, false);
+    ed.key_press(&later, KeyCode::Digit2, false, None);
     assert_eq!(ed.tool_size(), 2, "stale accumulator dropped");
 }
 
@@ -753,13 +756,13 @@ fn ctrl_enter_commits_the_edit() {
     };
     ed.activate_tool(ToolKind::Text);
     take_log();
-    let update = ed.key_press(&env, KeyCode::Enter, false);
+    let update = ed.key_press(&env, KeyCode::Enter, false, None);
     assert!(update.consumed);
     assert!(take_log().contains(&"commit-edit".to_owned()));
     assert_eq!(ed.scene().object_count(), 1);
     // Plain Enter passes through (the selection engine's Accept).
     let plain = env_at(Instant::now());
-    assert!(!ed.key_press(&plain, KeyCode::Enter, false).consumed);
+    assert!(!ed.key_press(&plain, KeyCode::Enter, false, None).consumed);
 }
 
 #[test]

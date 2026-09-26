@@ -53,17 +53,17 @@ use flowshot_ui::editor::{
     EditorEnv, EditorState, EditorTools, EditorView, ToolKind, ToolRegistry,
 };
 use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
-use flowshot_ui::register_shape_tools;
 use flowshot_ui::render::{
     Color, Command, DisplayList, ImageCommand, Point, Rect, RenderTarget, Renderer, RgbaImage,
     ShadowSpec, Shape, TextCommand, TextureId, linear_to_srgb, read_texture_rgba, srgb_to_linear,
 };
+use flowshot_ui::{register_shape_tools, register_text_tool};
 use tiny_skia::{FillRule, LineCap, LineJoin, Paint, Path, PathBuilder, Pixmap, Stroke, Transform};
 use tracing_subscriber::layer::{Context, Layer};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry;
 use winit::event::MouseButton;
-use winit::keyboard::ModifiersState;
+use winit::keyboard::{KeyCode, ModifiersState};
 
 const W: u32 = 640;
 const H: u32 = 480;
@@ -1231,6 +1231,7 @@ fn count_ink(image: &[u8], x0: u32, y0: u32, width: u32, height: u32, color: &Co
 fn golden_editor(config: &Config) -> EditorState {
     let mut registry = ToolRegistry::new();
     register_shape_tools(&mut registry);
+    register_text_tool(&mut registry);
     EditorState::new(EditorTools::from_config(config), registry)
 }
 
@@ -1542,6 +1543,62 @@ fn invert_goldens() {
             drag(ed, env, (180.0, 140.0), (460.0, 340.0));
             ed.activate_tool(ToolKind::Invert);
             drag(ed, env, (240.0, 100.0), (520.0, 380.0));
+        },
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Todo 22: text-tool golden (the committed text object through the REAL
+// editor -> scene -> ListSink -> wgpu chain vs the swash-mask reference;
+// the CJK fixture doubles as the font-fallback render proof).
+// ---------------------------------------------------------------------------
+
+fn type_str(ed: &mut EditorState, env: &EditorEnv, text: &str) {
+    for character in text.chars() {
+        if character == '\n' {
+            ed.key_press(env, KeyCode::Enter, false, None);
+        } else {
+            ed.key_press(env, KeyCode::Space, false, Some(&character.to_string()));
+        }
+    }
+}
+
+fn commit_text(ed: &mut EditorState, env: &EditorEnv) {
+    ed.key_press(&ctrl(env), KeyCode::Enter, false, None);
+}
+
+fn place_cursor(ed: &mut EditorState, env: &EditorEnv, at: (f64, f64)) {
+    ed.pointer_press(env, MouseButton::Left, lp(at));
+    ed.pointer_release(env, MouseButton::Left, lp(at));
+}
+
+#[test]
+fn text_goldens() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    golden(&gpu, "text-default", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Text);
+        place_cursor(ed, env, (100.0, 150.0));
+        type_str(ed, env, "FlowShot");
+        commit_text(ed, env);
+    });
+    golden(&gpu, "text-max", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::Text);
+        ed.set_tool_size(50);
+        place_cursor(ed, env, (80.0, 100.0));
+        type_str(ed, env, "Big");
+        commit_text(ed, env);
+    });
+    golden(
+        &gpu,
+        "text-multiline-cjk",
+        Config::default(),
+        |ed, env, _| {
+            ed.activate_tool(ToolKind::Text);
+            place_cursor(ed, env, (100.0, 200.0));
+            type_str(ed, env, "日本語\nFlowShot");
+            commit_text(ed, env);
         },
     );
 }

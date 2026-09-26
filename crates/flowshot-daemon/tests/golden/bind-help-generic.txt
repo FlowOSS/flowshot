@@ -1,0 +1,17 @@
+FlowShot global shortcuts - compositor bind help
+
+The org.freedesktop.portal.GlobalShortcuts portal is unavailable or was
+denied, so FlowShot cannot grab hotkeys itself. Add the binds below to
+your compositor configuration; they invoke the flowshot CLI directly and
+need NO resident daemon.
+
+# Your compositor
+No paste-ready snippet is generated for this desktop. Bind these commands
+in your compositor's keybind configuration (the triggers are suggestions;
+any free key works). wlroots compositors generally accept the sway
+`bindsym` syntax:
+  Print        ->  flowshot capture         (Capture a region)
+  Shift+Print  ->  flowshot capture --full  (Capture the full screen)
+  Ctrl+Print   ->  flowshot capture screen  (Capture the active monitor)
+
+Full per-desktop guide: docs/

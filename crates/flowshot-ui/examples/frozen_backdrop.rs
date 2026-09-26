@@ -32,14 +32,18 @@
 //!
 //! With `--features test-drive`, stdin lines inject synthetic events through
 //! the production routing path (the todo-13 injector protocol, extended by
-//! todos 16/20): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
+//! todos 16/20/22): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
 //! <down|up>`, `wheel <slot> <angle-delta>`, `mods <slot>
-//! <none|shift|ctrl|...[+...]>`, and `press/release <slot>
-//! <escape|enter|left|right|up|down|a|c|q|p|d|s|r|m|t|b|i|z|delete|0..9|...>`.
+//! <none|shift|ctrl|...[+...]>`, `press/release <slot>
+//! <escape|enter|left|right|up|down|home|end|backspace|a|c|q|p|d|s|r|m|t|b|i|z|delete|0..9|...>`,
+//! `text <slot> <string>` (per char: ASCII through the key-text seam,
+//! non-ASCII through `Ime::Commit` - the real platform split), and
+//! `ime <slot> <enabled|disabled|preedit|commit> [text]`.
 //!
 //! Todo 21: the REAL shape tools (pencil/line/arrow/rect/ellipse/marker/
 //! invert) are registered - the todo-20 line stub is gone; every F12 tool
-//! key now draws its production shape.
+//! key now draws its production shape. Todo 22: the text tool (IME editing)
+//! is registered too.
 
 use std::process::ExitCode;
 
@@ -98,9 +102,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
     let mut runtime = runtime?;
-    // Todo 21: the production shape tools (the todo-35 binary layer will do
+    // Todo 21/22: the production tools (the todo-35 binary layer will do
     // the same registration).
     flowshot_ui::register_shape_tools(runtime.core_mut().editor_mut().registry_mut());
+    flowshot_ui::register_text_tool(runtime.core_mut().editor_mut().registry_mut());
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     runtime.run()?;
@@ -292,10 +297,17 @@ fn spawn_stdin_injector(handle: flowshot_ui::OverlayHandle) {
         let stdin = std::io::stdin();
         for line in stdin.lock().lines() {
             let Ok(line) = line else { break };
-            let Some(input) = parse_command(&line) else {
+            let Some(inputs) = parse_command(&line) else {
                 continue;
             };
-            if handle.inject_event(input).is_err() {
+            let mut failed = false;
+            for input in inputs {
+                if handle.inject_event(input).is_err() {
+                    failed = true;
+                    break;
+                }
+            }
+            if failed {
                 break;
             }
         }
@@ -303,10 +315,99 @@ fn spawn_stdin_injector(handle: flowshot_ui::OverlayHandle) {
 }
 
 #[cfg(feature = "test-drive")]
-fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
+fn parse_command(line: &str) -> Option<Vec<flowshot_ui::SyntheticInput>> {
     use flowshot_ui::{SyntheticInput, WindowSlot};
-    use winit::event::MouseButton;
-    use winit::keyboard::{KeyCode, ModifiersState};
+    use winit::event::Ime;
+
+    let mut parts = line.split_whitespace();
+    let verb = parts.next()?;
+    if verb != "text" {
+        return parse_one(line).map(|input| vec![input]);
+    }
+    let slot = parts.next()?.parse::<usize>().ok()?;
+    let text: String = parts.collect::<Vec<_>>().join(" ");
+    Some(
+        text.chars()
+            .map(|character| {
+                if character.is_ascii() {
+                    SyntheticInput::key_text(
+                        WindowSlot::new(slot),
+                        code_for(character),
+                        &character.to_string(),
+                    )
+                } else {
+                    // Non-ASCII reaches a real app through the IME commit
+                    // path (text-input-v3), never through key text.
+                    SyntheticInput::ime(WindowSlot::new(slot), Ime::Commit(character.to_string()))
+                }
+            })
+            .collect(),
+    )
+}
+
+/// The physical code a real keyboard delivers for an ASCII char (the text
+/// payload carries the insertion; non-ASCII chars travel as IME commits -
+/// the real platform split on Wayland).
+#[cfg(feature = "test-drive")]
+fn code_for(character: char) -> winit::keyboard::KeyCode {
+    use winit::keyboard::KeyCode;
+    match character {
+        'a'..='z' => LETTER_CODES[character as usize - 'a' as usize],
+        'A'..='Z' => LETTER_CODES[character as usize - 'A' as usize],
+        '0'..='9' => DIGIT_CODES[character as usize - '0' as usize],
+        _ => KeyCode::Space,
+    }
+}
+
+#[cfg(feature = "test-drive")]
+const LETTER_CODES: [winit::keyboard::KeyCode; 26] = [
+    winit::keyboard::KeyCode::KeyA,
+    winit::keyboard::KeyCode::KeyB,
+    winit::keyboard::KeyCode::KeyC,
+    winit::keyboard::KeyCode::KeyD,
+    winit::keyboard::KeyCode::KeyE,
+    winit::keyboard::KeyCode::KeyF,
+    winit::keyboard::KeyCode::KeyG,
+    winit::keyboard::KeyCode::KeyH,
+    winit::keyboard::KeyCode::KeyI,
+    winit::keyboard::KeyCode::KeyJ,
+    winit::keyboard::KeyCode::KeyK,
+    winit::keyboard::KeyCode::KeyL,
+    winit::keyboard::KeyCode::KeyM,
+    winit::keyboard::KeyCode::KeyN,
+    winit::keyboard::KeyCode::KeyO,
+    winit::keyboard::KeyCode::KeyP,
+    winit::keyboard::KeyCode::KeyQ,
+    winit::keyboard::KeyCode::KeyR,
+    winit::keyboard::KeyCode::KeyS,
+    winit::keyboard::KeyCode::KeyT,
+    winit::keyboard::KeyCode::KeyU,
+    winit::keyboard::KeyCode::KeyV,
+    winit::keyboard::KeyCode::KeyW,
+    winit::keyboard::KeyCode::KeyX,
+    winit::keyboard::KeyCode::KeyY,
+    winit::keyboard::KeyCode::KeyZ,
+];
+
+#[cfg(feature = "test-drive")]
+const DIGIT_CODES: [winit::keyboard::KeyCode; 10] = [
+    winit::keyboard::KeyCode::Digit0,
+    winit::keyboard::KeyCode::Digit1,
+    winit::keyboard::KeyCode::Digit2,
+    winit::keyboard::KeyCode::Digit3,
+    winit::keyboard::KeyCode::Digit4,
+    winit::keyboard::KeyCode::Digit5,
+    winit::keyboard::KeyCode::Digit6,
+    winit::keyboard::KeyCode::Digit7,
+    winit::keyboard::KeyCode::Digit8,
+    winit::keyboard::KeyCode::Digit9,
+];
+
+#[cfg(feature = "test-drive")]
+fn parse_one(line: &str) -> Option<flowshot_ui::SyntheticInput> {
+    use flowshot_ui::{SyntheticInput, WindowSlot};
+    use winit::event::{Ime, MouseButton};
+    use winit::keyboard::ModifiersState;
 
     let mut parts = line.split_whitespace();
     match parts.next()? {
@@ -355,43 +456,22 @@ fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
             }
             Some(SyntheticInput::modifiers(WindowSlot::new(slot), modifiers))
         }
-        command @ ("press" | "release") => {
+        "ime" => {
             let slot = parts.next()?.parse::<usize>().ok()?;
-            let key = match parts.next()? {
-                "escape" => KeyCode::Escape,
-                "enter" => KeyCode::Enter,
-                "numpadenter" => KeyCode::NumpadEnter,
-                "left" => KeyCode::ArrowLeft,
-                "right" => KeyCode::ArrowRight,
-                "up" => KeyCode::ArrowUp,
-                "down" => KeyCode::ArrowDown,
-                "a" => KeyCode::KeyA,
-                "c" => KeyCode::KeyC,
-                "q" => KeyCode::KeyQ,
-                // Todo 20: tool activation keys (F12 map), undo/redo, delete,
-                // and the digit size adjusters.
-                "p" => KeyCode::KeyP,
-                "d" => KeyCode::KeyD,
-                "s" => KeyCode::KeyS,
-                "r" => KeyCode::KeyR,
-                "m" => KeyCode::KeyM,
-                "t" => KeyCode::KeyT,
-                "b" => KeyCode::KeyB,
-                "i" => KeyCode::KeyI,
-                "z" => KeyCode::KeyZ,
-                "delete" => KeyCode::Delete,
-                "0" => KeyCode::Digit0,
-                "1" => KeyCode::Digit1,
-                "2" => KeyCode::Digit2,
-                "3" => KeyCode::Digit3,
-                "4" => KeyCode::Digit4,
-                "5" => KeyCode::Digit5,
-                "6" => KeyCode::Digit6,
-                "7" => KeyCode::Digit7,
-                "8" => KeyCode::Digit8,
-                "9" => KeyCode::Digit9,
+            let rest: String = parts.collect::<Vec<_>>().join(" ");
+            let (kind, text) = rest.split_once(' ').unwrap_or((rest.as_str(), ""));
+            let ime = match kind {
+                "enabled" => Ime::Enabled,
+                "disabled" => Ime::Disabled,
+                "preedit" => Ime::Preedit(text.to_owned(), None),
+                "commit" => Ime::Commit(text.to_owned()),
                 _ => return None,
             };
+            Some(SyntheticInput::ime(WindowSlot::new(slot), ime))
+        }
+        command @ ("press" | "release") => {
+            let slot = parts.next()?.parse::<usize>().ok()?;
+            let key = key_code(parts.next()?)?;
             let slot = WindowSlot::new(slot);
             Some(if command == "press" {
                 SyntheticInput::key_press(slot, key)
@@ -401,4 +481,47 @@ fn parse_command(line: &str) -> Option<flowshot_ui::SyntheticInput> {
         }
         _ => None,
     }
+}
+
+/// The injector's key-name table: navigation keys, the F12 tool activation
+/// keys (todo 20), undo/redo, delete, and the digit size adjusters.
+#[cfg(feature = "test-drive")]
+fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
+    use winit::keyboard::KeyCode;
+    Some(match name {
+        "escape" => KeyCode::Escape,
+        "enter" => KeyCode::Enter,
+        "numpadenter" => KeyCode::NumpadEnter,
+        "left" => KeyCode::ArrowLeft,
+        "right" => KeyCode::ArrowRight,
+        "up" => KeyCode::ArrowUp,
+        "down" => KeyCode::ArrowDown,
+        "home" => KeyCode::Home,
+        "end" => KeyCode::End,
+        "backspace" => KeyCode::Backspace,
+        "a" => KeyCode::KeyA,
+        "c" => KeyCode::KeyC,
+        "q" => KeyCode::KeyQ,
+        "p" => KeyCode::KeyP,
+        "d" => KeyCode::KeyD,
+        "s" => KeyCode::KeyS,
+        "r" => KeyCode::KeyR,
+        "m" => KeyCode::KeyM,
+        "t" => KeyCode::KeyT,
+        "b" => KeyCode::KeyB,
+        "i" => KeyCode::KeyI,
+        "z" => KeyCode::KeyZ,
+        "delete" => KeyCode::Delete,
+        "0" => KeyCode::Digit0,
+        "1" => KeyCode::Digit1,
+        "2" => KeyCode::Digit2,
+        "3" => KeyCode::Digit3,
+        "4" => KeyCode::Digit4,
+        "5" => KeyCode::Digit5,
+        "6" => KeyCode::Digit6,
+        "7" => KeyCode::Digit7,
+        "8" => KeyCode::Digit8,
+        "9" => KeyCode::Digit9,
+        _ => return None,
+    })
 }

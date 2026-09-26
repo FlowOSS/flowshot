@@ -20,6 +20,7 @@ use crate::error::DaemonError;
 use crate::instance::{self, close_quietly};
 use crate::lifecycle::{Clock, DaemonMode, LifecycleMonitor, LifecyclePolicy, TokioClock};
 use crate::notify::{DesktopNotifier, GatedNotifier, Notifier};
+use crate::shortcut::{Registration, ShortcutOptions, ShortcutWiring};
 use crate::state::DaemonState;
 
 /// Everything [`Daemon::start`] needs (grouped options object; tests and
@@ -49,6 +50,10 @@ pub struct DaemonOptions {
     /// Time source; defaults to [`TokioClock`] (tests inject accelerated
     /// clocks).
     pub clock: Option<Arc<dyn Clock>>,
+    /// Global-shortcut host configuration (todo 34). Defaults to DISABLED
+    /// so pre-todo-34 callers keep their exact startup behavior; the
+    /// binary enables it via [`ShortcutOptions::production`].
+    pub shortcuts: ShortcutOptions,
 }
 
 impl DaemonOptions {
@@ -78,6 +83,7 @@ impl DaemonOptions {
             command_sink: None,
             notifier: None,
             clock: None,
+            shortcuts: ShortcutOptions::default(),
         }
     }
 }
@@ -110,6 +116,7 @@ pub struct Daemon {
     monitor: LifecycleMonitor,
     notifier: Arc<dyn Notifier>,
     state: Arc<DaemonState>,
+    shortcuts: Registration,
 }
 
 impl Daemon {
@@ -133,8 +140,11 @@ impl Daemon {
         options.state.set_tray(options.config.daemon.tray);
 
         let connection = instance::connect(options.bus_address.as_deref()).await?;
-        let interface =
-            FlowShotInterface::new(sink, Arc::clone(&options.state), Arc::clone(&clock));
+        let interface = FlowShotInterface::new(
+            Arc::clone(&sink),
+            Arc::clone(&options.state),
+            Arc::clone(&clock),
+        );
         connection
             .object_server()
             .at(OBJECT_PATH, interface)
@@ -153,6 +163,19 @@ impl Daemon {
         }
         report_ready_to_supervisor();
 
+        // Todo 34: the shortcut ladder runs AFTER readiness reporting - a
+        // portal confirmation dialog may hold registration for up to its
+        // budget while the bus service is already serving.
+        let shortcuts = crate::shortcut::start(
+            &options.shortcuts,
+            ShortcutWiring {
+                sink,
+                state: Arc::clone(&options.state),
+                notifier: Arc::clone(&notifier),
+            },
+        )
+        .await;
+
         let monitor = LifecycleMonitor::new(
             LifecyclePolicy {
                 mode: options.mode,
@@ -166,6 +189,7 @@ impl Daemon {
             monitor,
             notifier,
             state: options.state,
+            shortcuts,
         }))
     }
 
@@ -182,12 +206,14 @@ impl Daemon {
             monitor,
             notifier: _notifier,
             state: _state,
+            shortcuts,
         } = self;
         let reason = tokio::select! {
             _idle = monitor.run_until_exit() => ShutdownReason::IdleExit,
             signal = shutdown_signal() => signal,
         };
         tracing::info!(reason = ?reason, "daemon shutting down");
+        shortcuts.shutdown().await;
         close_quietly(connection).await;
         Ok(reason)
     }

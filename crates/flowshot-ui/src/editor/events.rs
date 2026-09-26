@@ -10,6 +10,7 @@
 //! undo/redo/delete scene ops.
 
 use flowshot_core::geometry::LogicalPoint;
+use flowshot_core::scene::ToolObject;
 use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
 
@@ -112,8 +113,21 @@ impl EditorState {
     }
 
     /// A key press (auto-repeat feeds digits and undo/redo like Flameshot's
-    /// shortcut repeat, but never re-toggles tools).
-    pub fn key_press(&mut self, env: &EditorEnv, code: KeyCode, repeat: bool) -> EditorUpdate {
+    /// shortcut repeat, but never re-toggles tools). `text` is the winit
+    /// `KeyEvent.text` payload (the todo-22 edit-session input); while an
+    /// edit widget is active every non-Escape key belongs to the session
+    /// ([`EditorState::editing_key_press`]) and the normal key map is
+    /// skipped - typing never toggles tools or resizes.
+    pub fn key_press(
+        &mut self,
+        env: &EditorEnv,
+        code: KeyCode,
+        repeat: bool,
+        text: Option<&str>,
+    ) -> EditorUpdate {
+        if let Some(update) = self.editing_key_press(env, code, repeat, text) {
+            return update;
+        }
         let ctrl = env.modifiers.control_key();
         let shift = env.modifiers.shift_key();
         let plain = !ctrl && !shift && !env.modifiers.alt_key() && !env.modifiers.super_key();
@@ -123,13 +137,6 @@ impl EditorState {
             }
             if !shift && self.shortcuts.is_undo(code) {
                 return EditorUpdate::eaten(self.undo());
-            }
-            // Ctrl+Return commits an active edit widget (F27 text lifecycle;
-            // the semantics belong to todo 22, the routing lands here).
-            if self.editing() && matches!(code, KeyCode::Enter | KeyCode::NumpadEnter) {
-                let at = env.mouse.unwrap_or_default();
-                self.commit_edit(env, at);
-                return EditorUpdate::eaten(true);
             }
         }
         if plain {
@@ -172,8 +179,9 @@ impl EditorState {
     }
 
     /// Opens a draw session: a FRESH tool instance per stroke (Flameshot
-    /// `tool()->copy()` per press), then `pressed` (which may consume) and
-    /// `draw_start`.
+    /// `tool()->copy()` per press), then the todo-22 re-edit probe (an
+    /// object under the press the tool can take over replaces the draw
+    /// start), then `pressed` (which may consume) and `draw_start`.
     fn begin_stroke(&mut self, env: &EditorEnv, button: MouseButton, at: LogicalPoint) {
         let Some(kind) = self.active_kind else {
             return;
@@ -182,6 +190,22 @@ impl EditorState {
             fresh.on_color_changed(self.color);
             fresh.on_size_changed(self.sizes.get(Some(kind)));
             self.tool = Some(fresh);
+        }
+        let hit = self.object_at(at);
+        let hit_data = hit.and_then(|id| self.scene.get_object(id).map(ToolObject::to_data));
+        let reopened = self
+            .with_ctx(env, at, |ctx, tool| {
+                hit_data
+                    .as_ref()
+                    .is_some_and(|data| tool.edit_object_data(ctx, data))
+            })
+            .unwrap_or(false);
+        if reopened {
+            if let Some(id) = hit {
+                self.begin_reedit(id);
+            }
+            self.drawing = false;
+            return;
         }
         let opened = self
             .with_ctx(env, at, |ctx, tool| {
@@ -203,15 +227,14 @@ impl EditorState {
     }
 
     /// Commits the active edit widget (click-outside / Ctrl+Return); the
-    /// produced object becomes one undo unit.
-    fn commit_edit(&mut self, env: &EditorEnv, at: LogicalPoint) {
+    /// produced object becomes one undo unit (re-edit replacement
+    /// bookkeeping lives in [`EditorState::commit_edit_object`]).
+    pub(super) fn commit_edit(&mut self, env: &EditorEnv, at: LogicalPoint) {
         let object = self
             .with_ctx(env, at, |ctx, tool| tool.commit_edit(ctx))
             .flatten();
         let committed = object.is_some();
-        if let Some(object) = object {
-            self.commit_object(object);
-        }
+        self.commit_edit_object(object);
         tracing::debug!(
             target: "flowshot_ui::editor",
             committed,
@@ -222,7 +245,7 @@ impl EditorState {
     /// Runs `run` with the per-event context and the active tool (split
     /// borrow: the context borrows the editor's data fields while the tool
     /// is mutably borrowed - one function, disjoint fields).
-    fn with_ctx<T>(
+    pub(super) fn with_ctx<T>(
         &mut self,
         env: &EditorEnv,
         mouse: LogicalPoint,

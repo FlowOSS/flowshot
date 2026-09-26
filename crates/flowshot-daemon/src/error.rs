@@ -43,6 +43,16 @@ pub enum DaemonError {
     #[error("OpenURI portal failed: {0}")]
     Portal(String),
 
+    /// `GlobalShortcuts` portal registration failed (absent, denied,
+    /// broken, panicked, or timed out). Non-fatal by design: the todo-34
+    /// ladder logs it and continues with the compositor-bind fallback.
+    #[error("global shortcuts portal unavailable: {0}")]
+    ShortcutPortal(String),
+
+    /// Shortcut restore-data (de)serialization failed.
+    #[error("shortcut restore data: {0}")]
+    ShortcutPersist(#[from] serde_json::Error),
+
     /// Filesystem operation failed (autostart entry, config I/O).
     #[error("I/O failure: {0}")]
     Io(#[from] std::io::Error),

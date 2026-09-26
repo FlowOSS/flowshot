@@ -45,6 +45,12 @@ pub enum InputEvent {
         pressed: bool,
         /// `true` when the press is an auto-repeat.
         repeat: bool,
+        /// The text the key produced (winit `KeyEvent.text`): `None` on
+        /// releases, non-text keys, and presses an IME consumed. The todo-22
+        /// edit sessions insert this payload; with text-input-v3 active the
+        /// compositor/IME keyboard grab guarantees text arrives through
+        /// EITHER this field OR `Ime::Commit`, never both (the iced model).
+        text: Option<String>,
     },
 
     /// The mouse wheel rotated, in angle-delta units (a standard notch is
@@ -98,6 +104,22 @@ impl SyntheticInput {
                 code,
                 pressed: true,
                 repeat: false,
+                text: None,
+            },
+        }
+    }
+
+    /// A key-press event carrying produced text (the todo-22 text-input
+    /// seam: edit sessions insert the payload).
+    #[must_use]
+    pub fn key_text(slot: WindowSlot, code: KeyCode, text: &str) -> Self {
+        Self {
+            slot,
+            event: InputEvent::Key {
+                code,
+                pressed: true,
+                repeat: false,
+                text: Some(text.to_owned()),
             },
         }
     }
@@ -111,6 +133,7 @@ impl SyntheticInput {
                 code,
                 pressed: false,
                 repeat: false,
+                text: None,
             },
         }
     }
