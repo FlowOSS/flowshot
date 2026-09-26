@@ -1,0 +1,210 @@
+//! The chrome state (plan todo 26): the floating-widget owner the route
+//! funnel consults BEFORE the F27 editor chain (Qt child-widget parity - a
+//! press on the toolbar / color wheel / side panel never reaches the scene)
+//! and the shell paints after the selection chrome.
+//!
+//! Visibility contracts:
+//! - the color wheel opens on the editor's right-click effect (the funnel
+//!   applies [`EditorEffect::ColorWheel`](crate::editor::EditorEffect) by
+//!   calling [`ChromeState::show_color_wheel`]) and occupies Esc-cascade
+//!   stage 5 while visible;
+//! - the side panel toggles with Space ([`ChromeState::toggle_panel`], the
+//!   funnel's chrome key seam), is hard-gated by `[editor].side_panel`, and
+//!   occupies Esc-cascade stage 3 while shown;
+//! - a chrome-consumed press GRABS the release (implicit-grab parity), so
+//!   the layer drag-reorder completes even when the cursor drifts, and an
+//!   Esc cascade step cancels the grab ([`ChromeState::cancel_grab`]).
+//!
+//! The draw-color sink is the F27 "drawColor persists to TOML on change"
+//! seam: the binary layer (todo 35) installs a writer; the lib stays pure.
+
+mod input;
+
+use crate::editor::EditorState;
+use crate::render::{DisplayList, TextureId, f32_from_f64};
+use crate::selection::SelectionState;
+use flowshot_core::config::UiConfig;
+use flowshot_core::geometry::OutputInfo;
+use flowshot_core::tokens::DesignTokens;
+
+use super::{ColorWheel, SizeHud, Toolbar, side_panel, toolbar::ToolbarButton};
+
+/// The draw-color persistence callback (F27: a wheel pick writes
+/// `[editor].draw_color` back to the TOML; the binary layer owns the path).
+pub type DrawColorSink = Box<dyn Fn(&str) + Send + 'static>;
+
+/// The armed layer drag-reorder (press on a row armed it; the release row
+/// is the drop target).
+#[derive(Debug, Clone, Copy)]
+struct LayerDrag {
+    from_z: usize,
+}
+
+/// The state of the editor chrome.
+pub struct ChromeState {
+    pub(crate) toolbar: Toolbar,
+    pub(crate) color_wheel: ColorWheel,
+    pub(crate) hud: SizeHud,
+    tokens: DesignTokens,
+    panel_visible: bool,
+    grabbed: bool,
+    layer_drag: Option<LayerDrag>,
+    draw_color_sink: Option<DrawColorSink>,
+}
+
+impl std::fmt::Debug for ChromeState {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ChromeState")
+            .field("toolbar", &self.toolbar)
+            .field("color_wheel", &self.color_wheel)
+            .field("hud", &self.hud)
+            .field("tokens", &self.tokens)
+            .field("panel_visible", &self.panel_visible)
+            .field("grabbed", &self.grabbed)
+            .field("layer_drag", &self.layer_drag)
+            .field("draw_color_sink", &self.draw_color_sink.is_some())
+            .finish()
+    }
+}
+
+impl ChromeState {
+    /// Creates a chrome state seeded with the default config projection
+    /// (the default toolbar button order; [`Self::configure`] supersedes).
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Applies a new config projection: the toolbar button order (plan:
+    /// "button order = config `buttons` list") and the palette tokens the
+    /// chrome paints with.
+    pub fn configure(&mut self, config: &UiConfig) {
+        self.tokens.palette.accent.clone_from(&config.accent_color);
+        self.tokens
+            .palette
+            .contrast
+            .clone_from(&config.contrast_color);
+        self.toolbar.buttons = config
+            .toolbar_buttons
+            .iter()
+            .map(|id| ToolbarButton::from_id(id))
+            .collect();
+        tracing::info!(
+            target: "flowshot_ui::chrome",
+            buttons = config.toolbar_buttons.join(","),
+            "chrome configured"
+        );
+    }
+
+    /// The design tokens the chrome paints and hit-tests with (single
+    /// source: the shell paints through [`Self::paint_into`]).
+    #[must_use]
+    pub const fn tokens(&self) -> &DesignTokens {
+        &self.tokens
+    }
+
+    /// Installs the draw-color persistence sink (`None` clears; F27
+    /// "drawColor persists to TOML on change" - the binary layer's seam).
+    pub fn set_draw_color_sink(&mut self, sink: Option<DrawColorSink>) {
+        self.draw_color_sink = sink;
+    }
+
+    /// Shows the color wheel centered at the given position.
+    pub fn show_color_wheel(&mut self, at: flowshot_core::geometry::LogicalPoint) {
+        self.color_wheel.visible = true;
+        self.color_wheel.position = at;
+    }
+
+    /// Hides the color wheel (Esc cascade stage 5 reaction / pick /
+    /// click-away - the F27 P1 "the picker consumes" rule).
+    pub fn hide_color_wheel(&mut self) {
+        self.color_wheel.visible = false;
+    }
+
+    /// Whether the side panel is shown: the Space toggle AND the
+    /// `[editor].side_panel` config gate (Esc cascade stage 3 occupancy).
+    #[must_use]
+    pub fn panel_shown(&self, editor: &EditorState) -> bool {
+        self.panel_visible && editor.config().editor.side_panel
+    }
+
+    /// Toggles the side panel (Space; plan todo 26). `false` when the
+    /// config gate is off - the key then falls through to the selection
+    /// engine untouched.
+    pub fn toggle_panel(&mut self, editor: &EditorState) -> bool {
+        if !editor.config().editor.side_panel {
+            return false;
+        }
+        self.panel_visible = !self.panel_visible;
+        tracing::info!(
+            target: "flowshot_ui::chrome",
+            visible = self.panel_visible,
+            "panel toggled"
+        );
+        true
+    }
+
+    /// Hides the side panel (Esc cascade stage 3 reaction).
+    pub fn hide_panel(&mut self) {
+        self.panel_visible = false;
+    }
+
+    /// Shows the size HUD.
+    pub fn show_size_hud(&mut self) {
+        self.hud.visible = true;
+    }
+
+    /// Hides the size HUD.
+    pub fn hide_size_hud(&mut self) {
+        self.hud.visible = false;
+    }
+
+    /// Drops any chrome implicit grab (Esc mid-drag: a pending layer
+    /// reorder must not land on a later release).
+    pub fn cancel_grab(&mut self) {
+        self.grabbed = false;
+        self.layer_drag = None;
+    }
+
+    /// Appends the chrome visuals to `list` (the shell paints this after
+    /// the selection chrome; the scale derives from the output).
+    pub fn paint_into(
+        &self,
+        list: &mut DisplayList,
+        editor: &EditorState,
+        selection: &SelectionState,
+        atlas: TextureId,
+        output: &OutputInfo,
+    ) {
+        let scale = f32_from_f64(output.scale);
+        let rect = selection.rect();
+        self.toolbar
+            .draw(list, editor, &self.tokens, scale, atlas, rect, output);
+        self.color_wheel
+            .draw(list, editor, &self.tokens, scale, atlas, output);
+        if self.panel_shown(editor)
+            && let Some(selection) = rect
+        {
+            side_panel::paint::draw(list, editor, &self.tokens, scale, atlas, selection, output);
+        }
+        self.hud.draw(list, editor, &self.tokens, scale, atlas);
+    }
+}
+
+impl Default for ChromeState {
+    fn default() -> Self {
+        let mut state = Self {
+            toolbar: Toolbar::default(),
+            color_wheel: ColorWheel::default(),
+            hud: SizeHud::default(),
+            tokens: DesignTokens::default(),
+            panel_visible: false,
+            grabbed: false,
+            layer_drag: None,
+            draw_color_sink: None,
+        };
+        state.configure(&UiConfig::default());
+        state
+    }
+}

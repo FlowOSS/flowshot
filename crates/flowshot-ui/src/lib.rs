@@ -62,6 +62,7 @@
 
 mod adapter;
 mod app;
+pub mod chrome;
 mod crosshair;
 pub mod gpu;
 mod handler;

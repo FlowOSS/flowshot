@@ -230,7 +230,7 @@ impl PaintSink for ListSink<'_> {
 
 /// Converts a global-logical rect into this output's local physical px
 /// (EDGES converted, never the size - the #4871 physical-first rule).
-pub(super) fn local_rect(output: &OutputInfo, rect: LogicalRect) -> Rect {
+pub(crate) fn local_rect(output: &OutputInfo, rect: LogicalRect) -> Rect {
     let x0 = local_x(output, rect.x.0);
     let y0 = local_y(output, rect.y.0);
     let x1 = local_x(output, rect.x.0 + rect.width.0);
@@ -238,12 +238,12 @@ pub(super) fn local_rect(output: &OutputInfo, rect: LogicalRect) -> Rect {
     Rect::from_parts(x0, y0, x1 - x0, y1 - y0)
 }
 
-pub(super) fn local_x(output: &OutputInfo, global: f64) -> f32 {
+pub(crate) fn local_x(output: &OutputInfo, global: f64) -> f32 {
     let offset = Logical(global - output.logical_rect.x.0);
     f32_from_i32(offset.to_physical(output.scale).0)
 }
 
-pub(super) fn local_y(output: &OutputInfo, global: f64) -> f32 {
+pub(crate) fn local_y(output: &OutputInfo, global: f64) -> f32 {
     let offset = Logical(global - output.logical_rect.y.0);
     f32_from_i32(offset.to_physical(output.scale).0)
 }

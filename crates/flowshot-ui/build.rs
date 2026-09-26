@@ -15,7 +15,7 @@ fn main() {
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("icons.rs");
-    let atlas_path = Path::new(&out_dir).join("icon_atlas.png");
+    let atlas_path = Path::new(&out_dir).join("icon_atlas.rgba");
 
     let icon_dir = Path::new("icons");
     let mut icons = Vec::new();
@@ -53,7 +53,7 @@ fn main() {
     rs_code.push_str(&atlas_height.to_string());
     rs_code.push_str(";\n\n");
 
-    rs_code.push_str("pub const ICON_ATLAS: &[u8] = include_bytes!(concat!(env!(\"OUT_DIR\"), \"/icon_atlas.png\"));\n\n");
+    rs_code.push_str("pub const ICON_ATLAS: &[u8] = include_bytes!(concat!(env!(\"OUT_DIR\"), \"/icon_atlas.rgba\"));\n\n");
 
     rs_code.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]\n");
     rs_code.push_str("pub enum Icon {\n");
@@ -122,6 +122,6 @@ fn main() {
     rs_code.push_str("    }\n");
     rs_code.push_str("}\n");
 
-    pixmap.save_png(&atlas_path).unwrap();
+    fs::write(&atlas_path, pixmap.data()).unwrap();
     fs::write(&dest_path, rs_code).unwrap();
 }

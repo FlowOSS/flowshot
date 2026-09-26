@@ -72,6 +72,15 @@ impl Rect {
         }
     }
 
+    /// Returns true if the point is inside the rectangle.
+    #[must_use]
+    pub fn contains(&self, point: Point) -> bool {
+        point.x >= self.origin.x
+            && point.x < self.origin.x + self.size.width
+            && point.y >= self.origin.y
+            && point.y < self.origin.y + self.size.height
+    }
+
     /// Right edge (`x + width`).
     #[must_use]
     pub fn right(self) -> f32 {

@@ -64,9 +64,10 @@ pub(crate) struct OverlayApp {
 
 impl OverlayApp {
     pub(crate) fn new() -> Self {
-        let tokens = DesignTokens::default();
-        let crosshair_color =
-            crosshair::parse_srgb_hex(&tokens.palette.accent).unwrap_or(crosshair::FALLBACK_COLOR);
+        // The chrome owns the live token set (theming is todo 36); the
+        // crosshair color is derived once from the same brand default.
+        let crosshair_color = crosshair::parse_srgb_hex(&DesignTokens::default().palette.accent)
+            .unwrap_or(crosshair::FALLBACK_COLOR);
         Self {
             core: OverlayCore::new(InputRouter::new(OutputLayout::new(Vec::new()), Vec::new())),
             windows: Vec::new(),
@@ -93,10 +94,17 @@ impl OverlayApp {
                     tracing::info!("exit requested via input; closing all overlay windows");
                     target.exit();
                 }
-                // Accept/Copy/ColorWheel are binary-layer wiring seams: the
-                // export/clipboard paths land with todos 28/35 and the color
-                // wheel with todo 26; the engine already logged the effect.
-                Action::Accept | Action::Copy | Action::ColorWheel => {}
+                // The funnel already showed the wheel (core-owned chrome
+                // state - the headless path owns the whole picker flow);
+                // the shell arm only repaints every window. Accept/Copy are
+                // binary-layer wiring seams: the export/clipboard paths land
+                // with todos 28/35.
+                Action::ColorWheel => {
+                    for entry in &self.windows {
+                        entry.window.request_redraw();
+                    }
+                }
+                Action::Accept | Action::Copy => {}
             }
         }
     }
@@ -215,6 +223,13 @@ impl OverlayApp {
             self.core
                 .selection()
                 .paint_into(&mut list, output, Instant::now());
+            self.core.chrome().paint_into(
+                &mut list,
+                self.core.editor(),
+                self.core.selection(),
+                crate::widgets::ICON_ATLAS_ID,
+                output,
+            );
         }
         let content = match (entry.renderer.as_mut(), list.is_empty()) {
             (Some(renderer), false) => Some((renderer, &list)),
