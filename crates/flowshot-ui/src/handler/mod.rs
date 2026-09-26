@@ -60,6 +60,7 @@ impl OverlayApp {
                 surface: None,
                 monitor_name,
                 renderer: None,
+                effect_textures: Vec::new(),
             });
         }
         self.init_surfaces()?;

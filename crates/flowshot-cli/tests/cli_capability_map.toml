@@ -1,0 +1,297 @@
+# FlowShot CLI capability map (plan todo 35; replaces the Flameshot
+# parity-diff per User Amendment #2: CAPABILITY parity is kept, INTERFACE
+# parity is deliberately dropped).
+#
+# Every row is one Flameshot CLI capability from the draft F12 inventory
+# (verbs, per-subcommand flags, CLI-reachable capture modes; source:
+# flameshot.org/docs/advanced/commandline-options + the F12 lane-1 sweep).
+# Each row is either:
+#   disposition = "mapped"  + argv = [...]  (must parse through the
+#                           flowshot clap surface - enforced by
+#                           tests/capability_map.rs, runs in CI)
+#   disposition = "dropped" + reason = "..." (explicit product decision)
+# Zero unmapped rows allowed. Todo 38's parity_matrix.toml REFERENCES these
+# row ids instead of duplicating dispositions (Momus r4 single-source rule).
+
+# ---- verbs (F12: CLI gui/full/screen/launcher/config) ----
+
+[[capability]]
+id = "verb-gui"
+flameshot = "gui"
+disposition = "mapped"
+argv = ["capture"]
+note = "the `gui` verb itself is rejected with a did-you-mean hint; the capability (interactive region capture + editor) is the bare command"
+
+[[capability]]
+id = "verb-full"
+flameshot = "full"
+disposition = "mapped"
+argv = ["capture", "full"]
+
+[[capability]]
+id = "verb-screen"
+flameshot = "screen"
+disposition = "mapped"
+argv = ["capture", "screen"]
+note = "top-level `screen` verb rejected with hint; capability lives under capture"
+
+[[capability]]
+id = "verb-launcher"
+flameshot = "launcher"
+disposition = "mapped"
+argv = ["capture", "--dialog"]
+note = "top-level `launcher` verb rejected with hint"
+
+[[capability]]
+id = "verb-config"
+flameshot = "config"
+disposition = "mapped"
+argv = ["settings"]
+note = "`config` also works as a visible alias of `settings`"
+
+# ---- gui/full/screen flags (F12 flag inventory) ----
+
+[[capability]]
+id = "flag-path"
+flameshot = "-p/--path"
+disposition = "mapped"
+argv = ["capture", "-o", "/tmp/captures"]
+note = "renamed to -o/--output (file OR dir, same semantics)"
+
+[[capability]]
+id = "flag-clipboard"
+flameshot = "-c/--clipboard"
+disposition = "mapped"
+argv = ["capture", "-c"]
+
+[[capability]]
+id = "flag-delay"
+flameshot = "-d/--delay"
+disposition = "mapped"
+argv = ["capture", "-d", "2000"]
+
+[[capability]]
+id = "flag-region"
+flameshot = "--region <WxH+X+Y|string>"
+disposition = "mapped"
+argv = ["capture", "--region", "640x480+10+20"]
+note = "grammar WxH[+X+Y]|at-cursor per Oracle r4; offset-less WxH centers at the cursor (todo 18)"
+
+[[capability]]
+id = "flag-last-region"
+flameshot = "--last-region"
+disposition = "mapped"
+argv = ["capture", "--last-region"]
+
+[[capability]]
+id = "flag-raw"
+flameshot = "-r/--raw"
+disposition = "mapped"
+argv = ["capture", "--raw"]
+note = "PNG to stdout; forces the in-process one-shot mode (stdout never routes over D-Bus)"
+
+[[capability]]
+id = "flag-print-geometry"
+flameshot = "-g/--print-geometry"
+disposition = "mapped"
+argv = ["capture", "--print-geometry"]
+
+[[capability]]
+id = "flag-upload"
+flameshot = "-u/--upload"
+disposition = "mapped"
+argv = ["capture", "--upload"]
+note = "empty [upload].client_id -> exit 2 with a settings hint (Amendment #3: no shared default client-id)"
+
+[[capability]]
+id = "flag-pin"
+flameshot = "--pin"
+disposition = "mapped"
+argv = ["capture", "--pin"]
+
+[[capability]]
+id = "flag-accept-on-select"
+flameshot = "-s/--accept-on-select"
+disposition = "mapped"
+argv = ["capture", "--instant"]
+
+[[capability]]
+id = "flag-screen-number"
+flameshot = "screen -n/--number"
+disposition = "mapped"
+argv = ["capture", "screen", "1"]
+note = "index or connector name; no argument = the output under the cursor"
+
+# ---- config subcommand flags (all config-mutating: Amendment #2 drop) ----
+
+[[capability]]
+id = "flag-config-autostart"
+flameshot = "config -a/--autostart"
+disposition = "dropped"
+reason = "config-mutating flag: [daemon].startup_launch in TOML + the settings UI own config (Amendment #2/#3)"
+
+[[capability]]
+id = "flag-config-notifications"
+flameshot = "config -n/--notifications"
+disposition = "dropped"
+reason = "config-mutating flag: [daemon].notifications in TOML + settings UI (Amendment #3 single notifications bool)"
+
+[[capability]]
+id = "flag-config-filename"
+flameshot = "config -f/--filename"
+disposition = "dropped"
+reason = "config-mutating flag: [save].filename_pattern in TOML + the settings UI Filename Editor tab (todo 36)"
+
+[[capability]]
+id = "flag-config-trayicon"
+flameshot = "config -t/--trayicon"
+disposition = "dropped"
+reason = "config-mutating flag: [daemon].tray in TOML + settings UI"
+
+[[capability]]
+id = "flag-config-showhelp"
+flameshot = "config -s/--showhelp"
+disposition = "dropped"
+reason = "showHelp dropped by Amendment #3 anti-bloat audit"
+
+[[capability]]
+id = "flag-config-maincolor"
+flameshot = "config -m/--maincolor"
+disposition = "dropped"
+reason = "config-mutating flag: [ui].accent_color in TOML + settings UI"
+
+[[capability]]
+id = "flag-config-contrastcolor"
+flameshot = "config -k/--contrastcolor"
+disposition = "dropped"
+reason = "config-mutating flag: [ui].contrast_color in TOML + settings UI"
+
+[[capability]]
+id = "flag-config-check"
+flameshot = "config --check"
+disposition = "dropped"
+reason = "the settings UI validates on open and repairs on Apply (todo 36); resilient loading never fails a command"
+
+[[capability]]
+id = "flag-edit-inversion"
+flameshot = "-e (edit inversion)"
+disposition = "dropped"
+reason = "the -e inversion is dropped: the editor is the DEFAULT and --no-edit is the opt-out (Amendment #2)"
+
+# ---- CLI-reachable capture modes (F12: 11 capture modes) ----
+
+[[capability]]
+id = "mode-interactive-region"
+flameshot = "gui interactive region selection"
+disposition = "mapped"
+argv = ["capture"]
+
+[[capability]]
+id = "mode-full-desktop"
+flameshot = "full all-monitors capture"
+disposition = "mapped"
+argv = ["capture", "full"]
+
+[[capability]]
+id = "mode-screen-index"
+flameshot = "screen capture by index"
+disposition = "mapped"
+argv = ["capture", "screen", "2"]
+
+[[capability]]
+id = "mode-active-monitor-at-cursor"
+flameshot = "screen default = screen containing the cursor (Wayland-hard-blocked in Flameshot)"
+disposition = "mapped"
+argv = ["capture", "screen"]
+note = "Amendment #3: `capture screen` no-arg = output under the cursor (todo 12/18); the Flameshot captureActiveMonitor flag is replaced by this behavior"
+
+[[capability]]
+id = "mode-screen-connector"
+flameshot = "(absent: Flameshot addresses screens by index only)"
+disposition = "mapped"
+argv = ["capture", "screen", "DP-1"]
+note = "connector-name targeting is a FlowShot addition (todo 35 surface)"
+
+[[capability]]
+id = "mode-delayed-capture"
+flameshot = "delayed capture"
+disposition = "mapped"
+argv = ["capture", "-d", "5000"]
+
+[[capability]]
+id = "mode-preselect-geometry"
+flameshot = "preselected region WxH+X+Y"
+disposition = "mapped"
+argv = ["capture", "--region", "640x480+10+20"]
+
+[[capability]]
+id = "mode-preselect-centered-at-cursor"
+flameshot = "(absent: Flameshot --region needs explicit offsets)"
+disposition = "mapped"
+argv = ["capture", "--region", "640x480"]
+note = "offset-less WxH centers/clamps the preselection at the cursor (todo 18)"
+
+[[capability]]
+id = "mode-preselect-at-cursor"
+flameshot = "--region string form"
+disposition = "mapped"
+argv = ["capture", "--region", "at-cursor"]
+
+[[capability]]
+id = "mode-repeat-last-region"
+flameshot = "repeat last region"
+disposition = "mapped"
+argv = ["capture", "last"]
+
+[[capability]]
+id = "mode-manual-coordinates"
+flameshot = "launcher manual-coordinate dialog (F12 mode 9)"
+disposition = "mapped"
+argv = ["capture", "--dialog"]
+
+[[capability]]
+id = "mode-instant-accept"
+flameshot = "accept-on-select immediate export"
+disposition = "mapped"
+argv = ["capture", "--instant"]
+
+[[capability]]
+id = "mode-hide-cursor"
+flameshot = "hideCursor (ini-only in Flameshot)"
+disposition = "mapped"
+argv = ["capture", "--hide-cursor"]
+note = "promoted to a per-invocation flag (F9 Wayland fix list)"
+
+[[capability]]
+id = "mode-skip-editor"
+flameshot = "direct-to-actions capture"
+disposition = "mapped"
+argv = ["capture", "--no-edit"]
+
+[[capability]]
+id = "mode-pin-file"
+flameshot = "pin (capture-time only in Flameshot)"
+disposition = "mapped"
+argv = ["pin", "/tmp/image.png"]
+note = "`flowshot pin [FILE]` pins the last capture or an existing image file"
+
+[[capability]]
+id = "mode-color-picker"
+flameshot = "colorpicker (in-editor only in Flameshot)"
+disposition = "mapped"
+argv = ["color"]
+note = "standalone screen eyedropper -> hex to clipboard"
+
+[[capability]]
+id = "mode-one-shot"
+flameshot = "one-off mode (v11: background component optional)"
+disposition = "mapped"
+argv = ["capture", "--no-daemon"]
+note = "in-process one-shot; clipboard offers die with the process (documented, todo 28)"
+
+[[capability]]
+id = "mode-daemon-residency"
+flameshot = "background daemon (KDSingleApplication, autoCloseIdle)"
+disposition = "mapped"
+argv = ["daemon"]
+note = "foreground init-agnostic daemon + smart lifecycle replaces autoCloseIdle (Amendment #3); auto-spawn via the atomic Invoke handshake"

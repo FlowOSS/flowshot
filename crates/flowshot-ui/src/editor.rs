@@ -37,12 +37,15 @@
 //! - deactivating a tool cancels its edit widget (todo 22 may refine the
 //!   commit-on-switch path).
 
+mod blur;
 mod editing;
+mod effect;
 mod events;
 mod keys;
 mod kind;
 mod outline;
 mod paint;
+mod pixelate;
 mod registry;
 mod routing;
 mod scene_ops;
@@ -50,19 +53,25 @@ mod size;
 mod tool;
 mod tools;
 mod types;
+mod undo;
 mod view;
 
+#[cfg(test)]
+mod blur_tests;
+#[cfg(test)]
+mod pixelate_tests;
 #[cfg(test)]
 mod tests;
 
 use editing::Reedit;
 use flowshot_core::geometry::LogicalRect;
-use flowshot_core::scene::{Color as SceneColor, Scene, UndoStack};
+use flowshot_core::scene::{Color as SceneColor, Scene};
 
 use crate::selection::CascadeState;
 
 use paint::parse_draw_color;
 
+pub use effect::{EffectKind, PixelEffect, effect_texture_id};
 pub use keys::{ToolShortcuts, digit_for};
 pub use kind::ToolKind;
 pub use outline::{DASH_OFF, DASH_ON, OBJECT_OUTLINE_INNER, OBJECT_OUTLINE_OUTER};
@@ -78,9 +87,11 @@ pub use size::{
 pub use tool::{EditKey, EditorContext, EditorTools, FramePixels, Tool, ToolCursor};
 pub use tools::{
     ArrowTool, EllipseTool, InvertTool, LineTool, MARKER_ALPHA, MarkerTool, PencilTool,
-    RDP_EPSILON, RectTool, TEXT_PADDING, TextTool, register_shape_tools, register_text_tool,
+    PixelateTool, RDP_EPSILON, RectTool, TEXT_PADDING, TextTool, register_pixelate_tools,
+    register_shape_tools, register_text_tool,
 };
 pub use types::{EditorEffect, EditorEnv, EditorUpdate};
+pub use undo::{EditorUndo, Snapshot};
 pub use view::EditorView;
 
 /// The editor state machine: tool registry + active tool, the annotation
@@ -93,7 +104,9 @@ pub struct EditorState {
     active_kind: Option<ToolKind>,
     drawing: bool,
     scene: Scene,
-    undo: UndoStack,
+    effects: Vec<PixelEffect>,
+    next_effect: u64,
+    undo: EditorUndo,
     selected: Option<usize>,
     sizes: ToolSizes,
     digits: DigitAccumulator,
@@ -117,7 +130,7 @@ impl EditorState {
     #[must_use]
     pub fn new(config: EditorTools, registry: ToolRegistry) -> Self {
         let color = parse_draw_color(&config.editor.draw_color);
-        let undo = UndoStack::from_undo_limit(config.editor.undo_limit);
+        let undo = EditorUndo::from_undo_limit(config.editor.undo_limit);
         let sizes = ToolSizes::from_config(&config);
         Self {
             registry,
@@ -125,6 +138,8 @@ impl EditorState {
             active_kind: None,
             drawing: false,
             scene: Scene::new(),
+            effects: Vec::new(),
+            next_effect: 0,
             undo,
             selected: None,
             sizes,
@@ -238,8 +253,13 @@ impl EditorState {
 
     /// Installs the frozen original frame tools sample from (todo 23's
     /// secure pixelate reads the ORIGINAL through this; `None` clears).
+    /// A new frame starts a new capture session: baked pixel effects
+    /// reference the PREVIOUS frame's pixels, so they and the undo journal
+    /// are dropped with it.
     pub fn install_frame(&mut self, frame: Option<FramePixels>) {
         self.frame = frame;
+        self.effects.clear();
+        self.undo.clear();
     }
 
     /// The installed frame view.

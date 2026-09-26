@@ -19,6 +19,7 @@
 mod arrow;
 mod geometry;
 mod path;
+mod pixelate;
 mod point;
 mod shape;
 mod text;
@@ -27,6 +28,8 @@ mod text_measure;
 mod text_session;
 
 #[cfg(test)]
+mod pixelate_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod text_tests;
@@ -34,6 +37,7 @@ mod text_tests;
 pub use arrow::ArrowTool;
 pub use geometry::RDP_EPSILON;
 pub use path::{MARKER_ALPHA, MarkerTool, PencilTool};
+pub use pixelate::PixelateTool;
 pub use point::{InvertTool, LineTool};
 pub use shape::{EllipseTool, RectTool};
 pub use text::{TEXT_PADDING, TextTool};
@@ -56,4 +60,13 @@ pub fn register_shape_tools(registry: &mut ToolRegistry) {
 /// Registers the todo-22 text tool (IME editing) on `registry`.
 pub fn register_text_tool(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Text, || Box::new(TextTool::default()));
+}
+
+/// Registers the todo-23 destructive region tools (secure pixelate + its
+/// blur variant) on `registry`.
+pub fn register_pixelate_tools(registry: &mut ToolRegistry) {
+    registry.register(ToolKind::Pixelate, || Box::new(PixelateTool::default()));
+    registry.register(ToolKind::Blur, || {
+        Box::new(PixelateTool::new(crate::editor::EffectKind::Blur))
+    });
 }

@@ -11,7 +11,7 @@
 //! 250-LOC ceiling, todo 21); the local-conversion helpers here are shared
 //! with it.
 
-use flowshot_core::geometry::{Logical, OutputInfo, ToPhysical};
+use flowshot_core::geometry::{Logical, LogicalRect, OutputInfo, ToPhysical};
 use flowshot_core::scene::{
     Color as SceneColor, PaintSink, Point as ScenePoint, Rect as SceneRect,
 };
@@ -93,11 +93,15 @@ impl<'a> ListSink<'a> {
     }
 
     fn local_rect(&self, rect: SceneRect) -> Rect {
-        let x0 = local_x(self.output, f64::from(rect.x));
-        let y0 = local_y(self.output, f64::from(rect.y));
-        let x1 = local_x(self.output, f64::from(rect.x + rect.width));
-        let y1 = local_y(self.output, f64::from(rect.y + rect.height));
-        Rect::from_parts(x0, y0, x1 - x0, y1 - y0)
+        local_rect(
+            self.output,
+            LogicalRect::from_raw(
+                f64::from(rect.x),
+                f64::from(rect.y),
+                f64::from(rect.width),
+                f64::from(rect.height),
+            ),
+        )
     }
 
     fn local_len(&self, logical: f32) -> f32 {
@@ -222,6 +226,16 @@ impl PaintSink for ListSink<'_> {
             max_width: None,
         });
     }
+}
+
+/// Converts a global-logical rect into this output's local physical px
+/// (EDGES converted, never the size - the #4871 physical-first rule).
+pub(super) fn local_rect(output: &OutputInfo, rect: LogicalRect) -> Rect {
+    let x0 = local_x(output, rect.x.0);
+    let y0 = local_y(output, rect.y.0);
+    let x1 = local_x(output, rect.x.0 + rect.width.0);
+    let y1 = local_y(output, rect.y.0 + rect.height.0);
+    Rect::from_parts(x0, y0, x1 - x0, y1 - y0)
 }
 
 pub(super) fn local_x(output: &OutputInfo, global: f64) -> f32 {

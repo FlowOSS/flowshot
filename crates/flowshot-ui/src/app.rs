@@ -16,11 +16,11 @@ use winit::window::{Window, WindowId};
 
 use crate::backdrop::{Backdrop, BackdropOptions};
 use crate::crosshair;
-use crate::editor::{EditorView, ToolCursor};
+use crate::editor::{EditorView, PixelEffect, ToolCursor};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::Action;
-use crate::render::{DisplayList, Renderer};
+use crate::render::{DisplayList, Renderer, RgbaImage, TextureId};
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
 use crate::surface::WindowSurface;
@@ -34,6 +34,10 @@ pub(crate) struct WindowEntry {
     /// The window's own renderer (todo 15): holds THIS output's frozen-frame
     /// texture, so per-window redraws never thrash a shared MSAA target.
     pub renderer: Option<Renderer>,
+    /// The pixel-effect texture ids currently uploaded to THIS window's
+    /// renderer (todo 23: the sync diff base - effects are editor state,
+    /// textures are per-renderer).
+    pub effect_textures: Vec<TextureId>,
 }
 
 /// The application state driven by the winit event loop.
@@ -170,6 +174,17 @@ impl OverlayApp {
                 let (width, height) = surface.size();
                 crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
             });
+        // The todo-23 pixel-effect textures must exist in THIS renderer
+        // before the display list references them (missing ids draw the
+        // magenta placeholder).
+        if let Some(renderer) = entry.renderer.as_mut() {
+            let effects = self.core.editor().pixel_effects();
+            if let Err(error) =
+                sync_effect_textures(renderer, gpu, &mut entry.effect_textures, effects)
+            {
+                tracing::error!(%error, window = slot.index(), "pixel effect texture sync failed");
+            }
+        }
         // The frozen-frame backdrop (todo 15) with the LIVE selection cutout
         // (todo 16: the engine's rect supersedes the construction-time
         // option, so the dim follows the drag).
@@ -209,4 +224,41 @@ impl OverlayApp {
             tracing::error!(%error, window = slot.index(), "frame presentation failed");
         }
     }
+}
+
+/// Syncs one renderer's pixel-effect texture set to the editor's effect
+/// layer (todo 23): uploads new bakes, drops textures of undone/replaced
+/// effects (each bake can be megabytes - retired ids must not linger).
+/// A failed upload logs and keeps the id marked uploaded: the renderer's
+/// magenta placeholder is the visible failure signal, retried never per
+/// frame (log-spam guard).
+fn sync_effect_textures(
+    renderer: &mut Renderer,
+    gpu: &GpuContext,
+    uploaded: &mut Vec<TextureId>,
+    effects: &[PixelEffect],
+) -> Result<(), UiError> {
+    for id in uploaded.iter().copied() {
+        if !effects.iter().any(|effect| effect.texture_id() == id) {
+            renderer.textures_mut().remove(id);
+        }
+    }
+    for effect in effects {
+        let id = effect.texture_id();
+        if uploaded.contains(&id) {
+            continue;
+        }
+        let image = RgbaImage {
+            width: effect.width(),
+            height: effect.height(),
+            data: effect.pixels(),
+        };
+        let result = renderer
+            .textures_mut()
+            .insert(&gpu.device, &gpu.queue, id, &image);
+        uploaded.push(id);
+        result?;
+    }
+    uploaded.retain(|id| effects.iter().any(|effect| effect.texture_id() == *id));
+    Ok(())
 }

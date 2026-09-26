@@ -14,6 +14,7 @@ use flowshot_core::scene::ToolObject;
 use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
 
+use super::effect::PixelEffect;
 use super::keys::digit_for;
 use super::routing::{
     MoveTarget, PressRoute, PressTarget, ReleaseTarget, route_move, route_press, route_release,
@@ -22,6 +23,14 @@ use super::size::stepped;
 use super::tool::{EditorContext, Tool};
 use super::types::{EditorEffect, EditorEnv, EditorUpdate};
 use super::{EditorState, kind::ToolKind};
+
+/// The two commit channels a draw release can produce (todo 23: the
+/// destructive pixel-effect channel is checked first - a tool implements
+/// exactly one of the two).
+enum StrokeCommit {
+    Effect(PixelEffect),
+    Object(Box<dyn ToolObject>),
+}
 
 impl EditorState {
     /// A pointer press at the layout-clamped global position `at`.
@@ -100,11 +109,22 @@ impl EditorState {
             ReleaseTarget::Picker => EditorUpdate::eaten(false),
             ReleaseTarget::ToolDraw => {
                 self.drawing = false;
-                let object = self
-                    .with_ctx(env, at, |ctx, tool| tool.draw_end(ctx, at))
+                let committed = self
+                    .with_ctx(env, at, |ctx, tool| {
+                        if let Some(effect) = tool.draw_end_effect(ctx, at) {
+                            return Some(StrokeCommit::Effect(effect));
+                        }
+                        tool.draw_end(ctx, at).map(StrokeCommit::Object)
+                    })
                     .flatten();
-                if let Some(object) = object {
-                    self.commit_object(object);
+                match committed {
+                    Some(StrokeCommit::Effect(effect)) => {
+                        self.commit_effect(effect);
+                    }
+                    Some(StrokeCommit::Object(object)) => {
+                        self.commit_object(object);
+                    }
+                    None => {}
                 }
                 EditorUpdate::eaten(true)
             }
@@ -223,22 +243,6 @@ impl EditorState {
             tool = kind.id(),
             session = opened,
             "draw start"
-        );
-    }
-
-    /// Commits the active edit widget (click-outside / Ctrl+Return); the
-    /// produced object becomes one undo unit (re-edit replacement
-    /// bookkeeping lives in [`EditorState::commit_edit_object`]).
-    pub(super) fn commit_edit(&mut self, env: &EditorEnv, at: LogicalPoint) {
-        let object = self
-            .with_ctx(env, at, |ctx, tool| tool.commit_edit(ctx))
-            .flatten();
-        let committed = object.is_some();
-        self.commit_edit_object(object);
-        tracing::debug!(
-            target: "flowshot_ui::editor",
-            committed,
-            "edit committed"
         );
     }
 

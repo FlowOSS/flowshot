@@ -31,6 +31,11 @@ flowshot-actions = { path = "../flowshot-actions" }
 # (lightweight workspace member; zero new external crates - all of its deps
 # are already in this crate's graph).
 flowshot-capture = { path = "../flowshot-capture" }
+# Todo 33: the tray's per-monitor submenu live-probes outputs through
+# `CaptureThread` (the todo-6 registry probe - no GPU, no capture session;
+# a dedicated wayland connection bounded by 10 s deadlines). Workspace
+# member edge only: zero new external crates in the lock.
+flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
 # EXECUTOR DECISION (todo 32): the daemon's OWN bus stays on workspace zbus 4
 # (default features = async-io reactor) driven from a tokio runtime. Source-
 # verified: each zbus-4 connection owns a PRIVATE async-executor + dedicated

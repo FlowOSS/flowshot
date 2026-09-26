@@ -30,6 +30,11 @@
 //!   `shortcuts` persistence reason, and the compositor-bind fallback
 //!   ladder (paste-ready Hyprland/Sway/GNOME snippets, `KGlobalAccel`
 //!   guidance) behind `flowshot --print-bind-help` (todo 35);
+//! - [`tray`] - the SNI tray (todo 33): `org.kde.StatusNotifierItem` +
+//!   `com.canonical.dbusmenu` hand-rolled on the same zbus-4 connection,
+//!   the F12-parity menu dispatching into [`CommandSink`], the
+//!   `[daemon].tray` gate, the absent-watcher degrade (warn, never
+//!   crash), and the `tray` lifecycle persistence reason;
 //! - [`autostart`] - `[daemon].startup_launch` -> XDG `.desktop` autostart
 //!   entry;
 //! - [`daemon`] - the composition root ([`Daemon::start`] /
@@ -67,6 +72,7 @@ pub mod request;
 pub mod shortcut;
 pub mod state;
 pub mod strings;
+pub mod tray;
 
 #[cfg(feature = "systemd")]
 pub mod systemd;
@@ -90,6 +96,7 @@ pub use shortcut::{
     ShortcutWiring, bind_help, default_shortcuts,
 };
 pub use state::{DaemonState, PersistenceReasons};
+pub use tray::{TrayHandle, TrayOptions, TrayWiring};
 
 use std::time::Duration;
 

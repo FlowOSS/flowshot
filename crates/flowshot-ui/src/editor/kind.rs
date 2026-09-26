@@ -35,6 +35,9 @@ pub enum ToolKind {
     Counter,
     /// Secure pixelate / blur (todo 23).
     Pixelate,
+    /// The gaussian blur variant of the pixelate tool (todo 23; unbound by
+    /// default like counter/move - the todo-26 panel exposes the mode).
+    Blur,
     /// Region color inversion (todo 21).
     Invert,
     /// Selection/object mover (todo 25 semantics; falls through to the
@@ -43,8 +46,10 @@ pub enum ToolKind {
 }
 
 impl ToolKind {
-    /// Every kind, in the Flameshot toolbar order (`buttonTypeOrder`).
-    pub const ALL: [Self; 12] = [
+    /// Every kind, in the Flameshot toolbar order (`buttonTypeOrder`); the
+    /// blur variant trails its pixelate parent (no Flameshot toolbar slot -
+    /// it is a pixelate mode).
+    pub const ALL: [Self; 13] = [
         Self::Pencil,
         Self::Line,
         Self::Arrow,
@@ -55,6 +60,7 @@ impl ToolKind {
         Self::Text,
         Self::Counter,
         Self::Pixelate,
+        Self::Blur,
         Self::Invert,
         Self::Move,
     ];
@@ -73,6 +79,7 @@ impl ToolKind {
             Self::Text => "text",
             Self::Counter => "counter",
             Self::Pixelate => "pixelate",
+            Self::Blur => "blur",
             Self::Invert => "invert",
             Self::Move => "move",
         }
@@ -99,18 +106,25 @@ impl ToolKind {
             Self::Text => Some(KeyCode::KeyT),
             Self::Pixelate => Some(KeyCode::KeyB),
             Self::Invert => Some(KeyCode::KeyI),
-            Self::Counter | Self::Move => None,
+            Self::Blur | Self::Counter | Self::Move => None,
         }
     }
 
     /// Whether this kind dispatches to the shared `draw_thickness` size
     /// slot (the others own independent `[tools.*]` slots - F27 per-tool
-    /// size dispatch, see [`super::size::ToolSizes`]).
+    /// size dispatch, see [`super::size::ToolSizes`]; blur shares the
+    /// pixelate slot - Flameshot's blur is the pixelate tool's size-driven
+    /// variant).
     #[must_use]
     pub const fn uses_shared_thickness(self) -> bool {
         !matches!(
             self,
-            Self::Text | Self::Rectangle | Self::Marker | Self::Pixelate | Self::Counter
+            Self::Text
+                | Self::Rectangle
+                | Self::Marker
+                | Self::Pixelate
+                | Self::Blur
+                | Self::Counter
         )
     }
 }
@@ -160,6 +174,7 @@ mod tests {
         }
         assert_eq!(ToolKind::Counter.default_key(), None);
         assert_eq!(ToolKind::Move.default_key(), None);
+        assert_eq!(ToolKind::Blur.default_key(), None, "blur ships unbound");
         // No two kinds share a key (Amendment #3 collision rule).
         let keys: Vec<_> = ToolKind::ALL
             .iter()
@@ -182,6 +197,7 @@ mod tests {
                         | ToolKind::Rectangle
                         | ToolKind::Marker
                         | ToolKind::Pixelate
+                        | ToolKind::Blur
                         | ToolKind::Counter
                 )
             );

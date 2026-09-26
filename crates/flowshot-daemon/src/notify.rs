@@ -35,6 +35,10 @@ pub enum NotificationRecord {
     /// surface. Emitted at most once per install (the restore-data file
     /// carries the notified flag).
     ShortcutsRegistered,
+    /// Tray `About` entry (todo 33): the payload is the toast body
+    /// ([`crate::strings::about_body`]). A full About surface lands with
+    /// the todo-36 settings stack - recorded deviation.
+    About(String),
 }
 
 /// The notification seam: every user-visible toast in the product goes

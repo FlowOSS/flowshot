@@ -13,21 +13,22 @@
 //! [`Reedit`] snapshot restores it on cancel/empty-commit, and the commit
 //! pushes (snapshot, scene+new object) as ONE undo unit.
 
-use flowshot_core::geometry::LogicalRect;
-use flowshot_core::scene::{Scene, ToolObject};
+use flowshot_core::geometry::{LogicalPoint, LogicalRect};
+use flowshot_core::scene::ToolObject;
 use winit::event::Ime;
 use winit::keyboard::KeyCode;
 
 use super::EditorState;
 use super::tool::EditKey;
 use super::types::{EditorEnv, EditorUpdate};
+use super::undo::Snapshot;
 
-/// The provisional re-edit state: the scene snapshot taken when the tool
-/// took over an existing object (exact restore on cancel - nothing else
-/// mutates the scene while an edit widget is open).
+/// The provisional re-edit state: the full (scene, effects) snapshot taken
+/// when the tool took over an existing object (exact restore on cancel -
+/// nothing else mutates the editor state while an edit widget is open).
 #[derive(Debug)]
 pub(super) struct Reedit {
-    before: Scene,
+    before: Snapshot,
 }
 
 impl EditorState {
@@ -94,7 +95,7 @@ impl EditorState {
     /// Removes the re-edited object from the scene and snapshots for the
     /// undo pair / cancel restore (called by the funnel's re-edit probe).
     pub(super) fn begin_reedit(&mut self, id: usize) {
-        let before = self.scene.clone();
+        let before = self.snapshot();
         if self.scene.remove_object(id).is_none() {
             return;
         }
@@ -110,9 +111,24 @@ impl EditorState {
         let Some(reedit) = self.reedit.take() else {
             return;
         };
-        self.scene = reedit.before;
-        self.selected = None;
+        self.restore(reedit.before);
         tracing::debug!(target: "flowshot_ui::editor", "re-edit cancelled; object restored");
+    }
+
+    /// Commits the active edit widget (click-outside / Ctrl+Return); the
+    /// produced object becomes one undo unit (re-edit replacement
+    /// bookkeeping lives in [`EditorState::commit_edit_object`]).
+    pub(super) fn commit_edit(&mut self, env: &EditorEnv, at: LogicalPoint) {
+        let object = self
+            .with_ctx(env, at, |ctx, tool| tool.commit_edit(ctx))
+            .flatten();
+        let committed = object.is_some();
+        self.commit_edit_object(object);
+        tracing::debug!(
+            target: "flowshot_ui::editor",
+            committed,
+            "edit committed"
+        );
     }
 
     /// The edit-commit bookkeeping: a produced object becomes ONE undo unit
@@ -123,7 +139,7 @@ impl EditorState {
         match (object, self.reedit.take()) {
             (Some(object), Some(reedit)) => {
                 let id = self.scene.add_object(object);
-                self.undo.push(reedit.before, self.scene.clone());
+                self.undo.push(reedit.before, self.snapshot());
                 tracing::info!(
                     target: "flowshot_ui::editor",
                     object = self.scene.get_object(id).map_or("?", ToolObject::type_id),
@@ -137,8 +153,7 @@ impl EditorState {
                 self.commit_object(object);
             }
             (None, Some(reedit)) => {
-                self.scene = reedit.before;
-                self.selected = None;
+                self.restore(reedit.before);
                 tracing::debug!(
                     target: "flowshot_ui::editor",
                     "empty re-edit commit; old object restored"

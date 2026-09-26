@@ -43,14 +43,19 @@
 //! Todo 21: the REAL shape tools (pencil/line/arrow/rect/ellipse/marker/
 //! invert) are registered - the todo-20 line stub is gone; every F12 tool
 //! key now draws its production shape. Todo 22: the text tool (IME editing)
-//! is registered too.
+//! is registered too. Todo 23: the secure pixelate (key `b`) and its blur
+//! variant (rebound to `v` for QA - blur ships unbound) are registered, and
+//! the FIRST `--frame` output's pixels are installed as the editor frame
+//! the destructive tools bake from.
 
 use std::process::ExitCode;
 
 use flowshot_capture::{Frame, FrameBuffer, FrameFormat, OutputRef};
-use flowshot_core::geometry::{Logical, LogicalPoint, LogicalRect, OutputInfo, PhysicalPoint};
+use flowshot_core::geometry::{
+    Logical, LogicalPoint, LogicalRect, OutputInfo, PhysicalPoint, PhysicalSize, Transform,
+};
 use flowshot_ui::backdrop::{BackdropOptions, CursorSprite, FrozenCapture, PlacedCursor};
-use flowshot_ui::{OverlayRuntime, UiError};
+use flowshot_ui::{FramePixels, OverlayRuntime, ToolKind, UiError};
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()
@@ -87,6 +92,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let outputs = load_outputs(layout_path)?;
     let frames = load_frames(&args.frames, &outputs)?;
     let cursor = load_cursor(&args)?;
+    let editor_frame = editor_frame(&frames, &outputs);
     let capture = FrozenCapture {
         outputs,
         frames,
@@ -102,14 +108,66 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
     let mut runtime = runtime?;
-    // Todo 21/22: the production tools (the todo-35 binary layer will do
+    // Todo 21/22/23: the production tools (the todo-35 binary layer will do
     // the same registration).
     flowshot_ui::register_shape_tools(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_text_tool(runtime.core_mut().editor_mut().registry_mut());
+    flowshot_ui::register_pixelate_tools(runtime.core_mut().editor_mut().registry_mut());
+    // Todo 23: the destructive tools bake from the installed editor frame
+    // (the pristine read side); the blur variant ships unbound (no F12 key)
+    // so QA rebinds it to `v`.
+    runtime.core_mut().install_frame(editor_frame);
+    runtime
+        .core_mut()
+        .editor_mut()
+        .shortcuts_mut()
+        .rebind(ToolKind::Blur, Some(winit::keyboard::KeyCode::KeyV));
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     runtime.run()?;
     Ok(())
+}
+
+/// Builds the editor's frozen-frame view from the FIRST loaded frame:
+/// upright RGBA (remapped through the output transform when rotated), the
+/// output's scale, and its global logical origin (todo 23's read side;
+/// todo 35 decides the production stitched-vs-per-output policy).
+fn editor_frame(frames: &[Frame], outputs: &[OutputInfo]) -> Option<FramePixels> {
+    let frame = frames.first()?;
+    let OutputRef::Connector(connector) = &frame.output else {
+        return None;
+    };
+    let output = outputs
+        .iter()
+        .find(|output| &output.connector == connector)?;
+    let (width, height) = (
+        usize::try_from(frame.buffer.width).ok()?,
+        usize::try_from(frame.buffer.height).ok()?,
+    );
+    let upright = output.transform.apply_to_size(PhysicalSize::from_raw(
+        i32::try_from(width).ok()?,
+        i32::try_from(height).ok()?,
+    ));
+    let (uw, uh) = (
+        usize::try_from(upright.width.0).ok()?,
+        usize::try_from(upright.height.0).ok()?,
+    );
+    let mut rgba = vec![0u8; uw * uh * 4];
+    if output.transform == Transform::Normal {
+        rgba.copy_from_slice(&frame.buffer.data[..uw * uh * 4]);
+    } else {
+        output
+            .transform
+            .remap_buffer(&frame.buffer.data[..], &mut rgba, width, height, 4)
+            .ok()?;
+    }
+    Some(FramePixels {
+        rgba,
+        width: u32::try_from(uw).ok()?,
+        height: u32::try_from(uh).ok()?,
+        scale: output.scale,
+        origin: LogicalPoint::from_raw(output.logical_rect.x.0, output.logical_rect.y.0),
+    })
 }
 
 /// Headless orientation/scale verification (Metis #16 edge case): plans the
@@ -510,6 +568,7 @@ fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
         "t" => KeyCode::KeyT,
         "b" => KeyCode::KeyB,
         "i" => KeyCode::KeyI,
+        "v" => KeyCode::KeyV,
         "z" => KeyCode::KeyZ,
         "delete" => KeyCode::Delete,
         "0" => KeyCode::Digit0,

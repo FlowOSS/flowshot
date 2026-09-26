@@ -85,9 +85,10 @@ pub use backdrop::{
     backdrop_texture_id, capture_frozen, cursor_texture_id,
 };
 pub use editor::{
-    EditKey, EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUpdate,
-    EditorView, FramePixels, TEXT_PADDING, TextTool, Tool, ToolCursor, ToolKind, ToolRegistry,
-    ToolShortcuts, register_shape_tools, register_text_tool,
+    EditKey, EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUndo,
+    EditorUpdate, EditorView, EffectKind, FramePixels, PixelEffect, PixelateTool, TEXT_PADDING,
+    TextTool, Tool, ToolCursor, ToolKind, ToolRegistry, ToolShortcuts, effect_texture_id,
+    register_pixelate_tools, register_shape_tools, register_text_tool,
 };
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
