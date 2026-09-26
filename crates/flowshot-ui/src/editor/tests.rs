@@ -1039,18 +1039,28 @@ fn funnel_esc_deselects_the_object_stage() {
 }
 
 #[test]
-fn funnel_picker_flag_makes_the_editor_swallow_presses() {
+fn funnel_picker_swallows_presses_until_click_away() {
+    // Todo 26: stage 5 is CHROME-driven (raw cascade pokes are futile - the
+    // todo-20 stage 1/2/4 precedent); the real producer is the right-click
+    // wheel-open through the funnel.
     let mut core = funnel_core();
-    core.selection_mut().cascade_mut().set_picker_visible(true);
     move_to(&mut core, 100.0, 100.0);
-    click(&mut core, MouseButton::Left, true);
+    click(&mut core, MouseButton::Right, true);
+    click(&mut core, MouseButton::Right, false);
+    assert!(core.chrome().color_wheel.visible);
+    assert!(
+        core.selection().cascade().picker_visible(),
+        "cascade synced"
+    );
+    // P1: while the picker is visible, a left press never reaches the
+    // region engine and starts no draw session - the click-away only hides.
     move_to(&mut core, 400.0, 300.0);
-    click(&mut core, MouseButton::Left, false);
-    // P1: nothing reached the region engine, no draw session ran.
+    click(&mut core, MouseButton::Left, true);
     assert_eq!(core.selection().rect(), None);
     assert_eq!(core.editor().scene().object_count(), 0);
-    // The sync never touches the picker flag (todo 26 owns it).
-    assert!(core.selection().cascade().picker_visible());
+    assert!(!core.chrome().color_wheel.visible);
+    assert!(!core.selection().cascade().picker_visible());
+    click(&mut core, MouseButton::Left, false);
 }
 
 #[test]

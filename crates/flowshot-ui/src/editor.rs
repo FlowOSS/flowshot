@@ -45,8 +45,9 @@ mod keys;
 mod kind;
 mod mutate;
 mod outline;
-mod paint;
+pub(crate) mod paint;
 mod pixelate;
+mod properties;
 mod registry;
 mod routing;
 mod scene_ops;
@@ -321,7 +322,8 @@ impl EditorState {
     }
 
     /// Writes the editor's occupancy into the Esc-cascade seam (stages 1,
-    /// 2, and 4 - the panel/picker stages belong to todo 26).
+    /// 2, and 4; the funnel's `sync_cascade` adds the chrome-owned panel
+    /// and picker stages 3/5 - todo 26).
     pub fn sync_cascade(&self, cascade: &mut CascadeState) {
         cascade.set_tool_checked(self.active_kind.is_some());
         cascade.set_object_selected(self.selected.is_some());

@@ -48,14 +48,15 @@ pub struct CursorTrack {
 /// the headless engines it owns are individually cloneable/compareable.)
 #[derive(Debug)]
 pub struct OverlayCore {
-    router: InputRouter,
+    pub(crate) router: InputRouter,
     cursor: Option<CursorTrack>,
     ime: ImeStatus,
     last_commit: Option<String>,
     exit_requested: bool,
     modifiers: ModifiersState,
-    selection: SelectionState,
-    editor: EditorState,
+    pub(crate) selection: SelectionState,
+    pub(crate) editor: EditorState,
+    pub(crate) chrome: crate::chrome::ChromeState,
 }
 
 impl OverlayCore {
@@ -71,6 +72,7 @@ impl OverlayCore {
             modifiers: ModifiersState::empty(),
             selection: SelectionState::default(),
             editor: EditorState::default(),
+            chrome: crate::chrome::ChromeState::default(),
         }
     }
 
@@ -135,10 +137,26 @@ impl OverlayCore {
         &mut self.editor
     }
 
+    /// The chrome state.
+    #[must_use]
+    pub fn chrome(&self) -> &crate::chrome::ChromeState {
+        &self.chrome
+    }
+
+    /// Mutable chrome state.
+    pub fn chrome_mut(&mut self) -> &mut crate::chrome::ChromeState {
+        &mut self.chrome
+    }
+
     /// Installs the frozen original frame the editor's tools sample from
     /// (the todo-23 secure-pixelate input; `None` clears).
     pub fn install_frame(&mut self, frame: Option<FramePixels>) {
         self.editor.install_frame(frame);
+    }
+
+    /// Applies a new chrome config projection.
+    pub fn configure_chrome(&mut self, config: &flowshot_core::config::UiConfig) {
+        self.chrome.configure(config);
     }
 
     /// The current keyboard modifier snapshot.

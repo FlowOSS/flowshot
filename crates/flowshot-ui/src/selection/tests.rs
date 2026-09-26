@@ -632,8 +632,8 @@ fn case34_esc_cascade_walks_all_six_stages_in_order() {
 
     let mut core = dual_core();
     let slot = WindowSlot::new(0);
-    // Todo 20: stages 1/2/4 are editor-driven (real state), stages 3/5 stay
-    // raw seam flags until todo 26 owns the panel/picker.
+    // Todo 20/26: EVERY stage is driven by real state now - 1/2/4 by the
+    // editor, 3/5 by the chrome (raw cascade pokes are futile).
     core.editor_mut()
         .registry_mut()
         .register(ToolKind::Pencil, || Box::new(CascadeStubTool));
@@ -647,12 +647,12 @@ fn case34_esc_cascade_walks_all_six_stages_in_order() {
     core.editor_mut()
         .select_object_at(LogicalPoint::from_raw(120.0, 120.0));
     core.editor_mut().set_edit_widget_present(true);
-    {
-        let cascade = core.selection_mut().cascade_mut();
-        cascade.set_panel_visible(true);
-        cascade.set_picker_visible(true);
-    }
+    assert!(core.chrome_space(), "panel toggle (stage 3 producer)");
+    core.chrome_mut()
+        .show_color_wheel(LogicalPoint::from_raw(200.0, 200.0));
     core.sync_cascade();
+    assert!(core.selection().cascade().panel_visible());
+    assert!(core.selection().cascade().picker_visible());
 
     let buffer = Arc::new(Mutex::new(Vec::new()));
     let subscriber = tracing_subscriber::fmt()

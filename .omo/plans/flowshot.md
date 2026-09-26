@@ -308,7 +308,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = renumber suite + shot; failure = delete non-counter object leaves counts untouched (unit). Evidence <attemptDir>/task-24-flowshot.png
   Commit: Y | feat(editor): circle-count tool
   Recommended task executor category: quick - small tool atop existing scene ops.
-- [ ] 25. Editor: undo/redo + z-order wiring
+- [x] 25. Editor: undo/redo + z-order wiring
   What to do: wire core UndoStack (todo 4) into editor: every mutation = one unit (draw-end, move-release, delete, text-commit, property change, pixelate placement); Ctrl+Z / Ctrl+Shift+Z shortcuts (config); undoLimit from config; z-order: selected object raise/lower via side-panel buttons + no default keys (parity: panel-driven); layer list in side panel (todo 26 hosts UI; this todo provides model + ops): objects listed bottom-to-top with type icons, click = select, drag = reorder (maps to z-order ops with undo units). Must NOT: no snapshot logic here (core owns).
   Parallelization: Wave 4 | Blocked by: 20,4 | Blocks: 38
   References: draft F27 undo spec (atomic move units, limit), F12 (layer ordering v12 feature, panel row).

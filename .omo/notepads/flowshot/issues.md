@@ -64,3 +64,12 @@ clap_mangen = "0.3.3" was added to the root table by the orchestrator; the worke
 
 ## 2026-09-26: kwin stub tests are load-sensitive (flaky under fresh-compile contention)
 First full-workspace `cargo test` after a big compile batch failed `kwin::tests::stub_round_trip_area_capture_matches_the_raw_fixture` + `unknown_qimage_format_is_a_typed_decode_error` (30s runtime = deadline timeouts). Re-run after build cache warm: ALL green (988 passed). Root: the stub tests use deadline-bounded pipe reads; parallel rustc/test contention starves them. ACTION todo 38/CI: run the suite with warm cache, or bump the stub deadline budgets if CI shows this flake.
+
+## 2026-09-26 (todo 26): core config gaps vs plan todo 26 (core NOT editable from UI tasks)
+- `showSidePanelButton` (plan todo 26: "side panel (Space toggles, showSidePanelButton config)") is ABSENT from core UiConfig - no key to gate a toolbar panel-toggle button. Landed: Space toggle + [editor].side_panel gate. ACTION: core config owner adds [ui].show_side_panel_button; todo 36 wires the button.
+- Core `default_toolbar_buttons()` (arrow,rectangle,circle,marker,text,pixelate,counter,copy,save,pin,upload,undo) does NOT match the plan's F12 default order (pencil,line,arrow,selection,rect,circle,marker,text,circlecount,pixelate,invert,move,undo,redo,copy,save,upload,open-app,pin,exit). The todo-26 contract (order = config list) works with ANY list; the DEFAULT is core's. ACTION: core config owner aligns the default (todo 36 validation).
+- [editor].side_panel semantics: treated as the panel FEATURE gate (hard-off hides everything); initial visibility is hidden (Flameshot parity, Space opens). If the intended reading is "initial visibility", the toggle default flips in one line (ChromeState::panel_visible).
+
+## 2026-09-26 (todo 26): deferred chrome polish (no plan acceptance line; needs new surface)
+- Tooltips (400ms dwell) + toolbar reveal / panel slide animations (motion tokens D8d): need hover-dwell tracking (chrome has no motion route today) + a per-frame redraw scheduler (OverlayCore::tick only serves the selection HUD deadline). ACTION todo 38 (integration/polish wave): add a chrome motion/tick surface or drop the plan lines explicitly.
+- SizeHud (chrome/hud.rs) is an inert seam: `visible` is never set in production and `rect` never positioned (the plan todo 26 text does not include the notifier box; todo 20 shipped the timing-based digit reset without a visual). ACTION todo 38: wire via a size-change EditorEffect + tick deadline, or delete.

@@ -27,8 +27,14 @@
 //! frozen_backdrop --layout /tmp/layout.json \
 //!     --frame HDMI-A-1=/tmp/frame-hdmi.png --frame DP-3=/tmp/frame-dp3.png \
 //!     [--cursor /tmp/cursor.png --cursor-pos X,Y --hotspot X,Y] \
-//!     [--selection WxH+X+Y] [--no-dim] [--no-cursor]
+//!     [--selection WxH+X+Y] [--no-dim] [--no-cursor] \
+//!     [--toolbar pencil,copy,undo] [--draw-color-toml /tmp/config.toml]
 //! ```
+//!
+//! Todo 26: `--toolbar` re-projects the chrome button order (the config
+//! `buttons` list acceptance) and `--draw-color-toml` installs the draw-color
+//! persistence sink - every wheel pick rewrites `[editor].draw_color` in
+//! that TOML file (the F27 persistence acceptance, file-asserted).
 //!
 //! With `--features test-drive`, stdin lines inject synthetic events through
 //! the production routing path (the todo-13 injector protocol, extended by
@@ -84,6 +90,8 @@ struct Args {
     dim: bool,
     cursor_visible: bool,
     verify_offscreen: Option<(usize, String)>,
+    toolbar: Option<String>,
+    draw_color_toml: Option<String>,
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -134,6 +142,35 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             Some(winit::keyboard::KeyCode::KeyK),
             Some(winit::keyboard::KeyCode::KeyJ),
         );
+    // Todo 26: the chrome config projection (button-order acceptance) and
+    // the draw-color persistence sink (F27 TOML write; the example owns the
+    // file path - the lib seam is the pure callback).
+    if let Some(toolbar) = &args.toolbar {
+        let buttons = toolbar
+            .split(',')
+            .map(|id| id.trim().to_owned())
+            .filter(|id| !id.is_empty())
+            .collect();
+        runtime
+            .core_mut()
+            .configure_chrome(&flowshot_core::config::UiConfig {
+                toolbar_buttons: buttons,
+                ..flowshot_core::config::UiConfig::default()
+            });
+    }
+    if let Some(path) = &args.draw_color_toml {
+        let path = std::path::PathBuf::from(path);
+        runtime
+            .core_mut()
+            .chrome_mut()
+            .set_draw_color_sink(Some(Box::new(move |hex: &str| {
+                let mut config = flowshot_core::config::Config::load(&path).unwrap_or_default();
+                hex.clone_into(&mut config.editor.draw_color);
+                if let Err(error) = config.save(&path) {
+                    eprintln!("flowshot: draw-color persist failed: {error}");
+                }
+            })));
+    }
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     runtime.run()?;
@@ -276,6 +313,8 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
                     .ok_or("--verify-offscreen wants INDEX=PATH")?;
                 args.verify_offscreen = Some((index.trim().parse()?, path.to_owned()));
             }
+            "--toolbar" => args.toolbar = Some(value("--toolbar")?),
+            "--draw-color-toml" => args.draw_color_toml = Some(value("--draw-color-toml")?),
             other => return Err(format!("unknown argument {other}").into()),
         }
     }
@@ -569,6 +608,7 @@ fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
         "home" => KeyCode::Home,
         "end" => KeyCode::End,
         "backspace" => KeyCode::Backspace,
+        "space" => KeyCode::Space,
         "a" => KeyCode::KeyA,
         "c" => KeyCode::KeyC,
         "q" => KeyCode::KeyQ,

@@ -125,6 +125,19 @@ impl OverlayApp {
                 continue;
             };
             let mut renderer = Renderer::new(&gpu.device, &gpu.queue, surface.format());
+
+            let atlas_image = crate::render::RgbaImage {
+                width: crate::widgets::ATLAS_WIDTH,
+                height: crate::widgets::ATLAS_HEIGHT,
+                data: crate::widgets::ICON_ATLAS,
+            };
+            renderer.textures_mut().insert(
+                &gpu.device,
+                &gpu.queue,
+                crate::widgets::ICON_ATLAS_ID,
+                &atlas_image,
+            )?;
+
             if let Some(backdrop) = backdrop.as_mut() {
                 let slot = WindowSlot::new(index);
                 if let Some(output_index) = core.router().output_index_for(slot) {

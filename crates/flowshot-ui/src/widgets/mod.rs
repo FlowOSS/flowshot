@@ -27,6 +27,9 @@ pub use separator::Separator;
 pub use slider::Slider;
 pub use toggle::Toggle;
 
+/// The texture ID for the icon atlas.
+pub const ICON_ATLAS_ID: crate::render::TextureId = crate::render::TextureId::new(1);
+
 // Re-export the generated icons
 #[allow(missing_docs)]
 pub mod icons {

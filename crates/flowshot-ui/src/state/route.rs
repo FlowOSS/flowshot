@@ -12,7 +12,7 @@ use std::time::Instant;
 use winit::event::{Ime, MouseButton};
 use winit::keyboard::KeyCode;
 
-use crate::editor::{EditorEnv, EditorUpdate};
+use crate::editor::{EditorEffect, EditorEnv, EditorUpdate};
 use crate::input::{Action, InputEvent, RouteReport};
 use crate::router::WindowSlot;
 use crate::selection::{Effect, EscStep, SelectionEnv, SelectionState, SelectionUpdate};
@@ -86,12 +86,38 @@ impl OverlayCore {
         // delivers motion before buttons; injections must do the same).
         if let Some(cursor) = self.cursor {
             let at = cursor.clamped;
+            // Chrome FIRST (todo 26, Qt child-widget parity): a press on the
+            // toolbar / color wheel / side panel never reaches the F27 chain,
+            // and a chrome-consumed press grabs its release (the layer
+            // drag-reorder lands even when the cursor drifts).
+            let chrome_ate = if pressed {
+                self.chrome_press(slot, button, at)
+            } else {
+                self.chrome_release(slot, at)
+            };
+            if chrome_ate {
+                actions.extend(
+                    (0..self.router.window_count())
+                        .map(|index| Action::Redraw(WindowSlot::new(index))),
+                );
+                self.sync_cascade();
+                return RouteReport {
+                    actions,
+                    ..RouteReport::default()
+                };
+            }
             let env = self.editor_env();
             let outcome = if pressed {
                 self.editor.pointer_press(&env, button, at)
             } else {
                 self.editor.pointer_release(&env, button, at)
             };
+            // The wheel-open effect is applied IN the funnel (the chrome is
+            // core-owned state, so the headless path owns the whole picker
+            // flow; the shell's Action::ColorWheel arm only redraws).
+            if outcome.effects.contains(&EditorEffect::ColorWheel) {
+                self.chrome.show_color_wheel(at);
+            }
             let consumed = outcome.consumed;
             actions.extend(editor_actions(outcome, self.router.window_count()));
             if !consumed {
@@ -132,14 +158,25 @@ impl OverlayCore {
             let consumed = outcome.consumed;
             actions.extend(editor_actions(outcome, self.router.window_count()));
             if !consumed {
-                let update = feed_selection(self, |selection, env| selection.key_press(env, code));
-                if let Some(step) = update.esc_step {
-                    self.apply_esc_step(step);
+                // Space toggles the side panel (plan todo 26) between the
+                // editor (a text edit session owns the key while typing) and
+                // the selection engine (which has no Space binding).
+                if code == KeyCode::Space && !repeat && self.chrome_space() {
+                    actions.extend(
+                        (0..self.router.window_count())
+                            .map(|index| Action::Redraw(WindowSlot::new(index))),
+                    );
+                } else {
+                    let update =
+                        feed_selection(self, |selection, env| selection.key_press(env, code));
+                    if let Some(step) = update.esc_step {
+                        self.apply_esc_step(step);
+                    }
+                    if update.effects.contains(&Effect::Exit) {
+                        self.exit_requested = true;
+                    }
+                    actions.extend(update_actions(update, self.router.window_count()));
                 }
-                if update.effects.contains(&Effect::Exit) {
-                    self.exit_requested = true;
-                }
-                actions.extend(update_actions(update, self.router.window_count()));
             }
             self.sync_cascade();
         }
@@ -192,24 +229,33 @@ impl OverlayCore {
     }
 
     /// Applies the editor-side reaction to a popped Esc-cascade step (the
-    /// cascade order itself is the selection engine's contract).
+    /// cascade order itself is the selection engine's contract). Any step
+    /// cancels a chrome grab first: an Esc mid-layer-drag must not let a
+    /// later release land the reorder.
     fn apply_esc_step(&mut self, step: EscStep) {
+        self.chrome.cancel_grab();
         match step {
             EscStep::DeselectTool => self.editor.deactivate_tool(),
             EscStep::DeselectObject => self.editor.deselect_object(),
             EscStep::DeleteToolWidget => self.editor.delete_tool_widget(),
-            // The panel/picker stages belong to todo 26; Close is the Exit
-            // effect the selection engine already emitted.
-            EscStep::HidePanel | EscStep::HidePicker | EscStep::Close => {}
+            // The panel/picker stages are chrome-owned (todo 26).
+            EscStep::HidePanel => self.chrome.hide_panel(),
+            EscStep::HidePicker => self.chrome.hide_color_wheel(),
+            // Close is the Exit effect the selection engine already emitted.
+            EscStep::Close => {}
         }
     }
 
-    /// Writes the editor's occupancy into the cascade seam (stages 1/2/4).
-    /// Crate-public: the funnel syncs after every button/key event, and
-    /// tests sync after driving the editor API directly.
+    /// Writes the chrome + editor occupancy into the cascade seam (stages
+    /// 1/2/4 from the editor, 3/5 from the chrome - the funnel is the only
+    /// writer). Crate-public: tests sync after driving the API directly.
     pub(crate) fn sync_cascade(&mut self) {
+        let panel = self.chrome.panel_shown(&self.editor);
+        let picker = self.chrome.color_wheel.visible;
         let (editor, cascade) = (&self.editor, self.selection.cascade_mut());
         editor.sync_cascade(cascade);
+        cascade.set_panel_visible(panel);
+        cascade.set_picker_visible(picker);
     }
 }
 
