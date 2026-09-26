@@ -17,6 +17,7 @@
 //! `[tools.rectangle].corner_radius`).
 
 mod arrow;
+mod counter;
 mod geometry;
 mod path;
 mod pixelate;
@@ -35,6 +36,7 @@ mod tests;
 mod text_tests;
 
 pub use arrow::ArrowTool;
+pub use counter::CounterTool;
 pub use geometry::RDP_EPSILON;
 pub use path::{MARKER_ALPHA, MarkerTool, PencilTool};
 pub use pixelate::PixelateTool;
@@ -69,4 +71,9 @@ pub fn register_pixelate_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Blur, || {
         Box::new(PixelateTool::new(crate::editor::EffectKind::Blur))
     });
+}
+
+/// Registers the todo-24 circle-count tool on `registry`.
+pub fn register_counter_tool(registry: &mut ToolRegistry) {
+    registry.register(ToolKind::Counter, || Box::new(CounterTool::default()));
 }

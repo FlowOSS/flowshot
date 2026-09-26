@@ -93,9 +93,9 @@ pub use size::{
 };
 pub use tool::{EditKey, EditorContext, EditorTools, FramePixels, Tool, ToolCursor};
 pub use tools::{
-    ArrowTool, EllipseTool, InvertTool, LineTool, MARKER_ALPHA, MarkerTool, PencilTool,
-    PixelateTool, RDP_EPSILON, RectTool, TEXT_PADDING, TextTool, register_pixelate_tools,
-    register_shape_tools, register_text_tool,
+    ArrowTool, CounterTool, EllipseTool, InvertTool, LineTool, MARKER_ALPHA, MarkerTool,
+    PencilTool, PixelateTool, RDP_EPSILON, RectTool, TEXT_PADDING, TextTool, register_counter_tool,
+    register_pixelate_tools, register_shape_tools, register_text_tool,
 };
 pub use types::{EditorEffect, EditorEnv, EditorUpdate};
 pub use undo::{EditorUndo, Snapshot};

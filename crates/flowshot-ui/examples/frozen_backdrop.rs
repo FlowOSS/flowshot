@@ -116,20 +116,27 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
     let mut runtime = runtime?;
-    // Todo 21/22/23: the production tools (the todo-35 binary layer will do
+    // Todo 21/22/23/24: the production tools (the todo-35 binary layer will do
     // the same registration).
     flowshot_ui::register_shape_tools(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_text_tool(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_pixelate_tools(runtime.core_mut().editor_mut().registry_mut());
+    flowshot_ui::register_counter_tool(runtime.core_mut().editor_mut().registry_mut());
     // Todo 23: the destructive tools bake from the installed editor frame
     // (the pristine read side); the blur variant ships unbound (no F12 key)
-    // so QA rebinds it to `v`.
+    // so QA rebinds it to `v`. Todo 24: the counter tool ships unbound so QA
+    // rebinds it to `n`.
     runtime.core_mut().install_frame(editor_frame);
     runtime
         .core_mut()
         .editor_mut()
         .shortcuts_mut()
         .rebind(ToolKind::Blur, Some(winit::keyboard::KeyCode::KeyV));
+    runtime
+        .core_mut()
+        .editor_mut()
+        .shortcuts_mut()
+        .rebind(ToolKind::Counter, Some(winit::keyboard::KeyCode::KeyN));
     // Todo 25: z-order ships panel-driven with NO default keys (plan); QA
     // rebinds raise/lower to k/j (both off the F12 map) - the blur-rebind
     // precedent. Object move needs no binding: press-drag-release on a
@@ -617,6 +624,7 @@ fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
         "s" => KeyCode::KeyS,
         "r" => KeyCode::KeyR,
         "m" => KeyCode::KeyM,
+        "n" => KeyCode::KeyN,
         "t" => KeyCode::KeyT,
         "b" => KeyCode::KeyB,
         "i" => KeyCode::KeyI,

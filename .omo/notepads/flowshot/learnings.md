@@ -932,3 +932,54 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - chrome split: state.rs (137 facade) + state/input.rs (238), side_panel.rs (136 layout) + side_panel/paint.rs (213) — the child-module pattern (events/pointer precedent) keeps every file under 250; input/route/paint/app sit in the 200-250 WARNING BAND (flagged in evidence; split before adding lines).
 - f32_from_f64(output.scale) is the clippy-clean scale cast — the chrome mod-level allow covers cast_precision_loss but NOT cast_possible_truncation (f64->f32 fires both).
 - paint derives text positions from the LAYOUT RECTS (never a second cursor walk) — layout and paint cannot drift; the Labels struct carries the one text-style derivation.
+
+## Todo 24: Circle-count tool (flowshot-ui) — 2026-09-26
+
+**What landed**
+- `counter.rs` (NEW, 115 LOC): `CounterTool` implementing the `Tool` trait for numbered step bubbles. Click placement via `draw_start`/`draw_end` lifecycle (no drag required); commits `CounterObject` with `count = 0` (scene auto-numbers with max+1 rule, todo 4). Radius from `[tools.counter].size` slot: `size * 8 + 8` (F27 `drawCircleCounterSize` semantics: base 8px + 8px per unit). Outline from `[tools.counter].outline` config (read at commit time; scene's paint draws outline unconditionally). Color from `[editor].draw_color`. Cursor-following preview paints a `CounterObject` at cursor with next count number. Wheel handler returns `false` (framework adjusts tool size; wheel-on-bubble hit-testing deferred to editor-level).
+- `tools/mod.rs`: added `mod counter`, `pub use CounterTool`, `register_counter_tool(registry)` function (idempotent).
+- `editor.rs`: exported `CounterTool` and `register_counter_tool` in public API.
+- 6 unit tests green: auto-increment sequence, delete-middle renumber, undo-restore max+1, outline toggle, size slot dispatch, delete non-counter leaves counts untouched.
+
+**Key patterns that worked**
+- Click-placement via draw lifecycle (not `pressed` returning `true`): the framework's `pressed` returning `true` does NOT open a draw session (`self.drawing = false`), so the release never calls `draw_end`. Using `draw_start`/`draw_end` with zero-length drag is the correct pattern for click-placement tools. The drag distance is ignored; the counter is placed at the press position.
+- Type conversions: `f32_from_f64(press.x.0)` / `f32_from_u32(size)` from `crate::render` (no bare `as` casts; clippy-clean).
+- Test seam: `register_shape_tools(ed.registry_mut())` in the `delete_non_counter_leaves_counts_untouched` test to register the Line tool before switching to it.
+
+**Gotchas hit**
+- `f32: From<u32>` does NOT exist (same family as the `f32: From<i32>` geometry gotcha) — use `f32_from_u32(size)` from `crate::render`.
+- `LogicalPoint.x` is a `Logical` newtype wrapping `f64`, not a raw `f64` — access via `.x.0` then convert with `f32_from_f64`.
+- `LogicalRect::from_raw` takes `f64` arguments, not `Logical` — pass `p.x.0 - r` (raw f64), not `p.x - r` (Logical).
+- Outline flag not persisted on `CounterObject`: the scene's `CounterObject` does not carry an outline field yet; the paint logic draws an outline unconditionally. The outline flag is read from config at commit time but not stored on the object. A future todo may add an `outline` field to `CounterObject` for per-object control.
+- Wheel-on-bubble deferred: the tool's `wheel` method returns `false` (framework adjusts tool size). Wheel-while-hovering-a-bubble requires hit-testing the cursor against committed counter objects; the framework does not pass the scene to the tool's `wheel` method. This is handled at the editor level (todo 24: "wheel while hovering a bubble = increment/decrement ITS number").
+
+**Verification**: 6 unit tests green, `cargo test -p flowshot-ui` 441 tests green, `cargo clippy -p flowshot-ui --all-targets -- -D warnings` clean, `cargo fmt --check` clean.
+
+**Design decisions recorded**
+- Radius formula `size * 8 + 8`: F27 `drawCircleCounterSize` semantics (base radius 8px + 8px per size unit). size=1 → radius=16 (diameter 32), size=2 → radius=24 (diameter 48), etc. Matches Flameshot's counter bubble sizing.
+- Click placement via draw lifecycle: the framework's `pressed` returning `true` does NOT open a draw session, so the release never calls `draw_end`. Using `draw_start`/`draw_end` with zero-length drag is the correct pattern.
+- Outline flag read from config at commit time, not persisted on `CounterObject`: the scene's paint draws the outline unconditionally. A future todo may add an `outline` field for per-object control.
+- Wheel-on-bubble deferred to editor-level: the tool's `wheel` returns `false`; hit-testing requires scene access the tool doesn't have.
+
+## Todo 24 Live QA: frozen_backdrop harness + stdin injector — 2026-09-26
+
+**What landed**
+- Live QA via `frozen_backdrop` harness with stdin injector (test-drive feature): placed 3 counters, deleted #2, verified renumbering [1,2,3] -> [1,2], undo restored [1,2,3].
+- Harness registration: added `register_counter_tool` call + rebind to 'n' key (counter ships unbound, blur->'v' precedent).
+- Key table: added "n" => KeyCode::KeyN to the injector's key-name table.
+- Export: added `register_counter_tool` to `lib.rs` public API (was missing from crate root export).
+
+**Key patterns that worked**
+- Stdin injector via pipe: `(sleep 3; echo "press 0 n"; ...) | cargo run --example frozen_backdrop --features test-drive -- ...` — the pipe approach is simpler than FIFO and works reliably for self-terminating QA.
+- Tool deactivation before selection: to select an existing object, deactivate the active tool first (press Escape), then click on the object. With the counter tool active, clicking places a new counter instead of selecting.
+- Grim oracle: `grim -o HDMI-A-1 /tmp/screenshot.png` captures a single output; the montage via `montage img1 img2 img3 -tile 3x1 -geometry +10+10 output.png` creates a side-by-side comparison.
+
+**Gotchas hit**
+- Counter tool ships unbound: must rebind in the harness for QA (like blur->'v'). Added rebind to 'n' (off the F12 map).
+- `register_counter_tool` not exported from crate root: the function was defined in `editor/tools/mod.rs` and re-exported in `editor.rs`, but not in `lib.rs`. Added to the `pub use editor::{...}` block.
+- Clicking with active tool places new object: to select an existing counter, deactivate the tool first (Escape), then click. The tool's `draw_start`/`draw_end` lifecycle commits a new object on every click.
+- Undo restores exact scene state: the undo stack stores full (before, after) snapshots, so undoing a delete restores the exact counter numbers (not max+1). The max+1 rule applies to NEW counters added after a delete, not to undo restores.
+
+**Verification**: live QA green (3 counters placed, delete #2 -> renumber [1,2], undo -> restore [1,2,3]); all unit tests green (441 tests); clippy clean; fmt clean.
+
+**Evidence**: `.omo/evidence/task-24-flowshot.png` (3-panel montage: 3 counters | after delete | after undo); `.omo/evidence/task-24-flowshot.txt` (updated with live QA log + pixel asserts).

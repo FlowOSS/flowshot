@@ -316,7 +316,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = trio diff; failure = undo at empty = silent no-op (no crash, log). Evidence <attemptDir>/task-25-flowshot.png
   Commit: Y | feat(editor): undo/redo + z-order wiring
   Recommended task executor category: unspecified-low - integration over finished core ops.
-- [ ] 26. Editor: toolbar + color wheel + side panel
+- [x] 26. Editor: toolbar + color wheel + side panel
   What to do: floating toolbar anchored to selection (below if fits else above - flips, F27-style; repositions live on resize/move), button order = config `buttons` list (default order = F12: pencil,line,arrow,selection,rect,circle,marker,text,circlecount,pixelate,invert,move,undo,redo,copy,save,upload,open-app,pin,exit), icons from todo 19 atlas, tooltips 400ms, reveal animation per motion tokens (D8d); color wheel popover (right-click or color button): circular palette at equal angles, selected = 6px ring, radius = 3*count + buttonBaseSize, userColors config palette + rainbow slot for custom pick (opens eyedropper flow todo 27), drawColor persists to TOML on change (F27); side panel (Space toggles, showSidePanelButton config): per-tool options (size sliders, arrow style, reverseArrow, font styling for text, counter outline - NO insecure-pixelate toggle, mode dropped per Amendment #3) + layer list (todo 25 model); panel slides per motion tokens. Must NOT: no action implementations behind buttons (copy/save/etc. wired in W5 todos via callback traits).
   Parallelization: Wave 4 | Blocked by: 19,20,25 | Blocks: 38,41
   References: draft F27 colorpicker spec (radius formula, 6px ring, userColors/rainbow), F12 buttons list + panel, D8(d) motion.
