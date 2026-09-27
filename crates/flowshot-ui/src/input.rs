@@ -188,9 +188,21 @@ pub enum Action {
     /// The selection was copied (Ctrl+C or a configured double-click): the
     /// binary layer runs the clipboard pipeline (todos 28/35).
     Copy,
+    /// Toolbar save: the binary layer saves the export to disk (todo 38).
+    Save,
+    /// Toolbar pin: the binary layer pins the export to the screen (todo 38).
+    Pin,
+    /// Toolbar upload: the binary layer uploads the export (todo 38).
+    Upload,
+    /// Toolbar open-app: the binary layer saves + opens the export with
+    /// another application (todo 38).
+    OpenWith,
     /// Right-click: open the color wheel at the shared cursor position
     /// (todo 26 seam).
     ColorWheel,
+    /// The eyedropper sampled a color (the funnel already delivered it to
+    /// the color-pick sink; the shell arm is a no-op).
+    ColorPicked,
 }
 
 /// The outcome of routing one input event.

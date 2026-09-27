@@ -155,6 +155,16 @@ impl OverlayRuntime {
         &mut self.app.core
     }
 
+    /// Registers the binary-layer window-attributes hook (Wayland
+    /// `app_id=flowshot` via `WindowAttributesExtWayland`, applied by the
+    /// daemon's session child - the todo-13 deviation-A queue item; the
+    /// `pins::WindowCustomizer` precedent keeps this crate platform-pure).
+    #[must_use]
+    pub fn with_window_customizer(mut self, customizer: crate::pins::WindowCustomizer) -> Self {
+        self.app.customizer = Some(customizer);
+        self
+    }
+
     /// The cross-thread control handle (exit; `test-drive` injection).
     #[must_use]
     pub const fn handle(&self) -> &OverlayHandle {

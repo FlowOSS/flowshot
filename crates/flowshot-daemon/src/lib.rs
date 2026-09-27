@@ -64,6 +64,7 @@ pub mod bus;
 pub mod command;
 pub mod daemon;
 pub mod error;
+pub mod execute;
 pub mod instance;
 pub mod lifecycle;
 pub mod notify;

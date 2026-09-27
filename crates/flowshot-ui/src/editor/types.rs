@@ -31,6 +31,9 @@ pub enum EditorEffect {
     /// Right-click: open the color wheel at the cursor (todo 26 seam - the
     /// F27 P2 priority, emitted by the editor since todo 20).
     ColorWheel,
+    /// The eyedropper sampled a color (todo 27/38 seam - the funnel
+    /// delivers it to the standalone color-pick sink).
+    ColorPicked(flowshot_core::scene::Color),
 }
 
 impl EditorEffect {
@@ -39,6 +42,7 @@ impl EditorEffect {
     pub const fn token(self) -> &'static str {
         match self {
             Self::ColorWheel => "color-wheel",
+            Self::ColorPicked(_) => "color-picked",
         }
     }
 }
@@ -47,6 +51,7 @@ impl From<EditorEffect> for Action {
     fn from(effect: EditorEffect) -> Self {
         match effect {
             EditorEffect::ColorWheel => Self::ColorWheel,
+            EditorEffect::ColorPicked(_) => Self::ColorPicked,
         }
     }
 }

@@ -30,8 +30,11 @@ pub(crate) fn stub_guard() -> MutexGuard<'static, ()> {
 }
 
 /// Every test-side wire await is bounded: a stall becomes a loud named
-/// failure instead of hanging the suite.
-pub(crate) const CALL_TIMEOUT: Duration = Duration::from_secs(15);
+/// failure instead of hanging the suite. 45 s since todo 38: the 15 s
+/// budget flaked under full-workspace parallel-test contention (observed
+/// 15.21 s suite run, green standalone - the issues.md 2026-09-26 kwin
+/// stub-deadline family; bumping test budgets is the recorded remedy).
+pub(crate) const CALL_TIMEOUT: Duration = Duration::from_secs(45);
 
 /// Awaits `future` under [`CALL_TIMEOUT`], panicking with `what` on expiry.
 pub(crate) async fn bounded<T>(what: &str, future: impl Future<Output = T>) -> T {

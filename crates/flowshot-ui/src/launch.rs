@@ -246,14 +246,23 @@ impl OverlayCore {
     }
 
     /// The funnel's exit hook (region memory): when `actions` carries a
-    /// capture-completing effect ([`Action::Accept`] or [`Action::Copy`]),
+    /// capture-completing effect ([`Action::Accept`], [`Action::Copy`], or
+    /// one of the todo-38 toolbar completions Save/Pin/Upload/OpenWith),
     /// persists the current selection through the [`RegionSink`] (gated on
     /// `[capture].save_last_region`) and disarms the instant accept - any
     /// accept completes the session, so a later release must not re-fire.
     pub(crate) fn launch_persist(&mut self, actions: &[Action]) {
-        let captured = actions
-            .iter()
-            .any(|action| matches!(action, Action::Accept | Action::Copy));
+        let captured = actions.iter().any(|action| {
+            matches!(
+                action,
+                Action::Accept
+                    | Action::Copy
+                    | Action::Save
+                    | Action::Pin
+                    | Action::Upload
+                    | Action::OpenWith
+            )
+        });
         if !captured {
             return;
         }

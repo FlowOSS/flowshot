@@ -52,6 +52,7 @@ use crate::render::{
 use plan::{Entry, EntryState, PlannedCursor, plan_cursor, plan_entry};
 use scene::{WindowScene, local_physical_rect, window_crop};
 
+pub use pixels::{PreparedTexture, prepare_output_texture};
 pub use types::{BackdropOptions, CursorSprite, FrozenCapture, MissingFrame, PlacedCursor};
 
 /// Base of the per-output frozen-frame texture ids (consumer-issued scheme).

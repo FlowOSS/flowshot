@@ -1,0 +1,1220 @@
+# FlowShot parity matrix (plan todo 38, Metis #18).
+#
+# Enumerates EVERY draft-F12 inventory item (.omo/drafts/flowshot.md F12,
+# Flameshot lane-1 commit 2d478061) with exactly one disposition per row:
+#   - implemented_by (todo numbers) + verified_by (evidence paths and/or
+#     `test:<filter>` tokens run by the workspace suite), OR
+#   - out = "<REASON>" (e.g. DROPPED(user-amendment-3): ...), OR
+#   - capability_row = "<id>" for CLI-domain rows, REFERENCING
+#     crates/flowshot-cli/tests/cli_capability_map.toml instead of
+#     duplicating dispositions (Momus r4 SIMPLIFY: single source of truth
+#     per domain).
+# ZERO unmapped rows; the validator (crates/flowshot-cli/tests/
+# parity_matrix.rs) runs in CI via `cargo test --workspace`.
+#
+# Row grammar: id (unique, kebab-case), domain, item (F12 wording), then
+# exactly one disposition shape. verified_by entries that look like repo
+# paths are existence-checked by the validator.
+
+[meta]
+plan = ".omo/plans/flowshot.md"
+draft = ".omo/drafts/flowshot.md"
+cli_capability_map = "crates/flowshot-cli/tests/cli_capability_map.toml"
+type_enum_source = "flameshot src/tools/capturetool.h @ 2d478061 (TYPE_* 0..24, 7 unassigned)"
+
+# =====================================================================
+# CLI domain: REFERENCES into cli_capability_map.toml (43 rows: verbs,
+# flags, modes incl. the 11 capture modes, daemon residency).
+# =====================================================================
+
+[[row]]
+id = "cli-verb-gui"
+domain = "cli"
+item = "CLI verb gui (legacy)"
+capability_row = "verb-gui"
+
+[[row]]
+id = "cli-verb-full"
+domain = "cli"
+item = "CLI verb full (legacy)"
+capability_row = "verb-full"
+
+[[row]]
+id = "cli-verb-screen"
+domain = "cli"
+item = "CLI verb screen (legacy)"
+capability_row = "verb-screen"
+
+[[row]]
+id = "cli-verb-launcher"
+domain = "cli"
+item = "CLI verb launcher (legacy)"
+capability_row = "verb-launcher"
+
+[[row]]
+id = "cli-verb-config"
+domain = "cli"
+item = "CLI verb config (legacy)"
+capability_row = "verb-config"
+
+[[row]]
+id = "cli-flag-path"
+domain = "cli"
+item = "flag -p/--path"
+capability_row = "flag-path"
+
+[[row]]
+id = "cli-flag-clipboard"
+domain = "cli"
+item = "flag -c/--clipboard"
+capability_row = "flag-clipboard"
+
+[[row]]
+id = "cli-flag-delay"
+domain = "cli"
+item = "flag -d/--delay"
+capability_row = "flag-delay"
+
+[[row]]
+id = "cli-flag-region"
+domain = "cli"
+item = "flag -r/--region"
+capability_row = "flag-region"
+
+[[row]]
+id = "cli-flag-last-region"
+domain = "cli"
+item = "flag --last-region (repeat last)"
+capability_row = "flag-last-region"
+
+[[row]]
+id = "cli-flag-raw"
+domain = "cli"
+item = "flag --raw (stdout PNG)"
+capability_row = "flag-raw"
+
+[[row]]
+id = "cli-flag-print-geometry"
+domain = "cli"
+item = "flag --print-geometry"
+capability_row = "flag-print-geometry"
+
+[[row]]
+id = "cli-flag-upload"
+domain = "cli"
+item = "flag --upload (legacy -u)"
+capability_row = "flag-upload"
+
+[[row]]
+id = "cli-flag-pin"
+domain = "cli"
+item = "flag --pin"
+capability_row = "flag-pin"
+
+[[row]]
+id = "cli-flag-accept-on-select"
+domain = "cli"
+item = "flag --instant (accept on select, legacy -s)"
+capability_row = "flag-accept-on-select"
+
+[[row]]
+id = "cli-flag-screen-number"
+domain = "cli"
+item = "screen number/connector argument"
+capability_row = "flag-screen-number"
+
+[[row]]
+id = "cli-flag-config-autostart"
+domain = "cli"
+item = "flag --autostart (config surface)"
+capability_row = "flag-config-autostart"
+
+[[row]]
+id = "cli-flag-config-notifications"
+domain = "cli"
+item = "notifications config surface"
+capability_row = "flag-config-notifications"
+
+[[row]]
+id = "cli-flag-config-filename"
+domain = "cli"
+item = "flag --filename (pattern)"
+capability_row = "flag-config-filename"
+
+[[row]]
+id = "cli-flag-config-trayicon"
+domain = "cli"
+item = "flag --trayicon (config surface)"
+capability_row = "flag-config-trayicon"
+
+[[row]]
+id = "cli-flag-config-showhelp"
+domain = "cli"
+item = "flag --check/--help surface"
+capability_row = "flag-config-showhelp"
+
+[[row]]
+id = "cli-flag-config-maincolor"
+domain = "cli"
+item = "flag --maincolor"
+capability_row = "flag-config-maincolor"
+
+[[row]]
+id = "cli-flag-config-contrastcolor"
+domain = "cli"
+item = "flag --contrastcolor"
+capability_row = "flag-config-contrastcolor"
+
+[[row]]
+id = "cli-flag-config-check"
+domain = "cli"
+item = "flag --check"
+capability_row = "flag-config-check"
+
+[[row]]
+id = "cli-flag-edit-inversion"
+domain = "cli"
+item = "flag -e/--edit-inversion (legacy)"
+capability_row = "flag-edit-inversion"
+
+[[row]]
+id = "cli-mode-interactive-region"
+domain = "cli"
+item = "capture mode: interactive region"
+capability_row = "mode-interactive-region"
+
+[[row]]
+id = "cli-mode-full-desktop"
+domain = "cli"
+item = "capture mode: full desktop"
+capability_row = "mode-full-desktop"
+
+[[row]]
+id = "cli-mode-screen-index"
+domain = "cli"
+item = "capture mode: screen by index"
+capability_row = "mode-screen-index"
+
+[[row]]
+id = "cli-mode-active-monitor-at-cursor"
+domain = "cli"
+item = "capture mode: active monitor at cursor (captureActiveMonitor behavior)"
+capability_row = "mode-active-monitor-at-cursor"
+
+[[row]]
+id = "cli-mode-screen-connector"
+domain = "cli"
+item = "capture mode: screen by connector"
+capability_row = "mode-screen-connector"
+
+[[row]]
+id = "cli-mode-delayed-capture"
+domain = "cli"
+item = "capture mode: delayed"
+capability_row = "mode-delayed-capture"
+
+[[row]]
+id = "cli-mode-preselect-geometry"
+domain = "cli"
+item = "capture mode: preselected geometry WxH+X+Y"
+capability_row = "mode-preselect-geometry"
+
+[[row]]
+id = "cli-mode-preselect-centered-at-cursor"
+domain = "cli"
+item = "capture mode: preselect WxH centered at cursor"
+capability_row = "mode-preselect-centered-at-cursor"
+
+[[row]]
+id = "cli-mode-preselect-at-cursor"
+domain = "cli"
+item = "capture mode: preselect at-cursor (output under cursor)"
+capability_row = "mode-preselect-at-cursor"
+
+[[row]]
+id = "cli-mode-repeat-last-region"
+domain = "cli"
+item = "capture mode: repeat last region"
+capability_row = "mode-repeat-last-region"
+
+[[row]]
+id = "cli-mode-manual-coordinates"
+domain = "cli"
+item = "capture mode: manual coordinates (launcher dialog)"
+capability_row = "mode-manual-coordinates"
+
+[[row]]
+id = "cli-mode-instant-accept"
+domain = "cli"
+item = "capture mode: instant accept-on-select"
+capability_row = "mode-instant-accept"
+
+[[row]]
+id = "cli-mode-hide-cursor"
+domain = "cli"
+item = "capture mode modifier: hide cursor"
+capability_row = "mode-hide-cursor"
+
+[[row]]
+id = "cli-mode-skip-editor"
+domain = "cli"
+item = "capture mode modifier: skip editor (--no-edit)"
+capability_row = "mode-skip-editor"
+
+[[row]]
+id = "cli-mode-pin-file"
+domain = "cli"
+item = "pin [FILE] mode"
+capability_row = "mode-pin-file"
+
+[[row]]
+id = "cli-mode-color-picker"
+domain = "cli"
+item = "color picker mode (TYPE_GRAB_COLOR standalone)"
+capability_row = "mode-color-picker"
+
+[[row]]
+id = "cli-mode-one-shot"
+domain = "cli"
+item = "one-shot (--no-daemon) execution"
+capability_row = "mode-one-shot"
+
+[[row]]
+id = "cli-mode-daemon-residency"
+domain = "cli"
+item = "daemon residency / auto-spawn"
+capability_row = "mode-daemon-residency"
+
+# =====================================================================
+# F12 tool types: capturetool.h TYPE_* 0..24 (7 unassigned upstream;
+# 13 IMAGEUPLOADER is ENABLE_IMGUR-gated upstream, always-on here).
+# =====================================================================
+
+[[row]]
+id = "type-00-pencil"
+domain = "tool"
+item = "TYPE_PENCIL = 0 (freehand)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "type-01-drawer"
+domain = "tool"
+item = "TYPE_DRAWER = 1 (line)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "type-02-arrow"
+domain = "tool"
+item = "TYPE_ARROW = 2 (straight/curved shaft, reversible head)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui tools::"]
+
+[[row]]
+id = "type-03-selection"
+domain = "tool"
+item = "TYPE_SELECTION = 3 (object selection tool)"
+implemented_by = [21, 25]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "type-04-rectangle"
+domain = "tool"
+item = "TYPE_RECTANGLE = 4 (corner_radius config)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui tools::"]
+
+[[row]]
+id = "type-05-circle"
+domain = "tool"
+item = "TYPE_CIRCLE = 5 (ellipse)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui tools::"]
+
+[[row]]
+id = "type-06-marker"
+domain = "tool"
+item = "TYPE_MARKER = 6 (highlighter)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui tools::"]
+
+[[row]]
+id = "type-08-moveselection"
+domain = "tool"
+item = "TYPE_MOVESELECTION = 8 (move selection + contained objects, one undo unit)"
+implemented_by = [27]
+verified_by = [".omo/evidence/task-27-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "type-09-undo"
+domain = "tool"
+item = "TYPE_UNDO = 9 (journal, limit 100 clamp [0,999])"
+implemented_by = [25, 26]
+verified_by = [".omo/evidence/task-25-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "type-10-copy"
+domain = "tool"
+item = "TYPE_COPY = 10 (clipboard completion)"
+implemented_by = [16, 28, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow01-run.log", ".omo/evidence/task-28-flowshot.txt"]
+
+[[row]]
+id = "type-11-save"
+domain = "tool"
+item = "TYPE_SAVE = 11 (save completion)"
+implemented_by = [29, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow02-run.log", ".omo/evidence/task-29-flowshot.txt"]
+
+[[row]]
+id = "type-12-exit"
+domain = "tool"
+item = "TYPE_EXIT = 12 (toolbar exit + Esc cascade close)"
+implemented_by = [16, 26, 38]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui chrome::"]
+
+[[row]]
+id = "type-13-imageuploader"
+domain = "tool"
+item = "TYPE_IMAGEUPLOADER = 13 (upload completion; ENABLE_IMGUR-gated upstream, always-on here)"
+implemented_by = [31, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow09-run.log", ".omo/evidence/task-31-flowshot.txt"]
+
+[[row]]
+id = "type-14-open-app"
+domain = "tool"
+item = "TYPE_OPEN_APP = 14 (open-with completion)"
+implemented_by = [29, 38]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-actions export::"]
+
+[[row]]
+id = "type-15-pixelate"
+domain = "tool"
+item = "TYPE_PIXELATE = 15 (SECURE fringe-sampling redaction)"
+implemented_by = [23]
+verified_by = [".omo/evidence/task-23-flowshot.txt", "test:flowshot-ui pixelate"]
+
+[[row]]
+id = "type-16-redo"
+domain = "tool"
+item = "TYPE_REDO = 16"
+implemented_by = [25, 26]
+verified_by = [".omo/evidence/task-25-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "type-17-pin"
+domain = "tool"
+item = "TYPE_PIN = 17 (pin completion -> pin window)"
+implemented_by = [30, 38]
+verified_by = [".omo/evidence/task-30-flowshot.txt", ".omo/evidence/task-38-flowshot/flows/flow08-run.log"]
+
+[[row]]
+id = "type-18-text"
+domain = "tool"
+item = "TYPE_TEXT = 18 (in-scene edit, real IME, dbl-click re-edit)"
+implemented_by = [22]
+verified_by = [".omo/evidence/task-22-flowshot.txt", "test:flowshot-ui text"]
+
+[[row]]
+id = "type-19-circlecount"
+domain = "tool"
+item = "TYPE_CIRCLECOUNT = 19 (numbered bubbles + renumbering)"
+implemented_by = [24, 4]
+verified_by = [".omo/evidence/task-24-flowshot.txt", "test:flowshot-core scene::"]
+
+[[row]]
+id = "type-20-sizeincrease"
+domain = "tool"
+item = "TYPE_SIZEINCREASE = 20 (wheel-up / digit size adjusters, clip [1,50])"
+implemented_by = [20]
+verified_by = [".omo/evidence/task-20-flowshot.txt", "test:flowshot-ui size"]
+
+[[row]]
+id = "type-21-sizedecrease"
+domain = "tool"
+item = "TYPE_SIZEDECREASE = 21 (wheel-down size adjuster)"
+implemented_by = [20]
+verified_by = [".omo/evidence/task-20-flowshot.txt", "test:flowshot-ui size"]
+
+[[row]]
+id = "type-22-invert"
+domain = "tool"
+item = "TYPE_INVERT = 22 (color inversion)"
+implemented_by = [21]
+verified_by = [".omo/evidence/task-21-flowshot.txt", "test:flowshot-ui invert"]
+
+[[row]]
+id = "type-23-accept"
+domain = "tool"
+item = "TYPE_ACCEPT = 23 (Enter accept completion)"
+implemented_by = [16, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow05-run.log", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "type-24-cancel"
+domain = "tool"
+item = "TYPE_CANCEL = 24 (cancel/close, exit 3 one-shot)"
+implemented_by = [16, 35, 38]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-cli exit"]
+
+# =====================================================================
+# F12 editor features beyond the TYPE_* enum.
+# =====================================================================
+
+[[row]]
+id = "tool-blur-variant"
+domain = "editor-feature"
+item = "blur tool (F27: pixelate's radius variant, rendered twice)"
+implemented_by = [23]
+verified_by = [".omo/evidence/task-23-flowshot.txt", "test:flowshot-ui blur"]
+
+[[row]]
+id = "tool-eyedropper"
+domain = "editor-feature"
+item = "colorpicker/eyedropper (in-editor + standalone `flowshot color`)"
+implemented_by = [27, 38]
+verified_by = [".omo/evidence/task-27-flowshot.txt", "test:flowshot-daemon execute::"]
+
+[[row]]
+id = "feature-color-wheel"
+domain = "editor-feature"
+item = "right-click circular color wheel (equal angles, 6px selected ring, rainbow slot, drawColor persists to TOML)"
+implemented_by = [26, 38]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-ui chrome::"]
+
+[[row]]
+id = "feature-magnifier-square"
+domain = "editor-feature"
+item = "magnifier variant: square (17x17 sample, 10x zoom, edge flip)"
+implemented_by = [17]
+verified_by = [".omo/evidence/task-17-flowshot.txt", "test:flowshot-ui magnifier"]
+
+[[row]]
+id = "feature-magnifier-circle"
+domain = "editor-feature"
+item = "magnifier variant: circle ([editor].magnifier_shape)"
+implemented_by = [17]
+verified_by = [".omo/evidence/task-17-flowshot.txt", "test:flowshot-ui magnifier"]
+
+[[row]]
+id = "feature-magnifier-grid-hex"
+domain = "editor-feature"
+item = "magnifier pixel grid + hex/RGB readout (FlowShot ADDITION, F27 BORROW+ADD)"
+implemented_by = [17]
+verified_by = [".omo/evidence/task-17-flowshot.png", "test:flowshot-ui magnifier"]
+
+[[row]]
+id = "feature-geometry-hud-positions"
+domain = "editor-feature"
+item = "geometry HUD, positions 0-5 ([editor].hud_position) + hide time"
+implemented_by = [16, 2]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "feature-grid"
+domain = "editor-feature"
+item = "snapping grid ([editor].grid, toggle key)"
+implemented_by = [27]
+verified_by = [".omo/evidence/task-27-flowshot.txt", "test:flowshot-ui grid"]
+
+[[row]]
+id = "feature-z-order"
+domain = "editor-feature"
+item = "z-order raise/lower/reorder (panel layer rows, drag-reorder = ONE undo unit)"
+implemented_by = [25, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-ui zorder"]
+
+[[row]]
+id = "feature-wheel-thickness"
+domain = "editor-feature"
+item = "wheel tool-size adjust (threshold 60, per-tool size dispatch)"
+implemented_by = [20]
+verified_by = [".omo/evidence/task-20-flowshot.txt", "test:flowshot-ui size"]
+
+[[row]]
+id = "mouse-map-8-handle-resize"
+domain = "mouse-map"
+item = "8-handle selection resize (corners>edges>center hit priority, grip = buttonBaseSize*0.6/2)"
+implemented_by = [16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "mouse-map-ctrl-constrain"
+domain = "mouse-map"
+item = "Ctrl aspect-constrained resize"
+implemented_by = [16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "mouse-map-shift-mirror"
+domain = "mouse-map"
+item = "Shift mirror resize (topLeft += dTL - dBR)"
+implemented_by = [16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "mouse-map-dblclick"
+domain = "mouse-map"
+item = "double-click: text re-edit / configurable copy ([editor].double_click_copies)"
+implemented_by = [16, 22]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "mouse-map-rightclick-wheel"
+domain = "mouse-map"
+item = "right-click opens the color wheel (F27 P2 priority)"
+implemented_by = [20, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-ui chrome::"]
+
+[[row]]
+id = "mouse-map-drag-threshold"
+domain = "mouse-map"
+item = "3px manhattan drag-create threshold; 10x10 minimum (BORROW-MODIFIED from 1x1)"
+implemented_by = [16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "key-map-nudge-resize"
+domain = "keyboard-map"
+item = "arrows move 1px / Shift+arrows resize edge / Ctrl+Shift symmetric (CODE-WINS 1px per F27)"
+implemented_by = [16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "key-map-digits-size"
+domain = "keyboard-map"
+item = "digit keys accumulate tool size, clipped [1,50]"
+implemented_by = [20]
+verified_by = [".omo/evidence/task-20-flowshot.txt", "test:flowshot-ui keys"]
+
+[[row]]
+id = "key-map-space-panel"
+domain = "keyboard-map"
+item = "Space toggles the side panel"
+implemented_by = [26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-ui chrome::"]
+
+[[row]]
+id = "key-map-select-all"
+domain = "keyboard-map"
+item = "Ctrl+A select-all"
+implemented_by = [16]
+verified_by = [".omo/evidence/task-16-flowshot-selectall.png", "test:flowshot-ui selection::"]
+
+[[row]]
+id = "key-map-delete"
+domain = "keyboard-map"
+item = "Delete removes the selected object / tool widget (Esc cascade stage)"
+implemented_by = [16, 20]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "key-map-esc-cascade"
+domain = "keyboard-map"
+item = "six-stage Esc cascade (uncheck tool -> deselect -> panel -> widget -> picker -> close); Ctrl+Q immediate"
+implemented_by = [16, 20, 26]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-ui cascade"]
+
+# =====================================================================
+# F12 post-capture domain.
+# =====================================================================
+
+[[row]]
+id = "post-clipboard"
+domain = "post-capture"
+item = "clipboard copy (daemon-owned data-control offer; PNG + JPEG per [save].clipboard_format; GNOME keep-alive)"
+implemented_by = [28, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow01-run.log", ".omo/evidence/task-28-flowshot.txt"]
+
+[[row]]
+id = "post-save-strftime"
+domain = "post-capture"
+item = "save with strftime filename pattern (%F_%H-%M default) + sanitization"
+implemented_by = [29]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-actions pattern"]
+
+[[row]]
+id = "post-save-formats"
+domain = "post-capture"
+item = "save formats png/jpg/webp + jpeg_quality"
+implemented_by = [29]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-actions encode"]
+
+[[row]]
+id = "post-save-collision"
+domain = "post-capture"
+item = "collision numeration (_1, _2, ...)"
+implemented_by = [29, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow02-run.log", "test:flowshot-actions path"]
+
+[[row]]
+id = "post-pin-drag"
+domain = "post-capture"
+item = "pin drag (WM-delegated drag_window, F27 BORROW)"
+implemented_by = [30]
+verified_by = [".omo/evidence/task-30-flowshot.txt", "test:flowshot-ui pins::"]
+
+[[row]]
+id = "post-pin-zoom"
+domain = "post-capture"
+item = "pin wheel zoom STEP 0.03 accumulate-then-commit ANCHORED AT CURSOR (Flameshot center-zoom AVOIDED)"
+implemented_by = [30]
+verified_by = [".omo/evidence/task-30-flowshot.txt", "test:flowshot-ui zoom"]
+
+[[row]]
+id = "post-pin-rotate"
+domain = "post-capture"
+item = "pin rotate 90 degrees (buffer transform, menu + bindable)"
+implemented_by = [30]
+verified_by = [".omo/evidence/task-30-flowshot.txt", "test:flowshot-ui pins::"]
+
+[[row]]
+id = "post-pin-opacity"
+domain = "post-capture"
+item = "pin opacity keys 0-9 = 1.0..0.1 + menu +/-0.1"
+implemented_by = [30]
+verified_by = [".omo/evidence/task-30-flowshot.txt", "test:flowshot-ui pins::"]
+
+[[row]]
+id = "post-pin-menu"
+domain = "post-capture"
+item = "pin right-click context menu (copy/save/rotate/opacity/close) wired to the actions crate"
+implemented_by = [30, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow08-run.log", "test:flowshot-ui menu"]
+
+[[row]]
+id = "post-imgur"
+domain = "post-capture"
+item = "Imgur upload: custom client id (NO shared default - Amendment #3), history + delete hashes, copy_url"
+implemented_by = [31, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow09-run.log", ".omo/evidence/task-31-flowshot.txt"]
+
+[[row]]
+id = "post-stdout-raw"
+domain = "post-capture"
+item = "stdout mode --raw (PNG bytes; forces one-shot)"
+implemented_by = [29, 35, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow06-run.log"]
+
+[[row]]
+id = "post-stdout-print-geometry"
+domain = "post-capture"
+item = "stdout mode --print-geometry (WxH+X+Y; forces one-shot)"
+implemented_by = [29, 35, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow07-run.log"]
+
+[[row]]
+id = "post-open-with"
+domain = "post-capture"
+item = "open-with (portal OpenURI; save-then-open ordering)"
+implemented_by = [29]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-actions open"]
+
+[[row]]
+id = "post-actions-ordered-set"
+domain = "post-capture"
+item = "saveAfterCopy/copyPathAfterSave/copyURLAfterUpload boolean soup REPLACED by the ordered [save].actions set (Amendment #3)"
+implemented_by = [2, 28, 38]
+verified_by = [".omo/evidence/task-28-flowshot.txt", "test:flowshot-daemon execute::"]
+
+[[row]]
+id = "post-notify"
+domain = "post-capture"
+item = "notifications (saved/uploaded/error toasts, [daemon].notifications single-bool gate)"
+implemented_by = [29, 32]
+verified_by = [".omo/evidence/task-32-flowshot.txt", "test:flowshot-daemon notify"]
+
+# =====================================================================
+# F12 shell/daemon domain.
+# =====================================================================
+
+[[row]]
+id = "shell-tray"
+domain = "shell"
+item = "SNI tray icon (hand-rolled SNI + dbusmenu; ksni wire shapes as reference)"
+implemented_by = [33]
+verified_by = [".omo/evidence/task-33-flowshot.txt", "test:flowshot-daemon tray"]
+
+[[row]]
+id = "shell-tray-per-monitor-menu"
+domain = "shell"
+item = "tray per-monitor capture submenu (live probe, stable ids 100+n)"
+implemented_by = [33]
+verified_by = [".omo/evidence/task-33-flowshot.txt", "test:flowshot-daemon tray"]
+
+[[row]]
+id = "shell-tray-items"
+domain = "shell"
+item = "tray menu items: Take Screenshot / Capture Launcher / per-monitor / About / Quit"
+implemented_by = [33, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow16-run.log", "test:flowshot-daemon tray_bus"]
+
+[[row]]
+id = "shell-daemon-lifecycle"
+domain = "shell"
+item = "daemon autoCloseIdle REPLACED by smart lifecycle (4 persistence reasons + idle grace; Amendment #3)"
+implemented_by = [32, 38]
+verified_by = [".omo/evidence/task-32-flowshot.txt", "test:flowshot-daemon lifecycle"]
+
+[[row]]
+id = "shell-dbus"
+domain = "shell"
+item = "D-Bus org.flameshot.Flameshot -> org.flowoss.FlowShot (Capture/CaptureFull/CaptureScreen/Launcher/Settings/Invoke)"
+implemented_by = [32, 35, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow10-run.log", "test:flowshot-daemon bus::"]
+
+[[row]]
+id = "shell-autostart"
+domain = "shell"
+item = "autostart ([daemon].startup_launch; hand-rolled .desktop writer, auto-launch-crate-free)"
+implemented_by = [32]
+verified_by = [".omo/evidence/task-32-flowshot.txt", "test:flowshot-daemon autostart"]
+
+[[row]]
+id = "shell-single-instance"
+domain = "shell"
+item = "KDSingleApplication -> D-Bus name acquisition single-instance (F21: single-instance crate stale)"
+implemented_by = [32, 35]
+verified_by = [".omo/evidence/task-35-flowshot.txt", "test:flowshot-daemon instance"]
+
+[[row]]
+id = "shell-global-shortcuts-portal"
+domain = "shell"
+item = "built-in global shortcuts via XDG GlobalShortcuts portal (F14; Flakeshot has NONE)"
+implemented_by = [34, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow11-run.log", "test:flowshot-daemon --test portal_shortcuts"]
+
+[[row]]
+id = "shell-global-shortcuts-fallback"
+domain = "shell"
+item = "compositor-bind fallback snippets (--print-bind-help; hyprland/sway/gnome/generic)"
+implemented_by = [34, 35]
+verified_by = [".omo/evidence/task-34-flowshot.txt", "test:flowshot-cli help_surface"]
+
+[[row]]
+id = "shell-settings-tabs"
+domain = "shell"
+item = "4 GUI config tabs (General/Interface/Shortcuts/About-class) as the embedded egui settings window"
+implemented_by = [36, 38]
+verified_by = [".omo/evidence/task-36-flowshot.txt", ".omo/evidence/task-36-flowshot-interface.png"]
+
+[[row]]
+id = "shell-launcher-dialog"
+domain = "shell"
+item = "launcher dialog (manual coordinates + monitor targets + delay)"
+implemented_by = [37, 38]
+verified_by = [".omo/evidence/task-37-flowshot.txt", "test:flowshot-ui launcher::"]
+
+[[row]]
+id = "shell-completions-man"
+domain = "shell"
+item = "shell completions (6 shells) + man pages (flowshot.1, flowshot-config.5)"
+implemented_by = [35]
+verified_by = [".omo/evidence/task-35-flowshot.txt", "test:flowshot-cli man_pages"]
+
+# =====================================================================
+# F12 ini keys (~55): the Amendment-#3 grouped schema is the ONLY config
+# surface; legacy key names map per the plan todo-2 AUTHORITATIVE-NAMING
+# rule. Dropped keys carry OUT(DROPPED(user-amendment-3)).
+# =====================================================================
+
+[[row]]
+id = "ini-version"
+domain = "ini-key"
+item = "version -> config_version (versioned migration framework)"
+implemented_by = [2]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-undoLimit"
+domain = "ini-key"
+item = "undoLimit -> [editor].undo_limit (clamp [0,999])"
+implemented_by = [2, 25]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-showMagnifier"
+domain = "ini-key"
+item = "showMagnifier -> [editor].magnifier"
+implemented_by = [2, 17]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-squareMagnifier"
+domain = "ini-key"
+item = "squareMagnifier -> [editor].magnifier_shape"
+implemented_by = [2, 17]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-contrastOpacity"
+domain = "ini-key"
+item = "contrastOpacity -> [ui].dim_opacity (default 190)"
+implemented_by = [2, 15]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawThickness"
+domain = "ini-key"
+item = "drawThickness -> [editor].draw_thickness (default 3)"
+implemented_by = [2, 20]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawColor"
+domain = "ini-key"
+item = "drawColor -> [editor].draw_color (wheel pick persists to TOML)"
+implemented_by = [2, 26, 38]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-fontFamily"
+domain = "ini-key"
+item = "fontFamily -> [editor].font_family"
+implemented_by = [2, 22]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawFontSize"
+domain = "ini-key"
+item = "drawFontSize -> [editor].font_size (point size = toolSize + 8)"
+implemented_by = [2, 22]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-userColors"
+domain = "ini-key"
+item = "userColors -> [editor].color_palette (incl. rainbow slot)"
+implemented_by = [2, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-arrowStyle"
+domain = "ini-key"
+item = "arrowStyle -> [tools.arrow].style (straight|curved)"
+implemented_by = [2, 21, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-reverseArrow"
+domain = "ini-key"
+item = "reverseArrow -> [tools.arrow].reverse"
+implemented_by = [2, 21, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawMarkerSize"
+domain = "ini-key"
+item = "drawMarkerSize -> [tools.marker].size"
+implemented_by = [2, 21]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawRectangleSize"
+domain = "ini-key"
+item = "drawRectangleSize -> [tools.rectangle].corner_radius"
+implemented_by = [2, 21]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawPixelateSize"
+domain = "ini-key"
+item = "drawPixelateSize -> [tools.pixelate].size"
+implemented_by = [2, 23]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawCircleCounterSize"
+domain = "ini-key"
+item = "drawCircleCounterSize -> [tools.counter].size"
+implemented_by = [2, 24]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-drawCircleCounterOutline"
+domain = "ini-key"
+item = "drawCircleCounterOutline -> [tools.counter].outline"
+implemented_by = [2, 24, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-gridVisible"
+domain = "ini-key"
+item = "gridVisible -> [editor].grid"
+implemented_by = [2, 27]
+verified_by = [".omo/evidence/task-27-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-saveLastRegion"
+domain = "ini-key"
+item = "saveLastRegion -> [capture].save_last_region (+ persisted last_region)"
+implemented_by = [2, 18, 38]
+verified_by = [".omo/evidence/task-18-flowshot.txt", "test:flowshot-ui launch::"]
+
+[[row]]
+id = "ini-copyOnDoubleClick"
+domain = "ini-key"
+item = "copyOnDoubleClick -> [editor].double_click_copies"
+implemented_by = [2, 16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-jpegQuality"
+domain = "ini-key"
+item = "jpegQuality -> [save].jpeg_quality (default 75)"
+implemented_by = [2, 29]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-savePath"
+domain = "ini-key"
+item = "savePath -> [save].path (empty = platform pictures directory)"
+implemented_by = [2, 29, 38]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-daemon execute::"]
+
+[[row]]
+id = "ini-savePathFixed"
+domain = "ini-key"
+item = "savePathFixed -> [save].path_fixed"
+implemented_by = [2, 29]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-saveAsFileExtension"
+domain = "ini-key"
+item = "saveAsFileExtension -> [save].extension"
+implemented_by = [2, 29]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-filenamePattern"
+domain = "ini-key"
+item = "filenamePattern -> [save].filename_pattern (%F_%H-%M)"
+implemented_by = [2, 29]
+verified_by = [".omo/evidence/task-29-flowshot.txt", "test:flowshot-actions pattern"]
+
+[[row]]
+id = "ini-uploadClientID"
+domain = "ini-key"
+item = "uploadClientID -> [upload].client_id (EMPTY default = disabled, Amendment #3)"
+implemented_by = [2, 31]
+verified_by = [".omo/evidence/task-31-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-uploadHistoryMax"
+domain = "ini-key"
+item = "uploadHistoryMax -> [upload].history_max (default 25)"
+implemented_by = [2, 31]
+verified_by = [".omo/evidence/task-31-flowshot.txt", "test:flowshot-actions history"]
+
+[[row]]
+id = "ini-uploadWithoutConfirmation"
+domain = "ini-key"
+item = "uploadWithoutConfirmation -> [upload].without_confirmation"
+implemented_by = [2, 31]
+verified_by = ["test:flowshot-core config::"]
+
+[[row]]
+id = "ini-copyURLAfterUpload"
+domain = "ini-key"
+item = "copyURLAfterUpload -> [upload].copy_url"
+implemented_by = [2, 31, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow09-run.log", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-saveAfterCopy"
+domain = "ini-key"
+item = "saveAfterCopy -> folded into the ordered [save].actions set"
+implemented_by = [2, 28]
+verified_by = [".omo/evidence/task-28-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-copyPathAfterSave"
+domain = "ini-key"
+item = "copyPathAfterSave -> folded into [save].actions (copy-path, uri-list-appended rule)"
+implemented_by = [2, 28]
+verified_by = [".omo/evidence/task-28-flowshot.txt", "test:flowshot-actions pipeline"]
+
+[[row]]
+id = "ini-startupLaunch"
+domain = "ini-key"
+item = "startupLaunch -> [daemon].startup_launch (autostart entry)"
+implemented_by = [2, 32]
+verified_by = [".omo/evidence/task-32-flowshot.txt", "test:flowshot-daemon autostart"]
+
+[[row]]
+id = "ini-showSelectionGeometry"
+domain = "ini-key"
+item = "showSelectionGeometry -> [editor].hud_position"
+implemented_by = [2, 16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-showSelectionGeometryHideTime"
+domain = "ini-key"
+item = "showSelectionGeometryHideTime -> [editor].hud_hide_time"
+implemented_by = [2, 16]
+verified_by = [".omo/evidence/task-16-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-showSidePanelButton"
+domain = "ini-key"
+item = "showSidePanelButton -> [editor].side_panel (FEATURE gate; panel-toggle toolbar button awaits the core key - issues.md todo-26 entry)"
+implemented_by = [2, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-buttons"
+domain = "ini-key"
+item = "buttons -> [ui].toolbar_buttons (ordered id list = button order)"
+implemented_by = [2, 26]
+verified_by = [".omo/evidence/task-26-flowshot.txt", "test:flowshot-ui chrome::"]
+
+[[row]]
+id = "ini-uiColor-mainColor"
+domain = "ini-key"
+item = "uiColor/mainColor -> [ui].accent_color (FlowShot brand, NOT Flameshot purple)"
+implemented_by = [2, 19]
+verified_by = [".omo/evidence/task-19-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-contrastColor"
+domain = "ini-key"
+item = "contrastColor -> [ui].contrast_color"
+implemented_by = [2, 19]
+verified_by = [".omo/evidence/task-19-flowshot.txt", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-hideCursor"
+domain = "ini-key"
+item = "hideCursor -> [capture].hide_cursor (default false = #3582 fix direction)"
+implemented_by = [2, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow09-hidecursor-run.log", "test:flowshot-core config::"]
+
+[[row]]
+id = "ini-showMousePreview"
+domain = "ini-key"
+item = "showMousePreview -> [editor].mouse_preview (Oracle r4 F-4)"
+implemented_by = [2, 20]
+verified_by = [".omo/evidence/task-20-flowshot.txt", "test:flowshot-ui editor::"]
+
+[[row]]
+id = "ini-shortcuts-table"
+domain = "ini-key"
+item = "[Shortcuts] ini section -> [shortcuts] grouped table (F12 defaults minus collisions; persistence awaits the core group - issues.md todo-20/36 entries; recorder + rebind seams live)"
+implemented_by = [20, 36]
+verified_by = [".omo/evidence/task-36-flowshot-shortcuts.png", "test:flowshot-ui keys"]
+
+# --- Amendment-#3 DROPPED keys (the todo-2 acceptance: every drop is a
+# --- DROPPED(user-amendment-3) row; the validator consumes this list) ---
+
+[[row]]
+id = "ini-showQuitPrompt"
+domain = "ini-key"
+item = "showQuitPrompt"
+out = "DROPPED(user-amendment-3): no quit prompt (lean daemon lifecycle; tray Quit is direct)"
+
+[[row]]
+id = "ini-allowMultipleGuiInstances"
+domain = "ini-key"
+item = "allowMultipleGuiInstances"
+out = "DROPPED(user-amendment-3): ONE GUI session invariant (the todo-38 session gate enforces it)"
+
+[[row]]
+id = "ini-antialiasingPinZoom"
+domain = "ini-key"
+item = "antialiasingPinZoom"
+out = "DROPPED(user-amendment-3): pin zoom is ALWAYS antialiased (no toggle)"
+
+[[row]]
+id = "ini-insecurePixelate"
+domain = "ini-key"
+item = "insecurePixelate (+ the downscale-upscale mode code)"
+out = "DROPPED(user-amendment-3): secure-only pixelate (fringe sampling; not reversible by block-mean attacks)"
+
+[[row]]
+id = "ini-captureActiveMonitor"
+domain = "ini-key"
+item = "captureActiveMonitor"
+out = "DROPPED(user-amendment-3): behavior kept as `capture screen` no-arg (output under cursor); the flag is redundant"
+
+[[row]]
+id = "ini-autoCloseIdleDaemon"
+domain = "ini-key"
+item = "autoCloseIdleDaemon"
+out = "DROPPED(user-amendment-3): replaced by the smart lifecycle (4 persistence reasons + idle grace, always on)"
+
+[[row]]
+id = "ini-showHelp"
+domain = "ini-key"
+item = "showHelp"
+out = "DROPPED(user-amendment-3): tooltips + docs replace the in-app help surface"
+
+[[row]]
+id = "ini-showDesktopNotification"
+domain = "ini-key"
+item = "showDesktopNotification"
+out = "DROPPED(user-amendment-3): folded into the single [daemon].notifications bool"
+
+[[row]]
+id = "ini-showAbortNotification"
+domain = "ini-key"
+item = "showAbortNotification"
+out = "DROPPED(user-amendment-3): folded into the single [daemon].notifications bool"
+
+[[row]]
+id = "ini-predefinedColorPaletteLarge"
+domain = "ini-key"
+item = "predefinedColorPaletteLarge"
+out = "DROPPED(user-amendment-3): one palette size (the extended picker is the color wheel + eyedropper)"
+
+[[row]]
+id = "ini-keepOpenAppLauncher"
+domain = "ini-key"
+item = "keepOpenAppLauncher"
+out = "DROPPED(user-amendment-3): open-with goes through the portal OpenURI (moot)"
+
+[[row]]
+id = "ini-useX11LegacyScreenshot"
+domain = "ini-key"
+item = "useX11LegacyScreenshot"
+out = "DROPPED(user-amendment-3): X11 is roadmap; FlowShot is Wayland-native with no X11 code path"
+
+[[row]]
+id = "ini-uiLanguage"
+domain = "ini-key"
+item = "uiLanguage"
+out = "DROPPED(user-amendment-3): i18n is roadmap; the message-key string architecture ships from day 1"
+
+[[row]]
+id = "ini-historyConfirmationToDelete"
+domain = "ini-key"
+item = "historyConfirmationToDelete"
+out = "DROPPED(user-amendment-3): no history UI (upload history is a bounded JSONL log)"
+
+[[row]]
+id = "ini-uploadClientSecret"
+domain = "ini-key"
+item = "uploadClientSecret"
+out = "DROPPED(user-amendment-3): renamed [upload].client_id with an EMPTY default (no freeloading the shared Flameshot pool)"
+
+# =====================================================================
+# F9 fix-list rows live in .omo/evidence/task-38-flowshot/
+# 06-f9-dispositions.md (four-way classification per the plan acceptance);
+# the matrix rows above carry the capability parity. Cross-reference:
+# =====================================================================
+
+[[row]]
+id = "f9-dispositions"
+domain = "fix-list"
+item = "F9 Flameshot Wayland breakage list: every row dispositioned FIXED | N/A-on-Hyprland | moot-by-design | DOCUMENTED-DEGRADED"
+implemented_by = [13, 12, 28, 30, 16, 3, 32, 34, 38]
+verified_by = [".omo/evidence/task-38-flowshot/06-f9-dispositions.md"]
+
+[[row]]
+id = "perf-budgets"
+domain = "budgets"
+item = "hotkey->frame-ready <=150ms (1080p) / <=400ms (dual) + renderer frame avg <8ms"
+implemented_by = [13, 14, 15, 38]
+verified_by = [".omo/evidence/task-38-flowshot/flows/flow-perf-run.log", ".omo/evidence/task-38-flowshot/07-perf-budgets.md"]

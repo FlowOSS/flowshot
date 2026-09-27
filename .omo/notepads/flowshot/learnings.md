@@ -1220,3 +1220,44 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 **Ceiling/refactor discipline**
 - Extraction-first paid off: moving input/keymap/theme/surface into egui_host BEFORE writing launcher code kept every new file <=208 and the settings suite untouched-green (537 lib tests as the regression gate for a pure code move). MEASURE pre-move (input.rs 245/keymap.rs 207 were already warning-band; moved verbatim, flagged not grown).
 - clippy --all-targets WITHOUT the feature misses cfg(test-drive) code entirely - run BOTH feature configurations before declaring the gate green (the KeyEvent private-field errors only surfaced under --features test-drive).
+
+## 2026-09-27 (todo 38): integration-wave learnings
+- WINIT 0.30.13 ONE-EVENT-LOOP-PER-PROCESS: `EVENT_LOOP_CREATED` static
+  AtomicBool in event_loop.rs; second `build()` = `RecreationAttempt`
+  error unconditionally (any_thread does NOT bypass it; only the web
+  platform resets it). Design daemon-hosted GUIs as child processes from
+  the start. (Empirical: the flow-10 overlay leg panicked with the
+  cross-platform-hazard assert on a worker thread FIRST; the source check
+  then showed the global guard makes even main-thread reuse impossible.)
+- XDP APP-ID DERIVATION: unit `app-<APPID>-<RANDOM>.scope`, split at the
+  LAST dash => the nonce must not contain dashes (decimal digits proven
+  live); the matching `<APPID>.desktop` must be installed (NoDisplay is
+  fine for GDesktopAppInfo resolution) AND Exec resolvable.
+- PROBE-GREEN != CAPTURE-GREEN: a negotiated backend can pass outputs()
+  and still fail capture_outputs (Hyprland's rotated-headless ICC buffer
+  orientation). A production ladder needs RUNTIME fallthrough with the
+  failed rung excluded, not just probe-time negotiation.
+- BUSCTL argv arrays with dash-leading elements need `--` before the
+  element list (`Invoke as 4 capture full -- -o /path`), else busctl eats
+  them as its own options.
+- wl-clipboard-rs `copy_multi` with `foreground(false)` +
+  `ServeRequests::Unlimited` = background serving thread IN THIS PROCESS:
+  offer lifetime == process lifetime (the daemon-ownership model falls out
+  naturally; a --no-daemon copy dies with the CLI).
+- ImageMagick 7: `convert` deprecated (use `magick`); `compare -metric AE`
+  prints "COUNT (normalized)" on stderr — parse the leading integer.
+- tracing-subscriber fmt output carries ANSI codes even when piped —
+  strip (`sed 's/\x1b\[[0-9;]*m//g'`) before grepping token=value pairs
+  in QA scripts.
+- Full-workspace `cargo test` on this box (jobs=8 cap + user load) needs
+  `-- --test-threads=6`: the kwin stub tests spawn a private dbus-daemon
+  PER TEST and starve at 16 threads (one run HUNG >60s/test; standalone
+  0.03s/test).
+- The headless execution mode pattern that satisfied "flows execute
+  end-to-end through the real binary" under a visible-window ban: ONE
+  wiring function (configure_core) + ONE export implementation
+  (render_export/composite_selection) shared by the live child and the
+  test-drive driver; the shell's completion trigger is emulated by
+  delivering through the INSTALLED sink (deliver_completion), so the sink
+  wiring under test is the production one. Real clipboard/capture/GPU —
+  only the winit window leg is substituted.

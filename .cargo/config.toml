@@ -1,0 +1,3 @@
+[build]
+# User present: cap build parallelism at half the cores (16 -> 8).
+jobs = 8

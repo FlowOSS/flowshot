@@ -34,6 +34,8 @@ pub enum Invocation {
     Daemon(DaemonRun),
     /// `flowshot completions <shell>`.
     Completions(CompletionShell),
+    /// The hidden internal session-child verb (todo 38 process model).
+    Session(PathBuf),
     /// `--print-bind-help` (overrides any subcommand).
     PrintBindHelp,
 }
@@ -133,6 +135,7 @@ pub fn resolve(cli: Cli) -> Result<Invocation, CliError> {
             config: args.config,
         })),
         Some(Command::Completions { shell }) => Ok(Invocation::Completions(shell)),
+        Some(Command::Session { spec }) => Ok(Invocation::Session(spec)),
     }
 }
 

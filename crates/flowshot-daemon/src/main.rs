@@ -36,6 +36,23 @@ struct Args {
     /// a private dbus-daemon address isolates the service completely.
     #[arg(long, value_name = "ADDRESS")]
     bus_address: Option<String>,
+
+    #[command(subcommand)]
+    command: Option<Sub>,
+}
+
+/// Internal verbs (hidden from the user surface).
+#[derive(Debug, clap::Subcommand)]
+enum Sub {
+    /// Run one window session from a spec file (the daemon's
+    /// child-process contract, todo 38 - winit allows one event loop per
+    /// process, so every window session is a dedicated child).
+    #[command(hide = true)]
+    Session {
+        /// The session spec JSON path.
+        #[arg(long, value_name = "PATH")]
+        spec: PathBuf,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -47,6 +64,10 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     let args = Args::parse();
+    if let Some(Sub::Session { spec }) = &args.command {
+        let code = flowshot_daemon::execute::session::run_child(spec);
+        std::process::exit(i32::from(code));
+    }
     let config = load_config(args.config.as_deref())?;
 
     let mut options = if args.auto_spawned {
@@ -58,6 +79,16 @@ fn main() -> anyhow::Result<()> {
     options.bus_address = args.bus_address;
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
     options.shortcuts = flowshot_daemon::shortcut::ShortcutOptions::production();
+    // Todo 38: the executing sink (bus/tray/shortcut commands run the real
+    // capture pipeline; the CLI's `flowshot daemon` installs the same).
+    options.command_sink = Some(std::sync::Arc::new(
+        flowshot_daemon::execute::ExecutingSink::new(flowshot_daemon::execute::ExecCtx {
+            config_path: args.config.clone(),
+            state: Some(std::sync::Arc::clone(&options.state)),
+            notifier: None,
+            upload_base_url: None,
+        }),
+    ));
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

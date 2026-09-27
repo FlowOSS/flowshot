@@ -83,6 +83,7 @@ pub struct DaemonState {
     shortcuts: AtomicBool,
     clipboard_offer: AtomicBool,
     pins: Mutex<PinRegistry>,
+    last_capture: Mutex<Option<flowshot_ui::ExportedImage>>,
     last_activity: Mutex<Instant>,
     wake: Notify,
 }
@@ -98,6 +99,7 @@ impl DaemonState {
             shortcuts: AtomicBool::new(false),
             clipboard_offer: AtomicBool::new(false),
             pins: Mutex::new(PinRegistry::new()),
+            last_capture: Mutex::new(None),
             last_activity: Mutex::new(now),
             wake: Notify::new(),
         }
@@ -154,6 +156,25 @@ impl DaemonState {
     #[must_use]
     pub fn pin_ids(&self) -> Vec<u64> {
         self.lock_pins().ids()
+    }
+
+    /// Remembers the most recent completed capture (todo 38: `flowshot
+    /// pin` with no FILE pins the last capture - the daemon-resident
+    /// in-memory history slot; ONE image, replaced on every completion).
+    pub fn set_last_capture(&self, image: flowshot_ui::ExportedImage) {
+        *self.lock_last_capture() = Some(image);
+    }
+
+    /// The remembered last capture, when this daemon served one.
+    #[must_use]
+    pub fn last_capture(&self) -> Option<flowshot_ui::ExportedImage> {
+        self.lock_last_capture().clone()
+    }
+
+    fn lock_last_capture(&self) -> MutexGuard<'_, Option<flowshot_ui::ExportedImage>> {
+        self.last_capture
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
     }
 
     /// The current persistence-reason snapshot.

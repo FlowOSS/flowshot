@@ -59,6 +59,15 @@ pub enum Command {
     /// Run the foreground daemon (for the systemd user unit or any other
     /// init supervisor; the daemon is init-agnostic).
     Daemon(DaemonArgs),
+    /// Internal: run one window session from a spec file (the daemon's
+    /// child-process contract, todo 38 - winit allows one event loop per
+    /// process; hidden from the user surface).
+    #[command(hide = true)]
+    Session {
+        /// The session spec JSON path.
+        #[arg(long, value_name = "PATH")]
+        spec: PathBuf,
+    },
     /// Generate shell completions.
     Completions {
         /// Shell to generate completions for.

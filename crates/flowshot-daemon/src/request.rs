@@ -26,7 +26,7 @@ pub const CAPTURE_OPTION_KEYS: &[&str] = &[
 
 /// The typed form of one `Capture(options)` call: the Amendment #2 CLI
 /// modifier set as data.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[expect(
     clippy::struct_excessive_bools,
     reason = "each flag is an independent spec-mandated capture modifier (Amendment #2 surface)"

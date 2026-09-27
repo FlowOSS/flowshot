@@ -90,10 +90,16 @@ impl OverlayCore {
                 self.chrome_release(slot, at)
             };
             if chrome_ate {
+                // Toolbar W5 buttons queue capture-completing actions (todo
+                // 38); a completing gesture off the chrome branch persists
+                // the region memory explicitly (the todo-18 contract: the
+                // early return skips the main-path launch_persist).
+                actions.extend(self.chrome.take_actions());
                 actions.extend(
                     (0..self.router.window_count())
                         .map(|index| Action::Redraw(WindowSlot::new(index))),
                 );
+                self.launch_persist(&actions);
                 self.sync_cascade();
                 return RouteReport {
                     actions,
@@ -117,6 +123,15 @@ impl OverlayCore {
             // flow; the shell's Action::ColorWheel arm only redraws).
             if outcome.effects.contains(&EditorEffect::ColorWheel) {
                 self.chrome.show_color_wheel(at);
+            }
+            // The eyedropper's sample goes to the standalone color-pick sink
+            // here (todo 38, `flowshot color`); the shell's
+            // Action::ColorPicked arm is a no-op.
+            if let Some(color) = outcome.effects.iter().find_map(|effect| match effect {
+                EditorEffect::ColorPicked(color) => Some(*color),
+                EditorEffect::ColorWheel => None,
+            }) {
+                self.notify_color_pick(color);
             }
             let consumed = outcome.consumed;
             actions.extend(editor_actions(outcome, self.router.window_count()));

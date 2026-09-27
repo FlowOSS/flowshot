@@ -16,8 +16,9 @@ use winit::window::{Window, WindowId};
 
 use crate::backdrop::{Backdrop, BackdropOptions};
 use crate::crosshair;
-use crate::editor::{EditorView, MagnifierTexture, MagnifierView, PixelEffect, ToolCursor};
+use crate::editor::{EditorView, MagnifierTexture, MagnifierView, ToolCursor};
 use crate::error::UiError;
+use crate::export::sync_effect_textures;
 use crate::gpu::GpuContext;
 use crate::input::Action;
 use crate::render::{DisplayList, Renderer, RgbaImage, TextureId};
@@ -56,6 +57,9 @@ pub(crate) struct OverlayApp {
     /// (todo-13 behavior: transparent clear + crosshair only).
     pub backdrop: Option<Backdrop>,
     pub backdrop_options: BackdropOptions,
+    /// The binary-layer window-attributes hook (Wayland `app_id`; the
+    /// `pins::WindowCustomizer` seam - the lib stays platform-pure).
+    pub customizer: Option<crate::pins::WindowCustomizer>,
     /// The last IME cursor area sent to a window (todo 22: the caret mirror
     /// for `set_ime_cursor_area`, deduplicated so the compositor is not
     /// spammed on every event).
@@ -77,6 +81,7 @@ impl OverlayApp {
             crosshair_color,
             backdrop: None,
             backdrop_options: BackdropOptions::default(),
+            customizer: None,
             ime_area: None,
         }
     }
@@ -96,15 +101,24 @@ impl OverlayApp {
                 }
                 // The funnel already showed the wheel (core-owned chrome
                 // state - the headless path owns the whole picker flow);
-                // the shell arm only repaints every window. Accept/Copy are
-                // binary-layer wiring seams: the export/clipboard paths land
-                // with todos 28/35.
+                // the shell arm only repaints every window.
                 Action::ColorWheel => {
                     for entry in &self.windows {
                         entry.window.request_redraw();
                     }
                 }
-                Action::Accept | Action::Copy => {}
+                // Capture-completing gestures: the shell renders the export
+                // offscreen and hands it to the installed CompletionSink
+                // (todo 38); encoding/actions are the binary layer's.
+                Action::Accept
+                | Action::Copy
+                | Action::Save
+                | Action::Pin
+                | Action::Upload
+                | Action::OpenWith => self.complete(target, *action),
+                // The funnel already delivered the pick to the color-pick
+                // sink; nothing to repaint (the eyedropper changes no chrome).
+                Action::ColorPicked => {}
             }
         }
     }
@@ -285,41 +299,4 @@ fn magnifier_pass(
     };
     core.editor()
         .paint_magnifier(list, output, view, core.chrome().tokens())
-}
-
-/// Syncs one renderer's pixel-effect texture set to the editor's effect
-/// layer (todo 23): uploads new bakes, drops textures of undone/replaced
-/// effects (each bake can be megabytes - retired ids must not linger).
-/// A failed upload logs and keeps the id marked uploaded: the renderer's
-/// magenta placeholder is the visible failure signal, retried never per
-/// frame (log-spam guard).
-fn sync_effect_textures(
-    renderer: &mut Renderer,
-    gpu: &GpuContext,
-    uploaded: &mut Vec<TextureId>,
-    effects: &[PixelEffect],
-) -> Result<(), UiError> {
-    for id in uploaded.iter().copied() {
-        if !effects.iter().any(|effect| effect.texture_id() == id) {
-            renderer.textures_mut().remove(id);
-        }
-    }
-    for effect in effects {
-        let id = effect.texture_id();
-        if uploaded.contains(&id) {
-            continue;
-        }
-        let image = RgbaImage {
-            width: effect.width(),
-            height: effect.height(),
-            data: effect.pixels(),
-        };
-        let result = renderer
-            .textures_mut()
-            .insert(&gpu.device, &gpu.queue, id, &image);
-        uploaded.push(id);
-        result?;
-    }
-    uploaded.retain(|id| effects.iter().any(|effect| effect.texture_id() == *id));
-    Ok(())
 }

@@ -42,9 +42,8 @@ pub const DAEMON_SPAWN_TIMEOUT: &str = "the spawned FlowShot daemon did not acqu
 in time; if the session uses systemd, check `systemd-run --user` availability, otherwise run \
 `flowshot daemon` manually for the error";
 
-/// The one-shot path before the todo-38 execution wiring lands.
-pub const ONE_SHOT_SEAM: &str = "flowshot: one-shot capture execution is not wired yet \
-(plan todo 38); the request was parsed, validated, and typed.";
+/// The exclusive stdout modes requested together.
+pub const STDOUT_MODES_CONFLICT: &str = "--raw and --print-geometry both own stdout; pick one";
 
 /// An argv element that is not valid Unicode (the Invoke wire is `as`).
 pub const NON_UNICODE_ARG: &str = "argument is not valid Unicode";

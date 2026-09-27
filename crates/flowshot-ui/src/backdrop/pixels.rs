@@ -23,9 +23,13 @@ use super::CursorSprite;
 
 /// Tight, upright, renderer-ready `RGBA8888` pixels.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct PreparedTexture {
+pub struct PreparedTexture {
+    /// Row-major RGBA bytes (`width * height * 4`), post-transform
+    /// (upright) orientation.
     pub data: Vec<u8>,
+    /// Width in physical pixels (upright orientation).
     pub width: u32,
+    /// Height in physical pixels (upright orientation).
     pub height: u32,
 }
 
@@ -52,7 +56,7 @@ pub(super) fn to_rgba(format: FrameFormat, pixel: [u8; 4]) -> [u8; 4] {
 /// with the output's native physical size, [`UiError::TextureDataLength`]
 /// when the buffer holds fewer bytes than its stride geometry requires, and
 /// [`UiError::Geometry`] when the transform remap rejects the buffer.
-pub(super) fn prepare_output_texture(
+pub fn prepare_output_texture(
     frame: &Frame,
     output: &OutputInfo,
 ) -> Result<PreparedTexture, UiError> {

@@ -90,3 +90,6 @@ pub const SUMMARY_ABOUT: &str = "About FlowShot";
 pub fn about_body(version: &str) -> String {
     format!("Version {version}")
 }
+
+/// The exclusive stdout modes requested together (todo 38 executor).
+pub const STDOUT_MODES_CONFLICT: &str = "--raw and --print-geometry both own stdout; pick one";

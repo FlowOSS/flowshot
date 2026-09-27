@@ -25,6 +25,9 @@ flowshot-core = { path = "../flowshot-core" }
 # -actions re-enter with the todo-38 execution wiring (unused until then -
 # Amendment #3 anti-bloat).
 flowshot-daemon = { path = "../flowshot-daemon" }
+# Todo 38: the exit-code table downcasts the capture error chain for the
+# protocol permission refusal (IccError::PermissionDenied -> exit 5).
+flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
 # Same executor decision as the daemon crate (todo 32): workspace zbus 4,
 # futures driven from tokio; connections are closed explicitly (zbus-4
 # async-io has no drop-time close, todo-11 lesson).
@@ -43,6 +46,10 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 # Man-page generation harness (examples/man_pages.rs + tests); kept out of
 # the shipped binary.
 clap_mangen = { workspace = true }
+# Todo 38 flow 15: the exit-code mapping test constructs typed capture /
+# export errors (the permission-denied class downcast chain).
+flowshot-capture = { path = "../flowshot-capture" }
+flowshot-actions = { path = "../flowshot-actions" }
 proptest = { workspace = true }
 serde = { workspace = true }
 toml = { workspace = true }
