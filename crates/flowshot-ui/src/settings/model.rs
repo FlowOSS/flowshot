@@ -19,7 +19,7 @@ use flowshot_core::config::Config;
 use crate::editor::{ToolKind, ToolShortcuts};
 
 use super::strings;
-use super::theme::{ThemeMode, parse_hex_rgb};
+use crate::egui_host::theme::{ThemeMode, parse_hex_rgb};
 
 /// The window's four tabs (F12 parity).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -279,7 +279,7 @@ impl SettingsModel {
         let Some(target) = self.recorder else {
             return false;
         };
-        let Some(code) = super::keymap::code_from_egui_key(key) else {
+        let Some(code) = crate::egui_host::keymap::code_from_egui_key(key) else {
             return false;
         };
         match target {

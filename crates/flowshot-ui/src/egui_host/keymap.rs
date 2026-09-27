@@ -134,7 +134,7 @@ const PHYSICAL_TABLE: &[(KeyCode, Key)] = &[
 ];
 
 /// The egui key for a physical code, when egui models it.
-pub(super) fn egui_key_from_code(code: KeyCode) -> Option<Key> {
+pub(crate) fn egui_key_from_code(code: KeyCode) -> Option<Key> {
     PHYSICAL_TABLE
         .iter()
         .find(|(physical, _)| *physical == code)
@@ -144,7 +144,7 @@ pub(super) fn egui_key_from_code(code: KeyCode) -> Option<Key> {
 /// The winit code an egui key came from (recorder direction; first table
 /// match wins, so numpad aliases resolve to the main cluster). `None` for
 /// keys with no physical source - they cannot back a `KeyCode` binding.
-pub(super) fn code_from_egui_key(key: Key) -> Option<KeyCode> {
+pub(crate) fn code_from_egui_key(key: Key) -> Option<KeyCode> {
     PHYSICAL_TABLE
         .iter()
         .find(|(_, mapped)| *mapped == key)
@@ -152,7 +152,7 @@ pub(super) fn code_from_egui_key(key: Key) -> Option<KeyCode> {
 }
 
 /// The egui key for a logical (keymap-resolved) winit key.
-pub(super) fn egui_key_from_logical(logical: &WinitKey) -> Option<Key> {
+pub(crate) fn egui_key_from_logical(logical: &WinitKey) -> Option<Key> {
     match logical {
         WinitKey::Named(named) => egui_key_from_named(*named),
         WinitKey::Character(text) => Key::from_name(text.as_str()),
@@ -221,7 +221,7 @@ fn egui_key_from_named(named: NamedKey) -> Option<Key> {
 
 /// The egui key for a key event: logical first, physical as the non-Latin
 /// fallback (egui-winit semantics).
-pub(super) fn egui_key_for_event(
+pub(crate) fn egui_key_for_event(
     logical: &WinitKey,
     physical: PhysicalKey,
 ) -> Option<(Key, Option<Key>)> {

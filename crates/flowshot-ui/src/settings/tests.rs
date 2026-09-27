@@ -10,10 +10,10 @@ use flowshot_core::config::{CONFIG_VERSION, Config, SaveConfig};
 use flowshot_core::tokens::DesignTokens;
 use winit::keyboard::KeyCode;
 
-use super::keymap;
 use super::model::{Banner, RecorderTarget, SettingsModel, Tab, ThemeChoice};
 use super::tabs::FrameAction;
-use super::theme::{self, ThemeMode, parse_hex_rgb};
+use crate::egui_host::keymap;
+use crate::egui_host::theme::{self, ThemeMode, parse_hex_rgb};
 
 fn fixed_time() -> chrono::DateTime<Local> {
     let date = NaiveDate::from_ymd_opt(2026, 9, 27).unwrap();

@@ -58,6 +58,12 @@ chrono = { workspace = true }
 # PinActionSink bridge): the LIB never imports the Wayland-native actions
 # crate (purity gate) - the real bridge lands in the todo-35 binary layer.
 flowshot-actions = { path = "../flowshot-actions" }
+# QA-harness composition only (examples/launcher_dialog.rs executes the
+# dialog's typed request against the live session for the todo-37 acceptance:
+# probe for the monitor dropdown + capture_region for the saved-image
+# assert). The LIB keeps the MonitorProbe/LaunchCallback seams instead -
+# the production wiring lands in the todo-38 binary layer (purity gate).
+flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 bytes = { workspace = true }
 serde_json = { workspace = true }

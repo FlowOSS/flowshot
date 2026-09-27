@@ -3,7 +3,7 @@
 //! `[editor].color_palette` swatch editor (plan todo 36 tab 2).
 //!
 //! The accent/contrast pickers re-theme this window LIVE: the frame closure
-//! re-projects [`super::super::theme::style`] from the model every frame,
+//! re-projects [`crate::egui_host::theme::style`] from the model every frame,
 //! which is the "live-apply where safe (tokens-driven)" contract.
 //!
 //! The toolbar list is an order editor with move/remove/add controls (egui
@@ -18,8 +18,8 @@ use crate::editor::ToolKind;
 
 use super::super::model::{SettingsModel, ThemeChoice};
 use super::super::strings;
-use super::super::theme::parse_hex_rgb;
 use super::{combo, drag_u8, hex_color};
+use crate::egui_host::theme::parse_hex_rgb;
 
 /// The non-tool toolbar button ids (chrome/toolbar.rs icon vocabulary).
 const TOOLBAR_ACTION_IDS: [&str; 8] = [

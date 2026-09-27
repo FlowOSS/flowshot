@@ -1,5 +1,6 @@
-//! The frame pipeline: acquire -> egui frame -> paint -> present, the Apply
-//! persistence path, and the egui->winit cursor-icon projection.
+//! The launcher frame pipeline: acquire -> egui frame -> paint -> present,
+//! and the dispatch of the frame's [`LauncherAction`] (Capture = callback +
+//! close, Cancel = close).
 
 use std::time::{Duration, Instant};
 
@@ -8,12 +9,10 @@ use winit::event_loop::ActiveEventLoop;
 use crate::egui_host::{cursor_icon, points, scale_to_ppp, theme};
 use crate::error::UiError;
 
-use super::super::model::{Banner, SettingsModel};
-use super::super::tabs::{self, FrameAction, TabContext};
-use super::app::SettingsApp;
-use super::options::SettingsWindowOptions;
+use super::app::LauncherApp;
+use super::ui::{self as widgets, LauncherAction};
 
-pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
+pub(super) fn render(app: &mut LauncherApp, event_loop: &ActiveEventLoop) {
     let frame = match app.surface.as_ref().map(wgpu::Surface::get_current_texture) {
         Some(Ok(frame)) => frame,
         Some(Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated)) => {
@@ -33,7 +32,7 @@ pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
         }
         None => return,
     };
-    let SettingsApp {
+    let LauncherApp {
         options,
         model,
         window,
@@ -58,17 +57,12 @@ pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
         surface_config.height,
         pixels_per_point,
     ));
-    let mode = model.theme().resolve(options.system_theme);
-    let style = theme::style(&options.tokens, &model.config().ui, mode);
-    let context = TabContext {
-        system_theme: options.system_theme,
-        path_picker: options.path_picker.as_ref(),
-    };
-    let (output, action) = egui.frame_with(style, |ui| tabs::show(ui, model, &context));
+    let style = theme::style(&options.tokens, &options.ui_config, options.system_theme);
+    let (output, action) = egui.frame_with(style, |ui| widgets::show(ui, model));
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("settings-frame-encoder"),
+            label: Some("launcher-frame-encoder"),
         });
     egui.paint(
         gpu,
@@ -86,35 +80,14 @@ pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
         .map_or(Duration::MAX, |viewport| viewport.repaint_delay);
     *next_repaint = (repaint_delay < Duration::MAX).then(|| Instant::now() + repaint_delay);
     match action {
-        FrameAction::None => {}
-        FrameAction::Apply => apply(model, options),
-        FrameAction::Close => event_loop.exit(),
-    }
-    if action != FrameAction::None {
-        window.request_redraw();
-    }
-}
-
-/// The Apply pipeline: validation gate -> migration-safe TOML write ->
-/// applied callback (`ConfigChanged` emitter) -> clean state.
-fn apply(model: &mut SettingsModel, options: &SettingsWindowOptions) {
-    if !model.validate().is_empty() {
-        model.set_banner(Some(Banner::Validation));
-        return;
-    }
-    let config = model.config().clone();
-    match config.save(&options.config_path) {
-        Ok(()) => {
-            model.mark_clean();
-            model.set_banner(None);
-            if let Some(callback) = &options.on_applied {
-                callback.invoke(&config);
+        LauncherAction::None => {}
+        LauncherAction::Capture(request) => {
+            tracing::info!(request = ?request, "launcher capture dispatched");
+            if let Some(callback) = &options.on_capture {
+                callback.invoke(&request);
             }
-            tracing::info!(path = %options.config_path.display(), "settings applied");
+            event_loop.exit();
         }
-        Err(error) => {
-            tracing::error!(path = %options.config_path.display(), %error, "settings save failed");
-            model.set_banner(Some(Banner::SaveFailed(error.to_string())));
-        }
+        LauncherAction::Cancel => event_loop.exit(),
     }
 }

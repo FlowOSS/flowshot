@@ -1,5 +1,7 @@
-//! The winit `ApplicationHandler`: window/GPU spawn, surface lifecycle, and
-//! event plumbing. Frame rendering lives in [`super::frame`].
+//! The winit `ApplicationHandler` for the launcher dialog: window/GPU spawn,
+//! surface lifecycle, and event plumbing (the settings-window shape, minus
+//! the config model - the launcher is a fixed-size dialog). Frame rendering
+//! lives in [`super::frame`].
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -10,25 +12,31 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::{Window, WindowId};
 
+use crate::egui_host::input::WindowSignal;
+use crate::egui_host::{EguiSurface, points, scale_to_ppp};
 use crate::error::UiError;
 use crate::gpu::{self, GpuContext, OVERLAY_BACKENDS};
 
-use super::super::model::SettingsModel;
-use super::super::strings;
 use super::frame;
-use super::options::SettingsWindowOptions;
-use super::runtime::SettingsEvent;
-use crate::egui_host::input::WindowSignal;
-use crate::egui_host::{EguiSurface, points, scale_to_ppp};
+use super::model::LauncherModel;
+use super::options::LauncherWindowOptions;
+use super::strings;
+use super::window::LauncherEvent;
+
+/// The dialog's fixed logical size (four rows + the button bar).
+const DIALOG_SIZE: LogicalSize<f64> = LogicalSize {
+    width: 400.0,
+    height: 232.0,
+};
 
 /// The error-label for surface operations (the overlay passes a monitor
-/// name; the settings window is a single normal window).
-const SURFACE_LABEL: &str = "settings";
+/// name; the launcher is a single normal window).
+const SURFACE_LABEL: &str = "launcher";
 
 #[derive(Debug)]
-pub(super) struct SettingsApp {
-    pub(super) options: SettingsWindowOptions,
-    pub(super) model: SettingsModel,
+pub(super) struct LauncherApp {
+    pub(super) options: LauncherWindowOptions,
+    pub(super) model: LauncherModel,
     pub(super) window: Option<Arc<Window>>,
     pub(super) gpu: Option<GpuContext>,
     pub(super) surface: Option<wgpu::Surface<'static>>,
@@ -38,8 +46,8 @@ pub(super) struct SettingsApp {
     pub(super) fatal: Option<UiError>,
 }
 
-impl SettingsApp {
-    pub(super) fn new(model: SettingsModel, options: SettingsWindowOptions) -> Self {
+impl LauncherApp {
+    pub(super) fn new(model: LauncherModel, options: LauncherWindowOptions) -> Self {
         Self {
             options,
             model,
@@ -56,8 +64,8 @@ impl SettingsApp {
     fn spawn(&mut self, event_loop: &ActiveEventLoop) -> Result<(), UiError> {
         let attributes = Window::default_attributes()
             .with_title(strings::WINDOW_TITLE)
-            .with_inner_size(LogicalSize::new(760.0, 620.0))
-            .with_min_inner_size(LogicalSize::new(480.0, 400.0));
+            .with_inner_size(DIALOG_SIZE)
+            .with_resizable(false);
         let attributes = match &self.options.window_customizer {
             Some(customizer) => customizer.apply(attributes),
             None => attributes,
@@ -138,7 +146,7 @@ impl SettingsApp {
         ) {
             Ok(config) => *surface_config = config,
             Err(error) => {
-                tracing::error!(%error, "settings surface reconfigure failed");
+                tracing::error!(%error, "launcher surface reconfigure failed");
                 self.fatal = Some(error);
                 return;
             }
@@ -153,23 +161,29 @@ impl SettingsApp {
     }
 }
 
-impl ApplicationHandler<SettingsEvent> for SettingsApp {
+impl ApplicationHandler<LauncherEvent> for LauncherApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
             return;
         }
         if let Err(error) = self.spawn(event_loop) {
-            tracing::error!(%error, "settings window startup failed");
+            tracing::error!(%error, "launcher window startup failed");
             self.fatal = Some(error);
             event_loop.exit();
         }
     }
 
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: SettingsEvent) {
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: LauncherEvent) {
         match event {
-            SettingsEvent::Exit => event_loop.exit(),
-            SettingsEvent::SetSystemTheme(mode) => {
-                self.options.system_theme = mode;
+            LauncherEvent::Exit => event_loop.exit(),
+            #[cfg(feature = "test-drive")]
+            LauncherEvent::Synthetic(input) => {
+                if let Some(egui) = self.egui.as_mut() {
+                    let pixels_per_point = egui.input_mut().pixels_per_point();
+                    for event in input.egui_events(pixels_per_point) {
+                        egui.input_mut().push_event(event);
+                    }
+                }
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }
