@@ -54,16 +54,36 @@
 //! variant (rebound to `v` for QA - blur ships unbound) are registered, and
 //! the FIRST `--frame` output's pixels are installed as the editor frame
 //! the destructive tools bake from.
+//!
+//! Todo 18: the launch-flow flags drive the production
+//! [`flowshot_ui::LaunchRequest`] seam (the binary layer's todo-38 shape):
+//!
+//! - `--launch-region WxH[+X+Y]`: offset-less centers at the cursor
+//! - `--launch-at-cursor`: the output under the cursor
+//! - `--launch-last-region` with `--launch-config PATH`: restore from TOML
+//! - `--launch-cursor X,Y`: the resolved cursor (absent = `AwaitFirstMotion`)
+//! - `--launch-instant`: accept-on-select
+//! - `--launch-save-region`: persist through the region sink into the config
+//! - `--launch-motion X,Y`: offscreen only, the first-motion injection
+//!   through the production `test-drive` seam
+//!
+//! In `--verify-offscreen` mode the resolved selection renders into the PNG
+//! (dim cutout + outline/grips); live mode seeds the overlay core before
+//! `run()`.
 
 use std::process::ExitCode;
 
 use flowshot_capture::{Frame, FrameBuffer, FrameFormat, OutputRef};
-use flowshot_core::config::MagnifierShape;
+use flowshot_core::config::{Config, MagnifierShape, Region};
 use flowshot_core::geometry::{
-    Logical, LogicalPoint, LogicalRect, OutputInfo, PhysicalPoint, PhysicalSize, Transform,
+    Logical, LogicalPoint, LogicalRect, LogicalSize, OutputInfo, OutputLayout, PhysicalPoint,
+    PhysicalSize, Transform,
 };
 use flowshot_ui::backdrop::{BackdropOptions, CursorSprite, FrozenCapture, PlacedCursor};
-use flowshot_ui::{EditorTools, FramePixels, OverlayRuntime, ToolKind, UiError};
+use flowshot_ui::{
+    EditorTools, FramePixels, InputRouter, LaunchRequest, OverlayCore, OverlayRuntime, Preselect,
+    SelectionState, ToolKind, UiError,
+};
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()
@@ -82,6 +102,10 @@ fn main() -> ExitCode {
 }
 
 #[derive(Default)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "CLI-style harness bag: each bool mirrors one independent command-line flag"
+)]
 struct Args {
     layout: Option<String>,
     frames: Vec<(String, String)>,
@@ -95,6 +119,14 @@ struct Args {
     toolbar: Option<String>,
     draw_color_toml: Option<String>,
     magnifier: Option<String>,
+    launch_region: Option<String>,
+    launch_at_cursor: bool,
+    launch_last_region: bool,
+    launch_cursor: Option<(f64, f64)>,
+    launch_instant: bool,
+    launch_save_region: bool,
+    launch_config: Option<String>,
+    launch_motion: Option<(f64, f64)>,
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -114,8 +146,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         cursor_visible: args.cursor_visible,
         selection: args.selection,
     };
-    if let Some((index, path)) = args.verify_offscreen {
-        return verify_offscreen(capture, index, &path);
+    if let Some((index, path)) = &args.verify_offscreen {
+        // The launch seam (todo 18) supersedes the legacy --selection seed:
+        // the resolved rect flows through the REAL OverlayCore::launch path.
+        let selection = resolve_launch_selection(&args, &capture.outputs)?.or(args.selection);
+        return verify_offscreen(capture, *index, path, selection);
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
     let mut runtime = runtime?;
@@ -190,6 +225,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             })));
     }
+    apply_launch_args(&mut runtime, &args)?;
     // Todo 17: `--magnifier <square|circle>` projects the `[editor]`
     // magnifier config (visible from launch); the in-session toggle key is
     // `l` either way (F12 binds no magnifier key - the grid-F precedent).
@@ -251,18 +287,157 @@ fn editor_frame(frames: &[Frame], outputs: &[OutputInfo]) -> Option<FramePixels>
     })
 }
 
+/// The todo-18 live-path wiring in the binary layer's shape: the request
+/// seeds the core through the production seam, and the region sink persists
+/// `[capture].last_region` into the `--launch-config` TOML (the
+/// `DrawColorSink` pattern - the example owns the file path).
+fn apply_launch_args(
+    runtime: &mut OverlayRuntime,
+    args: &Args,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(request) = launch_request(args)? {
+        runtime.core_mut().launch(request);
+    }
+    if let Some(path) = &args.launch_config {
+        let path = std::path::PathBuf::from(path);
+        runtime
+            .core_mut()
+            .set_region_sink(Some(Box::new(move |region: Region| {
+                let mut config = Config::load(&path).unwrap_or_default();
+                config.capture.last_region = Some(region);
+                if let Err(error) = config.save(&path) {
+                    eprintln!("flowshot: region persist failed: {error}");
+                }
+            })));
+    }
+    Ok(())
+}
+
+/// Builds the typed launch request from the `--launch-*` flags (the binary
+/// layer's todo-38 mapping stand-in: the LIB never parses - the harness
+/// plays the CLI's already-typed `RegionToken` side). `None` when no
+/// launch flag is present (the pre-todo-18 behavior stays byte-identical).
+fn launch_request(args: &Args) -> Result<Option<LaunchRequest>, Box<dyn std::error::Error>> {
+    let selectors = [
+        args.launch_region.is_some(),
+        args.launch_at_cursor,
+        args.launch_last_region,
+    ];
+    if selectors.iter().filter(|set| **set).count() > 1 {
+        return Err("only one of --launch-region/--launch-at-cursor/--launch-last-region".into());
+    }
+    let preselect = if let Some(token) = &args.launch_region {
+        Some(parse_preselect(token)?)
+    } else if args.launch_at_cursor {
+        Some(Preselect::OutputAtCursor)
+    } else if args.launch_last_region {
+        let path = args
+            .launch_config
+            .as_deref()
+            .ok_or("--launch-last-region wants --launch-config PATH")?;
+        Some(Preselect::LastRegion(
+            Config::load(std::path::Path::new(path))
+                .unwrap_or_default()
+                .capture
+                .last_region,
+        ))
+    } else {
+        None
+    };
+    let requested = preselect.is_some()
+        || args.launch_instant
+        || args.launch_save_region
+        || args.launch_cursor.is_some()
+        || args.launch_motion.is_some();
+    if !requested {
+        return Ok(None);
+    }
+    Ok(Some(LaunchRequest {
+        preselect: preselect.unwrap_or(Preselect::None),
+        cursor: args
+            .launch_cursor
+            .map(|(x, y)| LogicalPoint::from_raw(x, y)),
+        instant: args.launch_instant,
+        save_last_region: args.launch_save_region,
+    }))
+}
+
+/// The harness-side `WxH[+X+Y]` reader (positive offsets; the signed
+/// grammar belongs to the CLI, todo 35 - the lib takes parsed rects).
+fn parse_preselect(token: &str) -> Result<Preselect, Box<dyn std::error::Error>> {
+    let invalid = || format!("--launch-region wants WxH[+X+Y] (got {token:?})");
+    let (size_part, offsets) = match token.find('+') {
+        Some(index) => (&token[..index], Some(&token[index + 1..])),
+        None => (token, None),
+    };
+    let (width, height) = size_part.split_once('x').ok_or_else(invalid)?;
+    let size = LogicalSize::from_raw(width.trim().parse()?, height.trim().parse()?);
+    let origin = match offsets {
+        Some(rest) => {
+            let (x, y) = rest.split_once('+').ok_or_else(invalid)?;
+            Some(LogicalPoint::from_raw(x.trim().parse()?, y.trim().parse()?))
+        }
+        None => None,
+    };
+    Ok(Preselect::Region { size, origin })
+}
+
+/// Resolves the launch request through the REAL production seam
+/// (`OverlayCore::launch`, plus the first-motion injection for the
+/// `AwaitFirstMotion` deferral) and returns the seeded selection rect for
+/// the offscreen render.
+fn resolve_launch_selection(
+    args: &Args,
+    outputs: &[OutputInfo],
+) -> Result<Option<LogicalRect>, Box<dyn std::error::Error>> {
+    let Some(request) = launch_request(args)? else {
+        return Ok(None);
+    };
+    let layout = OutputLayout::new(outputs.to_vec());
+    let bindings: Vec<usize> = (0..outputs.len()).collect();
+    let mut core = OverlayCore::new(InputRouter::new(layout, bindings));
+    core.launch(request);
+    #[cfg(feature = "test-drive")]
+    if let Some((x, y)) = args.launch_motion {
+        use flowshot_ui::{SyntheticInput, WindowSlot};
+        let global = LogicalPoint::from_raw(x, y);
+        let slot = outputs
+            .iter()
+            .position(|output| output.logical_rect.contains_point(global))
+            .ok_or("--launch-motion position is outside every output")?;
+        let (local_x, local_y) = core
+            .router()
+            .to_local(WindowSlot::new(slot), global)
+            .ok_or("--launch-motion slot is not bound")?;
+        core.inject_event(SyntheticInput::pointer_moved(
+            WindowSlot::new(slot),
+            local_x,
+            local_y,
+        ));
+    }
+    #[cfg(not(feature = "test-drive"))]
+    if args.launch_motion.is_some() {
+        return Err("--launch-motion needs --features test-drive".into());
+    }
+    Ok(core.selection().rect())
+}
+
 /// Headless orientation/scale verification (Metis #16 edge case): plans the
 /// backdrop, renders output `index`'s window scene through the REAL
 /// upload+commands+render path into an offscreen texture, and writes the
-/// readback as a PNG - no window, no GUI disturbance.
+/// readback as a PNG - no window, no GUI disturbance. A resolved launch
+/// `selection` (todo 18) renders through the same path the live overlay
+/// uses: the dim cutout plus the selection engine's outline/grips.
 fn verify_offscreen(
     capture: FrozenCapture,
     index: usize,
     path: &str,
+    selection: Option<LogicalRect>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use flowshot_ui::gpu::GpuContext;
     use flowshot_ui::render::{RenderTarget, Renderer, read_texture_rgba};
 
+    let outputs = capture.outputs.clone();
     let backdrop =
         flowshot_ui::Backdrop::plan(capture, &flowshot_core::tokens::DesignTokens::default());
     let (width, height) = backdrop
@@ -278,11 +453,16 @@ fn verify_offscreen(
     backdrop.upload_for(index, &mut renderer, &gpu)?;
     backdrop.upload_cursor(&mut renderer, &gpu)?;
     let options = BackdropOptions {
-        dim: false,
+        dim: selection.is_some(),
         cursor_visible: false,
-        selection: None,
+        selection,
     };
-    let list = backdrop.commands(index, (width, height), &options);
+    let mut list = backdrop.commands(index, (width, height), &options);
+    if let (Some(rect), Some(output)) = (selection, outputs.get(index)) {
+        let mut engine = SelectionState::default();
+        engine.set_rect(Some(rect));
+        engine.paint_into(&mut list, output, std::time::Instant::now());
+    }
     let target = renderer.create_offscreen_target(&gpu.device, width, height)?;
     let view = target.create_view(&wgpu::TextureViewDescriptor::default());
     renderer.render(
@@ -348,6 +528,20 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
             "--toolbar" => args.toolbar = Some(value("--toolbar")?),
             "--draw-color-toml" => args.draw_color_toml = Some(value("--draw-color-toml")?),
             "--magnifier" => args.magnifier = Some(value("--magnifier")?),
+            "--launch-region" => args.launch_region = Some(value("--launch-region")?),
+            "--launch-at-cursor" => args.launch_at_cursor = true,
+            "--launch-last-region" => args.launch_last_region = true,
+            "--launch-cursor" => {
+                let (x, y) = parse_pair(&value("--launch-cursor")?, "--launch-cursor")?;
+                args.launch_cursor = Some((x, y));
+            }
+            "--launch-instant" => args.launch_instant = true,
+            "--launch-save-region" => args.launch_save_region = true,
+            "--launch-config" => args.launch_config = Some(value("--launch-config")?),
+            "--launch-motion" => {
+                let (x, y) = parse_pair(&value("--launch-motion")?, "--launch-motion")?;
+                args.launch_motion = Some((x, y));
+            }
             other => return Err(format!("unknown argument {other}").into()),
         }
     }

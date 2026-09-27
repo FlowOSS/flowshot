@@ -75,6 +75,7 @@ pub mod backdrop;
 pub mod editor;
 pub mod error;
 pub mod input;
+pub mod launch;
 pub mod pins;
 pub mod render;
 pub mod router;
@@ -95,6 +96,9 @@ pub use editor::{
 };
 pub use error::UiError;
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
+pub use launch::{
+    InitialSelection, LaunchRequest, PendingPreselect, Preselect, RegionSink, output_at_cursor,
+};
 pub use router::{InputRouter, WindowSlot};
 pub use runtime::{OverlayHandle, OverlayRuntime};
 pub use selection::{

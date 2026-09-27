@@ -36,6 +36,10 @@ impl OverlayApp {
             (layout, bindings)
         };
         self.core.router_mut().install(layout, bindings);
+        // The launch preselect (todo 18) resolves against the real layout,
+        // which only exists now (the binary layer's `launch()` call runs
+        // before the event loop).
+        self.core.apply_launch();
         for (index, handle) in monitors.iter().enumerate() {
             let slot = WindowSlot::new(index);
             let monitor_name = monitor::monitor_name(handle, index);

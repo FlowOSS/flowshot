@@ -79,3 +79,24 @@ First full-workspace `cargo test` after a big compile batch failed `kwin::tests:
 - NO NEUTRAL PALETTE TOKEN: magnifier grid ink (gray 128/96) + readout white text follow the paint_grid/size-HUD hardcoded precedents — todo 36 theming should add neutral/ink tokens and switch both (joins the tray danger-token action).
 - app.rs at 246 pure LOC = WARNING BAND: the todo-35 binary-layer wiring must split before adding lines (render_window is the growth point).
 - Grid toggle (F) is NOT re-projected by editor.configure() while the magnifier toggle (L) IS — inconsistent settings-apply semantics within EditorState; todo 36 (settings surface) should align grid_visible with the magnifier pattern.
+
+## 2026-09-27: USER PRESENT — live GUI window QA re-suspended (policy change)
+The user returned to the machine: visible windows/overlays are hostile again. Effective
+immediately and until the user explicitly re-allows: NO visible-window QA runs (overlay
+harnesses, pin windows, dialogs). Verification falls back to: `--verify-offscreen` headless
+render paths (frozen_backdrop/pin harnesses), unit + integration seams, and invisible
+protocol reads. Anything genuinely needing a visible window (fullscreen placement asserts,
+hyprctl clients checks, focus behavior) is queued into `.omo/evidence/gui-qa-batch.md` for a
+user-approved batch run later. If a completed todo's live QA was interrupted by a user Esc,
+that is NOT a defect — re-verify offscreen instead of re-running visible.
+
+## 2026-09-27: CPU policy — half cores while user is present
+User directive: builds cap at 8/16 jobs while they use the machine (full CPU fine when away).
+Enforced via .cargo/config.toml [build] jobs = 8 (auto-applies to every worker's cargo calls —
+no prompt compliance needed). REMOVE or raise when the user steps away. Side benefit: the
+load-sensitive kwin stub tests (deadline budgets) should flake less under a capped build.
+
+## 2026-09-27 (todo 18): follow-ups for todo 38/40 (+ one DEFERRED GUI item)
+- TODO 38 (binary layer): consume the launch.rs module-header MAPPING TABLE — build LaunchRequest from the CLI's RegionToken/CaptureRequest + config ([capture].save_last_region, [capture].last_region) + todo-12 resolve_cursor_pos; call core_mut().launch(request) BEFORE run() (production order: the spawn hook resolves it on Resumed) and set_region_sink(load-or-default -> set -> save) — frozen_backdrop's apply_launch_args() is the reference wiring. `capture screen` no-arg: output_at_cursor(layout, position) -> Option<&OutputInfo>; None = CALLER's fallback policy (undecided: first output vs typed error — no overlay exists to await motion on for a non-interactive capture). Toolbar copy/save button wiring (W5 callbacks) must route capture-completing effects through the funnel's main exit or call launch_persist explicitly — the chrome-consumed early-return branch deliberately skips region persistence.
+- TODO 38/40 (confirm): `--region at-cursor` shipped as Preselect::OutputAtCursor (whole output under the cursor; recorded decision in decisions.md — the CLI's RegionToken::AtCursor doc is ambiguous and no spec defines a size-less centering). Docs (todo 40) must state the chosen semantics; a remap is a one-variant change in launch/resolve.rs.
+- DEFERRED (gui-qa-batch.md, todo-38 gate + visible-window ban): end-to-end `flowshot capture --region 200x100+50+50 --instant` + click + `-o` save == 200x100 grim-oracle crop, and `capture screen` no-arg saved-PNG dimensions. The ui-side halves are closed invisibly (seeded geometry tokens + pixel asserts + live output-at-cursor == hyprctl oracle + centered == live cursorpos reading).
