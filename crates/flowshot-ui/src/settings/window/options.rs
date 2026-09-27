@@ -8,8 +8,8 @@ use flowshot_core::tokens::DesignTokens;
 
 use crate::pins::WindowCustomizer;
 
-use super::super::input::ClipboardBridge;
-use super::super::theme::ThemeMode;
+use crate::egui_host::ClipboardBridge;
+use crate::egui_host::theme::ThemeMode;
 
 /// The save-path dialog seam (binary layer wires rfd; a `None` picker
 /// disables the Browse button).

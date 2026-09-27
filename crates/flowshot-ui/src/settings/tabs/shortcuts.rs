@@ -18,9 +18,9 @@ use winit::keyboard::KeyCode;
 
 use crate::editor::ToolKind;
 
-use super::super::keymap;
 use super::super::model::{RecorderTarget, SettingsModel};
 use super::super::strings;
+use crate::egui_host::keymap;
 
 pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel) {
     if model.recorder().is_some() {

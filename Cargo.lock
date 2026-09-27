@@ -1563,6 +1563,7 @@ dependencies = [
  "egui-wgpu",
  "flowshot-actions",
  "flowshot-capture",
+ "flowshot-capture-wayland",
  "flowshot-core",
  "futures",
  "image",

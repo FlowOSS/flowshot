@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-27T02:52:15.000Z",
+      "updated_at": "2026-09-27T03:44:07.515Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -61,7 +61,8 @@
         "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
         "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp",
         "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU",
-        "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M"
+        "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
+        "opencode:ses_f1f097b92ffeGjmsga6BQa52CY"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -99,7 +100,8 @@
         "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended",
         "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp": "appended",
         "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU": "appended",
-        "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended"
+        "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended",
+        "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -192,7 +194,18 @@
           "session_id": "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
           "agent": "Sisyphus-Junior",
           "category": "writing",
-          "updated_at": "2026-09-27T02:52:15.000Z"
+          "updated_at": "2026-09-27T03:42:50.146Z",
+          "ended_at": "2026-09-27T03:42:50.146Z",
+          "status": "completed"
+        },
+        "todo:37": {
+          "task_key": "todo:37",
+          "task_label": "37",
+          "task_title": "Shell: capture launcher dialog",
+          "session_id": "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
+          "agent": "Sisyphus-Junior",
+          "category": "deep-low",
+          "updated_at": "2026-09-27T03:44:07.515Z"
         }
       }
     }
@@ -200,7 +213,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-27T02:52:15.000Z",
+  "updated_at": "2026-09-27T03:44:07.515Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -237,7 +250,8 @@
     "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
     "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp",
     "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU",
-    "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M"
+    "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
+    "opencode:ses_f1f097b92ffeGjmsga6BQa52CY"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -275,7 +289,8 @@
     "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended",
     "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp": "appended",
     "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU": "appended",
-    "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended"
+    "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended",
+    "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -368,7 +383,18 @@
       "session_id": "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
       "agent": "Sisyphus-Junior",
       "category": "writing",
-      "updated_at": "2026-09-27T02:52:15.000Z"
+      "updated_at": "2026-09-27T03:42:50.146Z",
+      "ended_at": "2026-09-27T03:42:50.146Z",
+      "status": "completed"
+    },
+    "todo:37": {
+      "task_key": "todo:37",
+      "task_label": "37",
+      "task_title": "Shell: capture launcher dialog",
+      "session_id": "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
+      "agent": "Sisyphus-Junior",
+      "category": "deep-low",
+      "updated_at": "2026-09-27T03:44:07.515Z"
     }
   },
   "agent": "atlas"

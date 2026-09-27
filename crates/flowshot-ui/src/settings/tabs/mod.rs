@@ -15,8 +15,8 @@ use egui::Ui;
 
 use super::model::{Banner, SettingsModel, Tab};
 use super::strings;
-use super::theme::ThemeMode;
 use super::window::PathPicker;
+use crate::egui_host::theme::ThemeMode;
 
 /// What a rendered frame asks the window layer to do.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -177,7 +177,7 @@ pub(super) fn text_field(ui: &mut Ui, label: &str, value: &mut String) -> bool {
 pub(super) fn hex_color(ui: &mut Ui, label: &str, value: &mut String) -> bool {
     ui.horizontal(|ui| {
         ui.label(label);
-        let mut rgb = super::theme::parse_hex_rgb(value).unwrap_or([0x7F, 0x7F, 0x7F]);
+        let mut rgb = crate::egui_host::theme::parse_hex_rgb(value).unwrap_or([0x7F, 0x7F, 0x7F]);
         let mut changed = ui.color_edit_button_srgb(&mut rgb).changed();
         if changed {
             *value = format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]);

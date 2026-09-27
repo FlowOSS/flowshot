@@ -11,9 +11,9 @@ use crate::error::UiError;
 use crate::runtime::require_display_server;
 
 use super::super::model::SettingsModel;
-use super::super::theme::ThemeMode;
 use super::app::SettingsApp;
 use super::options::SettingsWindowOptions;
+use crate::egui_host::theme::ThemeMode;
 
 /// Events sent into the running loop from other threads.
 #[derive(Debug, Clone, Copy)]

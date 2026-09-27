@@ -1,12 +1,13 @@
 //! Token-driven egui theming (plan todo 36: "`egui::Visuals` built FROM
 //! design tokens").
 //!
-//! The settings window is the single egui surface (draft D8(b) exception),
-//! and it must still look like `FlowShot`: every color, radius, and spacing
-//! value projected into [`egui::Style`] comes from [`DesignTokens`] (todo 2)
-//! and the `[ui]` config group - accent/contrast pickers in the Interface
-//! tab re-theme the window LIVE (immediate-mode re-projection each frame),
-//! which is the "live-apply where safe (tokens-driven)" contract.
+//! The settings window (todo 36) and the capture launcher dialog (todo 37)
+//! are the only egui surfaces (draft D8(b) exception), and both must still
+//! look like `FlowShot`: every color, radius, and spacing value projected
+//! into [`egui::Style`] comes from [`DesignTokens`] (todo 2) and the `[ui]`
+//! config group - accent/contrast pickers in the Interface tab re-theme the
+//! window LIVE (immediate-mode re-projection each frame), which is the
+//! "live-apply where safe (tokens-driven)" contract.
 //!
 //! Dark/light: [`ThemeMode`] is the RESOLVED preference. The system
 //! preference itself arrives from the binary layer (ashpd Settings portal -

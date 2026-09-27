@@ -47,7 +47,7 @@ impl std::fmt::Debug for ClipboardBridge {
 
 /// What a window event asks the window layer to do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum WindowSignal {
+pub(crate) enum WindowSignal {
     /// Nothing; the event was consumed into the frame input.
     None,
     /// The pixel extent or scale factor changed (reconfigure the surface).
@@ -58,7 +58,7 @@ pub(super) enum WindowSignal {
 
 /// Per-window egui input accumulator.
 #[derive(Debug)]
-pub(super) struct InputState {
+pub(crate) struct InputState {
     events: Vec<Event>,
     modifiers: Modifiers,
     pointer_pos: Option<Pos2>,
@@ -71,7 +71,7 @@ pub(super) struct InputState {
 }
 
 impl InputState {
-    pub(super) fn new(
+    pub(crate) fn new(
         pixels_per_point: f32,
         screen_size_points: Vec2,
         max_texture_side: u32,
@@ -90,12 +90,26 @@ impl InputState {
         }
     }
 
-    pub(super) fn set_screen_size_points(&mut self, size: Vec2) {
+    pub(crate) fn set_screen_size_points(&mut self, size: Vec2) {
         self.screen_size_points = size;
     }
 
-    pub(super) fn set_pixels_per_point(&mut self, pixels_per_point: f32) {
+    pub(crate) fn set_pixels_per_point(&mut self, pixels_per_point: f32) {
         self.pixels_per_point = pixels_per_point;
+    }
+
+    #[cfg(feature = "test-drive")]
+    pub(crate) const fn pixels_per_point(&self) -> f32 {
+        self.pixels_per_point
+    }
+
+    /// TEST-DRIVE seam: queues one egui event directly (the pins'
+    /// domain-level injection pattern - winit's `KeyEvent` has private
+    /// fields, so synthetic keyboard input enters one layer below the
+    /// winit conversion, which the keymap tests cover independently).
+    #[cfg(feature = "test-drive")]
+    pub(crate) fn push_event(&mut self, event: Event) {
+        self.events.push(event);
     }
 
     #[expect(
@@ -103,7 +117,7 @@ impl InputState {
         clippy::cast_possible_truncation,
         reason = "f64 window coordinates/scale -> f32 egui points; UI extents are far within f32 range"
     )]
-    pub(super) fn on_window_event(&mut self, event: &WindowEvent) -> WindowSignal {
+    pub(crate) fn on_window_event(&mut self, event: &WindowEvent) -> WindowSignal {
         match event {
             WindowEvent::Resized(size) => {
                 self.screen_size_points = Vec2::new(
@@ -252,7 +266,7 @@ impl InputState {
     }
 
     /// Writes egui's copy/cut output through the bridge, when present.
-    pub(super) fn push_copied_text(&self, text: &str) {
+    pub(crate) fn push_copied_text(&self, text: &str) {
         if !text.is_empty()
             && let Some(bridge) = &self.clipboard
         {
@@ -261,7 +275,7 @@ impl InputState {
     }
 
     /// Drains the accumulated events into the frame's [`egui::RawInput`].
-    pub(super) fn take_raw_input(&mut self) -> egui::RawInput {
+    pub(crate) fn take_raw_input(&mut self) -> egui::RawInput {
         egui::RawInput {
             screen_rect: Some(Rect::from_min_size(Pos2::ZERO, self.screen_size_points)),
             max_texture_side: Some(usize::try_from(self.max_texture_side).unwrap_or(2048)),
