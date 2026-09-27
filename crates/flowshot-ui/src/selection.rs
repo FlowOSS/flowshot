@@ -56,11 +56,15 @@ use paint::SelectionColors;
 pub use cascade::{CascadeState, EscStep};
 pub use hit::{Handle, HitZone};
 pub use hud::{HudPosition, HudView, format_geometry};
+// The launch preselect (todo 18) shares the engine's explicit layout clamp
+// (size-preserving shift, intersection when oversized) - one math, two
+// callers.
 pub use metrics::{
     AVG_GLYPH_ADVANCE, BUTTON_BASE_FACTOR, DOUBLE_CLICK_INTERVAL, DRAG_THRESHOLD, GRIP_DIVISOR,
     HANDLE_AREA_FACTOR, HUD_BACKGROUND_ALPHA, LINE_SPACING_RATIO, MIN_SELECTION_SIDE,
     OUTLINE_WIDTH, SelectionMetrics,
 };
+pub(crate) use resize::fit_into_bounds;
 pub use types::{Effect, SelectionConfig, SelectionEnv, SelectionUpdate};
 
 /// The selection state machine: one selection rect in global logical space,

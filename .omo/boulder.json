@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-26T22:37:00.527Z",
+      "updated_at": "2026-09-27T00:08:47.614Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -55,7 +55,10 @@
         "opencode:ses_f20e47bffffeSXz3phU5jaDRoz",
         "opencode:ses_f208e5e69ffeI9DB38TB4awUXi",
         "opencode:ses_f2075573dffelG7cvkgvghbiC3",
-        "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym"
+        "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym",
+        "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14",
+        "opencode:ses_f1fd337e4ffen1RN041Xc2fclX",
+        "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -87,7 +90,10 @@
         "opencode:ses_f20e47bffffeSXz3phU5jaDRoz": "appended",
         "opencode:ses_f208e5e69ffeI9DB38TB4awUXi": "appended",
         "opencode:ses_f2075573dffelG7cvkgvghbiC3": "appended",
-        "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym": "appended"
+        "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym": "appended",
+        "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14": "appended",
+        "opencode:ses_f1fd337e4ffen1RN041Xc2fclX": "appended",
+        "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -157,8 +163,19 @@
           "agent": "Sisyphus-Junior",
           "category": "deep-low",
           "started_at": "2026-09-26T19:01:24.072Z",
-          "status": "running",
-          "updated_at": "2026-09-26T22:37:00.527Z"
+          "status": "completed",
+          "updated_at": "2026-09-26T23:52:52.852Z",
+          "ended_at": "2026-09-26T23:52:52.852Z",
+          "elapsed_ms": 17488780
+        },
+        "todo:18": {
+          "task_key": "todo:18",
+          "task_label": "18",
+          "task_title": "Overlay: preselect-at-cursor, region memory, accept-on-select",
+          "session_id": "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-09-27T00:08:47.614Z"
         }
       }
     }
@@ -166,7 +183,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-26T22:37:00.527Z",
+  "updated_at": "2026-09-27T00:08:47.614Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -197,7 +214,10 @@
     "opencode:ses_f20e47bffffeSXz3phU5jaDRoz",
     "opencode:ses_f208e5e69ffeI9DB38TB4awUXi",
     "opencode:ses_f2075573dffelG7cvkgvghbiC3",
-    "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym"
+    "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym",
+    "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14",
+    "opencode:ses_f1fd337e4ffen1RN041Xc2fclX",
+    "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -229,7 +249,10 @@
     "opencode:ses_f20e47bffffeSXz3phU5jaDRoz": "appended",
     "opencode:ses_f208e5e69ffeI9DB38TB4awUXi": "appended",
     "opencode:ses_f2075573dffelG7cvkgvghbiC3": "appended",
-    "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym": "appended"
+    "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym": "appended",
+    "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14": "appended",
+    "opencode:ses_f1fd337e4ffen1RN041Xc2fclX": "appended",
+    "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -299,8 +322,19 @@
       "agent": "Sisyphus-Junior",
       "category": "deep-low",
       "started_at": "2026-09-26T19:01:24.072Z",
-      "status": "running",
-      "updated_at": "2026-09-26T22:37:00.527Z"
+      "status": "completed",
+      "updated_at": "2026-09-26T23:52:52.852Z",
+      "ended_at": "2026-09-26T23:52:52.852Z",
+      "elapsed_ms": 17488780
+    },
+    "todo:18": {
+      "task_key": "todo:18",
+      "task_label": "18",
+      "task_title": "Overlay: preselect-at-cursor, region memory, accept-on-select",
+      "session_id": "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-09-27T00:08:47.614Z"
     }
   },
   "agent": "atlas"

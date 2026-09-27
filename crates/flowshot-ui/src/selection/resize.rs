@@ -173,7 +173,7 @@ fn aspect_edges(handle: Handle, aspect: f64, naive: Edges, at: LogicalPoint) -> 
 /// Shifts `rect` into `bounds` preserving its size when it fits; clamps it
 /// to the bounds (intersection semantics) when it cannot fit. `None` bounds
 /// (an empty layout) pass the rect through.
-pub(super) fn fit_into_bounds(rect: LogicalRect, bounds: Option<LogicalRect>) -> LogicalRect {
+pub(crate) fn fit_into_bounds(rect: LogicalRect, bounds: Option<LogicalRect>) -> LogicalRect {
     let Some(bounds) = bounds else {
         return rect;
     };

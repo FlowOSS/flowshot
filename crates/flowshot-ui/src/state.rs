@@ -21,6 +21,7 @@ use crate::editor::{EditorState, FramePixels};
 #[cfg(any(test, feature = "test-drive"))]
 use crate::input::SyntheticInput;
 use crate::input::{ImeStatus, InputEvent, RouteReport};
+use crate::launch::LaunchState;
 use crate::router::{InputRouter, WindowSlot};
 use crate::selection::SelectionState;
 
@@ -57,6 +58,7 @@ pub struct OverlayCore {
     pub(crate) selection: SelectionState,
     pub(crate) editor: EditorState,
     pub(crate) chrome: crate::chrome::ChromeState,
+    pub(crate) launch: LaunchState,
 }
 
 impl OverlayCore {
@@ -73,6 +75,7 @@ impl OverlayCore {
             selection: SelectionState::default(),
             editor: EditorState::default(),
             chrome: crate::chrome::ChromeState::default(),
+            launch: LaunchState::default(),
         }
     }
 

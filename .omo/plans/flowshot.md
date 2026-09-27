@@ -244,7 +244,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = spanning drag oracle + HUD assert; failure = 1x1 attempt clamps to 10x10 (unit), Esc cascade order log matches spec exactly. Evidence <attemptDir>/task-16-flowshot.png
   Commit: Y | feat(ui): selection engine (handles, modifiers, spanning, HUD)
   Recommended task executor category: unspecified-high - large but exhaustively specified interaction module.
-- [ ] 17. Overlay: magnifier with pixel grid + hex readout
+- [x] 17. Overlay: magnifier with pixel grid + hex readout
   What to do: per draft F27 spec EXACTLY: samples 17x17 source px (magPixels=8) around cursor from frozen frame, zoom 10x (170x170 rendered), offset 16px from cursor, square (crosshair arms) + circle (elliptic clip) variants per squareMagnifier config, flips to opposite side near screen edges (all 4), toggled by showMagnifier + in-session key; ADDITIONS (BORROW-MODIFIED): 1px pixel-grid lines at zoom >= 8, RGB+hex readout of pixel under crosshair (wayshot --color equivalence). Must NOT: no color-picker palette logic (todo 26/27).
   Parallelization: Wave 3 | Blocked by: 16 | Blocks: 38
   References: draft F27 magnifier constants (magnifierwidget.h cites), F12 (showMagnifier/squareMagnifier keys).
