@@ -1,4 +1,0 @@
-[build]
-# User present on this machine: cap build parallelism at half the cores (16 -> 8).
-# Remove this file (or raise jobs) when the user steps away / full CPU is fine.
-jobs = 8

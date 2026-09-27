@@ -80,6 +80,7 @@ pub mod pins;
 pub mod render;
 pub mod router;
 pub mod selection;
+pub mod settings;
 pub mod widgets;
 
 pub use backdrop::{

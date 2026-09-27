@@ -35,9 +35,23 @@ cosmic-text = { workspace = true }
 lyon = { workspace = true }
 bytemuck = { workspace = true }
 
-# egui enters with todo 36 version-matched to the winit pin (plan dep
-# guardrail); keeping it out avoids duplicate winit/wgpu majors in the lockfile
-# (deny.toml bans version drift).
+# Todo 36 settings surface: egui embedded in OUR wgpu renderer (draft D8(b),
+# the single recorded exception to the winit+wgpu+cosmic-text stack; settings
+# window ONLY - never the overlay/editor). egui-wgpu 0.28.1 requires wgpu
+# ^0.20.0 = the workspace pin (cached-registry-verified). egui-winit is
+# deliberately NOT used: its 0.28.1 release requires winit ^0.29 while the
+# workspace pins winit 0.30, and no egui release pairs (wgpu 0.20, winit 0.30)
+# - the plan's recorded fallback applies: feed egui_wgpu manually from our own
+# winit 0.30 input router (settings::input). Workspace inheritance forbids
+# default-features overrides, so egui's embedded default fonts come along
+# unused (the vendored Inter replaces them at runtime; the orchestrator can
+# trim them with default-features=false in the ROOT table if size matters).
+egui = { workspace = true }
+egui-wgpu = { workspace = true }
+# Filename-pattern live preview in the settings Filename tab (same strftime
+# subset as flowshot-actions' export expander; the actions crate is not a lib
+# dependency - purity gate).
+chrono = { workspace = true }
 
 [dev-dependencies]
 # QA-harness composition only (examples/pin_window.rs is the reference

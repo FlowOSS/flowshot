@@ -171,6 +171,36 @@ pub fn configure_overlay_surface(
     height: u32,
     monitor: &str,
 ) -> Result<wgpu::SurfaceConfiguration, UiError> {
+    configure_surface(surface, adapter, device, width, height, monitor, true)
+}
+
+/// Configures `surface` for an OPAQUE normal window (the todo-36 settings
+/// surface and the todo-37 launcher dialog): same format/present policy as
+/// the overlay, `Opaque` compositing (the window is not transparent).
+///
+/// # Errors
+///
+/// Same failure modes as [`configure_overlay_surface`].
+pub fn configure_opaque_surface(
+    surface: &wgpu::Surface<'static>,
+    adapter: &wgpu::Adapter,
+    device: &wgpu::Device,
+    width: u32,
+    height: u32,
+    label: &str,
+) -> Result<wgpu::SurfaceConfiguration, UiError> {
+    configure_surface(surface, adapter, device, width, height, label, false)
+}
+
+fn configure_surface(
+    surface: &wgpu::Surface<'static>,
+    adapter: &wgpu::Adapter,
+    device: &wgpu::Device,
+    width: u32,
+    height: u32,
+    monitor: &str,
+    transparent: bool,
+) -> Result<wgpu::SurfaceConfiguration, UiError> {
     let (width, height) = (width.max(1), height.max(1));
     let limit = device.limits().max_texture_dimension_2d;
     if !surface_size_fits(width, height, limit) {
@@ -191,11 +221,13 @@ pub fn configure_overlay_surface(
         .ok_or_else(|| UiError::NoSurfaceFormats {
             monitor: monitor.to_owned(),
         })?;
-    let alpha_mode = if capabilities
-        .alpha_modes
-        .contains(&CompositeAlphaMode::PreMultiplied)
-    {
+    let preferred_alpha = if transparent {
         CompositeAlphaMode::PreMultiplied
+    } else {
+        CompositeAlphaMode::Opaque
+    };
+    let alpha_mode = if capabilities.alpha_modes.contains(&preferred_alpha) {
+        preferred_alpha
     } else {
         capabilities
             .alpha_modes
