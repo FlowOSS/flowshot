@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-27T00:08:47.614Z",
+      "updated_at": "2026-09-27T02:52:15.000Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -58,7 +58,10 @@
         "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym",
         "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14",
         "opencode:ses_f1fd337e4ffen1RN041Xc2fclX",
-        "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn"
+        "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
+        "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp",
+        "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU",
+        "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -93,7 +96,10 @@
         "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym": "appended",
         "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14": "appended",
         "opencode:ses_f1fd337e4ffen1RN041Xc2fclX": "appended",
-        "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended"
+        "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended",
+        "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp": "appended",
+        "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU": "appended",
+        "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -175,7 +181,18 @@
           "session_id": "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
           "agent": "Sisyphus-Junior",
           "category": "unspecified-high",
-          "updated_at": "2026-09-27T00:08:47.614Z"
+          "updated_at": "2026-09-27T01:09:14.352Z",
+          "ended_at": "2026-09-27T01:09:14.352Z",
+          "status": "completed"
+        },
+        "todo:36": {
+          "task_key": "todo:36",
+          "task_label": "36",
+          "task_title": "Shell: settings UI (egui embedded in our wgpu renderer)",
+          "session_id": "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
+          "agent": "Sisyphus-Junior",
+          "category": "writing",
+          "updated_at": "2026-09-27T02:52:15.000Z"
         }
       }
     }
@@ -183,7 +200,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-27T00:08:47.614Z",
+  "updated_at": "2026-09-27T02:52:15.000Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -217,7 +234,10 @@
     "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym",
     "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14",
     "opencode:ses_f1fd337e4ffen1RN041Xc2fclX",
-    "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn"
+    "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
+    "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp",
+    "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU",
+    "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -252,7 +272,10 @@
     "opencode:ses_f2022a7f5ffeKwSoLxQA1LDoym": "appended",
     "opencode:ses_f1fdcc1fbffez3E7LR2EqWap14": "appended",
     "opencode:ses_f1fd337e4ffen1RN041Xc2fclX": "appended",
-    "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended"
+    "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn": "appended",
+    "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp": "appended",
+    "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU": "appended",
+    "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -334,7 +357,18 @@
       "session_id": "opencode:ses_f1fce9fe1ffeChU6McfBNfFZcn",
       "agent": "Sisyphus-Junior",
       "category": "unspecified-high",
-      "updated_at": "2026-09-27T00:08:47.614Z"
+      "updated_at": "2026-09-27T01:09:14.352Z",
+      "ended_at": "2026-09-27T01:09:14.352Z",
+      "status": "completed"
+    },
+    "todo:36": {
+      "task_key": "todo:36",
+      "task_label": "36",
+      "task_title": "Shell: settings UI (egui embedded in our wgpu renderer)",
+      "session_id": "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
+      "agent": "Sisyphus-Junior",
+      "category": "writing",
+      "updated_at": "2026-09-27T02:52:15.000Z"
     }
   },
   "agent": "atlas"

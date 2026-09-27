@@ -1172,3 +1172,29 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - LIVE ACCEPTANCE WITHOUT WINDOWS: probe (layout) + resolve_cursor (position) + `hyprctl monitors -j` (oracle) are all invisible IPC reads; feeding the live cursor into --launch-cursor and asserting the seeded geometry token against jq half-open containment math closes the "centers at hyprctl cursorpos" + "picks the output containing cursorpos" acceptance clauses with zero GUI disturbance.
 - Grip/outline keep-out: selection chrome ink sits ON the rect border with ~13px reach (buttonBaseSize*0.6 handles) — inside-region sample boxes need >=15px inset (todo-23's >=10px rule was for stroke outlines only).
 - fmt discipline: run `cargo fmt -p flowshot-ui` (not bare `cargo fmt`) when concurrent workers may have unformatted files in other crates; bare cargo fmt rewrites workspace-wide (this run: verified via mtimes that nothing outside flowshot-ui changed — the 00:58-01:26 batch was the todo-17 worker's own files).
+
+## 2026-09-27 (todo 36): egui 0.28 embedding without egui-winit — API gotchas (source-verified)
+- egui-wgpu 0.28.1 Renderer::render takes (&mut RenderPass, &[ClippedPrimitive], &ScreenDescriptor) — ANY render pass works, so offscreen-to-textature needs no surface at all: create_texture(RENDER_ATTACHMENT|COPY_SRC) → begin_render_pass → update_buffers (submit its returned callback buffers!) → render → read_texture_rgba. ScreenDescriptor = {size_in_pixels: [u32;2], pixels_per_point: f32}.
+- egui 0.28 REMOVED FullOutput::repaint_after: repaint scheduling reads output.viewport_output[ViewportId::ROOT].repaint_delay (Duration::MAX = idle) → ControlFlow::WaitUntil.
+- ComboBox::from_id_source (NOT from_id_salt — that rename came later); CollapsingHeader response field is body_returned (NOT inner); DragValue::clamp_range is DEPRECATED → .range(); Key has symbol_or_name()/name()/from_name() but NO format_to_short_string in 0.28; ui.color_edit_button_srgb(&mut [u8;3]) is the no-alpha #RRGGBB picker; FontData::from_static(&'static [u8]) for include_bytes fonts; egui::Spacing lives at egui::style::Spacing (not root-re-exported); Visuals.selection.stroke is a Stroke (not Color32).
+- winit 0.30: Key (logical) has NO lifetime param (0.29 had Key<'a>); KeyCode/NamedKey both span F1-F35; CursorIcon = the cursor-icon crate's CSS names (PointingHand→Pointer, ResizeHorizontal→EwResize, ResizeNeSw→NeswResize, ResizeColumn→ColResize…); set_cursor_icon DEPRECATED → set_cursor; ScaleFactorChanged carries scale_factor: f64 (f32::try_from(f64) does NOT exist — cast + documented expect).
+- CLEAR-COLOR COLOR SPACE is load-bearing for pixel asserts: sRGB target formats take the LINEAR clear value (hardware encodes; eframe convention = egui::Rgba::from(panel_fill)); gamma-space Rgba8Unorm takes the sRGB bytes /255 directly. Get this wrong and every readback assert is off by the sRGB transfer curve.
+- Workspace inheritance: `default-features = false` in an inheriting manifest is a HARD cargo error when the root table doesn't set it — the todo-14 comment claiming this was right. Feature trims must happen in the ROOT table.
+- Vendored binary assets deserve a `file` magic check in CI: three 268KB "TTFs" were GitHub 404 HTML for 8 todos because no consumer existed. Cheap guard: a unit test asserting include_bytes! font starts with a TrueType magic (0x00010000 / 'true' / 'ttcf') — added value the moment the first consumer appeared (todo 41 could keep it).
+
+## Todo 40: per-desktop guides + config reference + ADRs (docs/) — 2026-09-27
+
+**What landed**
+- docs/setup-{hyprland,sway,kde,gnome}.md, docs/config-reference.md, docs/verification.md, docs/architecture/{README,adr-001..006}.md. README.md (pre-landed) untouched. Evidence: .omo/evidence/task-40-flowshot.txt (drafted vs TBD list, spot checks, deviations).
+
+**Patterns that worked**
+- Golden files as doc sources: the `--print-bind-help` snippets in the guides are quoted verbatim from crates/flowshot-daemon/tests/golden/bind-help-*.txt — the docs can never drift from what the binary prints without the goldens drifting first.
+- Write per-desktop verification-class labels at the TOP of each guide (sway/kde/gnome are source/stub-verified, never run live here) — one sentence of honesty up front replaces per-claim hedging throughout.
+- config-reference hand-sync discipline: transcribe from the Default impls (never from memory), spot-check >=10 field names with grep against config.rs, and keep the "complete default file" block in serde field order. A doc-gen sync test remains the right long-term gate (plan acceptance) but is code — out of a docs-only dispatch.
+
+**Gotchas**
+- lychee absent on this machine (plan's link validator) — a ~20-line python link+anchor resolver (GitHub slug rules: lowercase, strip backticks/parens, spaces->hyphens) is a workable stand-in; record the deviation.
+- Hyprland 0.56 docs must carry BOTH config syntaxes: legacy `bind = ,Print,exec,...`/`permission = regex, screencopy, allow` (hyprland.conf) AND Lua `hl.bind(...)`/`hl.permission({binary=..., type=..., mode=...})` (hyprland.lua); `hyprctl keyword` is dead on the Lua parser (runtime = `hyprctl eval 'hl...'`).
+- Hyprland permissions wiki (fetched 2026-09-27): permission types include screencopy AND cursorpos (cursor position is its own class; todo 8's PERMISSION_TYPE_CURSOR_POS confirmed); config permission rules require a Hyprland RESTART, not a reload.
+- Exit codes 3-6 are todo-38 seams (exit.rs: "no producer until the todo-38 execution wiring lands") — docs phrase them as "exit code N in the CLI contract", never as observed behavior.
+- Plan todo 40 text also lists CONTRIBUTING.md + a D-Bus-vs-flameshot mapping table; the dispatch brief's file list excluded them — recorded in evidence for whoever closes the plan-level acceptance.

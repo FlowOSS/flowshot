@@ -197,12 +197,14 @@ impl EditorState {
     pub fn configure(&mut self, config: EditorTools) {
         let undo_limit = config.editor.undo_limit;
         self.color = parse_draw_color(&config.editor.draw_color);
-        // The magnifier projects BOTH config keys (todo 17: "toggled by
-        // [editor].magnifier config + in-session key" - a settings apply is
-        // authoritative over the session toggle; the grid's configure gap
-        // is a todo-27 leftover, not the pattern).
+        // Session toggles re-project from config on a settings apply (the
+        // apply is authoritative over the in-session toggle): the magnifier
+        // projects BOTH its config keys (todo 17), and the grid follows the
+        // same pattern (todo 36 alignment - issues.md 2026-09-27 todo-17
+        // follow-up: grid_visible was the lone configure() gap).
         self.magnifier_visible = config.editor.magnifier;
         self.magnifier_shape = config.editor.magnifier_shape;
+        self.grid_visible = config.editor.grid;
         self.config = config;
         self.sizes = ToolSizes::from_config(&self.config);
         self.undo

@@ -252,7 +252,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = readout round-trip assert; failure = cursor at exact corner -> magnifier fully on-screen (unit). Evidence <attemptDir>/task-17-flowshot.png
   Commit: Y | feat(ui): magnifier with grid + hex readout
   Recommended task executor category: quick - small self-contained widget, every constant specified.
-- [ ] 18. Overlay: preselect-at-cursor, region memory, accept-on-select
+- [x] 18. Overlay: preselect-at-cursor, region memory, accept-on-select
   What to do: launch-time flows: resolve cursor via todo 12 -> when Some(pos): `flowshot capture screen` (no arg) targets output-at-cursor (Amendment #3: behavior, not a config flag; FIXES the feature Flameshot hard-blocks on Wayland, F8 screengrabber L249-255); `--region WxH+X+Y` parse -> initial selection centered/clamped at cursor when no explicit coords (--region coordinate space = global LOGICAL px, converted physical-first internally; documented for scale!=1, Oracle r1 #8iii); when cursor unresolved (AwaitFirstMotion): defer preselect until first motion event (contract from todo 12); `--last-region` + [capture].save_last_region config (persist last rect in TOML); `--instant`: first release (or Enter on preselect) immediately runs export actions, no editor step (fixes #4780 monitor-picker blocking - no picker exists in FlowShot, spanning overlay handles multi-monitor natively). Must NOT: no CLI parsing here (todo 35 passes typed requests).
   Parallelization: Wave 3 | Blocked by: 16,12 | Blocks: 38
   References: draft F12 modes 5/6/7/10, F13 (cursor layers), F9 (#4780 fix), F8 (flameshot's Wayland block = the thing we fix).

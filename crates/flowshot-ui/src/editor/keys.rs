@@ -96,6 +96,25 @@ impl ToolShortcuts {
         self.redo = redo;
     }
 
+    /// The current undo key (Ctrl+…; settings-surface read seam, todo 36).
+    #[must_use]
+    pub const fn undo_key(&self) -> KeyCode {
+        self.undo
+    }
+
+    /// The current redo key (Ctrl+Shift+…; settings-surface read seam).
+    #[must_use]
+    pub const fn redo_key(&self) -> KeyCode {
+        self.redo
+    }
+
+    /// The current z-order bindings `(raise, lower)`; `None` = unbound
+    /// (the shipped default).
+    #[must_use]
+    pub const fn z_keys(&self) -> (Option<KeyCode>, Option<KeyCode>) {
+        (self.raise, self.lower)
+    }
+
     /// The z-order action a plain (unmodified) key press dispatches;
     /// `None` while the slots ship unbound (the plan's panel-driven
     /// default - config/QA rebind only).
