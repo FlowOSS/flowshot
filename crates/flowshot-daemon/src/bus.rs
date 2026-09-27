@@ -55,9 +55,24 @@ impl FlowShotInterface {
         Self { sink, state, clock }
     }
 
-    fn accept(&self, command: DaemonCommand) {
+    /// The bus reply contract (the silent-failure fix): the reply waits
+    /// for the sink's execution receipt - an early failure becomes a typed
+    /// `Failed` error reply (the forwarding CLI exits non-zero with the
+    /// message), while a receipt resolving `Ok` (success, or the startup
+    /// reply window elapsed with a window session still running) replies
+    /// acceptance. Untracked sinks reply immediately.
+    async fn accept(&self, command: DaemonCommand) -> fdo::Result<()> {
         self.state.touch(self.clock.now());
-        self.sink.dispatch(command);
+        let Some(receipt) = self.sink.dispatch_tracked(command) else {
+            return Ok(());
+        };
+        match receipt.await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(message)) => Err(fdo::Error::Failed(message)),
+            Err(_dropped) => Err(fdo::Error::Failed(
+                crate::strings::EXECUTOR_THREAD_DIED.to_owned(),
+            )),
+        }
     }
 }
 
@@ -65,77 +80,145 @@ impl FlowShotInterface {
 impl FlowShotInterface {
     /// Region capture with the Amendment #2 modifier bag (`a{sv}`; keys
     /// per [`crate::request::CAPTURE_OPTION_KEYS`]).
-    #[expect(
-        clippy::needless_pass_by_value,
-        reason = "the zbus interface macro deserializes owned message arguments"
-    )]
-    fn capture(&self, options: HashMap<String, OwnedValue>) -> fdo::Result<()> {
+    async fn capture(&self, options: HashMap<String, OwnedValue>) -> fdo::Result<()> {
         let request = CaptureRequest::from_vardict(&options)
             .map_err(|error| fdo::Error::InvalidArgs(error.to_string()))?;
-        self.accept(DaemonCommand::Capture(request));
-        Ok(())
+        self.accept(DaemonCommand::Capture(request)).await
     }
 
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
-    )]
     /// Full-desktop capture.
-    fn capture_full(&self) -> fdo::Result<()> {
-        self.accept(DaemonCommand::CaptureFull);
-        Ok(())
+    async fn capture_full(&self) -> fdo::Result<()> {
+        self.accept(DaemonCommand::CaptureFull).await
     }
 
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
-    )]
     /// Single-output capture by index.
-    fn capture_screen(&self, screen: u32) -> fdo::Result<()> {
-        self.accept(DaemonCommand::CaptureScreen(screen));
-        Ok(())
+    async fn capture_screen(&self, screen: u32) -> fdo::Result<()> {
+        self.accept(DaemonCommand::CaptureScreen(screen)).await
     }
 
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
-    )]
     /// Open the capture launcher dialog (todo 37 surface).
-    fn launcher(&self) -> fdo::Result<()> {
-        self.accept(DaemonCommand::Launcher);
-        Ok(())
+    async fn launcher(&self) -> fdo::Result<()> {
+        self.accept(DaemonCommand::Launcher).await
     }
 
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
-    )]
     /// Open the settings surface (todo 36).
-    fn settings(&self) -> fdo::Result<()> {
-        self.accept(DaemonCommand::Settings);
-        Ok(())
+    async fn settings(&self) -> fdo::Result<()> {
+        self.accept(DaemonCommand::Settings).await
     }
 
     /// Second-instance argv forwarding (single-instance parity UX: the
-    /// losing process exits 0 after this call).
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
-    )]
-    fn invoke(&self, argv: Vec<String>) -> fdo::Result<()> {
+    /// losing process exits 0 after this call, non-zero when the daemon's
+    /// execution failed early - the silent-failure fix).
+    async fn invoke(&self, argv: Vec<String>) -> fdo::Result<()> {
         tracing::info!(argv = ?argv, "invoke received");
-        self.accept(DaemonCommand::Invoke(argv));
-        Ok(())
+        self.accept(DaemonCommand::Invoke(argv)).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::command::RecordingSink;
+    use crate::command::{ExecutionOutcome, ExecutionReceipt, RecordingSink};
     use crate::testsupport::{ServiceStub, bounded, spawn_service_stub, stub_guard};
     use std::time::Instant;
     use zbus::zvariant::{Str, Value};
+
+    /// A sink whose tracked receipt resolves to a canned outcome (the
+    /// bus-side half of the silent-failure fix: receipt -> reply mapping).
+    #[derive(Debug)]
+    struct ReceiptSink(ReceiptMode);
+
+    #[derive(Debug)]
+    enum ReceiptMode {
+        Accepted,
+        Failed(&'static str),
+        ThreadDied,
+    }
+
+    impl CommandSink for ReceiptSink {
+        fn dispatch(&self, _command: DaemonCommand) {}
+
+        fn dispatch_tracked(&self, _command: DaemonCommand) -> Option<ExecutionReceipt> {
+            let (reply, receipt) = tokio::sync::oneshot::channel::<ExecutionOutcome>();
+            match &self.0 {
+                ReceiptMode::Accepted => {
+                    let _ = reply.send(Ok(()));
+                }
+                ReceiptMode::Failed(message) => {
+                    let _ = reply.send(Err((*message).to_owned()));
+                }
+                ReceiptMode::ThreadDied => {}
+            }
+            Some(receipt)
+        }
+    }
+
+    /// The `Failed` reply assertion shared by the receipt-error tests.
+    async fn assert_failed_reply(client: &zbus::Connection, expected_detail: &str) {
+        let error = bounded(
+            "CaptureFull (failing receipt)",
+            client.call_method(Some(SERVICE), OBJECT_PATH, Some(IFACE), "CaptureFull", &()),
+        )
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("a failing receipt must produce an error reply"));
+        match &error {
+            zbus::Error::MethodError(name, detail, _) => {
+                assert_eq!(name.as_str(), "org.freedesktop.DBus.Error.Failed");
+                let detail = detail.as_deref().unwrap_or_default();
+                assert!(
+                    detail.contains(expected_detail),
+                    "reply detail {detail:?} must carry {expected_detail:?}"
+                );
+            }
+            other => panic!("unexpected error: {other}"),
+        }
+    }
+
+    #[tokio::test]
+    #[expect(
+        clippy::await_holding_lock,
+        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+    )]
+    async fn early_execution_failure_replies_typed_failed() {
+        // Given: a sink whose execution fails inside the reply window.
+        let _guard = stub_guard();
+        let sink = ReceiptSink(ReceiptMode::Failed("session child failed (exit 1): boom"));
+        let stub = spawn_service_stub(Arc::new(sink)).await;
+        // When/Then: the bus call answers with the typed Failed error
+        // carrying the executor's message (the CLI maps it onto a non-zero
+        // exit + stderr text).
+        assert_failed_reply(stub.client(), "session child failed").await;
+        stub.shutdown().await;
+    }
+
+    #[tokio::test]
+    #[expect(
+        clippy::await_holding_lock,
+        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+    )]
+    async fn dropped_receipt_replies_executor_thread_died() {
+        // Given: a sink whose executor thread died before reporting.
+        let _guard = stub_guard();
+        let stub = spawn_service_stub(Arc::new(ReceiptSink(ReceiptMode::ThreadDied))).await;
+        // When/Then: the dead receipt surfaces as a typed failure, not Ok.
+        assert_failed_reply(stub.client(), crate::strings::EXECUTOR_THREAD_DIED).await;
+        stub.shutdown().await;
+    }
+
+    #[tokio::test]
+    #[expect(
+        clippy::await_holding_lock,
+        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+    )]
+    async fn resolved_ok_receipt_replies_acceptance() {
+        // Given: a sink whose execution reported success.
+        let _guard = stub_guard();
+        let stub = spawn_service_stub(Arc::new(ReceiptSink(ReceiptMode::Accepted))).await;
+        // When/Then: the call replies Ok.
+        call_ok(stub.client(), "CaptureFull", &()).await;
+        stub.shutdown().await;
+    }
 
     async fn recording_stub() -> (ServiceStub, RecordingSink) {
         let sink = RecordingSink::new();

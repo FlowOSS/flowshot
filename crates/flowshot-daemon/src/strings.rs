@@ -93,3 +93,9 @@ pub fn about_body(version: &str) -> String {
 
 /// The exclusive stdout modes requested together (todo 38 executor).
 pub const STDOUT_MODES_CONFLICT: &str = "--raw and --print-geometry both own stdout; pick one";
+
+/// The bus reply when the executor thread died (panic or spawn failure)
+/// before reporting an outcome - surfaced instead of swallowed (the
+/// silent-failure fix).
+pub const EXECUTOR_THREAD_DIED: &str =
+    "the FlowShot executor thread died before reporting an outcome";

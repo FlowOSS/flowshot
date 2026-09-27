@@ -89,9 +89,6 @@ pub async fn dispatch(
             dispatch_bus(&WireCall::Invoke(argv_tail.to_vec()), bus_address).await
         }
         Invocation::Settings => dispatch_bus(&WireCall::Settings, bus_address).await,
-        Invocation::Session(spec) => Ok(ExitCode::from(
-            flowshot_daemon::execute::session::run_child(spec),
-        )),
     }
 }
 

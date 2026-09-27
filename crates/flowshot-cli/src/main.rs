@@ -12,7 +12,7 @@ use anyhow::Context;
 use clap::Parser;
 use flowshot_cli::args::Cli;
 use flowshot_cli::exit::{self, CliError};
-use flowshot_cli::invocation::{self, Invocation};
+use flowshot_cli::invocation::{self, Invocation, Resolved};
 
 fn main() -> ExitCode {
     init_tracing();
@@ -29,9 +29,25 @@ fn main() -> ExitCode {
 
 fn execute(cli: Cli, argv: &[OsString]) -> anyhow::Result<ExitCode> {
     let bus_address = cli.bus_address.clone();
-    let invocation = invocation::resolve(cli)?;
+    match invocation::resolve(cli)? {
+        // The session child runs on the MAIN thread OUTSIDE any tokio
+        // runtime (the winit one-event-loop contract; its child legs build
+        // their own runtimes - a nested block_on panics). Mirrors the
+        // flowshot-daemon binary's early dispatch.
+        Resolved::Session(spec) => Ok(ExitCode::from(
+            flowshot_daemon::execute::session::run_child(&spec),
+        )),
+        Resolved::Command(invocation) => run_command(&invocation, bus_address.as_deref(), argv),
+    }
+}
+
+fn run_command(
+    invocation: &Invocation,
+    bus_address: Option<&str>,
+    argv: &[OsString],
+) -> anyhow::Result<ExitCode> {
     let argv_tail = invocation::argv_tail(argv)?;
-    if let Invocation::Capture(capture) = &invocation
+    if let Invocation::Capture(capture) = invocation
         && capture.request.upload
     {
         // The only CLI-side config gate (Amendment #3): unconfigured
@@ -43,8 +59,8 @@ fn execute(cli: Cli, argv: &[OsString]) -> anyhow::Result<ExitCode> {
         .build()
         .context("could not build the tokio runtime")?;
     Ok(runtime.block_on(flowshot_cli::dispatch::dispatch(
-        &invocation,
-        bus_address.as_deref(),
+        invocation,
+        bus_address,
         &argv_tail,
     ))?)
 }

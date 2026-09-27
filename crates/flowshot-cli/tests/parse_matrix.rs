@@ -4,15 +4,15 @@
 
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::Parser;
 use clap::error::ErrorKind;
 use flowshot_cli::args::{Cli, CompletionShell};
 use flowshot_cli::exit::CliError;
 use flowshot_cli::invocation::{
-    CaptureInvocation, CaptureSelection, DaemonRun, Invocation, ScreenSpec, argv_tail, resolve,
-    validate_upload,
+    CaptureInvocation, CaptureSelection, DaemonRun, Invocation, Resolved, ScreenSpec, argv_tail,
+    resolve, validate_upload,
 };
 use flowshot_daemon::CaptureRequest;
 
@@ -22,7 +22,11 @@ fn cli(args: &[&str]) -> Cli {
 }
 
 fn resolved(args: &[&str]) -> Invocation {
-    resolve(cli(args)).unwrap_or_else(|error| panic!("{error}"))
+    match resolve(cli(args)) {
+        Ok(Resolved::Command(invocation)) => invocation,
+        Ok(Resolved::Session(spec)) => panic!("unexpected session verb ({})", spec.display()),
+        Err(error) => panic!("{error}"),
+    }
 }
 
 fn resolve_error(args: &[&str]) -> CliError {
@@ -280,6 +284,18 @@ fn pin_color_settings_and_alias_resolve() {
     assert_eq!(resolved(&["color"]), Invocation::Color);
     assert_eq!(resolved(&["settings"]), Invocation::Settings);
     assert_eq!(resolved(&["config"]), Invocation::Settings);
+}
+
+#[test]
+fn session_verb_resolves_outside_the_runtime_command_set() {
+    // Given: the hidden session-child verb. When: resolved. Then: it lands
+    // in the pre-runtime Session lane, never in the dispatched Invocation
+    // set (the nested-runtime panic guard - main runs it before building
+    // the tokio runtime).
+    assert!(matches!(
+        resolve(cli(&["session", "--spec", "/tmp/spec.json"])),
+            Ok(Resolved::Session(spec)) if spec.as_path() == Path::new("/tmp/spec.json")
+    ));
 }
 
 #[test]

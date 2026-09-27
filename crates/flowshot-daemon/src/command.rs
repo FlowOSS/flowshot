@@ -49,7 +49,28 @@ impl fmt::Display for DaemonCommand {
 pub trait CommandSink: Send + Sync + fmt::Debug {
     /// Handle one accepted command.
     fn dispatch(&self, command: DaemonCommand);
+
+    /// Dispatch with an execution receipt for the bus caller (the
+    /// silent-failure fix: a forwarded command must not reply `Ok` while
+    /// its execution is already dying). Executing sinks return `Some`
+    /// receiver resolving per [`ExecutionOutcome`]; fire-and-forget sinks
+    /// keep this default (`None` = the bus replies immediately).
+    fn dispatch_tracked(&self, command: DaemonCommand) -> Option<ExecutionReceipt> {
+        self.dispatch(command);
+        None
+    }
 }
+
+/// How a tracked execution ended: `Ok(())` on success - or when the
+/// sink's startup reply window elapsed with the execution still running
+/// (the fire-and-forget contract for window sessions and delayed
+/// captures) - and `Err(message)` carrying the executor's error text.
+pub type ExecutionOutcome = Result<(), String>;
+
+/// Resolves when a tracked execution finishes or its startup reply window
+/// elapses. A dropped sender (the executor thread died before reporting)
+/// is itself a surfaced failure on the bus side.
+pub type ExecutionReceipt = tokio::sync::oneshot::Receiver<ExecutionOutcome>;
 
 /// Default sink: one stable structured log line per command (the todo-32
 /// acceptance greps `invoke received`).

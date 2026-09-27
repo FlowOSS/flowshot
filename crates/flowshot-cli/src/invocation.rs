@@ -13,6 +13,23 @@ use crate::args::{CaptureArgs, CaptureTarget, Cli, Command, CompletionShell};
 use crate::exit::CliError;
 use crate::strings;
 
+/// The resolved CLI entry point. The split is the nested-runtime guard
+/// (the live-found overlay-session defect): the hidden session-child verb
+/// MUST run on the main thread BEFORE any tokio runtime exists - the child
+/// legs (`overlay_child` and friends) build their own runtimes, and a
+/// `block_on` from within an entered runtime panics ("Cannot start a
+/// runtime from within a runtime"). Keeping `Session` OUT of
+/// [`Invocation`] makes the illegal path unrepresentable: [`crate::dispatch`]
+/// only ever sees [`Resolved::Command`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Resolved {
+    /// `<exe> session --spec PATH`: the todo-38 window-session child
+    /// (internal process-model contract; runs runtime-free at entry).
+    Session(PathBuf),
+    /// Every user-facing verb (dispatched inside the CLI's tokio runtime).
+    Command(Invocation),
+}
+
 /// One fully validated CLI invocation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Invocation {
@@ -34,8 +51,6 @@ pub enum Invocation {
     Daemon(DaemonRun),
     /// `flowshot completions <shell>`.
     Completions(CompletionShell),
-    /// The hidden internal session-child verb (todo 38 process model).
-    Session(PathBuf),
     /// `--print-bind-help` (overrides any subcommand).
     PrintBindHelp,
 }
@@ -111,31 +126,33 @@ pub enum RegionToken {
     },
 }
 
-/// Resolves the raw clap output into the typed invocation.
+/// Resolves the raw clap output into the typed entry point.
 ///
 /// # Errors
 ///
 /// [`CliError::Usage`] for grammar violations clap cannot express
 /// (region tokens, screen specs, stray positional arguments) and
 /// [`CliError::NonUnicodeArg`] for paths the wire cannot carry.
-pub fn resolve(cli: Cli) -> Result<Invocation, CliError> {
+pub fn resolve(cli: Cli) -> Result<Resolved, CliError> {
     if cli.print_bind_help {
-        return Ok(Invocation::PrintBindHelp);
+        return Ok(Resolved::Command(Invocation::PrintBindHelp));
     }
     match cli.command {
+        Some(Command::Session { spec }) => Ok(Resolved::Session(spec)),
         // Bare `flowshot` = `flowshot capture` (Amendment #2).
-        None => capture(&CaptureArgs::default()),
-        Some(Command::Capture(args)) => capture(&args),
-        Some(Command::Pin { file }) => Ok(Invocation::Pin(file)),
-        Some(Command::Color) => Ok(Invocation::Color),
-        Some(Command::Settings) => Ok(Invocation::Settings),
-        Some(Command::Daemon(args)) => Ok(Invocation::Daemon(DaemonRun {
+        None => capture(&CaptureArgs::default()).map(Resolved::Command),
+        Some(Command::Capture(args)) => capture(&args).map(Resolved::Command),
+        Some(Command::Pin { file }) => Ok(Resolved::Command(Invocation::Pin(file))),
+        Some(Command::Color) => Ok(Resolved::Command(Invocation::Color)),
+        Some(Command::Settings) => Ok(Resolved::Command(Invocation::Settings)),
+        Some(Command::Daemon(args)) => Ok(Resolved::Command(Invocation::Daemon(DaemonRun {
             auto_spawned: args.auto_spawned,
             idle_grace_secs: args.idle_grace,
             config: args.config,
-        })),
-        Some(Command::Completions { shell }) => Ok(Invocation::Completions(shell)),
-        Some(Command::Session { spec }) => Ok(Invocation::Session(spec)),
+        }))),
+        Some(Command::Completions { shell }) => {
+            Ok(Resolved::Command(Invocation::Completions(shell)))
+        }
     }
 }
 

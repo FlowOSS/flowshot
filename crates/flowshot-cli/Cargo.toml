@@ -52,6 +52,8 @@ flowshot-capture = { path = "../flowshot-capture" }
 flowshot-actions = { path = "../flowshot-actions" }
 proptest = { workspace = true }
 serde = { workspace = true }
+# The session-dispatch regression test parses the child's result JSON.
+serde_json = { workspace = true }
 toml = { workspace = true }
 
 [lints]
