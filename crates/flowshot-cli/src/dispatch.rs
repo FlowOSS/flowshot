@@ -16,29 +16,30 @@
 //!   its helper exits `AlreadyRunning` and both CLIs forward to whoever
 //!   holds the name.
 //!
-//! # Execution seam (todo 38)
+//! # Execution (todo 38)
 //!
-//! The one-shot path produces the fully typed [`CaptureInvocation`] and
-//! stops there: the capture pipeline (flowshot-capture backend ->
-//! flowshot-ui overlay/editor -> flowshot-actions export) plugs into
-//! [`one_shot_capture`]. Daemon-forwarded invocations execute inside the
-//! daemon (its `ChannelSink`/`LoggingSink` consumes the typed commands).
+//! The one-shot path runs the executor IN-PROCESS
+//! (`flowshot_daemon::execute`); daemon-forwarded invocations execute
+//! inside the daemon through the [`ExecutingSink`] this module installs
+//! into `DaemonOptions` (the same executor library, daemon-resident).
 
 use std::process::ExitCode;
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use flowshot_daemon::autostart::exec_value;
 use flowshot_daemon::daemon::{Daemon, DaemonOptions, Startup};
+use flowshot_daemon::execute::direct::{ScreenTarget, Target};
+use flowshot_daemon::execute::{self, ExecCtx, ExecutingSink};
 use flowshot_daemon::instance::{self, Ownership};
 use flowshot_daemon::shortcut::{CompositorFlavor, bind_help, default_shortcuts, detect_desktop};
 use flowshot_daemon::{SERVICE, ShortcutOptions};
 use zbus::Connection;
 
 use crate::completions;
-use crate::exit::CliError;
-use crate::invocation::{CaptureInvocation, DaemonRun, Invocation};
+use crate::exit::{self, CliError};
+use crate::invocation::{CaptureInvocation, CaptureSelection, DaemonRun, Invocation, ScreenSpec};
 use crate::spawn;
-use crate::strings;
 use crate::wire::{self, WireCall};
 
 /// Budget for the spawned helper to acquire the bus name.
@@ -71,7 +72,7 @@ pub async fn dispatch(
         Invocation::Daemon(run) => run_daemon(run, bus_address).await,
         Invocation::Capture(capture) => {
             if capture.one_shot {
-                Ok(one_shot_capture(capture))
+                one_shot_capture(capture).await
             } else {
                 let call = wire::capture_call(capture, argv_tail);
                 dispatch_bus(&call, bus_address).await
@@ -79,7 +80,7 @@ pub async fn dispatch(
         }
         Invocation::Launcher { one_shot } => {
             if *one_shot {
-                Ok(one_shot_launcher())
+                one_shot_launcher().await
             } else {
                 dispatch_bus(&WireCall::Launcher, bus_address).await
             }
@@ -88,6 +89,9 @@ pub async fn dispatch(
             dispatch_bus(&WireCall::Invoke(argv_tail.to_vec()), bus_address).await
         }
         Invocation::Settings => dispatch_bus(&WireCall::Settings, bus_address).await,
+        Invocation::Session(spec) => Ok(ExitCode::from(
+            flowshot_daemon::execute::session::run_child(spec),
+        )),
     }
 }
 
@@ -103,32 +107,41 @@ fn print_bind_help() {
     print!("{}", bind_help(flavor, &default_shortcuts()));
 }
 
-/// The in-process one-shot seam (todo 38 plugs the capture pipeline in
-/// here; until then the typed request is logged and the process exits
-/// clean).
-#[expect(
-    clippy::print_stderr,
-    reason = "the one-shot seam reports its not-yet-wired state to the user"
-)]
-fn one_shot_capture(capture: &CaptureInvocation) -> ExitCode {
+/// The in-process one-shot capture (todo 38): the same executor library
+/// the daemon runs, on this process (documented trade-off: a one-shot
+/// clipboard offer dies with this process - the `--no-daemon` help text).
+async fn one_shot_capture(capture: &CaptureInvocation) -> Result<ExitCode, CliError> {
     tracing::info!(
         selection = ?capture.selection,
         request = ?capture.request,
-        "one-shot capture request accepted (execution seam: todo 38)"
+        "one-shot capture executing in-process"
     );
-    eprintln!("{}", strings::ONE_SHOT_SEAM);
-    ExitCode::SUCCESS
+    let ctx = ExecCtx::one_shot(None);
+    let started = Instant::now();
+    let request = capture.request.clone();
+    let result = match &capture.selection {
+        CaptureSelection::Interactive => {
+            execute::overlay::run_interactive(request, &ctx, started, false).await
+        }
+        CaptureSelection::Full => execute::direct::run(Target::Full, request, &ctx, started).await,
+        CaptureSelection::Screen(spec) => {
+            let target = Target::Screen(match spec {
+                ScreenSpec::Cursor => ScreenTarget::Cursor,
+                ScreenSpec::Index(index) => ScreenTarget::Index(*index),
+                ScreenSpec::Connector(name) => ScreenTarget::Connector(name.clone()),
+            });
+            execute::direct::run(target, request, &ctx, started).await
+        }
+    };
+    Ok(exit::exec_exit_code(&result))
 }
 
-/// The one-shot launcher-dialog seam (todo 37/38).
-#[expect(
-    clippy::print_stderr,
-    reason = "the one-shot seam reports its not-yet-wired state to the user"
-)]
-fn one_shot_launcher() -> ExitCode {
-    tracing::info!("one-shot launcher dialog requested (execution seam: todo 37/38)");
-    eprintln!("{}", strings::ONE_SHOT_SEAM);
-    ExitCode::SUCCESS
+/// The one-shot launcher dialog (`capture --dialog --no-daemon`); Cancel
+/// maps onto the exit-3 user-cancelled class.
+async fn one_shot_launcher() -> Result<ExitCode, CliError> {
+    let ctx = ExecCtx::one_shot(None);
+    let result = execute::launcher::run(&ctx, Instant::now()).await;
+    Ok(exit::exec_exit_code(&result))
 }
 
 /// Forwards one wire call to the daemon, with a single full retry when the
@@ -223,6 +236,14 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
     options.bus_address = bus_address.map(ToOwned::to_owned);
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
     options.shortcuts = ShortcutOptions::production();
+    // Todo 38: the executing sink replaces the todo-32 LoggingSink default
+    // (bus/tray/shortcut commands run the real capture pipeline).
+    options.command_sink = Some(Arc::new(ExecutingSink::new(ExecCtx {
+        config_path: run.config.clone(),
+        state: Some(Arc::clone(&options.state)),
+        notifier: None,
+        upload_base_url: None,
+    })));
     match Daemon::start(options).await? {
         Startup::Running(daemon) => {
             let reason = daemon.run().await?;

@@ -87,10 +87,13 @@ pub fn helper_args(bus_address: Option<&str>) -> Vec<OsString> {
 }
 
 /// The scope unit name (todo-34: the `app-` prefix is what the portal's
-/// `GlobalShortcuts` backend accepts as an app id).
+/// `GlobalShortcuts` backend accepts as an app id). The nonce is DECIMAL:
+/// xdp derives the app id by splitting the unit at the LAST dash, and the
+/// todo-38 flow-11 live probe confirmed the digit-random form registers
+/// (an extra dash segment corrupts the derived app id -> `NotAllowed`).
 #[must_use]
 pub fn scope_unit(nonce: u128) -> String {
-    format!("app-org.flowoss.FlowShot-{nonce:x}")
+    format!("app-org.flowoss.FlowShot-{nonce}")
 }
 
 /// Decides between the direct and scope-wrapped spawn.
@@ -231,7 +234,7 @@ mod tests {
             plan,
             HelperPlan::Scope {
                 systemd_run: PathBuf::from("/usr/bin/systemd-run"),
-                unit: "app-org.flowoss.FlowShot-ab".to_owned(),
+                unit: "app-org.flowoss.FlowShot-171".to_owned(),
                 exe: exe.to_path_buf(),
                 args: helper_args(None),
             }

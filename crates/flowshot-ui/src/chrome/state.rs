@@ -21,6 +21,7 @@
 mod input;
 
 use crate::editor::EditorState;
+use crate::input::Action;
 use crate::render::{DisplayList, TextureId, f32_from_f64};
 use crate::selection::SelectionState;
 use flowshot_core::config::UiConfig;
@@ -50,6 +51,7 @@ pub struct ChromeState {
     grabbed: bool,
     layer_drag: Option<LayerDrag>,
     draw_color_sink: Option<DrawColorSink>,
+    pending_actions: Vec<Action>,
 }
 
 impl std::fmt::Debug for ChromeState {
@@ -64,6 +66,7 @@ impl std::fmt::Debug for ChromeState {
             .field("grabbed", &self.grabbed)
             .field("layer_drag", &self.layer_drag)
             .field("draw_color_sink", &self.draw_color_sink.is_some())
+            .field("pending_actions", &self.pending_actions)
             .finish()
     }
 }
@@ -167,6 +170,13 @@ impl ChromeState {
         self.layer_drag = None;
     }
 
+    /// Drains the toolbar's pending capture-completing actions (todo 38:
+    /// the funnel surfaces them in the route report; the chrome itself
+    /// never executes them).
+    pub(crate) fn take_actions(&mut self) -> Vec<Action> {
+        std::mem::take(&mut self.pending_actions)
+    }
+
     /// Appends the chrome visuals to `list` (the shell paints this after
     /// the selection chrome; the scale derives from the output).
     pub fn paint_into(
@@ -203,6 +213,7 @@ impl Default for ChromeState {
             grabbed: false,
             layer_drag: None,
             draw_color_sink: None,
+            pending_actions: Vec::new(),
         };
         state.configure(&UiConfig::default());
         state

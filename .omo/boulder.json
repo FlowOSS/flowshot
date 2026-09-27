@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-27T03:44:07.515Z",
+      "updated_at": "2026-09-27T14:31:27.780Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -62,7 +62,9 @@
         "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp",
         "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU",
         "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
-        "opencode:ses_f1f097b92ffeGjmsga6BQa52CY"
+        "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
+        "opencode:ses_f1e79892fffe4TeemiO5SJfNES",
+        "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -101,7 +103,9 @@
         "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp": "appended",
         "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU": "appended",
         "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended",
-        "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended"
+        "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended",
+        "opencode:ses_f1e79892fffe4TeemiO5SJfNES": "appended",
+        "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -205,7 +209,18 @@
           "session_id": "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
           "agent": "Sisyphus-Junior",
           "category": "deep-low",
-          "updated_at": "2026-09-27T03:44:07.515Z"
+          "updated_at": "2026-09-27T06:17:46.470Z",
+          "ended_at": "2026-09-27T06:17:46.470Z",
+          "status": "completed"
+        },
+        "todo:38": {
+          "task_key": "todo:38",
+          "task_label": "38",
+          "task_title": "E2E integration + parity matrix + regression suite + perf budgets",
+          "session_id": "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4",
+          "agent": "Sisyphus-Junior",
+          "category": "deep-low",
+          "updated_at": "2026-09-27T14:31:27.780Z"
         }
       }
     }
@@ -213,7 +228,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-27T03:44:07.515Z",
+  "updated_at": "2026-09-27T14:31:27.780Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -251,7 +266,9 @@
     "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp",
     "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU",
     "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M",
-    "opencode:ses_f1f097b92ffeGjmsga6BQa52CY"
+    "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
+    "opencode:ses_f1e79892fffe4TeemiO5SJfNES",
+    "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -290,7 +307,9 @@
     "opencode:ses_f1f96aae3ffe2k9iDmxRCe3cdp": "appended",
     "opencode:ses_f1f5c21fdffehnZQ6dfaOSCVVU": "appended",
     "opencode:ses_f1f38f9cdffeLMBESZYQF1pb3M": "appended",
-    "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended"
+    "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended",
+    "opencode:ses_f1e79892fffe4TeemiO5SJfNES": "appended",
+    "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -394,7 +413,18 @@
       "session_id": "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
       "agent": "Sisyphus-Junior",
       "category": "deep-low",
-      "updated_at": "2026-09-27T03:44:07.515Z"
+      "updated_at": "2026-09-27T06:17:46.470Z",
+      "ended_at": "2026-09-27T06:17:46.470Z",
+      "status": "completed"
+    },
+    "todo:38": {
+      "task_key": "todo:38",
+      "task_label": "38",
+      "task_title": "E2E integration + parity matrix + regression suite + perf budgets",
+      "session_id": "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4",
+      "agent": "Sisyphus-Junior",
+      "category": "deep-low",
+      "updated_at": "2026-09-27T14:31:27.780Z"
     }
   },
   "agent": "atlas"

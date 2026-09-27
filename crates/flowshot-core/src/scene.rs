@@ -117,7 +117,7 @@ impl Rect {
 }
 
 /// An RGBA color with premultiplied-free plain components.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct Color {
     /// Red channel.
     pub r: u8,

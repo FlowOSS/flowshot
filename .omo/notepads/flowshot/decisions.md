@@ -91,3 +91,54 @@ _Auto-scaffolded by /ulw-execute. Append new entries below - never overwrite._
 - TEST-DRIVE INJECTOR ENTERS AT THE egui::EVENT LAYER (LauncherInput::{Text,Key,Pointer} -> egui Events queued on the production InputState): winit 0.30's KeyEvent has PRIVATE fields (WindowEvent::KeyboardInput is not constructible), so the pins-style WindowEvent synthesis is impossible; the pins precedent (domain-level injection converted at the app layer) applies one layer down. The bypassed winit->egui conversion table is the settings keymap's independently-tested territory. Pointer injection (physical px -> points via pixels_per_point) drives the real ComboBox for the monitor-mode QA.
 - QA EXECUTION IN THE HARNESS (dev-dep flowshot-capture-wayland, the flowshot-actions precedent): the plan acceptance needs a SAVED 100x100 image == grim oracle, but the production capture executor is todo 38 - so examples/launcher_dialog.rs executes the typed request itself (ICC capture_region / capture_output_named + delay sleep + PNG save). Result: acceptance closed LIVE today (exact-pixel-match 1.000000 vs grim crop), and the harness doubles as the todo-38 reference wiring.
 - OFFSET-LESS WxH ACCEPTED (CLI --region grammar parity): executor centers at cursor (todo-18 semantics); the harness resolves the cursor through the F13 ladder (resolve_cursor_pos). RegionGeometry mirrors the CLI's RegionToken::Rect field-for-field; to_token() reproduces the wire format (roundtrip-tested incl. i32::MIN via unsigned_abs).
+
+## 2026-09-27 (todo 38): executor + process-model decisions
+- EXECUTOR HOME = flowshot-daemon::execute (library): both the CLI one-shot
+  path and the daemon's ExecutingSink call the SAME pipeline (cli depends
+  on daemon; the reverse edge would be circular). Modules: backend (ladder
+  runner + RUNTIME fallthrough), direct (window-less captures), overlay
+  (child session + configure_core), post (actions/stdout/region-memory/
+  persistence-reasons), pin/launcher/settings (child sessions), invoke
+  (daemon-side argv parser), session (child contract), headless
+  (test-drive execution mode).
+- WINDOW SESSIONS = CHILD PROCESSES (`<exe> session --spec`): forced by
+  winit 0.30.13's one-EventLoop-per-process guard (issues.md). Parent runs
+  post-capture => daemon-owned clipboard (todo 28), single pin registry,
+  crash isolation. Image handoff = temp PNG (lossless) + result JSON.
+- SINGLE-SESSION GATE: one active window session per daemon
+  (AtomicBool in session.rs) = the dropped allowMultipleGuiInstances
+  semantic; window-less captures are ungated.
+- INVOKE PARSING: the daemon hand-parses the FROZEN forwarded subset
+  (capture full/screen[spec] + modifiers, pin, color) — it cannot reuse
+  the CLI clap surface (dependency cycle). Grammar mirrors the CLI 1:1
+  with typed usage errors; the shared-core parser remains an orchestrator
+  follow-up (todo-37 note).
+- LAUNCHER DISPATCH: daemon mode forwards over the bus (Region ->
+  Capture{region token} = interactive preselect per the todo-37 mapping;
+  Screen -> Invoke["capture","screen",n,"-d",ms] = delay honored, the
+  todo-37 OPEN question decided: no wire extension, nothing dropped);
+  one-shot mode captures the typed geometry DIRECTLY in the child (a
+  second event loop is impossible; the todo-37 harness-proven semantics).
+- EDITOR SAMPLING FRAME = stitched scale-1 composite of the whole layout
+  (every output sampleable; logical-resolution sampling on scale>1
+  outputs documented) over per-output first-frame (blind beyond output 0).
+- CURSOR LADDER SKIP: the extra ICC cursor round-trip is only paid when a
+  cursor-dependent preselect exists (offset-less --region / at-cursor) —
+  perf budget fix (capture_ready 122-178ms -> 71-88ms dual).
+- `capture screen` NO-ARG with unresolved cursor = FIRST output + loud
+  warn (todo-18 open question decided: deterministic, never a failure).
+- STDOUT MODES: --raw EXCLUSIVE (its bytes own the stream);
+  --print-geometry ADDITIVE (prints, then the action set runs); both
+  together = usage error (exit 2, executor-side; the CLI parse surface
+  stays as todo-35 pinned it).
+- EXPORT RENDER: the live shell renders through each window's EXISTING
+  renderer (Backdrop::upload_for DRAINS the CPU pixels — texture residency
+  forces this) with BGRA->RGBA normalization by renderer.format(); the
+  headless path uses a fresh Rgba8UnormSrgb renderer (the
+  verify-offscreen pattern). ONE composite implementation
+  (completion::composite_selection) under both.
+- PERF 1080p = DOCUMENTED-DEGRADED (not claiming green): composed
+  ~180-210ms vs 150ms budget, NVIDIA/Vulkan bring-up dominated;
+  remediation designed (07-perf-budgets.md), live re-measure todo 41.
+- CALL_TIMEOUT (daemon stub tests) 15s -> 45s: the recorded remedy for
+  the load-sensitive deadline family, observed again this run.

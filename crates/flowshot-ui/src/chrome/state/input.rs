@@ -13,6 +13,7 @@ use crate::chrome::side_panel;
 use crate::chrome::toolbar::ToolbarButton;
 use crate::editor::paint::{local_x, local_y};
 use crate::editor::{EditorState, EditorTools, MAX_TOOL_SIZE, MIN_TOOL_SIZE, ToolKind};
+use crate::input::Action;
 use crate::render::{Point, f32_from_f64};
 use crate::router::WindowSlot;
 use crate::state::OverlayCore;
@@ -69,7 +70,9 @@ impl ChromeState {
             if left {
                 for (rect, button) in buttons.iter().zip(&self.toolbar.buttons) {
                     if rect.contains(local_pt) {
-                        toolbar_action(button, editor);
+                        if let Some(action) = toolbar_action(button, editor) {
+                            self.pending_actions.push(action);
+                        }
                         break;
                     }
                 }
@@ -251,24 +254,38 @@ impl OverlayCore {
 }
 
 /// One toolbar button press: tools activate; undo/redo drive the todo-25
-/// journal; the W5 action ids (copy/save/upload/pin/open-app/exit) stay
-/// no-op seams per the plan ("no action implementations behind buttons -
-/// wired in W5 todos via callback traits").
-fn toolbar_action(button: &ToolbarButton, editor: &mut EditorState) {
+/// journal; the W5 action ids (copy/save/upload/pin/open-app/exit) become
+/// shell actions (todo 38 wiring - the chrome queues, the funnel drains,
+/// the shell/binary layer executes).
+fn toolbar_action(button: &ToolbarButton, editor: &mut EditorState) -> Option<Action> {
     match button {
-        ToolbarButton::Tool(kind) => editor.activate_tool(*kind),
+        ToolbarButton::Tool(kind) => {
+            editor.activate_tool(*kind);
+            None
+        }
         ToolbarButton::Action(id) => match id.as_str() {
             "undo" => {
                 let _ = editor.undo();
+                None
             }
             "redo" => {
                 let _ = editor.redo();
+                None
             }
-            _ => tracing::debug!(
-                target: "flowshot_ui::chrome",
-                action = id.as_str(),
-                "toolbar action awaits its W5 callback trait"
-            ),
+            "copy" => Some(Action::Copy),
+            "save" => Some(Action::Save),
+            "pin" => Some(Action::Pin),
+            "upload" => Some(Action::Upload),
+            "open-app" => Some(Action::OpenWith),
+            "exit" => Some(Action::Exit),
+            _ => {
+                tracing::warn!(
+                    target: "flowshot_ui::chrome",
+                    action = id.as_str(),
+                    "unknown toolbar action id; press ignored"
+                );
+                None
+            }
         },
     }
 }

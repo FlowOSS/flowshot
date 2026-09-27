@@ -10,13 +10,14 @@
 //! | 5 | permission denied | portal/protocol permission refusal (todo 38 seam) |
 //! | 6 | action-export | `flowshot_actions` export failures incl. the todo-29 unwritable-dir class (Oracle r4 F-5.ii; todo 38 seam) |
 //!
-//! Codes 3-6 have no producer until the todo-38 execution wiring lands;
-//! the constants and the mapping arm are the contract that wiring fills in.
+//! Codes 3-6 are produced by the todo-38 execution wiring:
+//! [`exec_exit_code`] maps the executor's outcome/error onto this table.
 
 use std::ffi::OsString;
 use std::process::ExitCode;
 
 use flowshot_daemon::DaemonError;
+use flowshot_daemon::execute::{ExecOutcome, ExecuteError};
 
 use crate::strings;
 
@@ -68,6 +69,58 @@ pub enum CliError {
         /// What was attempted.
         detail: String,
     },
+}
+
+/// Maps one executor result onto the exit-code table: success 0,
+/// user-cancelled 3, permission-denied 5, capture-backend 4, export 6,
+/// usage 2, everything else generic 1.
+#[must_use]
+pub fn exec_exit_code(result: &Result<ExecOutcome, ExecuteError>) -> ExitCode {
+    ExitCode::from(exec_exit_u8(result))
+}
+
+/// The [`exec_exit_code`] mapping as the raw table value (tests assert on
+/// this - `ExitCode` is deliberately opaque).
+#[must_use]
+pub fn exec_exit_u8(result: &Result<ExecOutcome, ExecuteError>) -> u8 {
+    match result {
+        Ok(ExecOutcome::Done(_) | ExecOutcome::ColorPicked(_)) => OK,
+        Ok(ExecOutcome::Cancelled) => CANCELLED,
+        Err(error) => exec_error_code(error),
+    }
+}
+
+fn exec_error_code(error: &ExecuteError) -> u8 {
+    match error {
+        ExecuteError::Usage(_) => USAGE,
+        ExecuteError::Capture(_) if is_permission_denied(error) => PERMISSION_DENIED,
+        ExecuteError::Capture(_) | ExecuteError::Probe(_) | ExecuteError::Connect(_) => {
+            CAPTURE_BACKEND
+        }
+        ExecuteError::Export(_) | ExecuteError::Clipboard(_) => ACTION_EXPORT,
+        ExecuteError::Child { exit_code, .. } => *exit_code,
+        ExecuteError::Ui(_)
+        | ExecuteError::Io(_)
+        | ExecuteError::Task(_)
+        | ExecuteError::Daemon(_) => GENERIC,
+    }
+}
+
+/// Walks the capture error's source chain for the protocol permission
+/// refusal (the todo-7 denial mapping: compositor denial frame ->
+/// `IccError::PermissionDenied` inside `CaptureError::Backend`).
+fn is_permission_denied(error: &ExecuteError) -> bool {
+    let ExecuteError::Capture(capture) = error else {
+        return false;
+    };
+    let mut source = std::error::Error::source(capture);
+    while let Some(cause) = source {
+        if let Some(icc) = cause.downcast_ref::<flowshot_capture_wayland::IccError>() {
+            return matches!(icc, flowshot_capture_wayland::IccError::PermissionDenied);
+        }
+        source = cause.source();
+    }
+    false
 }
 
 /// Maps a typed CLI error onto the exit-code table.

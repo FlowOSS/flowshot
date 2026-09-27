@@ -43,14 +43,17 @@ impl OverlayApp {
         for (index, handle) in monitors.iter().enumerate() {
             let slot = WindowSlot::new(index);
             let monitor_name = monitor::monitor_name(handle, index);
-            let window = Arc::new(
-                target
-                    .create_window(overlay_window_attributes(handle))
-                    .map_err(|source| UiError::WindowCreation {
-                        monitor: monitor_name.clone(),
-                        source,
-                    })?,
-            );
+            let attributes = overlay_window_attributes(handle);
+            let attributes = match self.customizer.as_ref() {
+                Some(customizer) => customizer.apply(attributes),
+                None => attributes,
+            };
+            let window = Arc::new(target.create_window(attributes).map_err(|source| {
+                UiError::WindowCreation {
+                    monitor: monitor_name.clone(),
+                    source,
+                }
+            })?);
             // The crosshair is drawn by us; the compositor cursor would be
             // invisible over the fullscreen surface anyway (#1659-class fix).
             window.set_cursor_visible(false);

@@ -73,8 +73,10 @@ mod state;
 mod surface;
 
 pub mod backdrop;
+pub mod completion;
 pub mod editor;
 pub mod error;
+pub mod export;
 pub mod input;
 pub mod launch;
 pub mod launcher;
@@ -87,7 +89,12 @@ pub mod widgets;
 
 pub use backdrop::{
     Backdrop, BackdropOptions, CursorSprite, FrozenCapture, MissingFrame, PlacedCursor,
-    backdrop_texture_id, capture_frozen, cursor_texture_id,
+    PreparedTexture, backdrop_texture_id, capture_frozen, cursor_texture_id,
+    prepare_output_texture,
+};
+pub use completion::{
+    ColorPickSink, Completion, CompletionKind, CompletionSink, ExportedImage, RenderedOutput,
+    composite_selection,
 };
 pub use editor::{
     EditKey, EditorContext, EditorEffect, EditorEnv, EditorState, EditorTools, EditorUndo,
@@ -98,6 +105,7 @@ pub use editor::{
     register_selection_tools, register_shape_tools, register_text_tool,
 };
 pub use error::UiError;
+pub use export::{render_export, render_output_export};
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
 pub use launch::{
     InitialSelection, LaunchRequest, PendingPreselect, Preselect, RegionSink, output_at_cursor,

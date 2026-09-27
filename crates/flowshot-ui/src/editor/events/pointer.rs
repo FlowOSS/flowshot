@@ -59,15 +59,22 @@ impl EditorState {
             PressTarget::ToolDraw => {
                 self.begin_stroke(env, button, at);
                 // Eyedropper seam: if the active tool is Eyedropper and it
-                // sampled a color, apply it immediately.
-                if self.active_kind == Some(ToolKind::Eyedropper)
+                // sampled a color, apply it immediately and report the pick
+                // (the funnel delivers it to the color-pick sink, todo 38).
+                let picked = if self.active_kind == Some(ToolKind::Eyedropper)
                     && let Some(tool) = self.tool.as_ref()
                     && let Some(eyedropper) = tool.as_any().downcast_ref::<tools::EyedropperTool>()
                     && let Some(color) = eyedropper.sampled()
                 {
                     self.set_color(color);
-                }
-                EditorUpdate::eaten(true)
+                    Some(color)
+                } else {
+                    None
+                };
+                picked.map_or_else(
+                    || EditorUpdate::eaten(true),
+                    |color| EditorUpdate::with(vec![EditorEffect::ColorPicked(color)], true),
+                )
             }
             PressTarget::SelectObject => {
                 let hit = self.select_object_at(at);

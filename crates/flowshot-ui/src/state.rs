@@ -17,6 +17,7 @@ use flowshot_core::geometry::LogicalPoint;
 use winit::event::Ime;
 use winit::keyboard::ModifiersState;
 
+use crate::completion::{ColorPickSink, CompletionSink};
 use crate::editor::{EditorState, FramePixels};
 #[cfg(any(test, feature = "test-drive"))]
 use crate::input::SyntheticInput;
@@ -47,7 +48,6 @@ pub struct CursorTrack {
 ///
 /// (Not `Clone`/`PartialEq`: the editor holds live `dyn Tool` instances -
 /// the headless engines it owns are individually cloneable/compareable.)
-#[derive(Debug)]
 pub struct OverlayCore {
     pub(crate) router: InputRouter,
     cursor: Option<CursorTrack>,
@@ -59,6 +59,28 @@ pub struct OverlayCore {
     pub(crate) editor: EditorState,
     pub(crate) chrome: crate::chrome::ChromeState,
     pub(crate) launch: LaunchState,
+    completion: Option<CompletionSink>,
+    color_pick: Option<ColorPickSink>,
+}
+
+impl std::fmt::Debug for OverlayCore {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("OverlayCore")
+            .field("router", &self.router)
+            .field("cursor", &self.cursor)
+            .field("ime", &self.ime)
+            .field("last_commit", &self.last_commit)
+            .field("exit_requested", &self.exit_requested)
+            .field("modifiers", &self.modifiers)
+            .field("selection", &self.selection)
+            .field("editor", &self.editor)
+            .field("chrome", &self.chrome)
+            .field("launch", &self.launch)
+            .field("completion", &self.completion.is_some())
+            .field("color_pick", &self.color_pick.is_some())
+            .finish()
+    }
 }
 
 impl OverlayCore {
@@ -76,6 +98,46 @@ impl OverlayCore {
             editor: EditorState::default(),
             chrome: crate::chrome::ChromeState::default(),
             launch: LaunchState::default(),
+            completion: None,
+            color_pick: None,
+        }
+    }
+
+    /// Installs the completion sink (`None` clears): the shell calls it
+    /// with the rendered export when a capture-completing gesture fires
+    /// (todo 38 binary-layer seam, the `RegionSink` pattern).
+    pub fn set_completion_sink(&mut self, sink: Option<CompletionSink>) {
+        self.completion = sink;
+    }
+
+    /// Installs the standalone color-pick sink (`None` clears): fired when
+    /// the eyedropper samples a pixel (`flowshot color`, todo 38).
+    pub fn set_color_pick_sink(&mut self, sink: Option<ColorPickSink>) {
+        self.color_pick = sink;
+    }
+
+    /// The installed completion sink (shell-side invocation).
+    pub(crate) const fn completion_sink(&self) -> Option<&CompletionSink> {
+        self.completion.as_ref()
+    }
+
+    /// The funnel's eyedropper hook: delivers a sampled color to the
+    /// standalone color-pick sink when installed.
+    pub(crate) fn notify_color_pick(&self, color: flowshot_core::scene::Color) {
+        if let Some(sink) = self.color_pick.as_ref() {
+            sink(color);
+        }
+    }
+
+    /// TEST SEAM (feature `test-drive`, todo 38 headless execution mode):
+    /// delivers one completion through the installed sink exactly like the
+    /// shell's `complete()` does - the headless driver renders the export
+    /// offscreen and hands it in here, so the sink wiring under test is
+    /// the production one.
+    #[cfg(any(test, feature = "test-drive"))]
+    pub fn deliver_completion(&self, completion: crate::completion::Completion) {
+        if let Some(sink) = self.completion.as_ref() {
+            sink(completion);
         }
     }
 

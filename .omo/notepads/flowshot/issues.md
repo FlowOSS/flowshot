@@ -125,3 +125,79 @@ The todo-26/33/17 core actions remain open and now block settings-surface comple
 - TODO 38/40 (grammar unification): the WxH[±X±Y] parser now exists TWICE (flowshot-cli invocation.rs parse_region_token + flowshot-ui launcher/request.rs RegionGeometry::parse - rules mirrored 1:1, roundtrip-tested). Shared home = flowshot-core (orchestrator-owned from UI tasks); a core edit todo should host one parser + one typed rect and re-point both consumers.
 - TODO 41 (visual pass): the launcher dialog is 400x232 with ~90px bottom whitespace in the normal state (error-label headroom kept); tighten or bottom-anchor the button bar. The egui error_fg_color is the egui default (theme.rs doesn't project a danger token - joins the tray ATTENTION_RGB + magnifier-ink token actions). Launcher screenshot set for the visual bundle: .omo/evidence/task-37-flowshot.png row 1.
 - ORCHESTRATOR (non-blocking): settings::SettingsSurface was RETIRED in the egui_host extraction (EguiSurface is crate-private; settings' public API otherwise unchanged - render_offscreen/OFFSCREEN_FORMAT/ClipboardBridge/ThemeMode/style/fonts/parse_hex_rgb all still exported from flowshot_ui::settings). No consumer existed outside the crate (todo 38 wires SettingsWindow, not the surface). Root-table egui-winit dead pin note (todo 36) unchanged.
+
+## 2026-09-27 (reboot): user PRESENT again — policies re-applied
+Machine hung and was rebooted during todo 38's run (unknown cause; todo 38 was doing
+live fullscreen overlay QA at the time — record, don't assume). Policies back to
+user-present: NO visible windows (offscreen QA only), jobs=8 cap re-applied via
+.cargo/config.toml. Todo 38's worker left: completion.rs (new) + 4-crate edits, build
+broken with 4 errors at reboot time.
+
+## 2026-09-27 (todo 38): winit 0.30.13 = ONE EventLoop per PROCESS (architecture-forcing)
+`EventLoopBuilder::build()` flips a process-global `EVENT_LOOP_CREATED`
+AtomicBool and returns `Err(RecreationAttempt)` on ANY second build —
+regardless of thread or `with_any_thread` (registry-source-verified). The
+daemon-thread window-hosting model (todo 30/32/36/37 notes "process or
+dedicated thread") is therefore IMPOSSIBLE in-process: todo 38 landed the
+child-process model — every window session (overlay/color/pin/launcher/
+settings) runs as `<current_exe> session --spec <json>` (hidden verb on
+BOTH binaries; internal process-model contract, not a dev subcommand).
+The PARENT runs post-capture so the clipboard offer stays daemon-owned
+(todo 28) and the pin registry/persistence reasons stay in one process.
+Consequence (documented trade-off): a PIN's own copy/save offers are
+served by the pin child and die when the pin closes — a pin-copy
+outliving its pin needs a bus-level clipboard handoff (frozen todo-32
+vocabulary has no member; roadmap).
+## 2026-09-27 (todo 38): xdp app-id needs a DECIMAL scope nonce + installed .desktop
+Live flow-11 probe: `app-org.flowoss.FlowShot-t38-<pid>.scope` FAILED
+registration ("An app id is required") — xdp derives the app id by
+splitting the unit at the LAST dash, so an extra dash segment corrupts it
+to `org.flowoss.FlowShot-t38`. `app-org.flowoss.FlowShot-<pid>` (decimal)
++ a NoDisplay `org.flowoss.FlowShot.desktop` fixture => registration
+SUCCEEDED live (compositor listed all 3 shortcuts). FIXED: cli spawn.rs
+`scope_unit` hex -> decimal (test updated). ACTION todo 39: the packaged
+.desktop MUST be installed for portal shortcuts (known since todo 34, now
+live-proven both halves).
+## 2026-09-27 (todo 38): ICC rotated-headless finding CONFIRMED still present (foreign)
+Flow 13 live probe: Hyprland 0.56.2 still delivers the NATIVE-oriented
+buffer for a Rot90 headless output through ext-image-copy-capture (the
+todo-7/9 `BufferSizeMismatch` class). NEW: the executor's runtime ladder
+fallthrough (probe-green != capture-green) absorbs it — wlr-screencopy
+served the rotated scale-2 output correctly (1080x1920 upright physical).
+No FlowShot-side fix possible; keep the fallthrough + per-rung warn logs.
+## 2026-09-27 (todo 38): perf 1080p budget DEGRADED on this NVIDIA box
+wgpu bring-up (Instance 36-47ms + adapter/device ~82ms = 118-139ms) alone
+consumes 79-93% of the 150ms 1080p budget; composed estimate ~180-210ms
+(07-perf-budgets.md). Dual budget PASSES (290-348ms worst-case offscreen
+proxy <= 400ms). Remediation design recorded: prewarm the wgpu Instance
+concurrently with the capture, then full GPU||capture overlap in the
+session child (-> ~145ms). ACTION todo 41: implement + measure the TRUE
+hotkey->present live.
+## 2026-09-27 (todo 38): follow-ups for todos 39/40/41/42
+- TODO 39: ship the real `org.flowoss.FlowShot.desktop` (portal shortcuts
+  need it installed); nix devShell must carry wtype+ydotool (absent since
+  the reboot — flow 11's live trigger is gated on it); rfd (or a portal
+  PathPicker alternative) for the settings Browse button (stays None).
+- TODO 40: docs must state: `--region at-cursor` = whole output under
+  cursor (todo-18 decision, confirmed); `capture screen` no-arg with an
+  UNRESOLVED cursor falls back to the FIRST output + warn (todo-18 open
+  question decided in todo 38); `--raw` is EXCLUSIVE stdout mode,
+  `--print-geometry` is ADDITIVE (prints then runs actions); one-shot
+  `--no-daemon` clipboard offers die with the process (help text says so);
+  pin-child offer lifetime (above); editor sampling frame = stitched
+  scale-1 (magnifier/pixelate/eyedropper sample at LOGICAL resolution on
+  scale>1 outputs — exact at scale 1; per-output alternative was blind
+  beyond output 0).
+- TODO 41: live perf re-measure + the gui-qa-batch todo-38 section;
+  overlay app_id=flowshot assert (the with_window_customizer seam landed;
+  todo-13 deviation A closes there).
+- TODO 42: cross-platform note — the child-process session model is also
+  the macOS/X11 answer (winit main-thread requirements); the
+  `EventLoopHook`-style platform seams stayed OUT of flowshot-ui (purity
+  held: no winit platform imports in ui).
+- Clipboard release detection (todo-32 gap) unchanged: the executor SETS
+  clipboard_offer_held on copy; clearing still needs a data-control
+  selection listener (wl-clipboard-rs gap).
+- Settings ConfigChanged bus signal still absent (frozen vocabulary):
+  Apply = per-execution config re-read + log projection (todo-36 decision
+  executed).

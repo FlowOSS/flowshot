@@ -23,6 +23,10 @@ path = "src/main.rs"
 # daemon is INIT-AGNOSTIC - systemd is optional, never a hard dependency
 # (OpenRC/runit/s6/shepherd = packaging roadmap, todo 42).
 systemd = []
+# Todo 38 headless execution mode: forwards to flowshot-ui's test-drive
+# injector so the e2e harness drives OverlayCore through the production
+# funnel without a window (examples/e2e_headless.rs).
+test-drive = ["flowshot-ui/test-drive"]
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
@@ -36,6 +40,18 @@ flowshot-capture = { path = "../flowshot-capture" }
 # a dedicated wayland connection bounded by 10 s deadlines). Workspace
 # member edge only: zero new external crates in the lock.
 flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
+# Todo 38 executor: the overlay/pin/launcher/settings window runtimes, the
+# completion export boundary, and the launch vocabulary. The daemon is the
+# platform-integration layer (it already carries the wayland capture crates),
+# so the ui edge violates no purity gate (gates cover core/capture/ui only).
+flowshot-ui = { path = "../flowshot-ui" }
+# ExportedImage -> DynamicImage for the actions pipeline (todo 29 entry point).
+image = { workspace = true }
+# WindowCustomizer app_id hooks (pins/launcher/settings windows, todos 30/36/37).
+winit = { workspace = true }
+# The headless execution mode's GPU context (feature test-drive; already in
+# the graph via flowshot-ui).
+wgpu = { workspace = true }
 # EXECUTOR DECISION (todo 32): the daemon's OWN bus stays on workspace zbus 4
 # (default features = async-io reactor) driven from a tokio runtime. Source-
 # verified: each zbus-4 connection owns a PRIVATE async-executor + dedicated
@@ -69,6 +85,17 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 anyhow = { workspace = true }
 clap = { workspace = true }
+
+[dev-dependencies]
+# The e2e_headless harness builds synthetic capture frames (already locked
+# via flowshot-capture).
+bytes = { workspace = true }
+# Todo 38 flow 9: the upload wiremock e2e (the todo-31 test pattern).
+wiremock = { workspace = true }
+
+[[example]]
+name = "e2e_headless"
+required-features = ["test-drive"]
 
 [lints]
 workspace = true
