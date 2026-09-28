@@ -57,6 +57,10 @@ const WEAK_TEXT: f32 = 0.62;
 const SEPARATOR_ALPHA: f32 = 0.12;
 /// Control outlines: alpha multiplier over the ink.
 const OUTLINE_ALPHA: f32 = 0.24;
+/// Strong outlines (color-swatch frames, popup edges): alpha multiplier
+/// over the ink - the resting outline is too faint to frame a near-black
+/// swatch on a dark card.
+const OUTLINE_STRONG_ALPHA: f32 = 0.45;
 
 /// The derived surface scale for one (contrast, mode) pair.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -81,6 +85,8 @@ pub struct Surfaces {
     pub separator: Color32,
     /// Control outlines (field/button borders at rest).
     pub outline: Color32,
+    /// Strong outlines (color-swatch frames, popup edges).
+    pub outline_strong: Color32,
     /// Body text ink.
     pub text: Color32,
     /// Secondary/hint text ink.
@@ -123,6 +129,7 @@ pub fn surfaces(contrast: Color32, mode: ThemeMode) -> Surfaces {
                 control_hover: mix(card, ink, CONTROL_HOVER_DARK),
                 separator: ink.gamma_multiply(SEPARATOR_ALPHA),
                 outline: ink.gamma_multiply(OUTLINE_ALPHA),
+                outline_strong: ink.gamma_multiply(OUTLINE_STRONG_ALPHA),
                 text: ink,
                 text_weak: ink.gamma_multiply(WEAK_TEXT),
             }
@@ -142,6 +149,7 @@ pub fn surfaces(contrast: Color32, mode: ThemeMode) -> Surfaces {
                 control_hover: mix(card, contrast, CONTROL_HOVER_TINT_LIGHT),
                 separator: contrast.gamma_multiply(SEPARATOR_ALPHA),
                 outline: contrast.gamma_multiply(OUTLINE_ALPHA),
+                outline_strong: contrast.gamma_multiply(OUTLINE_STRONG_ALPHA),
                 text: ink,
                 text_weak: ink.gamma_multiply(WEAK_TEXT),
             }

@@ -56,7 +56,7 @@ impl SettingsApp {
     fn spawn(&mut self, event_loop: &ActiveEventLoop) -> Result<(), UiError> {
         let attributes = Window::default_attributes()
             .with_title(strings::WINDOW_TITLE)
-            .with_inner_size(LogicalSize::new(760.0, 620.0))
+            .with_inner_size(LogicalSize::new(860.0, 620.0))
             .with_min_inner_size(LogicalSize::new(480.0, 400.0));
         let attributes = match &self.options.window_customizer {
             Some(customizer) => customizer.apply(attributes),

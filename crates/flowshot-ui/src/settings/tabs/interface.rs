@@ -16,15 +16,13 @@
 
 use egui::Ui;
 
-use crate::editor::ToolKind;
-
+use super::super::fields::{self, combo, hex_color, number};
+use super::super::form::{card, row, title_case};
 use super::super::layout::FormMetrics;
 use super::super::model::{SettingsModel, ThemeChoice};
 use super::super::strings;
 use super::TabContext;
-use super::fields::{combo, hex_color, number};
-use super::form::{card, row};
-use crate::egui_host::theme::parse_hex_rgb;
+use crate::editor::ToolKind;
 
 /// The non-tool toolbar button ids (chrome/toolbar.rs icon vocabulary).
 const TOOLBAR_ACTION_IDS: [&str; 8] = [
@@ -79,19 +77,10 @@ pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<
     });
     changed |= card(ui, m, strings::FIELD_COLOR_PALETTE, |ui| {
         let config = model.config_mut();
-        palette_editor(ui, &mut config.editor.color_palette)
+        palette_editor(ui, m, &mut config.editor.color_palette)
     });
     if changed {
         model.mark_dirty();
-    }
-}
-
-/// Capitalizes a button id for display ("open-app" -> "Open-app").
-fn title(id: &str) -> String {
-    let mut chars = id.chars();
-    match chars.next() {
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        None => String::new(),
     }
 }
 
@@ -108,7 +97,7 @@ fn toolbar_list(ui: &mut Ui, m: &FormMetrics, buttons: &mut Vec<String>) -> bool
     let mut swap: Option<(usize, usize)> = None;
     let mut remove: Option<usize> = None;
     for (index, id) in buttons.iter().enumerate() {
-        row(ui, m, &title(id), |ui| {
+        row(ui, m, &title_case(id), |ui| {
             if ui
                 .add_enabled(index > 0, egui::Button::new(strings::BUTTON_MOVE_UP))
                 .clicked()
@@ -151,10 +140,10 @@ fn toolbar_list(ui: &mut Ui, m: &FormMetrics, buttons: &mut Vec<String>) -> bool
     }
     row(ui, m, "", |ui| {
         egui::ComboBox::from_id_source(combo_id)
-            .selected_text(title(&candidate))
+            .selected_text(title_case(&candidate))
             .show_ui(ui, |ui| {
                 for id in &unused {
-                    ui.selectable_value(&mut candidate, (*id).to_owned(), title(id));
+                    ui.selectable_value(&mut candidate, (*id).to_owned(), title_case(id));
                 }
             });
         if ui
@@ -172,31 +161,29 @@ fn toolbar_list(ui: &mut Ui, m: &FormMetrics, buttons: &mut Vec<String>) -> bool
     changed
 }
 
-fn palette_editor(ui: &mut Ui, palette: &mut Vec<String>) -> bool {
+fn palette_editor(ui: &mut Ui, m: &FormMetrics, palette: &mut Vec<String>) -> bool {
     let mut changed = false;
     let mut remove: Option<usize> = None;
-    ui.horizontal_wrapped(|ui| {
-        for (index, entry) in palette.iter_mut().enumerate() {
-            ui.scope(|ui| {
+    row(ui, m, "", |ui| {
+        ui.horizontal_wrapped(|ui| {
+            for (index, entry) in palette.iter_mut().enumerate() {
                 ui.push_id(index, |ui| {
                     ui.horizontal(|ui| {
-                        let mut rgb = parse_hex_rgb(entry).unwrap_or([0x7F, 0x7F, 0x7F]);
-                        if ui.color_edit_button_srgb(&mut rgb).changed() {
-                            *entry = format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]);
+                        if fields::swatch(ui, m, entry) {
                             changed = true;
                         }
-                        if ui.small_button(strings::BUTTON_REMOVE).clicked() {
+                        if ui.button(strings::BUTTON_REMOVE).clicked() {
                             remove = Some(index);
                         }
                     });
                 });
-            });
-        }
+            }
+            if ui.button(strings::BUTTON_ADD_SWATCH).clicked() {
+                palette.push(fields::NEW_SWATCH_HEX.to_owned());
+                changed = true;
+            }
+        });
     });
-    if ui.button(strings::BUTTON_ADD_SWATCH).clicked() {
-        palette.push("#7F7F7F".to_owned());
-        changed = true;
-    }
     if let Some(index) = remove {
         palette.remove(index);
         changed = true;

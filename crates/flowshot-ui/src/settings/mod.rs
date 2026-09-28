@@ -34,6 +34,8 @@
 //!   [`AppliedCallback`] (the binary layer's `ConfigChanged` `D-Bus`
 //!   emitter, todo 32).
 
+pub(crate) mod fields;
+pub(crate) mod form;
 mod layout;
 mod model;
 mod strings;

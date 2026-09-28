@@ -8,6 +8,7 @@ use winit::event_loop::ActiveEventLoop;
 
 use crate::egui_host::{cursor_icon, points, scale_to_ppp, theme};
 use crate::error::UiError;
+use crate::settings::FormMetrics;
 
 use super::app::LauncherApp;
 use super::ui::{self as widgets, LauncherAction};
@@ -57,10 +58,14 @@ pub(super) fn render(app: &mut LauncherApp, event_loop: &ActiveEventLoop) {
         surface_config.height,
         pixels_per_point,
     ));
-    let style = theme::style(&options.tokens, &options.ui_config, options.system_theme);
-    let (output, action) = egui.frame_with(egui::CentralPanel::default(), style, |ui| {
-        widgets::show(ui, model)
-    });
+    let style = theme::settings_style(&options.tokens, &options.ui_config, options.system_theme);
+    let metrics = FormMetrics::from_tokens(&options.tokens);
+    let panel = egui::CentralPanel::default().frame(
+        egui::Frame::none()
+            .fill(style.visuals.panel_fill)
+            .inner_margin(egui::Margin::same(metrics.window_margin())),
+    );
+    let (output, action) = egui.frame_with(panel, style, |ui| widgets::show(ui, model, &metrics));
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {

@@ -1,6 +1,7 @@
-//! The token-driven form primitives: section cards, the two-column row
-//! grid, sub-sections, pill tabs, the primary button, and the checkbox
-//! widget.
+//! The token-driven form primitives shared by EVERY egui panel: section
+//! cards, the two-column row grid, sub-sections, pill tabs, the primary
+//! button, hints, and the checkbox widget (the settings tabs and the
+//! launcher dialog build on the same vocabulary).
 //!
 //! Every visual value comes from the projected style ([`FormMetrics`] for
 //! geometry, `ui.visuals()` slots for color - the theme stores the card
@@ -25,29 +26,50 @@ const CHECK_STROKE_RATIO: f32 = 0.16;
 /// stays token-sized; the click area is generously wider).
 const HIT_WIDTH: f32 = 2.0;
 
+/// Capitalizes the first character for id display ("open-app" ->
+/// "Open-app"): the shared row-label projection of the toolbar and
+/// shortcut vocabularies.
+pub(crate) fn title_case(id: &str) -> String {
+    let mut chars = id.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
 /// A section card: the raised token surface, a semibold title, and a 1px
-/// separator under it. Returns the body's change flag.
-pub(super) fn card(
+/// separator under it, laid out as a CENTERED content column (capped at
+/// [`FormMetrics::content_width`]) so wide windows keep a readable measure.
+/// Returns the body's change flag.
+pub(crate) fn card(
     ui: &mut Ui,
     m: &FormMetrics,
     title: &str,
     body: impl FnOnce(&mut Ui) -> bool,
 ) -> bool {
+    let available = ui.available_width();
+    let width = m.content_width(available);
+    let inner = width - 2.0 * m.card_padding();
+    let offset = m.content_offset(available);
     let card_fill = ui.visuals().faint_bg_color;
     let title_color = ui.visuals().strong_text_color();
     let title_font = theme::semibold(m.title_size());
+    // The centering lives in the outer margin: Frame::show inherits the
+    // enclosing layout, so a wrapping horizontal would flow the body rows
+    // left-to-right instead of stacking them.
     Frame::none()
         .fill(card_fill)
         .rounding(Rounding::same(m.card_radius()))
         .inner_margin(Margin::same(m.card_padding()))
         .outer_margin(Margin {
-            left: 0.0,
-            right: 0.0,
+            left: offset,
+            right: offset,
             top: 0.0,
             bottom: m.medium(),
         })
         .show(ui, |ui| {
-            ui.set_width(ui.available_width());
+            ui.set_min_width(inner);
+            ui.set_max_width(inner);
             ui.label(RichText::new(title).font(title_font).color(title_color));
             ui.add_space(m.small());
             ui.separator();
@@ -58,10 +80,11 @@ pub(super) fn card(
 }
 
 /// One grid row: the label right-aligned in the fixed-width label column,
-/// the control in the column at [`FormMetrics::control_x`]. Both cells are
-/// exactly one control height tall - the uniform row rhythm. Returns
-/// whatever the control closure produced.
-pub(super) fn row<R>(
+/// the control in the column at [`FormMetrics::control_x`]. The row height
+/// is the control height, growing only when a narrow window wraps the
+/// label (clipping a wrapped label would break the grid's contract).
+/// Returns whatever the control closure produced.
+pub(crate) fn row<R>(
     ui: &mut Ui,
     m: &FormMetrics,
     label: &str,
@@ -69,13 +92,19 @@ pub(super) fn row<R>(
 ) -> R {
     let available = ui.available_width();
     let label_width = m.label_width(available);
-    let height = m.control_height();
+    let galley = egui::WidgetText::from(label).into_galley(
+        ui,
+        Some(egui::TextWrapMode::Wrap),
+        label_width,
+        egui::TextStyle::Body,
+    );
+    let height = m.control_height().max(galley.size().y);
     ui.horizontal(|ui| {
         ui.allocate_ui_with_layout(
             vec2(label_width, height),
             Layout::right_to_left(Align::Center),
             |ui| {
-                ui.label(label);
+                ui.label(galley);
             },
         );
         let control_width = ui.available_width().max(m.base_size());
@@ -93,7 +122,7 @@ pub(super) fn row<R>(
 /// action set): a semibold weak title aligned to the CONTROL column (it
 /// heads the rows below it, not the label column), over the same grid
 /// rows. Returns the body's change flag.
-pub(super) fn sub_section(
+pub(crate) fn sub_section(
     ui: &mut Ui,
     m: &FormMetrics,
     title: &str,
@@ -116,7 +145,7 @@ pub(super) fn sub_section(
 /// A pill tab: the selected tab is a solid accent pill with semibold ink,
 /// resting tabs take the themed button surface (hover feedback included)
 /// with the medium face.
-pub(super) fn pill_tab(ui: &mut Ui, m: &FormMetrics, selected: bool, label: &str) -> Response {
+pub(crate) fn pill_tab(ui: &mut Ui, m: &FormMetrics, selected: bool, label: &str) -> Response {
     let accent = ui.visuals().selection.stroke.color;
     let (font, text_color) = if selected {
         (theme::semibold(m.base_size()), ink_on(accent))
@@ -132,10 +161,10 @@ pub(super) fn pill_tab(ui: &mut Ui, m: &FormMetrics, selected: bool, label: &str
     ui.add(button)
 }
 
-/// The primary action button (Apply): accent-filled with semibold on-accent
-/// ink when enabled; the disabled state takes the neutral button surface
-/// and weak ink so it stays legible but clearly inert.
-pub(super) fn primary_button(ui: &mut Ui, m: &FormMetrics, label: &str, enabled: bool) -> Response {
+/// The primary action button (Apply / Capture): accent-filled with semibold
+/// on-accent ink when enabled; the disabled state takes the neutral button
+/// surface and weak ink so it stays legible but clearly inert.
+pub(crate) fn primary_button(ui: &mut Ui, m: &FormMetrics, label: &str, enabled: bool) -> Response {
     let accent = ui.visuals().selection.stroke.color;
     let (fill, text_color) = if enabled {
         (accent, ink_on(accent))
@@ -160,17 +189,27 @@ pub(super) fn primary_button(ui: &mut Ui, m: &FormMetrics, label: &str, enabled:
 
 /// A weak hint paragraph aligned to the control column (it annotates the
 /// field above it, not the whole card).
-pub(super) fn hint(ui: &mut Ui, m: &FormMetrics, text: &str) {
+pub(crate) fn hint(ui: &mut Ui, m: &FormMetrics, text: &str) {
+    note(ui, m, text, ui.visuals().weak_text_color());
+}
+
+/// A validation-error paragraph aligned to the control column (the
+/// launcher's inline geometry issue).
+pub(crate) fn error_hint(ui: &mut Ui, m: &FormMetrics, text: &str) {
+    note(ui, m, text, ui.visuals().error_fg_color);
+}
+
+fn note(ui: &mut Ui, m: &FormMetrics, text: &str, color: Color32) {
     let available = ui.available_width();
     ui.horizontal(|ui| {
         ui.add_space(m.label_width(available) + m.gutter());
-        ui.label(RichText::new(text).weak());
+        ui.colored_label(color, text);
     });
 }
 
 /// A read-only well displaying computed output (the filename preview):
 /// monospace text on the sunken field surface with the control outline.
-pub(super) fn readout(ui: &mut Ui, m: &FormMetrics, text: &str) {
+pub(crate) fn readout(ui: &mut Ui, m: &FormMetrics, text: &str) {
     let font = egui::FontId::monospace(m.base_size() - 1.0);
     let color = ui.visuals().text_color();
     let text_width = ui.fonts(|fonts| {
@@ -202,12 +241,12 @@ pub(super) fn readout(ui: &mut Ui, m: &FormMetrics, text: &str) {
 /// on, the accent edge on hover, and the selection-stroke focus ring.
 /// Click semantics match `egui::Checkbox` exactly (toggle + `changed()`,
 /// keyboard Space/Enter via the focused click sense, a11y widget info).
-pub(super) struct TokenCheckbox<'a> {
+pub(crate) struct TokenCheckbox<'a> {
     value: &'a mut bool,
 }
 
 impl<'a> TokenCheckbox<'a> {
-    pub(super) fn new(value: &'a mut bool) -> Self {
+    pub(crate) fn new(value: &'a mut bool) -> Self {
         Self { value }
     }
 }
@@ -231,7 +270,13 @@ impl Widget for TokenCheckbox<'_> {
             let (small, big) = ui.spacing().icon_rectangles(rect);
             let painter = ui.painter();
             if checked {
-                let on = ui.visuals().widgets.active;
+                // A disabled checked box reads inert (weak ink on the
+                // neutral surface), never a live accent.
+                let on = if enabled {
+                    ui.visuals().widgets.active
+                } else {
+                    ui.visuals().widgets.noninteractive
+                };
                 painter.rect(
                     big.expand(visuals.expansion),
                     visuals.rounding,

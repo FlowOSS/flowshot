@@ -11,11 +11,11 @@ use chrono::{DateTime, Local};
 use egui::Ui;
 use flowshot_core::config::SaveConfig;
 
+use super::super::fields::text_field;
+use super::super::form::{card, hint, readout, row};
 use super::super::model::SettingsModel;
 use super::super::strings;
 use super::TabContext;
-use super::fields::text_field;
-use super::form::{card, hint, readout, row};
 
 pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<'_>) {
     let m = &context.metrics;

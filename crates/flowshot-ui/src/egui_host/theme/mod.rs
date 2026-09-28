@@ -17,8 +17,9 @@
 //! - [`style`]: the shared token projection (colors, radii, typography) both
 //!   egui windows use.
 //! - [`settings_style`]: `style` plus the form-grid geometry (uniform
-//!   control height, icon edge, slider/combo widths) the settings surface
-//!   needs; the launcher keeps its live-QA'd 400x232 geometry untouched.
+//!   control height, icon edge, slider/combo widths) that BOTH egui panels
+//!   project - one control vocabulary across the settings window and the
+//!   launcher dialog (each keeps its own window size).
 //!
 //! Dark/light: [`ThemeMode`] is the RESOLVED preference. The system
 //! preference itself arrives from the binary layer (ashpd Settings portal -

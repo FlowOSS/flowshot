@@ -1,9 +1,16 @@
 //! The launcher dialog's widget layer: an immediate-mode projection of
-//! [`LauncherModel`] (the settings-tabs pattern). Pure egui - headless
-//! testable through [`egui::Context::run`] with synthetic raw input, and
-//! the single producer of [`LauncherAction`].
+//! [`LauncherModel`] (the settings-tabs pattern) over the SAME form
+//! vocabulary the settings window uses ([`crate::settings::form`] rows +
+//! [`crate::settings::fields`] controls + the token metrics), so both egui
+//! panels share one standard. Pure egui - headless testable through
+//! [`egui::Context::run`] with synthetic raw input, and the single producer
+//! of [`LauncherAction`].
 
 use egui::Ui;
+
+use crate::settings::FormMetrics;
+use crate::settings::fields::{combo, text_edit};
+use crate::settings::form::{error_hint, primary_button, row};
 
 use super::model::{LauncherModel, Target};
 use super::request::{GeometryIssue, LauncherRequest};
@@ -28,7 +35,11 @@ fn geometry_id() -> egui::Id {
 }
 
 /// Renders the dialog body; returns the frame's window-level action.
-pub(super) fn show(ui: &mut Ui, model: &mut LauncherModel) -> LauncherAction {
+pub(super) fn show(
+    ui: &mut Ui,
+    model: &mut LauncherModel,
+    metrics: &FormMetrics,
+) -> LauncherAction {
     if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
         return LauncherAction::Cancel;
     }
@@ -42,89 +53,61 @@ pub(super) fn show(ui: &mut Ui, model: &mut LauncherModel) -> LauncherAction {
     {
         return LauncherAction::Capture(request);
     }
-    egui::Grid::new("launcher-grid")
-        .num_columns(2)
-        .spacing([12.0, 10.0])
-        .show(ui, |ui| {
-            target_row(ui, model);
-            ui.end_row();
-            geometry_row(ui, model);
-            ui.end_row();
-            delay_row(ui, model);
-            ui.end_row();
-        });
+    target_row(ui, model, metrics);
+    geometry_row(ui, model, metrics);
+    row(ui, metrics, strings::DELAY_LABEL, |ui| {
+        ui.add(
+            egui::DragValue::new(model.delay_ms_mut())
+                .range(0.0..=f64::from(u32::MAX))
+                .suffix(strings::DELAY_SUFFIX),
+        );
+    });
+    ui.add_space(metrics.small());
     ui.separator();
-    let action = button_row(ui, model);
+    let action = button_row(ui, model, metrics);
     if model.take_focus() {
         ui.memory_mut(|memory| memory.request_focus(geometry_id()));
     }
     action
 }
 
-fn target_row(ui: &mut Ui, model: &mut LauncherModel) {
-    ui.label(strings::TARGET_LABEL);
-    let selected = match model.target() {
-        Target::Manual => strings::TARGET_MANUAL.to_owned(),
-        Target::Monitor(screen) => model
-            .monitors()
-            .iter()
-            .find(|entry| entry.screen == screen)
-            .map_or_else(
-                || format!("{} {screen}", strings::TARGET_SCREEN_PREFIX),
-                |entry| entry.label.clone(),
-            ),
-    };
+fn target_row(ui: &mut Ui, model: &mut LauncherModel, m: &FormMetrics) {
+    // The monitor labels are borrowed from a clone so the combo can hold a
+    // mutable borrow of the target at the same time.
     let entries = model.monitors().to_vec();
-    egui::ComboBox::from_id_source("launcher-target")
-        .selected_text(selected)
-        .show_ui(ui, |ui| {
-            ui.selectable_value(model.target_mut(), Target::Manual, strings::TARGET_MANUAL);
-            for entry in &entries {
-                ui.selectable_value(
-                    model.target_mut(),
-                    Target::Monitor(entry.screen),
-                    &entry.label,
-                );
-            }
-        });
+    let mut options: Vec<(Target, &str)> = vec![(Target::Manual, strings::TARGET_MANUAL)];
+    options.extend(
+        entries
+            .iter()
+            .map(|entry| (Target::Monitor(entry.screen), entry.label.as_str())),
+    );
+    combo(ui, m, strings::TARGET_LABEL, model.target_mut(), &options);
 }
 
-fn geometry_row(ui: &mut Ui, model: &mut LauncherModel) {
-    ui.label(strings::GEOMETRY_LABEL);
+fn geometry_row(ui: &mut Ui, model: &mut LauncherModel, m: &FormMetrics) {
     let manual = model.target() == Target::Manual;
-    ui.add_enabled_ui(manual, |ui| {
-        ui.vertical(|ui| {
+    row(ui, m, strings::GEOMETRY_LABEL, |ui| {
+        ui.add_enabled_ui(manual, |ui| {
+            let width = ui.available_width().max(m.control_min_width());
             ui.add(
-                egui::TextEdit::singleline(model.geometry_text_mut())
+                text_edit(ui, model.geometry_text_mut(), width)
                     .id(geometry_id())
-                    .desired_width(220.0)
                     .hint_text(strings::GEOMETRY_HINT),
             );
-            // Inline validation: the empty field carries the grammar hint as
-            // its placeholder; a malformed entry gets the visible error.
-            if let Err(issue @ GeometryIssue::Malformed) = model.geometry() {
-                ui.colored_label(ui.visuals().error_fg_color, issue.to_string());
-            }
         });
     });
+    // Inline validation: the empty field carries the grammar hint as its
+    // placeholder; a malformed entry gets the visible error row.
+    if let Err(issue @ GeometryIssue::Malformed) = model.geometry() {
+        error_hint(ui, m, &issue.to_string());
+    }
 }
 
-fn delay_row(ui: &mut Ui, model: &mut LauncherModel) {
-    ui.label(strings::DELAY_LABEL);
-    ui.add(
-        egui::DragValue::new(model.delay_ms_mut())
-            .range(0.0..=f64::from(u32::MAX))
-            .suffix(strings::DELAY_SUFFIX),
-    );
-}
-
-fn button_row(ui: &mut Ui, model: &LauncherModel) -> LauncherAction {
+fn button_row(ui: &mut Ui, model: &LauncherModel, m: &FormMetrics) -> LauncherAction {
     let request = model.request();
     let mut action = LauncherAction::None;
     ui.horizontal(|ui| {
-        if ui
-            .add_enabled(request.is_some(), egui::Button::new(strings::CAPTURE))
-            .clicked()
+        if primary_button(ui, m, strings::CAPTURE, request.is_some()).clicked()
             && let Some(request) = request
         {
             action = LauncherAction::Capture(request);

@@ -4,10 +4,10 @@
 use egui::Ui;
 use flowshot_core::config::{ArrowStyle, Config};
 
+use crate::settings::fields::{combo, number, toggle};
+use crate::settings::form::sub_section;
 use crate::settings::layout::FormMetrics;
 use crate::settings::strings;
-use crate::settings::tabs::fields::{combo, number, toggle};
-use crate::settings::tabs::form::sub_section;
 
 pub(super) fn show(ui: &mut Ui, m: &FormMetrics, config: &mut Config) -> bool {
     let mut changed = sub_section(ui, m, strings::GROUP_TOOL_ARROW, |ui| {

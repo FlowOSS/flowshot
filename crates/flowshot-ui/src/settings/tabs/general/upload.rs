@@ -4,10 +4,10 @@
 use egui::Ui;
 use flowshot_core::config::Config;
 
+use crate::settings::fields::{number, text_field, toggle};
+use crate::settings::form::hint;
 use crate::settings::layout::FormMetrics;
 use crate::settings::strings;
-use crate::settings::tabs::fields::{number, text_field, toggle};
-use crate::settings::tabs::form::hint;
 
 pub(super) fn show(ui: &mut Ui, m: &FormMetrics, config: &mut Config) -> bool {
     let mut changed = text_field(

@@ -23,10 +23,11 @@ use super::options::LauncherWindowOptions;
 use super::strings;
 use super::window::LauncherEvent;
 
-/// The dialog's fixed logical size (four rows + the button bar).
+/// The dialog's fixed logical size (three form rows + the inline error
+/// row's reserve + the button bar, at the default tokens).
 const DIALOG_SIZE: LogicalSize<f64> = LogicalSize {
     width: 400.0,
-    height: 232.0,
+    height: 176.0,
 };
 
 /// The error-label for surface operations (the overlay passes a monitor

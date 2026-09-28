@@ -19,12 +19,23 @@ use crate::egui_host::theme;
 /// vendored Inter, not against this comment).
 const LABEL_MAX_EM: f32 = 22.0;
 /// The most of the available width the label column may take (the control
-/// column keeps the rest).
-const LABEL_MAX_RATIO: f32 = 0.45;
+/// column keeps the rest). Sized so the em cap still wins inside the
+/// centered content column at the default window width.
+const LABEL_MAX_RATIO: f32 = 0.48;
 /// The control column's floor in em before the label column yields.
 const CONTROL_MIN_EM: f32 = 6.0;
 /// Section-card titles: em scale over the base size (semibold face).
 const TITLE_SCALE: f32 = 1.25;
+/// The content column's cap in em: section cards never stretch past a
+/// readable measure on wide windows - the column centers instead (the
+/// GNOME Settings / Zed boxed-list pattern; a full-width card at 1280px
+/// leaves every control stranded in horizontal dead space).
+const CONTENT_MAX_EM: f32 = 52.0;
+/// Single-line text fields' cap in em (a path-length field fills the
+/// control column; short values like an extension do not stretch).
+const FIELD_MAX_EM: f32 = 24.0;
+/// Combo boxes' cap in em (the selected value sets the honest width).
+const COMBO_MAX_EM: f32 = 20.0;
 
 /// A `u32` token step as points (byte-sized steps; oversized tokens fall
 /// back instead of truncating silently - the theme projection's rule).
@@ -154,10 +165,41 @@ impl FormMetrics {
         self.window_margin() + self.card_padding()
     }
 
-    /// The control column's left edge for `available` card content width -
-    /// the x every control in every row starts at.
+    /// The centered content column's width for `available` scroll width:
+    /// the em cap on wide windows, the full width below it.
+    #[must_use]
+    pub fn content_width(self, available: f32) -> f32 {
+        available.min(self.base_size * CONTENT_MAX_EM).max(0.0)
+    }
+
+    /// The centered content column's left offset for `available` scroll
+    /// width (zero below the cap - narrow windows keep every pixel).
+    #[must_use]
+    pub fn content_offset(self, available: f32) -> f32 {
+        (available - self.content_width(available)) * 0.5
+    }
+
+    /// Single-line text fields' width cap (the path field fills the
+    /// control column; short values keep an honest width).
+    #[must_use]
+    pub fn field_max_width(self) -> f32 {
+        self.base_size * FIELD_MAX_EM
+    }
+
+    /// Combo boxes' width cap.
+    #[must_use]
+    pub fn combo_max_width(self) -> f32 {
+        self.base_size * COMBO_MAX_EM
+    }
+
+    /// The control column's left edge for `available` scroll width - the
+    /// x every control in every row starts at (centering offset + card
+    /// padding + label column + gutter).
     #[must_use]
     pub fn control_x(self, available: f32) -> f32 {
-        self.content_left() + self.label_width(available) + self.gutter()
+        self.content_offset(available)
+            + self.content_left()
+            + self.label_width(self.content_width(available) - 2.0 * self.card_padding())
+            + self.gutter()
     }
 }
