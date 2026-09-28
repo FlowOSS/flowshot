@@ -33,7 +33,9 @@ use flowshot_core::geometry::{LogicalPoint, ToPhysical};
 
 use crate::icc::IccBackend;
 
-pub use protocol::{CursorImage, composite_cursor_rgba, source_local_to_global};
+pub use protocol::{
+    CursorImage, CursorPositionSpace, composite_cursor_rgba, source_local_to_global,
+};
 
 impl IccBackend {
     /// Queries the cursor position once, in global logical layout space.

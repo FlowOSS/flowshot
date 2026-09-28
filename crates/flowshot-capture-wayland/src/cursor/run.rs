@@ -22,7 +22,7 @@ use wayland_client::{Connection, EventQueue};
 use wayland_protocols::ext::image_capture_source::v1::client::ext_image_capture_source_v1::ExtImageCaptureSourceV1;
 use wayland_protocols::ext::image_copy_capture::v1::client::ext_image_copy_capture_cursor_session_v1::ExtImageCopyCaptureCursorSessionV1;
 
-use super::protocol::{CursorImage, resolve_cursor_pos};
+use super::protocol::{CursorImage, CursorPositionSpace, resolve_cursor_pos};
 use crate::error::{IccError, socket_connect_error};
 use crate::icc::dispatch::IccGen;
 use crate::icc::shm::ShmBuffer;
@@ -73,7 +73,7 @@ fn cursor_pos_inner() -> Result<Option<LogicalPoint>, IccError> {
     }) {
         tracing::debug!(%error, "cursor-position wait ended without a position");
     }
-    let resolved = resolve_cursor_pos(&state.cursor, &state.cursor_layout);
+    let resolved = resolve_cursor_pos(&state.cursor, &state.cursor_layout, state.cursor_space);
     teardown(&conn, handles, &mut state);
     Ok(resolved)
 }
@@ -209,6 +209,7 @@ pub(crate) fn create_cursor_sessions(
 
     let outputs = ordered_outputs(state)?;
     state.cursor_layout = outputs.iter().map(|(_, info)| info.clone()).collect();
+    state.cursor_space = CursorPositionSpace::for_desktop(state.desktop);
     state.cursor.begin(outputs.len());
 
     let mut handles = Vec::with_capacity(outputs.len());

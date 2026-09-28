@@ -53,7 +53,7 @@ impl Dispatch<ExtImageCopyCaptureCursorSessionV1, CursorSessionId> for CaptureSt
                     forward(
                         state,
                         CursorEvent::Moved {
-                            position: source_local_to_global(local, output),
+                            position: source_local_to_global(local, output, state.cursor_space),
                         },
                     );
                 }

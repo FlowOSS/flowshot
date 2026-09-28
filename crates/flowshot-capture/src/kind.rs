@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// The last three variants are roadmap placeholders for non-compositor
 /// platforms. They are documented, non-constructible outcomes of v1
 /// negotiation: [`CapabilityProbe::supports`](crate::CapabilityProbe::supports)
-/// reports `false` for them on every probe, so [`negotiate`](crate::negotiate)
+/// reports `false` for them on every probe, so [`negotiate()`](crate::negotiate())
 /// never returns them, and forcing one is a typed
 /// [`CaptureError::NoBackendAvailable`](crate::CaptureError::NoBackendAvailable).
 /// The platform audit (plan todo 42) tracks turning them into real backends.

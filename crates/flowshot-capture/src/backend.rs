@@ -86,7 +86,7 @@ impl PermissionResult {
 ///
 /// Implementations must be `Send + Sync` so the UI can own a
 /// `Box<dyn CaptureBackend>` chosen at runtime by
-/// [`negotiate`](crate::negotiate) and drive it from its own task.
+/// [`negotiate()`](crate::negotiate()) and drive it from its own task.
 ///
 /// # Contract
 ///

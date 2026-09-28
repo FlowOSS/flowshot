@@ -1,7 +1,7 @@
 //! The overlay frame builder (plan todo 41 extraction).
 //!
 //! ONE display-list construction path shared by the live shell
-//! ([`crate::app`]'s `render_window`) and the offscreen QA harnesses (the
+//! ([`crate::app::OverlayApp`]'s `render_window`) and the offscreen QA harnesses (the
 //! todo-15 `--verify-offscreen` pattern, the todo-41 QA bundle): backdrop ->
 //! grid -> editor -> selection chrome -> editor chrome -> magnifier, in the
 //! production paint order, evaluated at a caller-supplied `now` so motion

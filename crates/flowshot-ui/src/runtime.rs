@@ -155,6 +155,17 @@ impl OverlayRuntime {
         &mut self.app.core
     }
 
+    /// Re-themes the planned backdrop (dim layer + letterbox color) from
+    /// the core's live chrome tokens - call AFTER `configure_core` has
+    /// projected the `[ui]` config, since [`Backdrop::plan`](crate::Backdrop::plan)
+    /// ran on the pre-config default tokens at build time.
+    pub fn retheme_backdrop(&mut self) {
+        let tokens = self.app.core.chrome().tokens().clone();
+        if let Some(backdrop) = self.app.backdrop.as_mut() {
+            backdrop.retheme(&tokens);
+        }
+    }
+
     /// Registers the binary-layer window-attributes hook (Wayland
     /// `app_id=flowshot` via `WindowAttributesExtWayland`, applied by the
     /// daemon's session child - the todo-13 deviation-A queue item; the
