@@ -103,8 +103,14 @@ pub enum SessionResult {
     },
     /// Esc/Cancel without a completion.
     Cancelled,
-    /// The launcher forwarded its dispatch to the daemon.
-    Dispatched,
+    /// The launcher handed its dispatch back for the PARENT to run (the
+    /// parent executes the `Invoke` argv after the session ends - the
+    /// child's own session holds the single-window-session gate, so a
+    /// child-side dispatch can never acquire it).
+    Dispatched {
+        /// The lossless `Invoke` argv tail (everything after argv\[0\]).
+        argv: Vec<String>,
+    },
     /// The session window closed normally (settings/pins).
     Closed,
     /// The session failed; `exit_code` carries the shared todo-35 table.

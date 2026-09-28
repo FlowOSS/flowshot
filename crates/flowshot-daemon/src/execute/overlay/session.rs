@@ -91,6 +91,7 @@ pub fn run_overlay_session(session: OverlaySession) -> SessionOutcome {
             exit: Some(exit),
         },
     );
+    runtime.retheme_backdrop();
     match runtime.run() {
         Ok(()) => events.take_outcome(),
         Err(error) => SessionOutcome::Failed(error),

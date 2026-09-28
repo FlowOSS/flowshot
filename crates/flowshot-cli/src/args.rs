@@ -217,7 +217,7 @@ pub struct DaemonArgs {
     #[arg(long, value_name = "SECONDS", default_value_t = 60)]
     pub idle_grace: u64,
 
-    /// Config file to load (default: <xdg-config-home>/flowshot/flowshot.toml).
+    /// Config file to load (default: &lt;xdg-config-home&gt;/flowshot/flowshot.toml).
     #[arg(long, value_name = "PATH")]
     pub config: Option<PathBuf>,
 }

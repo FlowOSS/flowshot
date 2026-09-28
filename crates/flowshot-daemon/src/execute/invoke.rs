@@ -32,7 +32,7 @@ pub enum InvokeCall {
     Color,
 }
 
-/// Parses one forwarded argv tail (everything after argv[0]).
+/// Parses one forwarded argv tail (everything after argv\[0\]).
 ///
 /// # Errors
 ///

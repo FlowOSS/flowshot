@@ -11,6 +11,7 @@
 
 use super::*;
 use crate::input::Action;
+use crate::render::{Color, Command, DisplayList};
 use flowshot_core::geometry::{LogicalRect, OutputInfo, OutputLayout, PhysicalSize, Transform};
 use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
@@ -268,4 +269,48 @@ fn non_finite_motion_leaves_cursor_state_untouched() {
     assert_eq!(report.global_position, None);
     assert!(report.actions.is_empty());
     assert_eq!(core.cursor().copied(), before);
+}
+
+/// The selection outline color the core's engine paints (first stroke).
+fn outline_color(core: &OverlayCore) -> Color {
+    let output = OutputInfo::new(
+        "DP-1",
+        "DP-1",
+        LogicalRect::from_raw(0.0, 0.0, 1920.0, 1080.0),
+        PhysicalSize::from_raw(1920, 1080),
+        1.0,
+        Transform::Normal,
+    )
+    .expect("valid fixture output");
+    let mut list = DisplayList::new();
+    core.selection()
+        .paint_into(&mut list, &output, Instant::now());
+    list.iter()
+        .find_map(|command| match command {
+            Command::Stroke { color, .. } => Some(*color),
+            _ => None,
+        })
+        .expect("outline stroke painted")
+}
+
+#[test]
+fn configure_chrome_rethemes_the_selection_accent() {
+    let mut core = dual_core();
+    core.selection_mut()
+        .set_rect(Some(LogicalRect::from_raw(100.0, 100.0, 200.0, 150.0)));
+    assert_eq!(
+        outline_color(&core),
+        Color::from_rgba8(99, 102, 241, 255),
+        "default token accent before any config projection"
+    );
+    let ui = flowshot_core::config::UiConfig {
+        accent_color: "#FF0000".to_owned(),
+        ..Default::default()
+    };
+    core.configure_chrome(&ui);
+    assert_eq!(
+        outline_color(&core),
+        Color::from_rgba8(255, 0, 0, 255),
+        "the [ui].accent_color projection must reach the selection paint"
+    );
 }

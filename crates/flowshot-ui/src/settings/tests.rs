@@ -84,6 +84,25 @@ fn corrupt_toml_degrades_to_defaults_with_banner() {
 }
 
 #[test]
+fn corrupt_load_enables_apply_so_the_banner_repair_is_possible() {
+    // Given: a corrupt load (clean defaults model + repair banner)
+    let corrupt = SettingsModel::from_toml_str("config_version = ]]]not toml[[[");
+    // Then: Apply is enabled - the banner's "Apply to repair the file"
+    // promise must be actionable without an unrelated edit first (F3 bug 2)
+    assert!(corrupt.apply_enabled());
+    // And: a clean load over a valid file keeps Apply disabled until dirty
+    let clean = SettingsModel::from_toml_str(&Config::default().to_toml_string().unwrap());
+    assert!(!clean.apply_enabled());
+    let mut dirty = SettingsModel::from_toml_str(&Config::default().to_toml_string().unwrap());
+    dirty.mark_dirty();
+    assert!(dirty.apply_enabled());
+    // And: validation issues block Apply even with a repair pending
+    let mut invalid = SettingsModel::from_toml_str("config_version = ]]]not toml[[[");
+    invalid.config_mut().editor.undo_limit = 1000;
+    assert!(!invalid.apply_enabled());
+}
+
+#[test]
 fn validation_rejects_out_of_range_numbers() {
     // Given: undo_limit above the F27 ceiling and jpeg_quality below 1
     let mut model = SettingsModel::default();

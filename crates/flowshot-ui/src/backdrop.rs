@@ -117,6 +117,19 @@ impl Backdrop {
         }
     }
 
+    /// Re-derives the token colors (dim layer + letterbox placeholder)
+    /// from a new token set - the settings-apply theme pass. The planned
+    /// textures and geometry are untouched; only the per-frame paint
+    /// colors change, so this is valid any time after [`Self::plan`].
+    pub fn retheme(&mut self, tokens: &DesignTokens) {
+        self.dim_color = Color::dim_from_palette(&tokens.palette);
+        if self.dim_color.is_none() {
+            tracing::error!("contrast palette token malformed; dim layer disabled");
+        }
+        self.placeholder = Color::from_hex_token(&tokens.palette.contrast)
+            .unwrap_or_else(|| Color::from_rgba8(255, 0, 255, 255));
+    }
+
     /// The stitched layout every placement derives from.
     #[must_use]
     pub const fn layout(&self) -> &OutputLayout {
@@ -294,6 +307,7 @@ pub async fn capture_frozen(
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
 
+    use crate::render::Command;
     use bytes::BytesMut;
     use flowshot_capture::{BackendKind, Frame, FrameBuffer, FrameFormat, MockBackend, OutputRef};
     use flowshot_core::geometry::{
@@ -375,6 +389,32 @@ mod tests {
             ],
             cursor: None,
         }
+    }
+
+    #[test]
+    fn retheme_updates_the_dim_color_from_new_tokens() {
+        let mut backdrop = Backdrop::plan(dual_capture(), &DesignTokens::default());
+        let options = BackdropOptions::default();
+        let dim = |backdrop: &Backdrop| -> Color {
+            backdrop
+                .commands(0, (8, 6), &options)
+                .iter()
+                .find_map(|command| match command {
+                    Command::Dim { color, .. } => Some(*color),
+                    _ => None,
+                })
+                .expect("dim paints with the default options")
+        };
+        assert_eq!(
+            dim(&backdrop),
+            Color::from_rgba8(15, 23, 42, 190),
+            "plan-time dim = default contrast #0F172A at opacity 190"
+        );
+        let mut tokens = DesignTokens::default();
+        tokens.palette.contrast = "#FF0000".to_owned();
+        tokens.palette.dim_opacity = 128;
+        backdrop.retheme(&tokens);
+        assert_eq!(dim(&backdrop), Color::from_rgba8(255, 0, 0, 128));
     }
 
     #[test]

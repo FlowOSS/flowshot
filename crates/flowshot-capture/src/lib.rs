@@ -10,13 +10,13 @@
 //! - [`Frame`], [`FrameBuffer`], [`FrameFormat`]: CPU-side pixel delivery with
 //!   physical-pixels-first placement metadata (per-output scale and
 //!   transform, never an averaged scale).
-//! - [`CapabilityProbe`] + [`negotiate`]: the backend ladder
+//! - [`CapabilityProbe`] + [`negotiate()`]: the backend ladder
 //!   (`ext-image-copy-capture` -> `wlr-screencopy` -> `KWin ScreenShot2` ->
 //!   portal `ScreenCast` -> portal `Screenshot`), filtered by what the session
 //!   actually offers, with a config `force_backend` override.
 //! - [`MockBackend`]: a fixture-driven implementation for downstream tests.
 //!
-//! Geometry types ([`OutputInfo`], rectangles, transforms) are reused from
+//! Geometry types ([`flowshot_core::geometry::OutputInfo`], rectangles, transforms) are reused from
 //! [`flowshot_core::geometry`], never duplicated.
 //!
 //! # Purity

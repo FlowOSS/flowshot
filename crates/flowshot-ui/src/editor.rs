@@ -16,8 +16,7 @@
 //! priority) and passes through what it does not consume; the Esc cascade
 //! stays in the selection engine (its six-stage order is the final contract)
 //! and the editor reacts to the popped step through
-//! [`OverlayCore`](crate::OverlayCore)'s step application, keeping the
-//! cascade flags in sync via [`EditorState::sync_cascade`].
+//! [`OverlayCore::sync_cascade`] (the editor's own `sync_cascade` method).
 //!
 //! # Coordinate contract
 //!

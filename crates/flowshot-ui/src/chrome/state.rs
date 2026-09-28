@@ -86,13 +86,17 @@ impl ChromeState {
 
     /// Applies a new config projection: the toolbar button order (plan:
     /// "button order = config `buttons` list") and the palette tokens the
-    /// chrome paints with.
+    /// chrome paints with. The chrome token set is the LIVE `[ui]`
+    /// projection every theme-pass consumer reads (selection engine,
+    /// crosshair, backdrop dim) - `dim_opacity` rides along even though
+    /// the chrome itself never paints the dim layer.
     pub fn configure(&mut self, config: &UiConfig) {
         self.tokens.palette.accent.clone_from(&config.accent_color);
         self.tokens
             .palette
             .contrast
             .clone_from(&config.contrast_color);
+        self.tokens.palette.dim_opacity = config.dim_opacity;
         self.toolbar.buttons = config
             .toolbar_buttons
             .iter()

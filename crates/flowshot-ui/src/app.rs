@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use flowshot_core::geometry::{LogicalPoint, OutputLayout};
-use flowshot_core::tokens::DesignTokens;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
 
@@ -52,7 +51,6 @@ pub(crate) struct OverlayApp {
     /// must abort the loop; [`OverlayRuntime::run`](crate::OverlayRuntime)
     /// returns it after teardown so the process exits 1, never panics.
     pub fatal_error: Option<UiError>,
-    pub crosshair_color: [f32; 4],
     /// The frozen-frame backdrop (plan todo 15); `None` = the empty overlay
     /// (todo-13 behavior: transparent clear + crosshair only).
     pub backdrop: Option<Backdrop>,
@@ -68,17 +66,12 @@ pub(crate) struct OverlayApp {
 
 impl OverlayApp {
     pub(crate) fn new() -> Self {
-        // The chrome owns the live token set (theming is todo 36); the
-        // crosshair color is derived once from the same brand default.
-        let crosshair_color = crosshair::parse_srgb_hex(&DesignTokens::default().palette.accent)
-            .unwrap_or(crosshair::FALLBACK_COLOR);
         Self {
             core: OverlayCore::new(InputRouter::new(OutputLayout::new(Vec::new()), Vec::new())),
             windows: Vec::new(),
             window_index: HashMap::new(),
             gpu: None,
             fatal_error: None,
-            crosshair_color,
             backdrop: None,
             backdrop_options: BackdropOptions::default(),
             customizer: None,

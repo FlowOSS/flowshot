@@ -101,12 +101,18 @@ impl OverlayApp {
         }
         let probe = surfaces.first().ok_or(UiError::NoMonitors)?;
         let gpu = GpuContext::new(&instance, probe)?;
+        // Surfaces are created on Resumed - AFTER configure_core projected
+        // the `[ui]` palette into the chrome tokens, so the crosshair
+        // pipeline bakes the CONFIGURED accent (settings-apply theme pass).
+        let crosshair_color =
+            crate::crosshair::parse_srgb_hex(&self.core.chrome().tokens().palette.accent)
+                .unwrap_or(crate::crosshair::FALLBACK_COLOR);
         for (entry, surface) in self.windows.iter_mut().zip(surfaces) {
             let size = entry.window.inner_size();
             let spec = SurfaceSpec {
                 monitor: entry.monitor_name.clone(),
                 initial_size: (size.width, size.height),
-                crosshair_color: self.crosshair_color,
+                crosshair_color,
             };
             entry.surface = Some(WindowSurface::new(surface, &gpu, &spec)?);
         }

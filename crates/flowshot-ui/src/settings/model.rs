@@ -229,6 +229,16 @@ impl SettingsModel {
         self.dirty
     }
 
+    /// Whether Apply must be enabled: edits pending OR a corrupt-load
+    /// repair pending (the banner's "Apply to repair the file" promise -
+    /// a clean defaults model over a corrupt file is repairable), and
+    /// validation is clean.
+    #[must_use]
+    pub fn apply_enabled(&self) -> bool {
+        (self.dirty || matches!(self.banner, Some(Banner::CorruptConfig)))
+            && self.validate().is_empty()
+    }
+
     /// Marks pending edits.
     pub fn mark_dirty(&mut self) {
         self.dirty = true;

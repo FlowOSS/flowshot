@@ -122,6 +122,10 @@ pub(crate) struct CaptureState {
     /// Ordered output geometry the cursor sessions map positions against,
     /// filled before cursor sessions are created.
     pub cursor_layout: Vec<OutputInfo>,
+    /// The coordinate space the compositor reports cursor-session positions
+    /// in (set by `create_cursor_sessions` from the sniffed desktop env;
+    /// deterministic `PhysicalPerSpec` default keeps tests env-independent).
+    pub cursor_space: crate::cursor::CursorPositionSpace,
     /// When set, cursor session events are forwarded here as they arrive
     /// (the long-lived cursor stream); one-shot queries leave it `None` and
     /// read [`CaptureState::cursor`] instead.
@@ -151,6 +155,7 @@ impl CaptureState {
             screencopy: ActiveScreencopy::default(),
             cursor: ActiveCursor::default(),
             cursor_layout: Vec::new(),
+            cursor_space: crate::cursor::CursorPositionSpace::default(),
             cursor_sink: None,
             roundtrip_pending: false,
             desktop: detect_desktop_env(),

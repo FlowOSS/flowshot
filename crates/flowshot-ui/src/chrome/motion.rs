@@ -5,10 +5,11 @@
 //! popover scale-in, and the per-button hover/press wash. Every transition is
 //! a token-eased [`Tween`] evaluated at the `now` the caller was handed -
 //! pure functions of time, zero background work. The shell's frame scheduler
-//! consults [`ChromeMotion::active_at`] / [`ChromeMotion::wake`]: settled
-//! chrome schedules NOTHING (the todo-13 idle zero-CPU contract), and the
-//! reduced-motion switch ([`ChromeMotion::set_reduced`]) snaps every
-//! transition to its target.
+//! consults [`ChromeMotion::active_at`] / [`ChromeMotion::wake`] (the shell's
+//! frame scheduler consults the motion's wake deadline to pace the frame
+//! rate): settled chrome schedules NOTHING (the todo-13 idle zero-CPU
+//! contract), and the reduced-motion switch ([`ChromeMotion::set_reduced`])
+//! snaps every transition to its target.
 //!
 //! Hit-testing deliberately uses the FINAL geometry (the transitions are
 //! <=180ms; interaction leads the visual, so a panel is never unclickable

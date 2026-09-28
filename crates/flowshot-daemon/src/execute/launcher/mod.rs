@@ -3,14 +3,17 @@
 //! (the winit one-loop constraint). Its Capture dispatch follows the
 //! todo-37 mapping:
 //!
-//! - daemon-resident (`forward_to_daemon`): `Region{geometry, delay}` ->
-//!   the bus `Capture(a{sv})` member with the geometry's token (the daemon
-//!   then runs the interactive overlay preselected at that rect);
-//!   `Screen{screen, delay}` -> the bus `Invoke` channel
-//!   (`capture screen <n> -d <ms>` - the typed `CaptureScreen(u)` member
-//!   carries no delay; the Invoke channel is lossless). DECISION on the
-//!   todo-37 open question, recorded in decisions.md: the delay rides the
-//!   existing vocabulary, no wire extension, nothing dropped.
+//! - daemon-resident (`forward_to_daemon`): the child returns the
+//!   dispatch as DATA (`SessionResult::Dispatched { argv }`) and the
+//!   PARENT executes it through the lossless `Invoke` channel after the
+//!   session ends: `Region{geometry, delay}` -> `capture --region TOKEN
+//!   [-d MS]` (interactive overlay preselected at that rect);
+//!   `Screen{screen, delay}` -> `capture screen <n> [-d <ms>]`. DECISION
+//!   on the todo-37 open question, recorded in decisions.md: the delay
+//!   rides the existing vocabulary, no wire extension, nothing dropped.
+//!   F3 fix (2026-09-28): the child-side BUS forward this replaced could
+//!   never acquire the single-window-session gate the child itself held -
+//!   the Capture button was dead in daemon mode (live-QA found).
 //! - one-shot (`--dialog --no-daemon`): the child captures the typed
 //!   geometry DIRECTLY in-process (a second overlay loop inside the child
 //!   is impossible; the todo-37 harness proved exactly this direct
@@ -60,10 +63,22 @@ pub async fn run(ctx: &ExecCtx, started: Instant) -> Result<ExecOutcome, Execute
         "perf.launcher_closed"
     );
     match result? {
-        // The daemon executes the dispatched capture itself.
-        SessionResult::Dispatched => Ok(ExecOutcome::Done(
-            flowshot_actions::clipboard::PostCaptureReport::default(),
-        )),
+        // The parent executes the handed-back dispatch itself; the
+        // session guard released when `spawn` returned, so the capture's
+        // own window session can acquire it now. Dispatched through the
+        // concrete Invoke legs (not `execute` - that would recurse into
+        // the Launcher arm; `dispatch_argv` only ever builds captures).
+        SessionResult::Dispatched { argv } => match super::invoke::parse(&argv)? {
+            super::invoke::InvokeCall::Direct(target, request) => {
+                super::direct::run(target, request, ctx, started).await
+            }
+            super::invoke::InvokeCall::Interactive(request) => {
+                super::overlay::run_interactive(request, ctx, started, false).await
+            }
+            other => Err(ExecuteError::Task(format!(
+                "the launcher dispatch parsed to a non-capture call: {other:?}"
+            ))),
+        },
         // One-shot: the child captured directly; the parent runs
         // post-capture (clipboard offer ownership stays with the invoker).
         SessionResult::Completed { kind, selection } => {
@@ -112,7 +127,7 @@ pub fn launcher_child(spec: &SessionSpec) -> SessionResult {
         let spec = spec.clone();
         LaunchCallback::new(move |request: &LauncherRequest| {
             let outcome = if forward {
-                dispatch::forward_to_daemon(request)
+                dispatch::dispatch_argv(request)
             } else {
                 dispatch::capture_in_child(request, &spec)
             };

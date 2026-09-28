@@ -5,7 +5,7 @@
 //!
 //! | CLI form | Wire member |
 //! |----------|-------------|
-//! | `capture` (interactive/preselected/last) | `Capture(a{sv})` over [`CAPTURE_OPTION_KEYS`] |
+//! | `capture` (interactive/preselected/last) | `Capture(a{sv})` over [`flowshot_daemon::request::CAPTURE_OPTION_KEYS`] |
 //! | `capture full` (no modifiers) | `CaptureFull` |
 //! | `capture screen <n>` (no modifiers) | `CaptureScreen(u)` |
 //! | `capture --dialog` | `Launcher` |
@@ -40,7 +40,7 @@ pub enum WireCall {
     Launcher,
     /// `Settings`.
     Settings,
-    /// `Invoke(as)`: the argv tail (minus argv[0]).
+    /// `Invoke(as)`: the argv tail (minus argv\[0\]).
     Invoke(Vec<String>),
 }
 

@@ -68,14 +68,56 @@ impl ActiveCursor {
     }
 }
 
-/// Converts a source-local post-transform physical cursor position into the
-/// global logical layout space, honoring the output's scale and logical
-/// origin. Total: a non-finite or non-positive scale falls back to 1.0 inside
-/// [`ToLogical`], and negative local coordinates (the protocol allows the
-/// cursor hotspot outside the buffer) map to points before the origin.
+/// The coordinate space a compositor reports cursor-session `position` in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CursorPositionSpace {
+    /// The `ext-image-copy-capture-v1` spec (wlroots, COSMIC): source-local
+    /// POST-transform BUFFER (physical) pixels - converting divides by the
+    /// output scale.
+    #[default]
+    PhysicalPerSpec,
+    /// Hyprland deviation, LIVE-VERIFIED on a scale-2 output (F3 QA
+    /// 2026-09-28: oracle (4700,400), spec conversion yielded (4590,200) =
+    /// exactly local/2 short): Hyprland's `sendCursorEvents` reports
+    /// `untransformedPosition() - logicalBox().pos()`, which arrives
+    /// LOGICAL-relative - converting adds it to the output origin WITHOUT
+    /// dividing. The two spaces coincide at scale 1 (todo-8 live evidence).
+    /// Rotated-output behavior under Hyprland remains unverified (no
+    /// rotated scale!=1 hardware probed yet).
+    LogicalHyprland,
+}
+
+impl CursorPositionSpace {
+    /// The space for a sniffed desktop (the todo-8 "compositor-aware
+    /// handling" its RISKS section queued for exactly this live-confirmed
+    /// Hyprland scale-2 deviation).
+    #[must_use]
+    pub const fn for_desktop(desktop: flowshot_capture::DesktopEnv) -> Self {
+        match desktop {
+            flowshot_capture::DesktopEnv::Hyprland => Self::LogicalHyprland,
+            _ => Self::PhysicalPerSpec,
+        }
+    }
+}
+
+/// Converts a source-local cursor position into the global logical layout
+/// space, honoring the output's scale, logical origin, and the compositor's
+/// reported [`CursorPositionSpace`]. Total: a non-finite or non-positive
+/// scale falls back to 1.0 inside [`ToLogical`], and negative local
+/// coordinates (the protocol allows the cursor hotspot outside the buffer)
+/// map to points before the origin.
 #[must_use]
-pub fn source_local_to_global(local: PhysicalPoint, output: &OutputInfo) -> LogicalPoint {
-    let local_logical = local.to_logical(output.scale);
+pub fn source_local_to_global(
+    local: PhysicalPoint,
+    output: &OutputInfo,
+    space: CursorPositionSpace,
+) -> LogicalPoint {
+    let local_logical = match space {
+        CursorPositionSpace::PhysicalPerSpec => local.to_logical(output.scale),
+        CursorPositionSpace::LogicalHyprland => {
+            LogicalPoint::from_raw(f64::from(local.x.0), f64::from(local.y.0))
+        }
+    };
     LogicalPoint::from_raw(
         output.logical_rect.x.0 + local_logical.x.0,
         output.logical_rect.y.0 + local_logical.y.0,
@@ -89,10 +131,11 @@ pub fn source_local_to_global(local: PhysicalPoint, output: &OutputInfo) -> Logi
 pub(crate) fn resolve_cursor_pos(
     cursor: &ActiveCursor,
     layout: &[OutputInfo],
+    space: CursorPositionSpace,
 ) -> Option<LogicalPoint> {
     let (index, local) = cursor.first_position()?;
     let output = layout.get(index)?;
-    Some(source_local_to_global(local, output))
+    Some(source_local_to_global(local, output, space))
 }
 
 /// A captured cursor image: `RGBA8888` pixels plus the hotspot offset.
@@ -246,17 +289,47 @@ mod tests {
         ]
     }
 
+    /// Test seam: the conversion under the SPEC space (the pre-existing
+    /// protocol-correct math every original test pins).
+    fn source_local_to_global_spec(local: PhysicalPoint, output: &OutputInfo) -> LogicalPoint {
+        source_local_to_global(local, output, CursorPositionSpace::PhysicalPerSpec)
+    }
+
+    #[test]
+    fn hyprland_logical_space_skips_the_scale_division() {
+        // F3 2026-09-28 LIVE probe: headless 1920x1080 output at scale 2,
+        // origin (4480,0); cursor parked at global logical (4700,400)
+        // (hyprctl oracle). Hyprland reported source-local (220,400) =
+        // LOGICAL-relative; the spec divide-by-scale halved the offset and
+        // missed by exactly local/2 = (110,200).
+        let hidpi = output("FS-T8-S2", (4480.0, 0.0), (960.0, 540.0), (1920, 1080), 2.0);
+        let local = PhysicalPoint::from_raw(220, 400);
+        let hyprland = source_local_to_global(local, &hidpi, CursorPositionSpace::LogicalHyprland);
+        assert_eq!((hyprland.x.0, hyprland.y.0), (4700.0, 400.0));
+        let spec = source_local_to_global_spec(local, &hidpi);
+        assert_eq!((spec.x.0, spec.y.0), (4590.0, 200.0));
+    }
+
+    #[test]
+    fn hyprland_space_coincides_with_spec_at_scale_one() {
+        let dp3 = &qa_layout()[1];
+        let local = PhysicalPoint::from_raw(1280, 800);
+        let hyprland = source_local_to_global(local, dp3, CursorPositionSpace::LogicalHyprland);
+        let spec = source_local_to_global_spec(local, dp3);
+        assert_eq!((hyprland.x.0, hyprland.y.0), (spec.x.0, spec.y.0));
+    }
+
     #[test]
     fn scale_one_at_origin_maps_local_straight_to_global() {
         let hdmi = &qa_layout()[0];
-        let global = source_local_to_global(PhysicalPoint::from_raw(960, 540), hdmi);
+        let global = source_local_to_global_spec(PhysicalPoint::from_raw(960, 540), hdmi);
         assert_eq!((global.x.0, global.y.0), (960.0, 540.0));
     }
 
     #[test]
     fn second_monitor_adds_its_logical_origin() {
         let dp3 = &qa_layout()[1];
-        let global = source_local_to_global(PhysicalPoint::from_raw(100, 50), dp3);
+        let global = source_local_to_global_spec(PhysicalPoint::from_raw(100, 50), dp3);
         assert_eq!((global.x.0, global.y.0), (2020.0, 50.0));
     }
 
@@ -265,14 +338,14 @@ mod tests {
         // A scale-2 output at a non-zero logical origin: local physical
         // (200, 100) is local logical (100, 50), placed at origin (1920, 0).
         let hidpi = output("HIDPI", (1920.0, 0.0), (960.0, 540.0), (1920, 1080), 2.0);
-        let global = source_local_to_global(PhysicalPoint::from_raw(200, 100), &hidpi);
+        let global = source_local_to_global_spec(PhysicalPoint::from_raw(200, 100), &hidpi);
         assert_eq!((global.x.0, global.y.0), (2020.0, 50.0));
     }
 
     #[test]
     fn scale_two_at_origin_halves_the_offset() {
         let hidpi = output("HIDPI", (0.0, 0.0), (960.0, 540.0), (1920, 1080), 2.0);
-        let global = source_local_to_global(PhysicalPoint::from_raw(1919, 1079), &hidpi);
+        let global = source_local_to_global_spec(PhysicalPoint::from_raw(1919, 1079), &hidpi);
         assert_eq!((global.x.0, global.y.0), (959.5, 539.5));
     }
 
@@ -281,14 +354,14 @@ mod tests {
         // The protocol allows the hotspot outside the buffer (negative or
         // beyond the size); the conversion stays total.
         let dp3 = &qa_layout()[1];
-        let global = source_local_to_global(PhysicalPoint::from_raw(-20, -5), dp3);
+        let global = source_local_to_global_spec(PhysicalPoint::from_raw(-20, -5), dp3);
         assert_eq!((global.x.0, global.y.0), (1900.0, -5.0));
     }
 
     #[test]
     fn local_at_the_buffer_edge_maps_to_the_logical_edge() {
         let hidpi = output("HIDPI", (0.0, 0.0), (960.0, 540.0), (1920, 1080), 2.0);
-        let global = source_local_to_global(PhysicalPoint::from_raw(1920, 1080), &hidpi);
+        let global = source_local_to_global_spec(PhysicalPoint::from_raw(1920, 1080), &hidpi);
         assert_eq!((global.x.0, global.y.0), (960.0, 540.0));
     }
 
@@ -299,7 +372,8 @@ mod tests {
         cursor.begin(2);
         // Cursor is on DP-3 (index 1); HDMI-A-1 (index 0) never entered.
         cursor.session_mut(1).unwrap().position = Some(PhysicalPoint::from_raw(640, 360));
-        let global = resolve_cursor_pos(&cursor, &layout).unwrap();
+        let global =
+            resolve_cursor_pos(&cursor, &layout, CursorPositionSpace::PhysicalPerSpec).unwrap();
         assert_eq!((global.x.0, global.y.0), (2560.0, 360.0));
     }
 
@@ -311,13 +385,15 @@ mod tests {
         cursor.begin(2);
         cursor.session_mut(0).unwrap().entered = true; // entered but no position
         assert!(!cursor.any_position());
-        assert!(resolve_cursor_pos(&cursor, &layout).is_none());
+        assert!(
+            resolve_cursor_pos(&cursor, &layout, CursorPositionSpace::PhysicalPerSpec).is_none()
+        );
     }
 
     #[test]
     fn resolve_returns_none_on_an_empty_layout() {
         let cursor = ActiveCursor::default();
-        assert!(resolve_cursor_pos(&cursor, &[]).is_none());
+        assert!(resolve_cursor_pos(&cursor, &[], CursorPositionSpace::PhysicalPerSpec).is_none());
     }
 
     #[test]

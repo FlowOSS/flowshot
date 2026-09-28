@@ -133,14 +133,7 @@ fn show_action_bar(ui: &mut Ui, m: &FormMetrics, model: &mut SettingsModel) -> F
     let mut action = FrameAction::None;
     let issues = model.validate();
     ui.horizontal(|ui| {
-        if primary_button(
-            ui,
-            m,
-            strings::BUTTON_APPLY,
-            model.is_dirty() && issues.is_empty(),
-        )
-        .clicked()
-        {
+        if primary_button(ui, m, strings::BUTTON_APPLY, model.apply_enabled()).clicked() {
             action = FrameAction::Apply;
         }
         if ui

@@ -222,9 +222,13 @@ impl OverlayCore {
         self.editor.install_frame(frame);
     }
 
-    /// Applies a new chrome config projection.
+    /// Applies a new chrome config projection AND re-themes the selection
+    /// engine from the projected tokens (outline/grips/HUD follow
+    /// `[ui].accent_color` - the settings-apply theme pass).
     pub fn configure_chrome(&mut self, config: &flowshot_core::config::UiConfig) {
         self.chrome.configure(config);
+        let tokens = self.chrome.tokens().clone();
+        self.selection.retheme(&tokens);
     }
 
     /// The current keyboard modifier snapshot.

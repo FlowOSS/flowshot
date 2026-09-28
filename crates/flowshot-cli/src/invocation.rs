@@ -156,7 +156,7 @@ pub fn resolve(cli: Cli) -> Result<Resolved, CliError> {
     }
 }
 
-/// The argv tail (everything after argv[0]) as the `Invoke(as)` wire
+/// The argv tail (everything after argv\[0\]) as the `Invoke(as)` wire
 /// carries it. The daemon re-parses it with THIS crate's clap surface
 /// (todo 38).
 ///
