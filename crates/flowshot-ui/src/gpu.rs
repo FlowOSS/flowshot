@@ -6,7 +6,7 @@
 //! `RedrawRequested`, so an idle overlay performs no GPU work at all.
 //!
 //! Adapter policy (issues.md 2026-09-25 "downlevel wgpu limits"): adapters
-//! are enumerated and filtered by the [`crate::adapter::MIN_TEXTURE_DIMENSION_2D`] texture-size floor,
+//! are enumerated and filtered by the `crate::adapter::MIN_TEXTURE_DIMENSION_2D` texture-size floor,
 //! and every surface extent is validated against the device limits BEFORE
 //! `Surface::configure` (which panics on oversized extents), so GPU failures
 //! are typed [`UiError`]s end to end.

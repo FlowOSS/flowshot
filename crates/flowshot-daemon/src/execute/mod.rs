@@ -11,7 +11,7 @@
 //!   `flowshot-cli` awaits [`execute`] directly inside its tokio runtime
 //!   (the blocking overlay leg rides `spawn_blocking`);
 //! - the HEADLESS execution mode (feature `test-drive`,
-//!   [`headless`](mod@headless)): the same core wiring
+//!   `headless`: the same core wiring
 //!   ([`overlay::configure_core`]) and the same export implementation
 //!   ([`flowshot_ui::render_export`]) driven by synthetic input with
 //!   offscreen GPU renders - no window, no compositor disturbance. This is

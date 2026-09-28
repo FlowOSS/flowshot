@@ -1,7 +1,7 @@
 //! Overlay application state and frame rendering.
 //!
 //! Frames are rendered only in response to `RedrawRequested` (input, resize,
-//! spawn); the dispatch half lives in [`crate::handler`] and deliberately
+//! spawn); the dispatch half lives in `crate::handler` and deliberately
 //! idles in `about_to_wait`, so the default `ControlFlow::Wait` keeps an idle
 //! overlay at zero CPU (plan todo 13).
 

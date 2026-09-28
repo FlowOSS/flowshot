@@ -55,8 +55,8 @@
 //!
 //! # Test seam
 //!
-//! With feature `test-drive`, [`OverlayCore::inject_event`] (headless) and
-//! [`OverlayHandle::inject_event`] (live loop) feed [`SyntheticInput`] through
+//! With feature `test-drive`, `OverlayCore::inject_event` (headless) and
+//! `OverlayHandle::inject_event` (live loop) feed [`SyntheticInput`] through
 //! the exact production routing path, so mouse paths are QA-able without
 //! external injection tools.
 

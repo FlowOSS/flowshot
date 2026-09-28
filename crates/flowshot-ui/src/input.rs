@@ -74,8 +74,7 @@ pub enum InputEvent {
 /// A synthetic input targeted at one window slot.
 ///
 /// This is the payload of the `test-drive` seam
-/// ([`OverlayCore::inject_event`](crate::OverlayCore::inject_event) and
-/// `OverlayHandle::inject_event`), making mouse paths QA-able without
+/// (`OverlayCore::inject_event` and `OverlayHandle::inject_event`), making mouse paths QA-able without
 /// external injection tools.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SyntheticInput {

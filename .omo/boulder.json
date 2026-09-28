@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-28T14:11:21.102Z",
+      "updated_at": "2026-09-28T17:07:52.063Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -78,7 +78,9 @@
         "opencode:ses_f197035daffei5A2y7kl9vbJ7n",
         "opencode:ses_f196ff33cffeIZlivsNZj0V5vk",
         "opencode:ses_f17a50f02ffeL0b5YkyJWZ9ib8",
-        "opencode:ses_f17a4e234ffenrumpTfKP1OfnM"
+        "opencode:ses_f17a4e234ffenrumpTfKP1OfnM",
+        "opencode:ses_f1749f8e3ffe2sSfRab2r4KsaA",
+        "opencode:ses_f1703482dffeYuD5vExJbu6OWu"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -133,7 +135,9 @@
         "opencode:ses_f197035daffei5A2y7kl9vbJ7n": "appended",
         "opencode:ses_f196ff33cffeIZlivsNZj0V5vk": "appended",
         "opencode:ses_f17a50f02ffeL0b5YkyJWZ9ib8": "appended",
-        "opencode:ses_f17a4e234ffenrumpTfKP1OfnM": "appended"
+        "opencode:ses_f17a4e234ffenrumpTfKP1OfnM": "appended",
+        "opencode:ses_f1749f8e3ffe2sSfRab2r4KsaA": "appended",
+        "opencode:ses_f1703482dffeYuD5vExJbu6OWu": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -274,10 +278,10 @@
           "task_key": "final-wave:f1",
           "task_label": "F1",
           "task_title": "Plan compliance audit",
-          "session_id": "opencode:ses_f17a50f02ffeL0b5YkyJWZ9ib8",
+          "session_id": "opencode:ses_f1703482dffeYuD5vExJbu6OWu",
           "agent": "Sisyphus-Junior",
           "category": "quick",
-          "updated_at": "2026-09-28T14:11:09.560Z"
+          "updated_at": "2026-09-28T17:07:52.063Z"
         }
       }
     }
@@ -285,7 +289,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-28T14:11:21.102Z",
+  "updated_at": "2026-09-28T17:07:52.063Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -339,7 +343,9 @@
     "opencode:ses_f197035daffei5A2y7kl9vbJ7n",
     "opencode:ses_f196ff33cffeIZlivsNZj0V5vk",
     "opencode:ses_f17a50f02ffeL0b5YkyJWZ9ib8",
-    "opencode:ses_f17a4e234ffenrumpTfKP1OfnM"
+    "opencode:ses_f17a4e234ffenrumpTfKP1OfnM",
+    "opencode:ses_f1749f8e3ffe2sSfRab2r4KsaA",
+    "opencode:ses_f1703482dffeYuD5vExJbu6OWu"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -394,7 +400,9 @@
     "opencode:ses_f197035daffei5A2y7kl9vbJ7n": "appended",
     "opencode:ses_f196ff33cffeIZlivsNZj0V5vk": "appended",
     "opencode:ses_f17a50f02ffeL0b5YkyJWZ9ib8": "appended",
-    "opencode:ses_f17a4e234ffenrumpTfKP1OfnM": "appended"
+    "opencode:ses_f17a4e234ffenrumpTfKP1OfnM": "appended",
+    "opencode:ses_f1749f8e3ffe2sSfRab2r4KsaA": "appended",
+    "opencode:ses_f1703482dffeYuD5vExJbu6OWu": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -535,10 +543,10 @@
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "Plan compliance audit",
-      "session_id": "opencode:ses_f17a50f02ffeL0b5YkyJWZ9ib8",
+      "session_id": "opencode:ses_f1703482dffeYuD5vExJbu6OWu",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-09-28T14:11:09.560Z"
+      "updated_at": "2026-09-28T17:07:52.063Z"
     }
   },
   "agent": "atlas"

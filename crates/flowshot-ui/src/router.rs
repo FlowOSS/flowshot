@@ -87,7 +87,7 @@ impl InputRouter {
     /// Creates a router for `layout`.
     ///
     /// `bindings[i]` is the index into `layout.outputs` of the output that
-    /// [`WindowSlot::new(i)`] fullscreen-covers. Out-of-range indices behave
+    /// `WindowSlot::new(i)` fullscreen-covers. Out-of-range indices behave
     /// like unbound slots.
     #[must_use]
     pub fn new(layout: OutputLayout, bindings: Vec<usize>) -> Self {
@@ -220,7 +220,7 @@ impl InputRouter {
     /// extent (post-transform physical px, as reported by winit `Resized`).
     ///
     /// winit does not expose the output transform, so spawned outputs start
-    /// with the monitor's pre-transform mode size and [`Transform::Normal`];
+    /// with the monitor's pre-transform mode size and `Transform::Normal`;
     /// the first `Resized` corrects size and derived logical rect for rotated
     /// outputs. Todo 15 supersedes this layout with the capture-provided one
     /// (true transforms included). Unbound slots are a silent no-op.

@@ -78,7 +78,7 @@ pub fn action_for(id: i32) -> TrayAction {
 }
 
 /// One menu entry (host-agnostic model; the wire mapping lives in
-/// [`super::dbusmenu`]).
+/// `super::dbusmenu`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MenuNode {
     /// Stable dbusmenu id.

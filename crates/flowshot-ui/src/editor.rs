@@ -11,18 +11,18 @@
 //! # Ownership split
 //!
 //! The selection engine (todo 16) owns selection GEOMETRY; the editor owns
-//! the annotation scene and the active tool. [`OverlayCore`] feeds both from
+//! the annotation scene and the active tool. `OverlayCore` feeds both from
 //! one funnel: the editor sees every pointer/key/wheel event FIRST (the F27
 //! priority) and passes through what it does not consume; the Esc cascade
 //! stays in the selection engine (its six-stage order is the final contract)
 //! and the editor reacts to the popped step through
-//! [`OverlayCore::sync_cascade`] (the editor's own `sync_cascade` method).
+//! `OverlayCore::sync_cascade` (the editor's own `sync_cascade` method).
 //!
 //! # Coordinate contract
 //!
 //! The scene space is GLOBAL LOGICAL pixels (the selection engine's space);
 //! tools never touch physical coordinates. [`EditorState::paint_into`]
-//! bridges scene painting into each window's physical-px [`DisplayList`]
+//! bridges scene painting into each window's physical-px `DisplayList`
 //! with the output's own scale (the #4871 physical-first rule), so one
 //! scene spans every monitor exactly like the selection rect does.
 //!

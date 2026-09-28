@@ -1,7 +1,7 @@
 //! Live output probing for the per-monitor submenu (plan todo 33: "live
 //! probe outputs, todo 6").
 //!
-//! [`WaylandOutputProbe`] wraps the todo-6 [`CaptureThread`] registry
+//! [`WaylandOutputProbe`] wraps the todo-6 `CaptureThread` registry
 //! probe: a dedicated wayland connection, no GPU, no capture session,
 //! bounded by the thread's 10 s deadlines. It is INFALLIBLE by contract -
 //! headless boxes, absent sockets and frozen compositors all degrade to an

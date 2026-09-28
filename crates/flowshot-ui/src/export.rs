@@ -10,7 +10,7 @@
 //! (#4871).
 //!
 //! Two entry points:
-//! - [`render_completion`] for the live shell: renders through each
+//! - `render_completion` for the live shell: renders through each
 //!   window's EXISTING renderer (the backdrop's CPU pixels are drained on
 //!   first upload, so the window renderers are the only texture holders)
 //!   and normalizes the surface format's channel order (live surfaces

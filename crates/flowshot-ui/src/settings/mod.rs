@@ -1,7 +1,7 @@
 //! The settings surface (plan todo 36): egui embedded in OUR wgpu renderer
 //! (draft D8(b), the Ruffle pattern) - one of the two recorded exceptions to
 //! the winit+wgpu+cosmic-text stack (the other is the todo-37 launcher
-//! dialog); the shared embedded plumbing lives in [`crate::egui_host`], and
+//! dialog); the shared embedded plumbing lives in `crate::egui_host`, and
 //! the overlay and editor never touch egui.
 //!
 //! # Layout
@@ -12,10 +12,10 @@
 //!   quality 1..=100, `#RRGGBB` colors), reset preserving `config_version`,
 //!   and the todo-25 [`ToolShortcuts`](crate::editor::ToolShortcuts) rebind
 //!   seams.
-//! - [`crate::egui_host::theme`]: `egui::Style` projected FROM the design
+//! - `crate::egui_host::theme`: `egui::Style` projected FROM the design
 //!   tokens + `[ui]` config (live re-themed every frame - the
 //!   tokens-driven live-apply), with the vendored Inter weights as the
-//!   typographic hierarchy, and [`settings_style`] adding the form-grid
+//!   typographic hierarchy, and `settings_style` adding the form-grid
 //!   geometry (uniform control height, solid reserved scrollbar).
 //! - [`FormMetrics`]: the pure two-column grid math (fixed-width
 //!   right-aligned label column, gutter, control column at

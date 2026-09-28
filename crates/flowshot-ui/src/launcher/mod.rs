@@ -1,5 +1,5 @@
 //! The capture launcher dialog (plan todo 37): a small egui window on the
-//! todo-36 embedded stack ([`crate::egui_host`]) - the F12 mode-9
+//! todo-36 embedded stack (`crate::egui_host`) - the F12 mode-9
 //! manual-coordinate capability, reached via `flowshot capture --dialog` or
 //! the tray's `Capture Launcher` item (Amendment #2; both dispatch the
 //! daemon's `Launcher` method, todo 32).

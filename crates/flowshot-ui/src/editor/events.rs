@@ -26,7 +26,7 @@ impl EditorState {
     /// shortcut repeat, but never re-toggles tools). `text` is the winit
     /// `KeyEvent.text` payload (the todo-22 edit-session input); while an
     /// edit widget is active every non-Escape key belongs to the session
-    /// ([`EditorState::editing_key_press`]) and the normal key map is
+    /// (`editing_key_press`) and the normal key map is
     /// skipped - typing never toggles tools or resizes.
     pub fn key_press(
         &mut self,

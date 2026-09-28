@@ -1,4 +1,4 @@
-//! The production core wiring (todo 38): [`configure_core`] is the SINGLE
+//! The production core wiring (todo 38): `configure_core` is the SINGLE
 //! function both the live session child and the headless execution mode
 //! drive, so the offscreen QA path exercises the exact production
 //! configuration (tools, editor frame + config, chrome projection,

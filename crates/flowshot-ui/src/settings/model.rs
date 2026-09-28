@@ -93,7 +93,7 @@ pub enum Banner {
     Validation,
 }
 
-/// A validation issue, tied to a field label from [`strings`].
+/// A validation issue, tied to a field label from `strings`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FieldIssue {
     /// The offending field's label constant.

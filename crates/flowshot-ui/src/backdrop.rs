@@ -30,8 +30,8 @@
 //! # Texture ids
 //!
 //! Backdrop textures are consumer-issued handles: output `i` registers under
-//! [`backdrop_texture_id(i)`], the cursor sprite under
-//! [`cursor_texture_id()`]. The magnifier (todo 17) samples sub-regions of
+//! `backdrop_texture_id(i)`, the cursor sprite under
+//! `cursor_texture_id()`. The magnifier (todo 17) samples sub-regions of
 //! the same ids via [`Backdrop::texture_size`].
 
 mod pixels;
