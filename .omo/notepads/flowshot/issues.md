@@ -212,3 +212,10 @@ COLLATERAL FINDING (the new e2e test exposed it): Heartbeat::drop joined a worke
 TESTS: session_dispatch.rs (real binary + real session verb, headless: graceful typed Failed result, no panic, exit propagates the mapped code); daemon_failure_surface.rs (REAL daemon on a private dbus-daemon bus + production ExecutingSink + REAL flowshot binary: failing child -> CLI exit != 0 + "session child failed" on stderr); 3 bus receipt-mapping tests; parse_matrix session-lane test. Gates green: 1168 tests, clippy -D warnings, fmt.
 LIVE (bounded, self-reversing, QA config seeded/restored): one-shot overlay PRESENT + clean cancel (exit 3 = the frozen table's user-cancelled code - the task brief's "Esc exits 0" disagrees with exit.rs; 3 is correct and documented); daemon-path overlay PRESENT (2 windows/2 outputs) + CLI exit 0 + clean close, daemon log zero failures; settings window PRESENT + clean close; daemon idle-exited by itself; `capture full --no-daemon --raw` still exit 0 with a valid 4480x1440 PNG (one-shot direct path untouched). Evidence: .omo/evidence/fix-overlay-session-panic.txt + fix-*-live*.png screenshots.
 QA-TOOLING FINDING (gui-qa batch + todo 41): Hyprland 0.56.2 REMOVED the legacy `hyprctl dispatch killactive/focuswindow` string syntax - runtime window control needs the lua dispatchers now: `hyprctl dispatch 'hl.dsp.window.close({window = "class:flowshot$"})'` (selector-targeted: can never hit a user window), `hl.dsp.focus({window = "class:..."})`. The flow scripts' killactive usage is dead on this compositor.
+
+## 2026-09-27 (STRICT): user is ACTIVELY USING the machine (gaming) — zero visible windows, no exceptions
+The user is playing a game; ANY window/popup from FlowShot QA is hostile. NO visible-window
+runs of any kind, including "one brief fix-proof" runs. Verification = offscreen renders +
+unit seams + invisible protocol reads ONLY. The USER verifies visible behavior when they
+choose to test. jobs=8 cap stays. (Orchestrator note: pkill -f "flowshot" from a shell
+command containing that string kills the command itself — use pgrep/pkill with exact names.)

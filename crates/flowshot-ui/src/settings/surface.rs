@@ -10,6 +10,7 @@ use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::render::read_texture_rgba;
 
+use super::layout::FormMetrics;
 use super::model::SettingsModel;
 use super::tabs::{self, TabContext};
 use crate::egui_host::theme;
@@ -71,12 +72,37 @@ pub fn render_offscreen(
         view_formats: &[],
     });
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let style = theme::style(tokens, &model.config().ui, system_theme);
+    let style = theme::settings_style(tokens, &model.config().ui, system_theme);
+    let metrics = FormMetrics::from_tokens(tokens);
+    let panel_fill = style.visuals.panel_fill;
+    let panel = move || {
+        egui::CentralPanel::default().frame(
+            egui::Frame::none()
+                .fill(panel_fill)
+                .inner_margin(egui::Margin::same(metrics.window_margin())),
+        )
+    };
     let context = TabContext {
         system_theme,
         path_picker: None,
+        metrics,
     };
-    let (output, _action) = surface.frame_with(style, |ui| tabs::show(ui, model, &context));
+    // Two frames: egui's ScrollArea clip rect and scrollbar state are
+    // previous-frame persistent state, so the FIRST frame of a fresh
+    // context paints unclipped. The warm frame primes that state (the live
+    // window gets the same second frame from egui's own repaint request);
+    // the painted + read-back frame is the deterministic second one.
+    let (warm, _warm_action) =
+        surface.frame_with(panel(), style.clone(), |ui| tabs::show(ui, model, &context));
+    let mut encoder = gpu
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("settings-offscreen-warm-encoder"),
+        });
+    surface.paint(gpu, &mut encoder, &view, [width, height], &warm);
+    gpu.queue.submit(Some(encoder.finish()));
+    let (output, _action) =
+        surface.frame_with(panel(), style, |ui| tabs::show(ui, model, &context));
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {

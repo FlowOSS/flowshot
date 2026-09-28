@@ -55,6 +55,7 @@ fn run() -> Result<(), String> {
         // Seed a couple of realistic edits so the dump shows populated state.
         model.config_mut().upload.client_id = String::from("flowshot-demo-client");
         model.config_mut().daemon.tray = true;
+        model.mark_dirty();
         let pixels = render_offscreen(
             &gpu,
             &DesignTokens::default(),

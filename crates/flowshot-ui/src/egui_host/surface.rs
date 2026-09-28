@@ -64,13 +64,16 @@ impl EguiSurface {
         &mut self.input
     }
 
-    /// Runs one egui frame: `style` is installed, the accumulated input is
-    /// drained, and `show` renders the central panel. Returns the frame
-    /// output (for [`Self::paint`] + platform-output handling) and whatever
-    /// `show` produced. `A::default()` (the "no action" value) covers the
-    /// case where egui skips the panel body.
+    /// Runs one egui frame: `panel` is the host frame the `show` closure
+    /// renders into (the settings window passes a token-margined frame; the
+    /// launcher passes the default), `style` is installed, the accumulated
+    /// input is drained. Returns the frame output (for [`Self::paint`] +
+    /// platform-output handling) and whatever `show` produced.
+    /// `A::default()` (the "no action" value) covers the case where egui
+    /// skips the panel body.
     pub(crate) fn frame_with<A: Default>(
         &mut self,
+        panel: egui::CentralPanel,
         style: Style,
         show: impl FnOnce(&mut Ui) -> A,
     ) -> (egui::FullOutput, A) {
@@ -78,7 +81,7 @@ impl EguiSurface {
         let input = self.input.take_raw_input();
         let mut action = A::default();
         let output = self.ctx.run(input, |ctx| {
-            action = egui::CentralPanel::default().show(ctx, show).inner;
+            action = panel.show(ctx, show).inner;
         });
         self.input
             .push_copied_text(&output.platform_output.copied_text);

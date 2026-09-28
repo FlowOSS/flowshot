@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "active",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-27T20:33:56.118Z",
+      "updated_at": "2026-09-27T21:54:18.546Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -65,7 +65,9 @@
         "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
         "opencode:ses_f1e79892fffe4TeemiO5SJfNES",
         "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4",
-        "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8"
+        "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8",
+        "opencode:ses_f1b29825fffejXbPCYozQztZ9H",
+        "opencode:ses_f1b236480ffezTEPhCocKhfJEY"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -107,7 +109,9 @@
         "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended",
         "opencode:ses_f1e79892fffe4TeemiO5SJfNES": "appended",
         "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4": "appended",
-        "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8": "appended"
+        "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8": "appended",
+        "opencode:ses_f1b29825fffejXbPCYozQztZ9H": "appended",
+        "opencode:ses_f1b236480ffezTEPhCocKhfJEY": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -228,10 +232,19 @@
           "task_key": "todo:39",
           "task_label": "39",
           "task_title": "Packaging: AUR + Nix + Flatpak + desktop/metainfo",
-          "session_id": "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8",
+          "session_id": "opencode:ses_f1b29825fffejXbPCYozQztZ9H",
           "agent": "Sisyphus-Junior",
-          "category": "deep-low",
-          "updated_at": "2026-09-27T20:33:56.118Z"
+          "category": "unspecified-high",
+          "updated_at": "2026-09-27T21:47:37.669Z"
+        },
+        "todo:41": {
+          "task_key": "todo:41",
+          "task_label": "41",
+          "task_title": "Motion pass + visual polish + QA bundle",
+          "session_id": "opencode:ses_f1b236480ffezTEPhCocKhfJEY",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-09-27T21:54:18.546Z"
         }
       }
     }
@@ -239,7 +252,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "active",
-  "updated_at": "2026-09-27T20:33:56.118Z",
+  "updated_at": "2026-09-27T21:54:18.546Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -280,7 +293,9 @@
     "opencode:ses_f1f097b92ffeGjmsga6BQa52CY",
     "opencode:ses_f1e79892fffe4TeemiO5SJfNES",
     "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4",
-    "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8"
+    "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8",
+    "opencode:ses_f1b29825fffejXbPCYozQztZ9H",
+    "opencode:ses_f1b236480ffezTEPhCocKhfJEY"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -322,7 +337,9 @@
     "opencode:ses_f1f097b92ffeGjmsga6BQa52CY": "appended",
     "opencode:ses_f1e79892fffe4TeemiO5SJfNES": "appended",
     "opencode:ses_f1cb8d486ffedWvmwjDAdUlLA4": "appended",
-    "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8": "appended"
+    "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8": "appended",
+    "opencode:ses_f1b29825fffejXbPCYozQztZ9H": "appended",
+    "opencode:ses_f1b236480ffezTEPhCocKhfJEY": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -443,10 +460,19 @@
       "task_key": "todo:39",
       "task_label": "39",
       "task_title": "Packaging: AUR + Nix + Flatpak + desktop/metainfo",
-      "session_id": "opencode:ses_f1b6cf9f0ffeIceQwfha6zyuE8",
+      "session_id": "opencode:ses_f1b29825fffejXbPCYozQztZ9H",
       "agent": "Sisyphus-Junior",
-      "category": "deep-low",
-      "updated_at": "2026-09-27T20:33:56.118Z"
+      "category": "unspecified-high",
+      "updated_at": "2026-09-27T21:47:37.669Z"
+    },
+    "todo:41": {
+      "task_key": "todo:41",
+      "task_label": "41",
+      "task_title": "Motion pass + visual polish + QA bundle",
+      "session_id": "opencode:ses_f1b236480ffezTEPhCocKhfJEY",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-09-27T21:54:18.546Z"
     }
   },
   "agent": "atlas"

@@ -4,9 +4,12 @@
 use egui::Ui;
 use flowshot_core::config::{ClipboardFormat, Config, SaveAction};
 
+use crate::settings::layout::FormMetrics;
 use crate::settings::model::JPEG_QUALITY_RANGE;
 use crate::settings::strings;
-use crate::settings::tabs::{TabContext, combo, drag_u8, text_field, toggle};
+use crate::settings::tabs::TabContext;
+use crate::settings::tabs::fields::{combo, number, path_field, text_field, toggle};
+use crate::settings::tabs::form::sub_section;
 
 /// The post-capture action vocabulary, in canonical TOML order. Mirrors the
 /// core `SaveAction` enum; [`action_label`]'s exhaustive match fails the
@@ -34,30 +37,25 @@ fn action_label(action: SaveAction) -> &'static str {
 }
 
 pub(super) fn show(ui: &mut Ui, config: &mut Config, context: &TabContext<'_>) -> bool {
-    let mut changed = false;
-    ui.horizontal(|ui| {
-        ui.label(strings::FIELD_SAVE_PATH);
-        changed |= ui.text_edit_singleline(&mut config.save.path).changed();
-        let picker = context.path_picker;
-        let browse = ui.add_enabled(picker.is_some(), egui::Button::new(strings::BUTTON_BROWSE));
-        if browse.clicked()
-            && let Some(picker) = picker
-            && let Some(picked) = picker.pick()
-        {
-            config.save.path = picked;
-            changed = true;
-        }
-    });
-    changed |= toggle(ui, strings::FIELD_PATH_FIXED, &mut config.save.path_fixed);
-    changed |= text_field(ui, strings::FIELD_EXTENSION, &mut config.save.extension);
-    changed |= drag_u8(
+    let m = &context.metrics;
+    let mut changed = path_field(ui, m, &mut config.save.path, context.path_picker);
+    changed |= toggle(
         ui,
+        m,
+        strings::FIELD_PATH_FIXED,
+        &mut config.save.path_fixed,
+    );
+    changed |= text_field(ui, m, strings::FIELD_EXTENSION, &mut config.save.extension);
+    changed |= number(
+        ui,
+        m,
         strings::FIELD_JPEG_QUALITY,
         JPEG_QUALITY_RANGE,
         &mut config.save.jpeg_quality,
     );
     changed |= combo(
         ui,
+        m,
         strings::FIELD_CLIPBOARD_FORMAT,
         &mut config.save.clipboard_format,
         &[
@@ -65,26 +63,33 @@ pub(super) fn show(ui: &mut Ui, config: &mut Config, context: &TabContext<'_>) -
             (ClipboardFormat::Jpeg, strings::ENUM_JPEG),
         ],
     );
-    ui.label(strings::FIELD_SAVE_ACTIONS);
+    changed |= sub_section(ui, m, strings::FIELD_SAVE_ACTIONS, |ui| {
+        action_set(ui, m, config)
+    });
+    changed
+}
+
+/// The ordered action-set checklist; writes back in canonical TOML order
+/// when any box changed (the pre-rework contract).
+fn action_set(ui: &mut Ui, m: &FormMetrics, config: &mut Config) -> bool {
     let mut selected = config.save.actions.clone();
-    let mut actions_changed = false;
+    let mut changed = false;
     for action in ALL_SAVE_ACTIONS {
         let mut enabled = selected.contains(&action);
-        if toggle(ui, action_label(action), &mut enabled) {
+        if toggle(ui, m, action_label(action), &mut enabled) {
             if enabled {
                 selected.push(action);
             } else {
                 selected.retain(|existing| *existing != action);
             }
-            actions_changed = true;
+            changed = true;
         }
     }
-    if actions_changed {
+    if changed {
         config.save.actions = ALL_SAVE_ACTIONS
             .into_iter()
             .filter(|candidate| selected.contains(candidate))
             .collect();
-        changed = true;
     }
     changed
 }

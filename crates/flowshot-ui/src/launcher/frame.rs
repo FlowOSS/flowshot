@@ -58,7 +58,9 @@ pub(super) fn render(app: &mut LauncherApp, event_loop: &ActiveEventLoop) {
         pixels_per_point,
     ));
     let style = theme::style(&options.tokens, &options.ui_config, options.system_theme);
-    let (output, action) = egui.frame_with(style, |ui| widgets::show(ui, model));
+    let (output, action) = egui.frame_with(egui::CentralPanel::default(), style, |ui| {
+        widgets::show(ui, model)
+    });
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
