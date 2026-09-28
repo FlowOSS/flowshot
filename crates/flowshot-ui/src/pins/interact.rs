@@ -40,7 +40,7 @@ pub(super) fn dispatch(state: &mut PinState, input: &PinInput, now: Instant) -> 
         }
         PinInput::Wheel { units } => {
             let steps = commit_wheel(&mut state.wheel_accum, units);
-            state.zoom_by(steps)
+            state.zoom_by(steps, now)
         }
         PinInput::Button { button, pressed } => state.button(button, pressed, now),
         PinInput::Key {
@@ -53,7 +53,7 @@ pub(super) fn dispatch(state: &mut PinState, input: &PinInput, now: Instant) -> 
             state.modifiers = modifiers;
             Vec::new()
         }
-        PinInput::Touch { id, phase, x, y } => state.touch(id, phase, (x, y)),
+        PinInput::Touch { id, phase, x, y } => state.touch(id, phase, (x, y), now),
         PinInput::Resized { width, height } => {
             state.target_window = (width, height);
             vec![PinEffect::Redraw]

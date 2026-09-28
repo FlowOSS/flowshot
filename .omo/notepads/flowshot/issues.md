@@ -235,3 +235,18 @@ User asleep: visible-window QA re-allowed (timeout-bounded, self-reversing). job
 REMOVED. User directive: skip the per-completion full-build gate ceremony — workers run
 their own gates; orchestrator does targeted checks + ONE consolidated full verification
 at the end (avoids redundant workspace rebuilds between waves).
+
+## 2026-09-28 (todo 41): follow-ups recorded
+- REDUCED-MOTION CONFIG KEY: the UI switch is complete (OverlayCore::set_motion_reduced,
+  PinBehavior.reduced_motion) but `[ui].reduce_motion` needs a flowshot-core config key +
+  settings-Interface toggle + binary-layer wiring (daemon executor/session specs) — outside the
+  todo-41 edit scope (flowshot-ui only). Small: one bool key, one projection call per session
+  child (overlay/pins), one settings row.
+- WGPU PREWARM REMEDIATION (todo-38 perf follow-up "ACTION todo 41"): NOT implemented — lives in
+  flowshot-daemon::execute (Instance prewarm concurrent with capture), outside this dispatch's
+  edit scope; live hotkey→present re-measure needs a visible window (gui-qa-batch todo-41 row 3).
+  Re-dispatch both together.
+- LIVE IDLE-CPU + motion-feel + app_id asserts: gui-qa-batch.md todo-41 rows 1/2/4/5 (zero-
+  visible-windows policy; unit frame-schedule asserts + offscreen bundle landed as substitutes).
+- side_panel/paint.rs sits at 230 pure LOC (warning band) — next edit there should split the
+  layers-section half.

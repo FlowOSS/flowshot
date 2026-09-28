@@ -12,7 +12,7 @@ use std::time::Instant;
 use crate::chrome::motion::ChromeMotion;
 use crate::editor::paint::local_rect;
 use crate::editor::{EditorState, ToolKind};
-use crate::render::{Color, DisplayList, Point, Rect, Shape, ShadowSpec, TextureId};
+use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextureId};
 use crate::widgets::{ButtonState, IconButton, icons::Icon};
 use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo};
 use flowshot_core::tokens::DesignTokens;

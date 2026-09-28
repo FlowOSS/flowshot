@@ -61,6 +61,7 @@
 //! (`float, class:flowshot-pin` - todo 39/40 snippet); without one,
 //! Hyprland tiles the pin.
 
+mod anim;
 mod effects;
 mod event;
 mod image;

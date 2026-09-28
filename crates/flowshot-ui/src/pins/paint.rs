@@ -14,6 +14,8 @@
 //! [`crate::render::Renderer`], so the offscreen readback is ground truth
 //! for what the surface stores (the todo-15 verify-offscreen pattern).
 
+use std::time::Instant;
+
 use flowshot_core::tokens::DesignTokens;
 
 use super::shell::PinEntry;
@@ -23,7 +25,7 @@ use crate::gpu::GpuContext;
 use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, f32_from_f64, f32_from_u32};
 
 pub(super) fn render_pin(gpu: &GpuContext, entry: &mut PinEntry) {
-    let list = frame_list(&entry.state);
+    let list = frame_list(&entry.state, Instant::now());
     if let Err(error) = entry
         .surface
         .render(gpu, Some((&mut entry.renderer, &list)), None)
@@ -32,13 +34,15 @@ pub(super) fn render_pin(gpu: &GpuContext, entry: &mut PinEntry) {
     }
 }
 
-/// Builds one pin frame: shadow -> image quad -> context menu.
+/// Builds one pin frame: shadow -> image quad -> context menu. `now`
+/// evaluates the zoom transition (todo 41): the same instant the shell
+/// schedules with, so offscreen renders are deterministic stills.
 #[must_use]
-pub fn frame_list(state: &PinState) -> DisplayList {
+pub fn frame_list(state: &PinState, now: Instant) -> DisplayList {
     let scale = f32_from_f64(state.scale_factor());
     let tokens = state.tokens();
     let mut list = DisplayList::new();
-    let rect = image_rect(state);
+    let rect = image_rect(state, now);
     push_shadow(&mut list, tokens, state, rect, scale);
     list.image(super::TEXTURE_ID, rect, None);
     if let Some(menu) = state.menu() {
@@ -48,13 +52,14 @@ pub fn frame_list(state: &PinState) -> DisplayList {
 }
 
 /// The image draw rect in window-local physical px: the shadow frame
-/// margin plus the zoom-to-cursor offset, sized by the zoom scale.
+/// margin plus the zoom-to-cursor offset, sized by the zoom scale - all at
+/// the VISUAL (possibly mid-transition) zoom state.
 #[must_use]
-pub fn image_rect(state: &PinState) -> Rect {
+pub fn image_rect(state: &PinState, now: Instant) -> Rect {
     let margin = f32_from_f64(state.margin_px());
-    let (offset_x, offset_y) = state.offset();
+    let (offset_x, offset_y) = state.visual_offset(now);
     let (image_w, image_h) = state.image_size();
-    let scale = state.scale();
+    let scale = state.visual_scale(now);
     Rect::from_parts(
         margin + f32_from_f64(offset_x),
         margin + f32_from_f64(offset_y),

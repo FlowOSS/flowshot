@@ -149,3 +149,30 @@ _Auto-scaffolded by /ulw-execute. Append new entries below - never overwrite._
 - NOTICES lives at repo ROOT (common OSS convention), generated from `cargo deny list -f tsv` + vendored LICENSE files (never from memory): 643 third-party packages / 27 license groups / OFL-1.1+ISC+MIT full texts / exact Feather-derived icon subset (11 of 24, computed via comm). Project license stated as GPL-3.0-or-later per README+workspace (the crate-manifest MIT/Apache mismatch is reported as finding F-1, not silently adopted).
 - Porting roadmap = docs/porting-roadmap.md (standalone) + ADR-006 addendum link (task allowed either; ADR keeps its summary, doc carries the >=3-crates-per-phase detail + F20 conformance table + F24 red flags + crates.io spot-check record + init-systems phase). BackendKind roadmap-variant deviation recorded: shipped as documented non-constructible placeholders (is_roadmap() + typed NoBackendAvailable) instead of the plan's "cfg-excluded" wording - functionally equivalent, no cfg needed.
 - Unsafe allow-list = { flowshot-capture-wayland } ONLY, documented in ADR-006 + roadmap doc; exemption currently UNUSED (zero unsafe blocks workspace-wide; wl_shm readback = plain file I/O via nix safe wrappers). No SAFETY comments were missing; no src edits made.
+
+## 2026-09-28 (todo 41): motion/polish decisions
+- MOTION OWNERSHIP: chrome transitions live in ONE ChromeMotion owner (chrome/motion.rs) ticked
+  from OverlayCore::tick (about_to_wait cadence, rising-edge reveal detection); grip hover lives
+  in the selection engine (GripMotion) fed by the funnel on EVERY motion regardless of editor
+  consumption (handles stay hoverable under an active tool); pin zoom easing lives in PinState
+  (pins/anim.rs) with the shell's own about_to_wait pacing. Frame pacing (FRAME_INTERVAL=16ms)
+  is centralized in OverlayCore::wake — motion owners expose raw settle deadlines only.
+- REDUCED-MOTION SWITCH = UI-side seam (OverlayCore::set_motion_reduced + PinBehavior.
+  reduced_motion), NOT a config key: the plan's QA scenario says "reduced-motion config" but the
+  todo-41 dispatch forbids flowshot-core edits — the [ui].reduce_motion key + settings toggle is
+  a recorded follow-up (issues.md). The UI leg is complete: unit + pixel-identical oracle pair.
+- HIT-TESTING ON FINAL GEOMETRY during transitions (interaction leads the ≤180ms visual) —
+  keeps the chrome behavior suite green and avoids mid-animation unclickable states.
+- PIN ZOOM: window resize instant, CONTENT eases (compositor min==max mechanism can't animate;
+  anchor convergence pos(e)=cursor−e·delta proven). Pinch preview bypasses easing (direct
+  manipulation must not lag).
+- TOOLBAR/WHEEL/PANEL now draw token shadows (shadows.medium/large) — D8(c) "shadows FROM
+  tokens"; the wheel's square-bounds shadow at radius=half-side rounds into the disc silhouette
+  (rect shadow primitive fits the circle).
+- IMAGE ALPHA added to the renderer vocabulary (ImageCommand.alpha, image_faded()) as the
+  icon-fade enabler — a motion primitive, not a behavior change; parity reference updated in
+  lockstep.
+- QA BUNDLE = new examples/qa_bundle.rs on the EXTRACTED production frame builder
+  (flowshot_ui::build_overlay_frame, shared with render_window) + new launcher::render_offscreen
+  (settings pattern) + existing settings_offscreen/pin_window harnesses. Notification shot =
+  honest N/A (compositor-rendered surface).

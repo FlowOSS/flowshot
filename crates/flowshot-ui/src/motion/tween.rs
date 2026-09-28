@@ -96,11 +96,10 @@ impl Tween {
             return self.to;
         }
         let progress = elapsed.as_secs_f64() / self.spec.duration.as_secs_f64();
-        #[allow(
-            clippy::cast_precision_loss,
-            reason = "bezier evaluation is f32 by construction; the progress domain is [0, 1]"
-        )]
-        let eased = f64::from(cubic_bezier(self.spec.curve, progress as f32));
+        let eased = f64::from(cubic_bezier(
+            self.spec.curve,
+            crate::render::f32_from_f64(progress),
+        ));
         self.from + (self.to - self.from) * eased
     }
 
@@ -125,7 +124,9 @@ impl Tween {
     fn end(&self) -> Instant {
         // Millisecond-scale durations never overflow `Instant`; a saturated
         // platform clock settles immediately rather than panicking.
-        self.start.checked_add(self.spec.duration).unwrap_or(self.start)
+        self.start
+            .checked_add(self.spec.duration)
+            .unwrap_or(self.start)
     }
 }
 
@@ -148,12 +149,7 @@ pub struct StaggerSpec {
 /// past its end, eased in between. `count <= 1` runs the single element
 /// unstaggered; a zero `element` duration snaps to `1.0`.
 #[must_use]
-pub fn stagger_progress(
-    elapsed: Duration,
-    index: usize,
-    count: usize,
-    spec: &StaggerSpec,
-) -> f32 {
+pub fn stagger_progress(elapsed: Duration, index: usize, count: usize, spec: &StaggerSpec) -> f32 {
     if spec.element.is_zero() || elapsed >= spec.total || count == 0 {
         return 1.0;
     }
@@ -169,10 +165,6 @@ pub fn stagger_progress(
         return 0.0;
     }
     let local = elapsed.saturating_sub(start).min(spec.element);
-    #[allow(
-        clippy::cast_precision_loss,
-        reason = "millisecond-scale durations; f32 progress is the bezier solver's domain"
-    )]
     let progress = local.as_secs_f64() / spec.element.as_secs_f64();
-    cubic_bezier(spec.curve, progress as f32)
+    cubic_bezier(spec.curve, crate::render::f32_from_f64(progress))
 }

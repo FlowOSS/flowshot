@@ -26,6 +26,7 @@
 mod app;
 mod frame;
 mod model;
+mod offscreen;
 mod options;
 mod request;
 mod strings;
@@ -36,6 +37,7 @@ mod window;
 mod tests;
 
 pub use model::{LauncherModel, MonitorEntry, Target};
+pub use offscreen::render_offscreen;
 pub use options::{LaunchCallback, LauncherWindowOptions, MonitorProbe};
 pub use request::{GeometryIssue, LauncherRequest, RegionGeometry};
 pub use ui::LauncherAction;

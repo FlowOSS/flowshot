@@ -65,6 +65,7 @@ mod app;
 pub mod chrome;
 mod crosshair;
 mod egui_host;
+pub mod frame;
 pub mod gpu;
 mod handler;
 mod monitor;
@@ -107,6 +108,7 @@ pub use editor::{
 };
 pub use error::UiError;
 pub use export::{render_export, render_output_export};
+pub use frame::{OverlayFrame, build_overlay_frame};
 pub use input::{Action, ImeStatus, InputEvent, RouteReport, SyntheticInput};
 pub use launch::{
     InitialSelection, LaunchRequest, PendingPreselect, Preselect, RegionSink, output_at_cursor,
