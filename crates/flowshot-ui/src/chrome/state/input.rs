@@ -5,6 +5,8 @@
 //! `recolor_selected` / `configure` / `activate_tool` / the z-order ops),
 //! and the layer drag-reorder ([`EditorState::move_layer`], ONE undo unit).
 
+use std::time::Instant;
+
 use flowshot_core::config::ArrowStyle;
 use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo};
 use winit::event::MouseButton;
@@ -31,6 +33,7 @@ impl ChromeState {
         editor: &mut EditorState,
         selection: Option<LogicalRect>,
         output: &OutputInfo,
+        now: Instant,
     ) -> bool {
         let scale = f32_from_f64(output.scale);
         let local_pt = Point::new(local_x(output, at.x.0), local_y(output, at.y.0));
@@ -68,12 +71,11 @@ impl ChromeState {
         let (toolbar_rect, buttons) = self.toolbar.layout(selection, &self.tokens, scale, output);
         if !buttons.is_empty() && toolbar_rect.contains(local_pt) {
             if left {
-                for (rect, button) in buttons.iter().zip(&self.toolbar.buttons) {
-                    if rect.contains(local_pt) {
-                        if let Some(action) = toolbar_action(button, editor) {
-                            self.pending_actions.push(action);
-                        }
-                        break;
+                let pressed = buttons.iter().position(|rect| rect.contains(local_pt));
+                self.motion.set_press(pressed, now);
+                if let Some(index) = pressed {
+                    if let Some(action) = toolbar_action(&self.toolbar.buttons[index], editor) {
+                        self.pending_actions.push(action);
                     }
                 }
             }
@@ -103,11 +105,13 @@ impl ChromeState {
         editor: &mut EditorState,
         selection: Option<LogicalRect>,
         output: &OutputInfo,
+        now: Instant,
     ) -> bool {
         if !self.grabbed {
             return false;
         }
         self.grabbed = false;
+        self.motion.set_press(None, now);
         if let Some(drag) = self.layer_drag.take()
             && let Some(selection) = selection
         {
@@ -234,7 +238,7 @@ impl OverlayCore {
         };
         let selection = self.selection.rect();
         self.chrome
-            .press(button, at, &mut self.editor, selection, output)
+            .press(button, at, &mut self.editor, selection, output, Instant::now())
     }
 
     /// The funnel's chrome release (a chrome-consumed press grabbed it).
@@ -243,7 +247,8 @@ impl OverlayCore {
             return false;
         };
         let selection = self.selection.rect();
-        self.chrome.release(at, &mut self.editor, selection, output)
+        self.chrome
+            .release(at, &mut self.editor, selection, output, Instant::now())
     }
 
     /// The funnel's Space seam: the side-panel toggle (plan todo 26);

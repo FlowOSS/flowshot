@@ -61,6 +61,7 @@ pub struct OverlayCore {
     pub(crate) launch: LaunchState,
     completion: Option<CompletionSink>,
     color_pick: Option<ColorPickSink>,
+    motion_was_active: bool,
 }
 
 impl std::fmt::Debug for OverlayCore {
@@ -79,6 +80,7 @@ impl std::fmt::Debug for OverlayCore {
             .field("launch", &self.launch)
             .field("completion", &self.completion.is_some())
             .field("color_pick", &self.color_pick.is_some())
+            .field("motion_was_active", &self.motion_was_active)
             .finish()
     }
 }
@@ -100,6 +102,7 @@ impl OverlayCore {
             launch: LaunchState::default(),
             completion: None,
             color_pick: None,
+            motion_was_active: false,
         }
     }
 
@@ -230,10 +233,57 @@ impl OverlayCore {
         &self.modifiers
     }
 
-    /// Evaluates time-driven selection state (the HUD hide deadline) at
-    /// `now`; `true` when something changed and every window must redraw.
+    /// Evaluates time-driven state at `now`: the HUD hide deadline plus the
+    /// motion timelines (todo 41). `true` when any window must redraw -
+    /// a HUD flip, an animation frame, or the ONE settled frame after every
+    /// transition lands (so the resting state always paints before the loop
+    /// returns to `ControlFlow::Wait`).
     pub fn tick(&mut self, now: Instant) -> bool {
-        self.selection.tick(now)
+        let hud = self.selection.tick(now);
+        let panel = self.chrome.panel_shown(&self.editor);
+        self.chrome
+            .motion_tick(now, self.selection.rect().is_some(), panel);
+        let active = self.motion_active(now);
+        let was_active = std::mem::replace(&mut self.motion_was_active, active);
+        hud || active || was_active
+    }
+
+    /// Whether any motion timeline is still moving at `now` (chrome reveal /
+    /// panel / wheel / button wash, or the selection grip hover-grow).
+    #[must_use]
+    pub fn motion_active(&self, now: Instant) -> bool {
+        self.chrome.motion_active(now) || self.selection.motion_active(now)
+    }
+
+    /// The next instant the event loop must wake for time-driven state:
+    /// the HUD countdown deadline and the earliest motion settle deadline,
+    /// with running animations paced at [`crate::motion::FRAME_INTERVAL`].
+    /// `None` when idle - the shell then stays in `ControlFlow::Wait` (zero
+    /// CPU, the todo-13 contract the motion pass must not break).
+    #[must_use]
+    pub fn wake(&self, now: Instant) -> Option<Instant> {
+        let hud = self.selection.hud_wake();
+        if !self.motion_active(now) {
+            return hud;
+        }
+        let settle = [
+            hud,
+            self.selection.motion_wake(now),
+            self.chrome.motion_settle(now),
+        ]
+        .into_iter()
+        .flatten()
+        .filter(|deadline| *deadline > now)
+        .min();
+        let paced = now.checked_add(crate::motion::FRAME_INTERVAL)?;
+        Some(settle.map_or(paced, |deadline| deadline.min(paced)))
+    }
+
+    /// The reduced-motion switch (todo 41 failure QA): every overlay
+    /// transition snaps to its target and schedules no animation frames.
+    pub fn set_motion_reduced(&mut self, reduced: bool) {
+        self.chrome.set_motion_reduced(reduced);
+        self.selection.set_motion_reduced(reduced);
     }
 
     /// Routes one normalized event: maps coordinates into global logical
@@ -454,6 +504,81 @@ mod tests {
             KeyCode::Escape,
         ));
         assert_eq!(report.actions, vec![Action::Exit]);
+    }
+
+    #[test]
+    fn motion_frames_are_paced_and_settle_to_idle() {
+        // The todo-13 idle contract under the todo-41 motion pass: a reveal
+        // schedules paced frames, paints ONE settled frame, then the core
+        // demands no wake at all (ControlFlow::Wait, zero CPU).
+        let mut core = dual_core();
+        let t0 = Instant::now();
+        core.selection_mut()
+            .set_rect(Some(LogicalRect::from_raw(100.0, 100.0, 200.0, 150.0)));
+        // Rising edge: the tick that starts the reveal asks for a redraw.
+        assert!(core.tick(t0));
+        assert!(core.motion_active(t0));
+        let wake = core.wake(t0).expect("running animation schedules frames");
+        assert_eq!(wake, t0 + crate::motion::FRAME_INTERVAL);
+        // Mid-flight keeps pacing.
+        let mid = t0 + std::time::Duration::from_millis(90);
+        assert!(core.tick(mid));
+        assert_eq!(core.wake(mid), Some(mid + crate::motion::FRAME_INTERVAL));
+        // Past the 180ms reveal total: settled, but ONE final frame paints
+        // the resting state (was_active).
+        let end = t0 + std::time::Duration::from_millis(400);
+        assert!(core.tick(end), "the settled frame must paint");
+        assert!(!core.motion_active(end));
+        assert!(core.wake(end).is_none(), "settled motion schedules nothing");
+        // The next pass is fully idle.
+        assert!(!core.tick(end + std::time::Duration::from_millis(16)));
+        assert!(core.wake(end + std::time::Duration::from_millis(16)).is_none());
+    }
+
+    #[test]
+    fn reduced_motion_snaps_and_never_schedules_frames() {
+        // The todo-41 failure QA (unit leg): reduced motion -> transitions
+        // instant, no animation frames at all.
+        let mut core = dual_core();
+        core.set_motion_reduced(true);
+        let t0 = Instant::now();
+        core.selection_mut()
+            .set_rect(Some(LogicalRect::from_raw(100.0, 100.0, 200.0, 150.0)));
+        // The snapped reveal needs no animation frame: the event-driven
+        // redraw (selection change) already paints the resting state.
+        assert!(!core.tick(t0), "nothing may animate");
+        assert!(core.wake(t0).is_none(), "nothing may be scheduled");
+        assert!(!core.tick(t0 + std::time::Duration::from_millis(16)));
+    }
+
+    #[test]
+    fn grip_hover_from_injected_motion_schedules_settle_frames() {
+        let mut core = dual_core();
+        let t0 = Instant::now();
+        core.selection_mut()
+            .set_rect(Some(LogicalRect::from_raw(100.0, 100.0, 200.0, 150.0)));
+        core.tick(t0);
+        // Inject a motion onto the top-left handle (global 100,100 -> slot 0
+        // local 100,100): the grip hover-grow starts and schedules its
+        // 120ms settle deadline (paced below it).
+        core.inject_event(SyntheticInput::pointer_moved(
+            WindowSlot::new(0),
+            100.0,
+            100.0,
+        ));
+        let now = Instant::now();
+        assert!(core.selection().motion_active(now));
+        let wake = core.wake(now).expect("grip motion schedules");
+        assert!(wake <= now + crate::motion::FRAME_INTERVAL);
+        // Past BOTH the grip grow (120ms) and the reveal total (180ms) the
+        // core is settled and idle again.
+        assert!(!core.selection().motion_active(
+            now + std::time::Duration::from_millis(crate::motion::HANDLE_GROW_MS + 1)
+        ));
+        let end = now + std::time::Duration::from_millis(crate::motion::REVEAL_TOTAL_MS + 1);
+        assert!(!core.motion_active(end), "grip and reveal settled");
+        core.tick(end);
+        assert!(core.wake(end).is_none());
     }
 
     #[test]

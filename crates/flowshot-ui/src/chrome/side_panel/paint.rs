@@ -8,10 +8,13 @@ use flowshot_core::config::ArrowStyle;
 use flowshot_core::geometry::{LogicalRect, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
 
-use crate::chrome::side_panel::{ROW, SidePanelLayout, TOGGLE_ROW, Z_BUTTON, layout};
+use crate::chrome::side_panel::{
+    PANEL_BG_ALPHA, PANEL_WIDTH, SidePanelLayout, layout, layer_icon_edge, row_height,
+    slide_offset, toggle_row_height, toggle_track_width, z_button_edge,
+};
 use crate::chrome::toolbar::icon_for_tool;
 use crate::editor::{EditorState, MAX_TOOL_SIZE, ToolKind};
-use crate::render::{Color, DisplayList, Point, Rect, Shape, TextCommand, TextureId};
+use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextCommand, TextureId};
 use crate::widgets::{IconButton, Slider, Toggle, icons::Icon};
 
 /// The panel's text style (one derivation, every label shares it).
@@ -58,7 +61,9 @@ fn layer_icon(kind: &str) -> Icon {
 }
 
 /// Draws the panel (the caller gates on visibility: the Space toggle AND
-/// the `[editor].side_panel` config key).
+/// the `[editor].side_panel` config key). `slide` is the todo-41 slide-in
+/// progress (0 = hidden at the selection edge, 1 = resting); hit-testing
+/// stays on the untranslated layout.
 pub(crate) fn draw(
     list: &mut DisplayList,
     editor: &EditorState,
@@ -67,22 +72,34 @@ pub(crate) fn draw(
     atlas: TextureId,
     selection: LogicalRect,
     output: &OutputInfo,
+    slide: f64,
 ) {
-    let panel = layout(editor, selection, tokens, scale, output);
+    let resting = layout(editor, selection, tokens, scale, output);
+    let dx = slide_offset(
+        &resting,
+        crate::editor::paint::local_rect(output, selection).origin.x,
+        PANEL_WIDTH * scale,
+        slide,
+    );
+    let panel = resting.translated(dx);
     let contrast = Color::from_hex_token(&tokens.palette.contrast)
         .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
+    let radius = tokens.radii.medium as f32 * scale;
+    if let Some(spec) = ShadowSpec::from_token(&tokens.shadows.large, scale) {
+        list.shadow(panel.rect, radius, spec);
+    }
     list.fill(
         Shape::Rect {
             rect: panel.rect,
-            radius: tokens.radii.medium as f32 * scale,
+            radius,
         },
-        contrast.with_alpha8(240),
+        contrast.with_alpha8(PANEL_BG_ALPHA),
     );
     let labels = Labels {
         font_size: tokens.typography.base_size as f32 * scale,
         line: tokens.typography.base_size as f32 * scale * 1.2,
         family: tokens.typography.family.clone(),
-        color: Color::from_rgba8(255, 255, 255, 255),
+        color: contrast.readable_ink(),
     };
     draw_tool_section(list, editor, tokens, scale, &panel, &labels);
     draw_layers(list, editor, tokens, scale, atlas, &panel, &labels);
@@ -175,8 +192,8 @@ fn draw_layers(
     let gap = tokens.spacing.small as f32 * scale;
     let padding = tokens.spacing.medium as f32 * scale;
     if let Some(raise) = panel.raise_button {
-        let z_header = labels.line.max(Z_BUTTON * scale);
-        let header_y = raise.origin.y - (z_header - Z_BUTTON * scale) / 2.0;
+        let z_header = labels.line.max(z_button_edge(tokens) * scale);
+        let header_y = raise.origin.y - (z_header - z_button_edge(tokens) * scale) / 2.0;
         labels.text(
             list,
             panel.rect.origin.x + padding,
@@ -188,7 +205,7 @@ fn draw_layers(
             IconButton::new(lower, Icon::ChevronDown).draw(list, tokens, scale, atlas);
         }
     }
-    let icon_edge = super::LAYER_ICON * scale;
+    let icon_edge = layer_icon_edge(tokens) * scale;
     for (layer, (_, row)) in editor.layers().iter().zip(&panel.layer_rows) {
         if editor.selected_object() == Some(layer.id) {
             list.fill(
@@ -202,7 +219,7 @@ fn draw_layers(
         let src = layer_icon(layer.kind).rect();
         let dst = Rect::from_parts(
             row.origin.x + gap,
-            row.origin.y + (ROW * scale - icon_edge) / 2.0,
+            row.origin.y + (row_height(tokens) * scale - icon_edge) / 2.0,
             icon_edge,
             icon_edge,
         );
@@ -214,7 +231,7 @@ fn draw_layers(
         labels.text(
             list,
             row.origin.x + gap * 2.0 + icon_edge,
-            row.origin.y + (ROW * scale - labels.line) / 2.0,
+            row.origin.y + (row_height(tokens) * scale - labels.line) / 2.0,
             layer.kind.to_string(),
         );
     }
@@ -232,11 +249,13 @@ fn toggle_row(
     checked: bool,
 ) {
     labels.row_text(list, rect, label.to_string());
+    let track_width = toggle_track_width(tokens) * scale;
+    let track_height = toggle_row_height(tokens) * scale;
     let track = Rect::from_parts(
-        rect.origin.x + rect.size.width - 36.0 * scale,
-        rect.origin.y + (rect.size.height - TOGGLE_ROW * scale) / 2.0,
-        36.0 * scale,
-        TOGGLE_ROW * scale,
+        rect.origin.x + rect.size.width - track_width,
+        rect.origin.y + (rect.size.height - track_height) / 2.0,
+        track_width,
+        track_height,
     );
     Toggle::new(track, checked).draw(list, tokens, scale);
 }

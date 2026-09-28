@@ -219,3 +219,19 @@ runs of any kind, including "one brief fix-proof" runs. Verification = offscreen
 unit seams + invisible protocol reads ONLY. The USER verifies visible behavior when they
 choose to test. jobs=8 cap stays. (Orchestrator note: pkill -f "flowshot" from a shell
 command containing that string kills the command itself — use pgrep/pkill with exact names.)
+
+## 2026-09-28 (todo 42): STOP-and-report findings for the orchestrator / F-wave
+- F-1 LICENSE IDENTITY MISMATCH (F4-relevant, owner decision): ALL 7 crate manifests declare `license = "MIT OR Apache-2.0"` (crates/*/Cargo.toml:5) vs root [workspace.package] `license = "GPL-3.0-or-later"` + README + the announced user-approved default. Crates don't use `license.workspace = true`. Fix = 7 one-line edits; NOT done (license identity = owner call). NOTICES states GPL-3.0-or-later per README/workspace.
+- F-2 NO ROOT LICENSE FILE (ls -la verified). F4 expects "license file GPL-3.0-or-later". Add with packaging (todo 39) or F-wave.
+- F-3 NO justfile at root (plan todos 1/39 + the `just check` commit gate reference it).
+- F-4 ROOT MANIFEST DRIFT vs PLAN PINS (root Cargo.toml = STOP-and-report scope): zbus = "4.3.1" (plan: zbus 5; the ONLY root-actionable cargo-tree-d d group - zbus 5 already in lock via ashpd 0.10.3 + notify-rust 4.18; bumping collapses zbus/zvariant/zbus_macros/zbus_names/zvariant_derive/zvariant_utils pairs); ashpd = "0.10.0" (plan: 0.13); egui-winit = "0.28.1" is a DEAD workspace-table entry (deliberately unused - ui Cargo.toml documents the winit 0.29-vs-0.30 reason).
+- F-5 CI `cargo deny check` was RED since todo 1: deny.toml carried non-SPDX "Unicode" -> cargo-deny 0.20 refused to PARSE the config. Fixed within the 42(d) finalize mandate (Unicode-3.0 + OFL-1.1 + 4 forced additions + epaint UFL exception + 3 per-ID RUSTSEC ignores + bans warn). Green now: advisories ok, bans ok, licenses ok, sources ok.
+- F-6 (informational, F2) ci.yml clippy/test steps lack --workspace; harmless in a virtual workspace (default-members = all members).
+- TODO 42 delivered: scripts/purity-gate.sh (+allowlist, 2 recorded ui dev-dep entries) wired into ci.yml, PASS clean / FAIL planted (3/3 pattern classes) / revert byte-identical; unsafe audit (zero unsafe blocks workspace-wide; capture-wayland = the single recorded exemption, unused); NOTICES (643 crates, 27 license groups, OFL/ISC/MIT full texts, exact 11-icon Feather subset); docs/porting-roadmap.md (4 phases, >=3 spot-checked crates each, F20 conformance table, F24 red flags) + ADR-006 addendum. Evidence: .omo/evidence/task-42-flowshot.txt.
+- flowshot-ui purity: CLEAN (zero violations) - concurrent todo-41 worker unaffected; ui untouched by todo 42.
+
+## 2026-09-28 (sleep): user AWAY again — full QA + full CPU; gate ceremony reduced
+User asleep: visible-window QA re-allowed (timeout-bounded, self-reversing). jobs=8 cap
+REMOVED. User directive: skip the per-completion full-build gate ceremony — workers run
+their own gates; orchestrator does targeted checks + ONE consolidated full verification
+at the end (avoids redundant workspace rebuilds between waves).

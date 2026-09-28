@@ -27,6 +27,33 @@ pub use separator::Separator;
 pub use slider::Slider;
 pub use toggle::Toggle;
 
+/// Hover wash opacity (0-255): one ink (the contrast token) at a low alpha
+/// ramp - the design system's state language (hover < press < solid).
+pub const HOVER_WASH_ALPHA: u8 = 20;
+/// Press wash opacity (0-255), the next ramp step after hover.
+pub const PRESS_WASH_ALPHA: u8 = 40;
+/// Disabled ink opacity (0-255).
+pub const DISABLED_INK_ALPHA: u8 = 100;
+/// Idle button ink opacity (0-255).
+pub const IDLE_INK_ALPHA: u8 = 200;
+/// Keyboard focus-ring stroke width in logical px.
+pub const FOCUS_RING_WIDTH: f32 = 2.0;
+
+/// The animated wash level (todo 41) mapped to its alpha byte: level 1 =
+/// hover, level 2 = press; fractional levels fade continuously between the
+/// ramp steps.
+#[must_use]
+pub fn wash_alpha(level: f64) -> u8 {
+    let alpha = f64::from(HOVER_WASH_ALPHA) * level.max(0.0);
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "clamped into [0, 255] before the cast"
+    )]
+    let byte = alpha.min(255.0).round() as u8;
+    byte
+}
+
 /// The texture ID for the icon atlas.
 pub const ICON_ATLAS_ID: crate::render::TextureId = crate::render::TextureId::new(1);
 

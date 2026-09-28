@@ -31,6 +31,15 @@ impl OverlayCore {
         }
         let mut actions = Vec::new();
         if let Some(clamped) = clamped {
+            // Grip hover-grow + toolbar button wash (todo 41): tracked on
+            // EVERY motion regardless of editor consumption - the handles
+            // and toolbar cells stay hoverable under an active tool.
+            let now = std::time::Instant::now();
+            self.selection.update_hover(clamped, now);
+            if let Some(output) = self.router.output_for(slot) {
+                let selection = self.selection.rect();
+                self.chrome.hover(clamped, selection, output, now);
+            }
             // The deferred preselect (todo 18, AwaitFirstMotion contract)
             // applies on the FIRST motion, before the editor/selection see
             // it - the motion that reveals the cursor also reveals the

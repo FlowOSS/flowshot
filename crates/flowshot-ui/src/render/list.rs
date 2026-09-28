@@ -141,7 +141,8 @@ impl ShadowSpec {
 }
 
 /// An image quad: a registered texture drawn into `dst`, optionally sampling
-/// the pixel sub-region `src` (the magnifier's zoom window, todo 17).
+/// the pixel sub-region `src` (the magnifier's zoom window, todo 17), at a
+/// uniform `alpha` fade (the todo-41 motion seam; 1.0 = opaque).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ImageCommand {
     /// Which uploaded texture to sample.
@@ -150,6 +151,8 @@ pub struct ImageCommand {
     pub dst: Rect,
     /// Source sub-region in texture pixels; `None` samples the whole texture.
     pub src: Option<Rect>,
+    /// Uniform quad opacity in `[0, 1]` (clamped at draw time).
+    pub alpha: f32,
 }
 
 /// A rounded-rect clip region for [`Command::PushClip`].
@@ -293,7 +296,18 @@ impl DisplayList {
 
     /// Draws an uploaded texture into `dst` (optionally a pixel sub-region).
     pub fn image(&mut self, texture: TextureId, dst: Rect, src: Option<Rect>) {
-        self.push(Command::Image(ImageCommand { texture, dst, src }));
+        self.image_faded(texture, dst, src, 1.0);
+    }
+
+    /// Draws an image quad at a uniform opacity (the todo-41 fade seam;
+    /// `alpha` clamps into `[0, 1]`).
+    pub fn image_faded(&mut self, texture: TextureId, dst: Rect, src: Option<Rect>, alpha: f32) {
+        self.push(Command::Image(ImageCommand {
+            texture,
+            dst,
+            src,
+            alpha: alpha.clamp(0.0, 1.0),
+        }));
     }
 
     /// Draws a token-derived drop shadow for a rounded rect.

@@ -9,16 +9,22 @@ const IMAGE_WGSL: &str = r"
 struct VsOut {
     @builtin(position) clip: vec4<f32>,
     @location(0) uv: vec2<f32>,
+    @location(1) alpha: f32,
 };
 
 @group(0) @binding(0) var image_texture: texture_2d<f32>;
 @group(0) @binding(1) var image_sampler: sampler;
 
 @vertex
-fn vs_main(@location(0) position: vec2<f32>, @location(1) uv: vec2<f32>) -> VsOut {
+fn vs_main(
+    @location(0) position: vec2<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) alpha: f32,
+) -> VsOut {
     var out: VsOut;
     out.clip = vec4<f32>(position, 0.0, 1.0);
     out.uv = uv;
+    out.alpha = alpha;
     return out;
 }
 
@@ -26,17 +32,18 @@ fn vs_main(@location(0) position: vec2<f32>, @location(1) uv: vec2<f32>) -> VsOu
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     let texel = textureSample(image_texture, image_sampler, in.uv);
     // Atlas/frame content is stored premultiplied; the surface blends
-    // premultiplied, so pass through.
-    return texel;
+    // premultiplied, so a uniform fade scales every component (the
+    // todo-41 motion alpha: premultiplication is preserved).
+    return texel * in.alpha;
 }
 ";
 
-/// Interleaved `[pos xy, uv uv]` image-quad vertex.
-pub(crate) type ImageVertex = [f32; 4];
+/// Interleaved `[pos xy, uv uv, alpha]` image-quad vertex.
+pub(crate) type ImageVertex = [f32; 5];
 
 const IMAGE_VERTEX_ATTRIBUTES: &[wgpu::VertexAttribute] =
-    &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2];
-const IMAGE_VERTEX_STRIDE: u64 = 4 * std::mem::size_of::<f32>() as u64;
+    &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32];
+const IMAGE_VERTEX_STRIDE: u64 = 5 * std::mem::size_of::<f32>() as u64;
 
 /// Builds the image-quad pipeline for `bind_group_layout` (texture binding 0,
 /// sampler binding 1).

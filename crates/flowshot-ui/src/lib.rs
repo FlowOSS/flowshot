@@ -80,6 +80,7 @@ pub mod export;
 pub mod input;
 pub mod launch;
 pub mod launcher;
+pub mod motion;
 pub mod pins;
 pub mod render;
 pub mod router;

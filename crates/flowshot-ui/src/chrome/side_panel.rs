@@ -30,16 +30,42 @@ use crate::editor::EditorState;
 
 pub(super) mod paint;
 
-/// The panel width (logical px).
+/// The panel width (logical px). Chrome layout constant: the spacing scale
+/// carries no panel-width step (todo-41 audit, justified - every OTHER panel
+/// metric derives from the tokens via the functions below).
 pub const PANEL_WIDTH: f32 = 200.0;
-/// The slider / layer-row height (logical px).
-pub(super) const ROW: f32 = 24.0;
-/// The toggle-row height (logical px).
-pub(super) const TOGGLE_ROW: f32 = 20.0;
-/// The raise/lower button edge (logical px).
-pub(super) const Z_BUTTON: f32 = 20.0;
-/// The layer-row icon edge (logical px).
-pub(super) const LAYER_ICON: f32 = 16.0;
+/// The panel background opacity (0-255): near-solid contrast ink.
+pub(super) const PANEL_BG_ALPHA: u8 = 240;
+
+/// The slider / layer-row height (logical px): `spacing.large +
+/// spacing.medium` on the 4px grid (24 at default tokens).
+pub(super) fn row_height(tokens: &DesignTokens) -> f32 {
+    (tokens.spacing.large + tokens.spacing.medium) as f32
+}
+
+/// The toggle-row height (logical px): `spacing.large + spacing.small`
+/// (20 at default tokens).
+pub(super) fn toggle_row_height(tokens: &DesignTokens) -> f32 {
+    (tokens.spacing.large + tokens.spacing.small) as f32
+}
+
+/// The raise/lower button edge (logical px): `spacing.large +
+/// spacing.small` (20 at default tokens).
+pub(super) fn z_button_edge(tokens: &DesignTokens) -> f32 {
+    (tokens.spacing.large + tokens.spacing.small) as f32
+}
+
+/// The layer-row icon edge (logical px): `spacing.large` (16 at default
+/// tokens).
+pub(super) fn layer_icon_edge(tokens: &DesignTokens) -> f32 {
+    tokens.spacing.large as f32
+}
+
+/// The toggle track width (logical px): `2 * spacing.large +
+/// spacing.small` (36 at default tokens).
+pub(super) fn toggle_track_width(tokens: &DesignTokens) -> f32 {
+    (2 * tokens.spacing.large + tokens.spacing.small) as f32
+}
 
 /// The per-tool size-control label - the visibility gate of the plan's
 /// "per-tool options (size sliders ...)": `None` hides the slider (the
@@ -99,8 +125,8 @@ pub fn layout(
     let gap = tokens.spacing.small as f32 * scale;
     let width = PANEL_WIDTH * scale;
     let line = tokens.typography.base_size as f32 * scale * 1.2;
-    let row = ROW * scale;
-    let toggle_row = TOGGLE_ROW * scale;
+    let row = row_height(tokens) * scale;
+    let toggle_row = toggle_row_height(tokens) * scale;
 
     let kind = editor.active_tool();
     let sized = kind.and_then(size_label).is_some();
@@ -126,7 +152,7 @@ pub fn layout(
         }
         height += gap;
     }
-    let z_header = line.max(Z_BUTTON * scale);
+    let z_header = line.max(z_button_edge(tokens) * scale);
     height += z_header + gap + layers.len() as f32 * (row + gap);
 
     // Anchor right of the selection; flip left near the output edge; the
@@ -178,7 +204,7 @@ pub fn layout(
         cy += gap;
     }
 
-    let z_edge = Z_BUTTON * scale;
+    let z_edge = z_button_edge(tokens) * scale;
     layout.raise_button = Some(Rect::from_parts(
         cx + content - z_edge * 2.0 - gap,
         cy + (z_header - z_edge) / 2.0,
@@ -200,4 +226,49 @@ pub fn layout(
         cy += row + gap;
     }
     layout
+}
+
+impl SidePanelLayout {
+    /// Every rect shifted by `dx` (the todo-41 slide-in visual; hit-testing
+    /// keeps the untranslated layout - interaction leads the animation).
+    #[must_use]
+    pub(crate) fn translated(&self, dx: f32) -> Self {
+        let shift = |rect: Rect| Rect::from_parts(rect.origin.x + dx, rect.origin.y, rect.size.width, rect.size.height);
+        let shift_opt = |rect: &Option<Rect>| rect.map(|r| shift(r));
+        Self {
+            rect: shift(self.rect),
+            size_slider: shift_opt(&self.size_slider),
+            arrow_style: shift_opt(&self.arrow_style),
+            arrow_reverse: shift_opt(&self.arrow_reverse),
+            counter_outline: shift_opt(&self.counter_outline),
+            pixelate_mode: shift_opt(&self.pixelate_mode),
+            raise_button: shift_opt(&self.raise_button),
+            lower_button: shift_opt(&self.lower_button),
+            layer_rows: self
+                .layer_rows
+                .iter()
+                .map(|(id, rect)| (*id, shift(*rect)))
+                .collect(),
+        }
+    }
+}
+
+/// The slide-in offset (physical px) at slide progress `progress` (0 =
+/// hidden at the selection edge, 1 = resting): the panel drawers out of the
+/// selection edge it anchors to (right-anchored slides from the left,
+/// flipped-left panels slide from the right).
+#[must_use]
+pub(crate) fn slide_offset(
+    panel: &SidePanelLayout,
+    selection_local_x: f32,
+    width: f32,
+    progress: f64,
+) -> f32 {
+    let remaining = (1.0 - progress).clamp(0.0, 1.0) as f32;
+    let anchors_right = panel.rect.origin.x >= selection_local_x;
+    if anchors_right {
+        -remaining * width
+    } else {
+        remaining * width
+    }
 }

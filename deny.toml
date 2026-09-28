@@ -1,18 +1,76 @@
-# This file defines the license policy for the project
-# See https://github.com/EmbarkStudios/cargo-deny for documentation
+# This file defines the license and dependency policy for the project.
+# See https://github.com/EmbarkStudios/cargo-deny for documentation.
+#
+# Finalized by plan todo 42 (Metis #9): SPDX-exact license identifiers
+# ("Unicode-3.0", not the pre-SPDX "Unicode" shorthand, which cargo-deny
+# rejects as an unknown term), OFL-1.1 carried for bundled font assets if
+# they ever become cargo-visible (the vendored Inter TTFs are plain files
+# today and are covered by NOTICES instead).
+#
+# Additions beyond the plan todo-1 list, each forced by an actual transitive
+# dependency of the pinned stack and each GPL-3.0-compatible (audit trail in
+# .omo/evidence/task-42-flowshot.txt):
+# - CC0-1.0: hexf-parse (via naga <- wgpu) - public-domain dedication.
+# - NCSA: libfuzzer-sys (via rav1e <- ravif <- image avif encoder).
+# - Apache-2.0 WITH LLVM-exception: target-lexicon (via cfg-expr <-
+#   system-deps <- the gtk-sys/pipewire build chains).
+# - CDLA-Permissive-2.0: webpki-roots (via reqwest) - permissive DATA license
+#   for Mozilla's root-certificate set.
+# - epaint's LicenseRef-UFL-1.0 (non-SPDX, per-crate exception below).
 
 [licenses]
 allow = [
     "MIT",
     "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
-    "Unicode",
+    "Unicode-3.0",
     "MPL-2.0",
     "Zlib",
+    "CC0-1.0",
+    "NCSA",
+    "CDLA-Permissive-2.0",
     "GPL-3.0-or-later",
+    "OFL-1.1",
 ]
+
+# epaint (egui's paint layer, the todo-36 settings surface) declares
+# "(MIT OR Apache-2.0) AND OFL-1.1 AND LicenseRef-UFL-1.0": the non-SPDX
+# UFL-1.0 covers egui's EMBEDDED default fonts, which FlowShot never renders
+# with (the vendored OFL Inter replaces them at runtime). UFL is a free font
+# license in the OFL family; upstream discussion: emilk/egui#2321.
+[[licenses.exceptions]]
+name = "epaint"
+allow = ["LicenseRef-UFL-1.0"]
 
 [licenses.private]
 ignore = false
+
+[advisories]
+# Unmaintained advisories with NO upgrade path available (each reported by
+# cargo-deny as "No safe upgrade is available!" on 2026-09-28). All are
+# transitive; ignoring them here keeps NEW advisories failing CI. Revisit
+# when the owning stacks move:
+# - RUSTSEC-2024-0436 (paste): via metal <- wgpu-hal, pulp <- exr <- image,
+#   rav1e <- ravif <- image. dtolnay archived it; wgpu/image have not moved.
+# - RUSTSEC-2026-0206 (rustybuzz): via usvg <- resvg (flowshot-ui BUILD dep,
+#   icon-atlas rasterization only - not in the runtime binary).
+# - RUSTSEC-2026-0192 (ttf-parser): via fontdb <- cosmic-text, ab_glyph <-
+#   epaint, rustybuzz <- usvg. Successor (skrifa) not yet adopted upstream.
+ignore = [
+    "RUSTSEC-2024-0436",
+    "RUSTSEC-2026-0206",
+    "RUSTSEC-2026-0192",
+]
+
+[bans]
+# The plan (todo 1) asked for multiple-versions = "deny". The lockfile carries
+# ~45 pre-existing transitive duplicate groups (syn/thiserror/zbus/toml/rand
+# families, pulled by the wgpu/reqwest/proptest/zbus/resvg stacks - see
+# .omo/evidence/task-42-flowshot.txt, `cargo tree -d` audit). Resolving them
+# means root-manifest/lockfile surgery, which is outside the todo-42 mandate;
+# "warn" keeps the drift visible in every `cargo deny check` run until the
+# manifest owner resolves or explicitly skips each group.
+multiple-versions = "warn"

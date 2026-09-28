@@ -91,11 +91,23 @@ impl<'a> Button<'a> {
         let radius = tokens.radii.medium as f32 * scale;
 
         let (bg_color, fg_color) = match self.state {
-            ButtonState::Idle => (contrast.with_alpha8(0), contrast.with_alpha8(200)),
-            ButtonState::Hover => (contrast.with_alpha8(20), contrast.with_alpha8(255)),
-            ButtonState::Press => (contrast.with_alpha8(40), contrast.with_alpha8(255)),
+            ButtonState::Idle => (
+                contrast.with_alpha8(0),
+                contrast.with_alpha8(super::IDLE_INK_ALPHA),
+            ),
+            ButtonState::Hover => (
+                contrast.with_alpha8(super::HOVER_WASH_ALPHA),
+                contrast.with_alpha8(255),
+            ),
+            ButtonState::Press => (
+                contrast.with_alpha8(super::PRESS_WASH_ALPHA),
+                contrast.with_alpha8(255),
+            ),
             ButtonState::Focus => (contrast.with_alpha8(0), accent),
-            ButtonState::Disabled => (contrast.with_alpha8(0), contrast.with_alpha8(100)),
+            ButtonState::Disabled => (
+                contrast.with_alpha8(0),
+                contrast.with_alpha8(super::DISABLED_INK_ALPHA),
+            ),
         };
 
         if bg_color.a > 0.0 {
@@ -114,7 +126,7 @@ impl<'a> Button<'a> {
                     rect: self.rect,
                     radius,
                 },
-                2.0 * scale,
+                super::FOCUS_RING_WIDTH * scale,
                 accent,
             );
         }

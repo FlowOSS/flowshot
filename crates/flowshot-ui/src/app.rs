@@ -239,15 +239,15 @@ impl OverlayApp {
                 modifiers: *self.core.modifiers(),
             };
             self.core.editor().paint_into(&mut list, output, view);
-            self.core
-                .selection()
-                .paint_into(&mut list, output, Instant::now());
+            let now = Instant::now();
+            self.core.selection().paint_into(&mut list, output, now);
             self.core.chrome().paint_into(
                 &mut list,
                 self.core.editor(),
                 self.core.selection(),
                 crate::widgets::ICON_ATLAS_ID,
                 output,
+                now,
             );
         }
         // Magnifier (todo 17): the topmost cursor-following view aid. The

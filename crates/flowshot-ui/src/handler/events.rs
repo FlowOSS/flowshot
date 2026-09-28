@@ -162,12 +162,13 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
     fn about_to_wait(&mut self, target: &ActiveEventLoop) {
         let now = Instant::now();
         if self.core.tick(now) {
-            // The HUD hide deadline passed: one redraw clears it everywhere.
+            // A time-driven flip (HUD hide, animation frame, or the final
+            // settled frame): one redraw paints it everywhere.
             for entry in &self.windows {
                 entry.window.request_redraw();
             }
         }
-        match self.core.selection().hud_wake() {
+        match self.core.wake(now) {
             Some(deadline) if deadline > now => {
                 target.set_control_flow(ControlFlow::WaitUntil(deadline));
             }

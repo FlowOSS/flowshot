@@ -47,6 +47,21 @@ impl Handle {
         Self::Bottom,
     ];
 
+    /// This handle's index into [`Self::ALL`] (the hover-motion array key).
+    #[must_use]
+    pub const fn index(self) -> usize {
+        match self {
+            Self::TopLeft => 0,
+            Self::TopRight => 1,
+            Self::BottomLeft => 2,
+            Self::BottomRight => 3,
+            Self::Left => 4,
+            Self::Top => 5,
+            Self::Right => 6,
+            Self::Bottom => 7,
+        }
+    }
+
     /// Whether dragging this handle moves the left edge.
     #[must_use]
     pub const fn moves_left(self) -> bool {

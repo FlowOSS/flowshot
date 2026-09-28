@@ -1,6 +1,12 @@
 //! Icon button widget (toolbar pill).
+//!
+//! State language (todo 41): the background wash is ONE ink (the contrast
+//! token) at the [`super::wash_alpha`] ramp - discrete through
+//! [`ButtonState`], or continuous through the animated `wash` level the
+//! chrome's hover/press tweens feed. `alpha` fades the whole button (the
+//! toolbar's staggered reveal).
 
-use super::{Icon, button::ButtonState};
+use super::{FOCUS_RING_WIDTH, Icon, button::ButtonState, wash_alpha};
 use crate::render::{Color, DisplayList, Rect, Shape, TextureId};
 use flowshot_core::tokens::DesignTokens;
 
@@ -13,6 +19,11 @@ pub struct IconButton {
     pub state: ButtonState,
     /// The icon.
     pub icon: Icon,
+    /// Animated wash level (0 idle, 1 hover, 2 press); overrides the
+    /// state-derived background when set.
+    pub wash: Option<f64>,
+    /// Uniform fade multiplier in `[0, 1]` (the reveal seam).
+    pub alpha: f32,
 }
 
 impl IconButton {
@@ -23,6 +34,8 @@ impl IconButton {
             rect,
             state: ButtonState::Idle,
             icon,
+            wash: None,
+            alpha: 1.0,
         }
     }
 
@@ -30,6 +43,20 @@ impl IconButton {
     #[must_use]
     pub fn state(mut self, state: ButtonState) -> Self {
         self.state = state;
+        self
+    }
+
+    /// Sets the animated wash level (todo 41 hover/press feedback).
+    #[must_use]
+    pub fn wash(mut self, level: f64) -> Self {
+        self.wash = Some(level);
+        self
+    }
+
+    /// Sets the uniform fade multiplier (todo 41 reveal).
+    #[must_use]
+    pub fn alpha(mut self, alpha: f32) -> Self {
+        self.alpha = alpha.clamp(0.0, 1.0);
         self
     }
 
@@ -48,13 +75,15 @@ impl IconButton {
 
         let radius = self.rect.size.height / 2.0; // Pill shape
 
-        let bg_color = match self.state {
-            ButtonState::Idle => contrast.with_alpha8(0),
-            ButtonState::Hover => contrast.with_alpha8(20),
-            ButtonState::Press => contrast.with_alpha8(40),
-            ButtonState::Focus => contrast.with_alpha8(0),
-            ButtonState::Disabled => contrast.with_alpha8(0),
+        let bg_alpha8 = match self.wash {
+            Some(level) => wash_alpha(level),
+            None => match self.state {
+                ButtonState::Idle | ButtonState::Focus | ButtonState::Disabled => 0,
+                ButtonState::Hover => super::HOVER_WASH_ALPHA,
+                ButtonState::Press => super::PRESS_WASH_ALPHA,
+            },
         };
+        let bg_color = contrast.with_alpha(f32::from(bg_alpha8) / 255.0 * self.alpha);
 
         if bg_color.a > 0.0 {
             list.fill(
@@ -66,17 +95,20 @@ impl IconButton {
             );
         }
 
-        if self.state == ButtonState::Focus {
+        if self.state == ButtonState::Focus && self.alpha > 0.0 {
             list.stroke(
                 Shape::Rect {
                     rect: self.rect,
                     radius,
                 },
-                2.0 * scale,
-                accent,
+                FOCUS_RING_WIDTH * scale,
+                accent.with_alpha(self.alpha),
             );
         }
 
+        if self.alpha <= 0.0 {
+            return;
+        }
         let icon_rect = self.icon.rect();
         let icon_size = icon_rect[2] * scale;
         let dst = Rect::from_parts(
@@ -87,6 +119,6 @@ impl IconButton {
         );
         let src = Rect::from_parts(icon_rect[0], icon_rect[1], icon_rect[2], icon_rect[3]);
 
-        list.image(atlas, dst, Some(src));
+        list.image_faded(atlas, dst, Some(src), self.alpha);
     }
 }

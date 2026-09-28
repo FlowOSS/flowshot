@@ -20,6 +20,8 @@
 
 mod input;
 
+use std::time::Instant;
+
 use crate::editor::EditorState;
 use crate::input::Action;
 use crate::render::{DisplayList, TextureId, f32_from_f64};
@@ -28,6 +30,7 @@ use flowshot_core::config::UiConfig;
 use flowshot_core::geometry::OutputInfo;
 use flowshot_core::tokens::DesignTokens;
 
+use super::motion::ChromeMotion;
 use super::{ColorWheel, SizeHud, Toolbar, side_panel, toolbar::ToolbarButton};
 
 /// The draw-color persistence callback (F27: a wheel pick writes
@@ -46,6 +49,7 @@ pub struct ChromeState {
     pub(crate) toolbar: Toolbar,
     pub(crate) color_wheel: ColorWheel,
     pub(crate) hud: SizeHud,
+    pub(crate) motion: ChromeMotion,
     tokens: DesignTokens,
     panel_visible: bool,
     grabbed: bool,
@@ -61,6 +65,7 @@ impl std::fmt::Debug for ChromeState {
             .field("toolbar", &self.toolbar)
             .field("color_wheel", &self.color_wheel)
             .field("hud", &self.hud)
+            .field("motion", &self.motion)
             .field("tokens", &self.tokens)
             .field("panel_visible", &self.panel_visible)
             .field("grabbed", &self.grabbed)
@@ -93,6 +98,8 @@ impl ChromeState {
             .iter()
             .map(|id| ToolbarButton::from_id(id))
             .collect();
+        self.motion
+            .configure(&self.tokens, self.toolbar.buttons.len(), Instant::now());
         tracing::info!(
             target: "flowshot_ui::chrome",
             buttons = config.toolbar_buttons.join(","),
@@ -178,7 +185,10 @@ impl ChromeState {
     }
 
     /// Appends the chrome visuals to `list` (the shell paints this after
-    /// the selection chrome; the scale derives from the output).
+    /// the selection chrome; the scale derives from the output). `now`
+    /// evaluates the motion timeline (todo 41): the same instant the frame
+    /// scheduler ticks with, so offscreen harnesses render deterministic
+    /// animation stills from a synthetic clock.
     pub fn paint_into(
         &self,
         list: &mut DisplayList,
@@ -186,19 +196,77 @@ impl ChromeState {
         selection: &SelectionState,
         atlas: TextureId,
         output: &OutputInfo,
+        now: Instant,
     ) {
         let scale = f32_from_f64(output.scale);
         let rect = selection.rect();
-        self.toolbar
-            .draw(list, editor, &self.tokens, scale, atlas, rect, output);
+        self.toolbar.draw(
+            list, editor, &self.tokens, scale, atlas, rect, output, &self.motion, now,
+        );
         self.color_wheel
-            .draw(list, editor, &self.tokens, scale, atlas, output);
+            .draw(list, editor, &self.tokens, scale, atlas, output, &self.motion, now);
         if self.panel_shown(editor)
             && let Some(selection) = rect
         {
-            side_panel::paint::draw(list, editor, &self.tokens, scale, atlas, selection, output);
+            side_panel::paint::draw(
+                list,
+                editor,
+                &self.tokens,
+                scale,
+                atlas,
+                selection,
+                output,
+                self.motion.panel_progress(now),
+            );
         }
         self.hud.draw(list, editor, &self.tokens, scale, atlas);
+    }
+
+    /// The chrome motion timeline (todo 41): the shell's tick advances it,
+    /// the frame scheduler reads its wake, and the paint path evaluates it.
+    #[must_use]
+    pub const fn motion(&self) -> &ChromeMotion {
+        &self.motion
+    }
+
+    /// Advances the visibility-driven transitions (called once per
+    /// event-loop pass from [`crate::OverlayCore::tick`]).
+    pub(crate) fn motion_tick(&mut self, now: Instant, selection_present: bool, editor_panel: bool) {
+        let wheel = self.color_wheel.visible;
+        self.motion.tick(now, selection_present, editor_panel, wheel);
+    }
+
+    /// The reduced-motion switch (todo 41 failure QA: transitions instant).
+    pub fn set_motion_reduced(&mut self, reduced: bool) {
+        self.motion.set_reduced(reduced);
+    }
+
+    /// Whether any chrome transition is still moving at `now`.
+    #[must_use]
+    pub fn motion_active(&self, now: Instant) -> bool {
+        self.motion.active_at(now)
+    }
+
+    /// The earliest chrome settle deadline after `now` (`None` at rest).
+    #[must_use]
+    pub fn motion_settle(&self, now: Instant) -> Option<Instant> {
+        self.motion.settle_at(now)
+    }
+
+    /// The funnel's motion seam: updates the toolbar hover wash from the
+    /// pointer position (every motion event, editor-consumed or not).
+    pub(crate) fn hover(
+        &mut self,
+        at: flowshot_core::geometry::LogicalPoint,
+        selection: Option<flowshot_core::geometry::LogicalRect>,
+        output: &OutputInfo,
+        now: Instant,
+    ) {
+        let scale = f32_from_f64(output.scale);
+        let index = self
+            .toolbar
+            .button_at(at, selection, &self.tokens, scale, output);
+        self.motion.set_hover(index, now);
     }
 }
 
@@ -208,6 +276,7 @@ impl Default for ChromeState {
             toolbar: Toolbar::default(),
             color_wheel: ColorWheel::default(),
             hud: SizeHud::default(),
+            motion: ChromeMotion::new(&DesignTokens::default(), Instant::now()),
             tokens: DesignTokens::default(),
             panel_visible: false,
             grabbed: false,

@@ -42,19 +42,9 @@ impl SelectionColors {
         Self {
             accent,
             hud_background: accent.with_alpha8(HUD_BACKGROUND_ALPHA),
-            hud_text: if is_dark(accent) {
-                Color::from_rgba8(255, 255, 255, 255)
-            } else {
-                Color::from_rgba8(0, 0, 0, 255)
-            },
+            hud_text: accent.readable_ink(),
         }
     }
-}
-
-/// Weighted-luma darkness test on the sRGB-encoded channels (Flameshot
-/// `ColorUtils::colorIsDark` parity).
-fn is_dark(color: Color) -> bool {
-    0.299 * color.r + 0.587 * color.g + 0.114 * color.b < 0.5
 }
 
 /// Everything one window's selection paint needs.
@@ -74,6 +64,9 @@ pub(super) struct SelectionPaint<'a> {
     pub font_family: Option<&'a str>,
     /// HUD box corner radius (radii token, logical px).
     pub hud_radius: f64,
+    /// Per-grip radius multiplier at the paint instant (`Handle::index`
+    /// order; the todo-41 hover-grow, 1.0 = resting).
+    pub grip_scales: [f64; 8],
 }
 
 /// Appends the selection visuals to `list` in paint order: outline, grips,
@@ -90,10 +83,11 @@ pub(super) fn append(list: &mut DisplayList, paint: &SelectionPaint<'_>) {
     );
     let grip_radius = local_len(paint.metrics.grip / 2.0, scale);
     for handle in Handle::ALL {
+        let grown = grip_radius * f32_from_f64(paint.grip_scales[handle.index()]);
         list.fill(
             Shape::Ellipse {
                 center: local_point(paint.output, handle.anchor(paint.rect)),
-                radii: Size::new(grip_radius, grip_radius),
+                radii: Size::new(grown, grown),
             },
             paint.colors.accent,
         );
@@ -202,6 +196,7 @@ mod tests {
             colors,
             font_family: None,
             hud_radius: 2.0,
+            grip_scales: [1.0; 8],
         }
     }
 

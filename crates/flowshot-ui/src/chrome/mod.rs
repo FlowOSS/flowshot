@@ -24,12 +24,14 @@
 
 pub mod color_wheel;
 pub mod hud;
+pub mod motion;
 pub mod side_panel;
 pub mod state;
 pub mod toolbar;
 
 pub use color_wheel::{BUTTON_BASE_SIZE, ColorWheel, SELECTED_RING, SWATCH_SIZE, WheelLayout};
 pub use hud::SizeHud;
+pub use motion::ChromeMotion;
 pub use side_panel::{SidePanelLayout, size_label};
 pub use state::{ChromeState, DrawColorSink};
 pub use toolbar::{Toolbar, ToolbarButton, icon_for_tool};
