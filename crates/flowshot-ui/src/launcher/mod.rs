@@ -1,14 +1,14 @@
-//! The capture launcher dialog (plan todo 37): a small egui window on the
-//! todo-36 embedded stack (`crate::egui_host`) - the F12 mode-9
+//! The capture launcher dialog: a small egui window on the
+//! embedded stack (`crate::egui_host`) - the F12 mode-9
 //! manual-coordinate capability, reached via `flowshot capture --dialog` or
-//! the tray's `Capture Launcher` item (Amendment #2; both dispatch the
-//! daemon's `Launcher` method, todo 32).
+//! the tray's `Capture Launcher` item (both dispatch the
+//! daemon's `Launcher` method).
 //!
-//! # Surface (plan-exact, capability parity only)
+//! # Surface (capability parity only)
 //!
 //! - manual geometry entry `WxH+X+Y` with inline validation (the CLI's
 //!   `--region` grammar: offsets optional and independently signed),
-//! - a monitor dropdown fed by the live output probe (todo 6) through the
+//! - a monitor dropdown fed by the live output probe through the
 //!   [`MonitorProbe`] seam,
 //! - a delay spinner (ms),
 //! - Capture / Cancel.
@@ -16,7 +16,7 @@
 //! # Dispatch seam
 //!
 //! Capture emits the typed [`LauncherRequest`] through the
-//! [`LaunchCallback`] seam and closes; the binary layer (todo 38) maps it
+//! [`LaunchCallback`] seam and closes; the binary layer maps it
 //! onto the daemon's command vocabulary - `Region` -> `Capture` (region
 //! semantics: `CaptureRequest.region` carries [`RegionGeometry::to_token`]),
 //! `Screen` -> `CaptureScreen(index)`. Cancel closes without a request (the

@@ -1,7 +1,7 @@
-//! The launcher-dialog session (plan todo 37/38, `DaemonCommand::Launcher`
+//! The launcher-dialog session (`DaemonCommand::Launcher`
 //! and CLI `capture --dialog`): the egui dialog runs in a session CHILD
 //! (the winit one-loop constraint). Its Capture dispatch follows the
-//! todo-37 mapping:
+//! recorded mapping:
 //!
 //! - daemon-resident (`forward_to_daemon`): the child returns the
 //!   dispatch as DATA (`SessionResult::Dispatched { argv }`) and the
@@ -9,14 +9,14 @@
 //!   session ends: `Region{geometry, delay}` -> `capture --region TOKEN
 //!   [-d MS]` (interactive overlay preselected at that rect);
 //!   `Screen{screen, delay}` -> `capture screen <n> [-d <ms>]`. DECISION
-//!   on the todo-37 open question, recorded in decisions.md: the delay
+//!   on the open question (recorded): the delay
 //!   rides the existing vocabulary, no wire extension, nothing dropped.
 //!   F3 fix (2026-09-28): the child-side BUS forward this replaced could
 //!   never acquire the single-window-session gate the child itself held -
 //!   the Capture button was dead in daemon mode (live-QA found).
 //! - one-shot (`--dialog --no-daemon`): the child captures the typed
 //!   geometry DIRECTLY in-process (a second overlay loop inside the child
-//!   is impossible; the todo-37 harness proved exactly this direct
+//!   is impossible; the launcher harness proved exactly this direct
 //!   semantics live) and hands the export to the parent's post-capture.
 //!
 //! Cancel -> [`ExecOutcome::Cancelled`] (the CLI's exit-3 class).

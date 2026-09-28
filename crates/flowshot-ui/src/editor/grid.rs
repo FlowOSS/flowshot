@@ -1,10 +1,10 @@
-//! The grid overlay paint (plan todo 27: `[editor].grid` config + toggle
+//! The grid overlay paint (`[editor].grid` config + toggle
 //! key, spacing token, 1px lines, drawn UNDER annotations ABOVE backdrop).
 //! Split from the facade at the 250-LOC ceiling.
 
 use super::EditorState;
 
-/// The grid line ink: neutral gray at 25% (todo-41 audit JUSTIFIED: the
+/// The grid line ink: neutral gray at 25% (audit JUSTIFIED: the
 /// grid overlays arbitrary wallpaper AND arbitrary annotations, so it must
 /// not take the brand hue or the contrast token - a neutral ink is the only
 /// color readable over every backdrop; the magnifier's `GRID_COLOR` is the
@@ -17,7 +17,7 @@ const GRID_LINE_COLOR: crate::render::Color = crate::render::Color {
 };
 
 impl EditorState {
-    /// Paints the grid overlay (plan todo 27: spacing token, 1px lines,
+    /// Paints the grid overlay (spacing token, 1px lines,
     /// drawn UNDER annotations ABOVE backdrop).
     pub fn paint_grid(
         &self,

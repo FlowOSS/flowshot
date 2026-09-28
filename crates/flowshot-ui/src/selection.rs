@@ -1,7 +1,7 @@
-//! The selection interaction engine (plan todo 16, draft F27).
+//! The selection interaction engine (draft F27).
 //!
 //! The complete Flameshot selection behavior spec, clean-room reimplemented
-//! on the todo-13 input seam and expressed in GLOBAL LOGICAL space so one
+//! on the shell's input seam and expressed in GLOBAL LOGICAL space so one
 //! selection rect spans every monitor (#4894 regression restored - the
 //! per-output cropping at export is the layout algebra of
 //! `flowshot_core::geometry`, consumed by the backdrop and the export path):
@@ -20,15 +20,15 @@
 //!   position 0-5 and hides after the configured hide-time,
 //! - Esc walks the six-stage cascade in the exact spec order, Ctrl+Q exits
 //!   immediately, Enter accepts, Ctrl+C copies, Ctrl+A selects the full
-//!   layout, right-click is the color-wheel seam (todo 26), and a
+//!   layout, right-click is the color-wheel seam (chrome-owned), and a
 //!   double-click inside the selection copies when configured.
 //!
 //! The engine is pure state: [`OverlayCore`](crate::OverlayCore) feeds it
 //! clamped global positions, the modifier snapshot, and the layout bounds
 //! through [`SelectionEnv`]; it answers with [`SelectionUpdate`]s (effects
 //! for the shell + whether windows must redraw). No annotation drawing
-//! lives here (todo 20+), and no behavior constant is tunable beyond the
-//! config keys [`SelectionConfig`] lists.
+//! lives here (that is the editor's), and no behavior constant is tunable
+//! beyond the config keys [`SelectionConfig`] lists.
 
 mod cascade;
 mod drag;
@@ -57,7 +57,7 @@ use paint::SelectionColors;
 pub use cascade::{CascadeState, EscStep};
 pub use hit::{Handle, HitZone};
 pub use hud::{HudPosition, HudView, format_geometry};
-// The launch preselect (todo 18) shares the engine's explicit layout clamp
+// The launch preselect shares the engine's explicit layout clamp
 // (size-preserving shift, intersection when oversized) - one math, two
 // callers.
 pub use metrics::{
@@ -70,7 +70,7 @@ pub use types::{Effect, SelectionConfig, SelectionEnv, SelectionUpdate};
 
 /// The selection state machine: one selection rect in global logical space,
 /// the active drag, the Esc-cascade seams, the HUD timer, and the grip
-/// hover-grow motion (todo 41).
+/// hover-grow motion.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SelectionState {
     config: SelectionConfig,
@@ -139,7 +139,7 @@ impl SelectionState {
         self.grips.retheme(tokens);
     }
 
-    /// The reduced-motion switch (todo 41): `true` snaps the grip hover-grow
+    /// The reduced-motion switch: `true` snaps the grip hover-grow
     /// (and every later selection transition) to its target.
     pub fn set_motion_reduced(&mut self, reduced: bool) {
         self.grips.set_reduced(reduced);
@@ -184,7 +184,7 @@ impl SelectionState {
         self.rect
     }
 
-    /// Seeds the selection without input (the todo-18 preselect seam).
+    /// Seeds the selection without input (the launch preselect seam).
     /// Mirrors Flameshot's `initialSelection`: no HUD show (the indicator
     /// only appears on user-driven geometry changes).
     pub fn set_rect(&mut self, rect: Option<LogicalRect>) {
@@ -194,13 +194,14 @@ impl SelectionState {
         }
     }
 
-    /// The Esc-cascade seam state (todos 20/26 set and clear the stages).
+    /// The Esc-cascade seam state (the editor and chrome layers set and
+    /// clear the stages).
     #[must_use]
     pub const fn cascade(&self) -> &CascadeState {
         &self.cascade
     }
 
-    /// Mutable Esc-cascade seam (todos 20/26).
+    /// Mutable Esc-cascade seam (the editor and chrome layers own it).
     pub fn cascade_mut(&mut self) -> &mut CascadeState {
         &mut self.cascade
     }

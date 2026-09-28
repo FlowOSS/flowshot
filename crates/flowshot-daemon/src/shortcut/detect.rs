@@ -13,7 +13,7 @@
 
 use flowshot_capture::DesktopEnv;
 
-/// Environment variable that masks the portal path (the plan's QA "portal
+/// Environment variable that masks the portal path (the QA "portal
 /// masked (env override harness)" failure scenario): `0`/`off`/`false`/
 /// `disabled` (case-insensitive) skip the portal attempt entirely and go
 /// straight to the compositor-bind fallback.
@@ -23,7 +23,7 @@ pub const PORTAL_OVERRIDE_ENV: &str = "FLOWSHOT_SHORTCUTS_PORTAL";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PortalMode {
     /// Try the portal first, fall back to compositor snippets on failure
-    /// (the plan todo-34 ladder).
+    /// (the shortcut ladder).
     #[default]
     Auto,
     /// Skip the portal (QA harness / user override via

@@ -1,4 +1,4 @@
-//! The arrow annotation object (plan todo 21, draft F27 arrow math).
+//! The arrow annotation object (draft F27 arrow math).
 //!
 //! Clean-room reimplementation of the Flameshot `ArrowTool` geometry
 //! (`arrowtool.cpp` @ 2d478061): a shaft from the tail stopping at the head's

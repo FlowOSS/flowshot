@@ -1,15 +1,15 @@
-//! The editor's unified undo journal (plan todo 23's destructive-op undo).
+//! The editor's unified undo journal (the destructive-op undo).
 //!
 //! The core [`UndoStack`](flowshot_core::scene::UndoStack) snapshots
-//! [`Scene`]s only; todo 23's baked pixel effects are editor-local overlay
-//! state (the core scene vocabulary is closed to this task), and a
+//! [`Scene`]s only; the baked pixel effects are editor-local overlay
+//! state (the core scene vocabulary is closed to the UI layer), and a
 //! destructive op must undo ATOMICALLY with the scene - one Ctrl+Z removes
 //! exactly the last mutation whether it was an annotation or a redaction,
 //! in true interleaved order. This journal therefore stores
 //! `(scene, effects)` snapshot pairs with the core `UndoStack` semantics
 //! MIRRORED EXACTLY (full before/after pairs, cursor, redo-tail truncation
 //! on push, oldest-eviction over the limit, silent no-ops at the ends,
-//! limit 0 disables history): todo 25's wiring (config `undo_limit`,
+//! limit 0 disables history): the mutation wiring (config `undo_limit`,
 //! move-release units, z-order ops) keeps working against the same
 //! contract, and effect snapshots are cheap because the baked buffers are
 //! `Arc`-shared ([`PixelEffect::clone`] bumps refcounts, never pixels).

@@ -41,8 +41,8 @@ pub(crate) struct PixelLayout {
     /// The shared frame format with the identical byte order.
     pub format: FrameFormat,
     /// Whether the format's fourth byte is undefined padding that must be
-    /// forced to 255 (`Format_RGBX8888`; the todo-10 `RGBx` precedent -
-    /// consumers pass an `A` byte straight through).
+    /// forced to 255 (`Format_RGBX8888`; the portal `ScreenCast` `RGBx`
+    /// precedent - consumers pass an `A` byte straight through).
     pub force_opaque_alpha: bool,
 }
 

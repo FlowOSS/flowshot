@@ -1,4 +1,4 @@
-//! Token-driven micro-widget layer (plan todo 19).
+//! Token-driven micro-widget layer.
 //!
 //! This module provides the design system primitives: buttons, sliders,
 //! popovers, etc. All visual properties (colors, spacing, radii) are derived
@@ -39,7 +39,7 @@ pub const IDLE_INK_ALPHA: u8 = 200;
 /// Keyboard focus-ring stroke width in logical px.
 pub const FOCUS_RING_WIDTH: f32 = 2.0;
 
-/// The animated wash level (todo 41) mapped to its alpha byte: level 1 =
+/// The animated wash level mapped to its alpha byte: level 1 =
 /// hover, level 2 = press; fractional levels fade continuously between the
 /// ramp steps.
 #[must_use]

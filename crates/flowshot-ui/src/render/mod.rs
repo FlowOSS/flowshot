@@ -1,9 +1,9 @@
-//! The batched 2D renderer (plan todo 14): vector geometry, text, images,
+//! The batched 2D renderer: vector geometry, text, images,
 //! and effects on wgpu - a pure draw-command consumer.
 //!
 //! # Architecture
 //!
-//! Consumers (overlay, widgets, editor - todos 15+) build a [`DisplayList`]
+//! Consumers (overlay, widgets, editor) build a [`DisplayList`]
 //! of [`Command`]s in **physical pixels** per frame; [`Renderer::render`]
 //! executes it into any color attachment (the live overlay surface or an
 //! offscreen texture). No scene or editor semantics live here.
@@ -29,7 +29,7 @@
 //!
 //! Degenerate geometry is skipped with a tracing log; a missing image texture
 //! draws the magenta placeholder and logs an error. The renderer never
-//! panics (Amendment #4).
+//! panics - the crate-wide rule.
 
 mod atlas;
 mod color;

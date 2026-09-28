@@ -1,7 +1,7 @@
 //! Headless overlay state and the central routing entry point.
 //!
-//! [`OverlayCore`] owns the [`InputRouter`], the selection engine (todo 16),
-//! the editor tool framework (todo 20), and the input-derived state every
+//! [`OverlayCore`] owns the [`InputRouter`], the selection engine,
+//! the editor tool framework, and the input-derived state every
 //! window shares (cursor track, IME status, exit request). It contains no
 //! windowing or GPU handles, so the full input path - coordinate mapping,
 //! the F27 event-routing priority, Esc teardown, IME plumbing - is
@@ -108,13 +108,13 @@ impl OverlayCore {
 
     /// Installs the completion sink (`None` clears): the shell calls it
     /// with the rendered export when a capture-completing gesture fires
-    /// (todo 38 binary-layer seam, the `RegionSink` pattern).
+    /// (a binary-layer seam, the `RegionSink` pattern).
     pub fn set_completion_sink(&mut self, sink: Option<CompletionSink>) {
         self.completion = sink;
     }
 
     /// Installs the standalone color-pick sink (`None` clears): fired when
-    /// the eyedropper samples a pixel (`flowshot color`, todo 38).
+    /// the eyedropper samples a pixel (the binary layer's `flowshot color`).
     pub fn set_color_pick_sink(&mut self, sink: Option<ColorPickSink>) {
         self.color_pick = sink;
     }
@@ -132,7 +132,7 @@ impl OverlayCore {
         }
     }
 
-    /// TEST SEAM (feature `test-drive`, todo 38 headless execution mode):
+    /// TEST SEAM (feature `test-drive`, the headless execution mode):
     /// delivers one completion through the installed sink exactly like the
     /// shell's `complete()` does - the headless driver renders the export
     /// offscreen and hands it in here, so the sink wiring under test is
@@ -168,8 +168,7 @@ impl OverlayCore {
         &self.ime
     }
 
-    /// The most recent IME commit, when any (consumed by the text tool,
-    /// todo 22).
+    /// The most recent IME commit, when any (consumed by the text tool).
     #[must_use]
     pub fn last_commit(&self) -> Option<&str> {
         self.last_commit.as_deref()
@@ -181,26 +180,27 @@ impl OverlayCore {
         self.exit_requested
     }
 
-    /// The selection interaction engine (plan todo 16).
+    /// The selection interaction engine.
     #[must_use]
     pub const fn selection(&self) -> &SelectionState {
         &self.selection
     }
 
-    /// Mutable selection access: the config/preselect seams (todos 18/35)
-    /// and the Esc-cascade stage flags (todos 20/26).
+    /// Mutable selection access: the config/preselect seams (the launch
+    /// flows and the binary layer) and the Esc-cascade stage flags (the
+    /// editor and chrome layers).
     pub fn selection_mut(&mut self) -> &mut SelectionState {
         &mut self.selection
     }
 
-    /// The editor tool framework (plan todo 20).
+    /// The editor tool framework.
     #[must_use]
     pub const fn editor(&self) -> &EditorState {
         &self.editor
     }
 
-    /// Mutable editor access: the tool registry (todos 21-27/35 register
-    /// concrete tools), config, shortcuts, and color seams.
+    /// Mutable editor access: the tool registry (the composition roots
+    /// register concrete tools), config, shortcuts, and color seams.
     pub fn editor_mut(&mut self) -> &mut EditorState {
         &mut self.editor
     }
@@ -217,7 +217,7 @@ impl OverlayCore {
     }
 
     /// Installs the frozen original frame the editor's tools sample from
-    /// (the todo-23 secure-pixelate input; `None` clears).
+    /// (the secure-pixelate input; `None` clears).
     pub fn install_frame(&mut self, frame: Option<FramePixels>) {
         self.editor.install_frame(frame);
     }
@@ -238,7 +238,7 @@ impl OverlayCore {
     }
 
     /// Evaluates time-driven state at `now`: the HUD hide deadline plus the
-    /// motion timelines (todo 41). `true` when any window must redraw -
+    /// motion timelines. `true` when any window must redraw -
     /// a HUD flip, an animation frame, or the ONE settled frame after every
     /// transition lands (so the resting state always paints before the loop
     /// returns to `ControlFlow::Wait`).
@@ -263,7 +263,7 @@ impl OverlayCore {
     /// the HUD countdown deadline and the earliest motion settle deadline,
     /// with running animations paced at [`crate::motion::FRAME_INTERVAL`].
     /// `None` when idle - the shell then stays in `ControlFlow::Wait` (zero
-    /// CPU, the todo-13 contract the motion pass must not break).
+    /// CPU, the shell contract the motion pass must not break).
     #[must_use]
     pub fn wake(&self, now: Instant) -> Option<Instant> {
         let hud = self.selection.hud_wake();
@@ -283,7 +283,7 @@ impl OverlayCore {
         Some(settle.map_or(paced, |deadline| deadline.min(paced)))
     }
 
-    /// The reduced-motion switch (todo 41 failure QA): every overlay
+    /// The reduced-motion switch (motion failure QA): every overlay
     /// transition snaps to its target and schedules no animation frames.
     pub fn set_motion_reduced(&mut self, reduced: bool) {
         self.chrome.set_motion_reduced(reduced);
@@ -303,7 +303,7 @@ impl OverlayCore {
         route::route(self, slot, event)
     }
 
-    /// TEST SEAM (plan todo 13, Metis blocker #1 fallback): injects a
+    /// TEST SEAM (Metis blocker #1 fallback): injects a
     /// synthetic event through the exact production routing path, so mouse
     /// paths are QA-able without external injection tools.
     // By value for seam symmetry: the live injector (`OverlayHandle`) must

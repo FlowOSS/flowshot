@@ -1,4 +1,4 @@
-//! Selection-handle hover motion (plan todo 41, D8(d) "handle hover-grow").
+//! Selection-handle hover motion (D8(d) "handle hover-grow").
 //!
 //! Each of the eight grips owns one [`Tween`] (0 = resting, 1 = fully
 //! grown); the paint path scales the grip radius by

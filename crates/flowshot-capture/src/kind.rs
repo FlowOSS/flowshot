@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 /// reports `false` for them on every probe, so [`negotiate()`](crate::negotiate())
 /// never returns them, and forcing one is a typed
 /// [`CaptureError::NoBackendAvailable`](crate::CaptureError::NoBackendAvailable).
-/// The platform audit (plan todo 42) tracks turning them into real backends.
+/// The platform audit (ADR-006) tracks turning them into real backends.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum BackendKind {
     /// The `ext-image-copy-capture-v1` compositor protocol with cursor

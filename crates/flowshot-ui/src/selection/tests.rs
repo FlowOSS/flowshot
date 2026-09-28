@@ -1,5 +1,5 @@
-//! The todo-16 input-state-machine table (plan acceptance: >= 25 cases via
-//! the todo-13 test-drive injection seam).
+//! The selection input-state-machine table (acceptance bar: >= 25 cases
+//! via the shell's test-drive injection seam).
 //!
 //! Two levels, both headless (no GPU, no window):
 //! - the routing table drives [`OverlayCore::inject_event`] - the exact
@@ -36,7 +36,7 @@ use crate::selection::{Effect, SelectionConfig, SelectionEnv, SelectionState};
 use crate::state::OverlayCore;
 
 /// The minimal registered tool the cascade tests activate (the Esc-cascade
-/// tool stage is editor-driven since todo 20 - it needs a real instance).
+/// tool stage is editor-driven - it needs a real instance).
 #[derive(Debug)]
 struct CascadeStubTool;
 
@@ -578,7 +578,7 @@ fn case32_ctrl_q_exits_immediately() {
     let mut core = dual_core();
     let slot = WindowSlot::new(0);
     seed(&mut core, rect(100.0, 100.0, 50.0, 50.0));
-    // Todo 20: the tool-checked cascade stage is editor-driven - a REAL
+    // The tool-checked cascade stage is editor-driven - a REAL
     // registered+activated tool occupies it (raw flag pokes are overwritten
     // by the post-event cascade sync).
     core.editor_mut()
@@ -640,7 +640,7 @@ fn case34_esc_cascade_walks_all_six_stages_in_order() {
 
     let mut core = dual_core();
     let slot = WindowSlot::new(0);
-    // Todo 20/26: EVERY stage is driven by real state now - 1/2/4 by the
+    // EVERY stage is driven by real state now - 1/2/4 by the
     // editor, 3/5 by the chrome (raw cascade pokes are futile).
     core.editor_mut()
         .registry_mut()
@@ -890,7 +890,7 @@ fn case44_effects_map_onto_shell_actions() {
 
 #[test]
 fn case45_set_rect_seeds_without_showing_the_hud() {
-    // The todo-18 preselect seam mirrors Flameshot's initialSelection: the
+    // The launch preselect seam mirrors Flameshot's initialSelection: the
     // geometry indicator only appears on USER-driven changes.
     let mut state = state_with(SelectionConfig::default());
     state.set_rect(Some(rect(100.0, 100.0, 200.0, 150.0)));

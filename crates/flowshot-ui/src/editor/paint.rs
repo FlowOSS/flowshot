@@ -1,4 +1,4 @@
-//! The scene -> display-list paint bridge (plan todo 20).
+//! The scene -> display-list paint bridge.
 //!
 //! Scene objects and tool previews paint through the renderer-agnostic
 //! [`PaintSink`] of `flowshot-core`; [`ListSink`] is the `flowshot-ui`
@@ -8,7 +8,7 @@
 //! factor; the #4871 physical-first rule).
 //!
 //! The object-selection outline lives in [`super::outline`] (split at the
-//! 250-LOC ceiling, todo 21); the local-conversion helpers here are shared
+//! 250-LOC ceiling); the local-conversion helpers here are shared
 //! with it.
 
 use flowshot_core::geometry::{Logical, LogicalRect, OutputInfo, ToPhysical};
@@ -21,7 +21,7 @@ use crate::render::{
 };
 
 /// The selection engine's text line-height ratio (cosmic-text needs an
-/// explicit line height; same constant as the HUD text). The todo-22 text
+/// explicit line height; same constant as the HUD text). The text
 /// session shares it so the edit preview and the committed paint agree.
 pub(super) const LINE_HEIGHT_RATIO: f32 = 1.2;
 

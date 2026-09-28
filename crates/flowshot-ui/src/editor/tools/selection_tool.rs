@@ -1,8 +1,8 @@
-//! The selection tool (plan todo 27, draft F12 `TYPE_SELECTION`).
+//! The selection tool (draft F12 `TYPE_SELECTION`).
 //!
 //! The selection tool is a PARITY tool: it does NOT draw annotations. Its
 //! sole purpose is to re-enter selection mode when the user presses `S`
-//! (the default F12 binding). The selection engine (todo 16) owns the
+//! (the default F12 binding). The selection engine owns the
 //! selection geometry; this tool is a no-op placeholder that signals
 //! "selection mode active" to the routing funnel.
 //!
@@ -20,7 +20,7 @@ use super::super::tool::{EditorContext, Tool};
 /// The selection tool (F12 `TYPE_SELECTION` parity).
 ///
 /// A no-op tool that signals "selection mode active" to the routing funnel.
-/// The selection engine (todo 16) owns the selection geometry; this tool
+/// The selection engine owns the selection geometry; this tool
 /// delegates all pointer handling to it.
 #[derive(Debug, Default)]
 pub struct SelectionTool;

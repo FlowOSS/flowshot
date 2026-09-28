@@ -1,4 +1,4 @@
-//! Token-derived selection metrics (plan todo 16, draft F27).
+//! Token-derived selection metrics (draft F27).
 //!
 //! Every size the selection engine needs derives from the design tokens via
 //! the Flameshot formulas - zero hardcoded visual constants:
@@ -11,8 +11,8 @@
 //!   constructor - `sideVal = buttonBaseSize() * 0.6`, `handleSide = sideVal / 2`)
 //!
 //! The behavior constants (drag threshold, minimum size) are spec values,
-//! not theme values: they are NOT tunable beyond the config keys the plan
-//! lists (todo 16 "Must NOT").
+//! not theme values: they are NOT tunable beyond the config keys the
+//! selection engine consumes - a deliberate no-tuning rule.
 
 use flowshot_core::tokens::DesignTokens;
 
@@ -51,7 +51,7 @@ pub const HUD_BACKGROUND_ALPHA: u8 = 200;
 
 /// Average glyph advance as a fraction of the font size, used ONLY to size
 /// the HUD background box (the shaped text itself is measured by the
-/// renderer; the box is an estimate, documented per todo 16).
+/// renderer; the box is an estimate, documented as such).
 pub const AVG_GLYPH_ADVANCE: f64 = 0.6;
 
 /// Double-click interval (Qt's default `doubleClickInterval`, which

@@ -162,7 +162,7 @@ impl EditorState {
         }
         self.reedit = Some(Reedit { before });
         // The removal shifts ids above it - the selection is invalidated
-        // (the todo-20 undo/redo discipline).
+        // (the editor's undo/redo discipline).
         self.selected = None;
         tracing::debug!(target: "flowshot_ui::editor", "re-edit started");
     }

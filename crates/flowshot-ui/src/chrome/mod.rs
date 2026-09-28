@@ -1,13 +1,13 @@
-//! The editor chrome (plan todo 26).
+//! The editor chrome.
 //!
 //! This module provides the UI overlays for the editor:
 //! - Toolbar: the tool strip anchored below the selection (flipping above
 //!   near the bottom edge), button order = the `[ui].toolbar_buttons`
-//!   config list, icons from the todo-19 atlas.
+//!   config list, icons from the icon atlas.
 //! - Color Wheel: the circular palette popover (F27 colorpicker spec) the
 //!   editor's right-click effect opens.
 //! - Side Panel: the Space-toggled tool-options panel and layer list
-//!   (the todo-25 z-order model: click = select, drag = reorder).
+//!   (the z-order model: click = select, drag = reorder).
 //! - HUD: size-notifier surface.
 //!
 //! [`ChromeState`] owns the four and the input contracts: the route funnel

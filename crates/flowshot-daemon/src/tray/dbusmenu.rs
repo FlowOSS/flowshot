@@ -5,10 +5,10 @@
 //! Wire shape: `GetLayout` replies `(u revision, (i id, a{sv} props,
 //! av children))` - children are recursively the same structure wrapped
 //! in variants. [`Layout`] derives that signature; child structs are
-//! built through `StructureBuilder` (the todo-34 lesson: manual
+//! built through `StructureBuilder` (lesson learned: manual
 //! `Value`/`Dict` assembly is a rabbit hole, the builder is not).
 //!
-//! All methods are SYNC (todo-32 discipline: sync dispatch runs inline on
+//! All methods are SYNC (sync dispatch runs inline on
 //! the connection's driver thread): the layout answers from the cached
 //! probe, and the only slow operation - the wayland output probe - is
 //! pushed onto the tokio runtime through [`TrayCore::refresh_outputs`].
@@ -174,7 +174,7 @@ impl DbusMenu {
     }
 
     /// The activation callback: `clicked` runs the id's dispatch-table
-    /// action (the todo-33 [`CommandSink`](crate::CommandSink) seam).
+    /// action (the [`CommandSink`](crate::CommandSink) seam).
     #[expect(
         clippy::needless_pass_by_value,
         reason = "the zbus interface macro deserializes owned message arguments"

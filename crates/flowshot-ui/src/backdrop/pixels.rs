@@ -1,4 +1,4 @@
-//! Pixel preparation for the frozen-frame backdrop (plan todo 15).
+//! Pixel preparation for the frozen-frame backdrop.
 //!
 //! Captured [`Frame`] buffers arrive in a compositor pixel format
 //! ([`FrameFormat`]), with possible row-stride padding, in the output's

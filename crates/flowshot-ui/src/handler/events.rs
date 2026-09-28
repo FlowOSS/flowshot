@@ -1,4 +1,4 @@
-//! The winit `ApplicationHandler` dispatch (plan todo 13/16).
+//! The winit `ApplicationHandler` dispatch.
 //!
 //! Every window event funnels through [`OverlayCore::route`](crate::OverlayCore),
 //! the single input seam real events and `test-drive` injections share.
@@ -197,7 +197,7 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
 
 impl OverlayApp {
     /// Routes one input event, applies the shell actions, and mirrors the
-    /// text-edit caret into the window's IME cursor area (todo 22 - keys,
+    /// text-edit caret into the window's IME cursor area (keys,
     /// pointer buttons, and IME events can all move the caret).
     fn route_sync(&mut self, target: &ActiveEventLoop, slot: WindowSlot, event: &InputEvent) {
         let report = self.core.route(slot, event);
@@ -205,7 +205,7 @@ impl OverlayApp {
         self.sync_ime_area(slot);
     }
 
-    /// Routes one wheel event as an angle delta (the todo-20 tool-size
+    /// Routes one wheel event as an angle delta (the editor tool-size
     /// adjuster consumes it; zero deltas are dropped).
     fn route_wheel(&mut self, target: &ActiveEventLoop, slot: WindowSlot, delta: MouseScrollDelta) {
         let delta_y = wheel_angle(delta);

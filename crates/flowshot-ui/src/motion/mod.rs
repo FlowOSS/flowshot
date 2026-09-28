@@ -1,11 +1,11 @@
-//! Token-driven motion (plan todo 41, draft D8(d)).
+//! Token-driven motion (draft D8(d)).
 //!
 //! The animation layer every animated surface shares: cubic-bezier easing
 //! evaluated from the `flowshot_core::tokens` curves (NEVER hardcoded
 //! control points), retargetable value [`Tween`]s, and the staggered-reveal
 //! progress function behind the toolbar's appearance animation.
 //!
-//! # Frame-scheduling contract (the todo-13 idle rule)
+//! # Frame-scheduling contract (the shell's idle rule)
 //!
 //! Motion is damage/timeline-driven: a tween is a PURE function of
 //! `(start, now)`, so nothing burns CPU between frames. The shell asks the
@@ -20,7 +20,7 @@
 //! Every spec resolves through [`MotionSpec`]; the reduced-motion switch
 //! swaps in [`MotionSpec::instant`] (zero duration), which makes each tween
 //! snap to its target and report `active_at == false` - transitions become
-//! instant and NO animation frames are scheduled (the plan todo-41 failure
+//! instant and NO animation frames are scheduled (the failure
 //! QA: "reduced-motion config -> transitions instant").
 
 mod easing;
@@ -56,9 +56,9 @@ pub const WHEEL_ENTER_MS: u64 = 150;
 pub const WHEEL_EXIT_MS: u64 = 100;
 /// Pin zoom easing duration (D8(d) "pin zoom").
 pub const PIN_ZOOM_MS: u64 = 150;
-/// One toolbar button's fade+slide duration (plan todo 41: 120-180ms band).
+/// One toolbar button's fade+slide duration (the 120-180ms band).
 pub const REVEAL_ELEMENT_MS: u64 = 120;
-/// The whole staggered toolbar reveal's duration (plan todo 41 band top).
+/// The whole staggered toolbar reveal's duration (the band top).
 pub const REVEAL_TOTAL_MS: u64 = 180;
 
 /// The grip radius growth at full hover (1.0 = +35% radius).

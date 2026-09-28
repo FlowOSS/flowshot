@@ -1,4 +1,4 @@
-//! The secure pixelate's deterministic gaussian noise (plan todo 23, F27).
+//! The secure pixelate's deterministic gaussian noise (F27).
 //!
 //! Flameshot seeds `std::mt19937 prng(42)` and pulls from two
 //! `std::normal_distribution<float>`s INSIDE the pixel loop - its own comment
@@ -12,7 +12,7 @@
 //!   uniform stream,
 //! - Box-Muller for the normal deviates (f32, the F27 precision),
 //! - the whole buffer PRE-GENERATED in the canonical consumption order
-//!   (plan todo 23: "noise buffer PRE-GENERATED in canonical pixel order
+//!   ("noise buffer PRE-GENERATED in canonical pixel order
 //!   from the seed (SIMD consumes the SAME buffer -> byte-identity by
 //!   construction)"). The canonical order is Flameshot's loop: `x` outer,
 //!   `y` inner, and per output pixel one color-noise deviate followed by

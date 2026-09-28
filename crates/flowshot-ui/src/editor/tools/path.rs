@@ -1,4 +1,4 @@
-//! The freehand path tools (plan todo 21): pencil and marker.
+//! The freehand path tools: pencil and marker.
 //!
 //! Both follow the F27 path-stroke lifecycle (`abstractpathtool.cpp`):
 //! points accumulate per motion, the stroke is valid from the second point
@@ -23,7 +23,7 @@ use super::geometry::{
 };
 use crate::render::f32_from_u32;
 
-/// The marker's translucent blend alpha (plan todo 21: "alpha ~0.5";
+/// The marker's translucent blend alpha ("alpha ~0.5";
 /// 128/255 = 0.502 - the F27 marker opacity constant).
 pub const MARKER_ALPHA: u8 = 128;
 

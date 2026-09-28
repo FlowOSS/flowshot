@@ -1,13 +1,13 @@
-//! The headless execution mode (plan todo 38, feature `test-drive`).
+//! The headless execution mode (feature `test-drive`).
 //!
 //! The minimal honest stand-in for the visible overlay session: the SAME
 //! production wiring ([`super::overlay::configure_core`]), the SAME input
-//! funnel (`OverlayCore::inject_event` - the todo-13 test seam), and the
+//! funnel (`OverlayCore::inject_event` - the test seam), and the
 //! SAME export implementation ([`flowshot_ui::render_export`] ->
 //! `composite_selection`) the live shell runs - only the winit/Wayland
 //! window leg is replaced by offscreen GPU renders. A virtual seat would
-//! need a nested compositor, which the plan forbids; the window leg itself
-//! carries per-todo live evidence (todos 13-27) and the deferred GUI-QA
+//! need a nested compositor, which is forbidden; the window leg itself
+//! carries per-module live evidence and the deferred GUI-QA
 //! batch.
 //!
 //! The shell's completion trigger is emulated exactly: when the funnel

@@ -1,19 +1,19 @@
-//! The side panel (plan todo 26): per-tool options + the layer list.
+//! The side panel: per-tool options + the layer list.
 //!
 //! Toggle with Space (the funnel's chrome key seam), gated by the
 //! `[editor].side_panel` config key; Esc cascade stage 3 hides it (the
-//! todo-16 cascade seam). The panel anchors to the right of the selection
+//! selection engine's cascade seam). The panel anchors to the right of the selection
 //! (flipping to the left near the output edge) and repositions live because
 //! the layout is recomputed from the selection rect every frame.
 //!
 //! Per-tool controls gate on the ACTIVE TOOL ([`size_label`] is the
-//! visibility table): one size slider bound to the todo-20 dispatched size
+//! visibility table): one size slider bound to the dispatched size
 //! slot (thickness / corner radius / font size / marker-block-counter size),
 //! arrow style + reverse, the counter outline toggle, and the pixelate/blur
 //! mode swap (the [`ToolKind::Blur`] panel exposure). NO insecure-pixelate
-//! toggle exists anywhere - the mode was dropped per Amendment #3.
+//! toggle exists anywhere - the insecure mode was deliberately dropped.
 //!
-//! The layer list (todo-25 model: [`EditorState::layers`], bottom-to-top)
+//! The layer list ([`EditorState::layers`], bottom-to-top)
 //! gives every object a row - row index == paint z - with its type icon;
 //! click = select, press-drag-release onto another row = reorder
 //! ([`EditorState::move_layer`], ONE undo unit), and the chevron buttons
@@ -31,7 +31,7 @@ use crate::editor::EditorState;
 pub(super) mod paint;
 
 /// The panel width (logical px). Chrome layout constant: the spacing scale
-/// carries no panel-width step (todo-41 audit, justified - every OTHER panel
+/// carries no panel-width step (audit justified - every OTHER panel
 /// metric derives from the tokens via the functions below).
 pub const PANEL_WIDTH: f32 = 200.0;
 /// The panel background opacity (0-255): near-solid contrast ink.
@@ -67,11 +67,11 @@ pub(super) fn toggle_track_width(tokens: &DesignTokens) -> f32 {
     (2 * tokens.spacing.large + tokens.spacing.small) as f32
 }
 
-/// The per-tool size-control label - the visibility gate of the plan's
-/// "per-tool options (size sliders ...)": `None` hides the slider (the
+/// The per-tool size-control label - the visibility gate of the
+/// "per-tool options (size sliders ...)" rule: `None` hides the slider (the
 /// selection/move/invert/eyedropper kinds have no size semantics; invert is
 /// a region effect). Rectangle's dispatched slot IS the corner radius (the
-/// F27 `drawRectangleSize` naming, Amendment #3), text's IS the font size.
+/// F27 `drawRectangleSize` naming), text's IS the font size.
 #[must_use]
 pub fn size_label(kind: ToolKind) -> Option<&'static str> {
     match kind {
@@ -229,7 +229,7 @@ pub fn layout(
 }
 
 impl SidePanelLayout {
-    /// Every rect shifted by `dx` (the todo-41 slide-in visual; hit-testing
+    /// Every rect shifted by `dx` (the slide-in visual; hit-testing
     /// keeps the untranslated layout - interaction leads the animation).
     #[must_use]
     pub(crate) fn translated(&self, dx: f32) -> Self {

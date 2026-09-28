@@ -2,7 +2,7 @@
 //!
 //! Every failure mode of startup, window creation, GPU initialization, and
 //! frame presentation is a structured variant; no stringly-typed errors cross
-//! crate boundaries (engineering standard, Amendment #4).
+//! crate boundaries (the typed-error, no-panic engineering standard).
 
 use flowshot_core::geometry::GeometryError;
 use thiserror::Error;
@@ -94,7 +94,7 @@ pub enum UiError {
     ///
     /// Checked BEFORE `wgpu::Surface::configure`, which panics on oversized
     /// extents; v1 is all-or-nothing, so one monitor failing this check tears
-    /// the whole overlay down with this typed error (Amendment #4: no panics).
+    /// the whole overlay down with this typed error (lib code never panics).
     #[error(
         "surface for monitor \"{monitor}\" needs {width}x{height} px but the GPU device \
          limits 2D textures to {max} px per dimension"
@@ -183,7 +183,7 @@ pub enum UiError {
     Geometry(#[from] GeometryError),
 
     /// A captured frame's buffer dimensions disagree with the output geometry
-    /// it claims to cover (backdrop upload guard, plan todo 15).
+    /// it claims to cover (backdrop upload guard).
     #[error(
         "frame for output \"{connector}\" is {actual_width}x{actual_height} px but the output \
           geometry implies {expected_width}x{expected_height} px"
@@ -201,13 +201,13 @@ pub enum UiError {
         expected_height: u32,
     },
 
-    // ---- plan todo 30 (pins) ----
+    // ---- pins ----
     /// The pin host was asked to run with zero pins.
     #[error("no pins requested; the pin host needs at least one pin window")]
     NoPinsRequested,
 
     /// A pin image buffer is zero-sized or shorter than its declared
-    /// dimensions require (pin spawn guard, plan todo 30).
+    /// dimensions require (pin spawn guard).
     #[error(
         "pin image {width}x{height} px needs {expected} RGBA bytes, got {actual} \
           (zero-sized pins are rejected)"

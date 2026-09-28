@@ -61,7 +61,7 @@ impl Color {
     }
 
     /// The dim-layer color from palette tokens: `contrast` at `dim_opacity`
-    /// alpha (plan todo 14(d) - the contrastOpacity token, zero hardcoded
+    /// alpha (the contrastOpacity token, zero hardcoded
     /// visual constants).
     ///
     /// # Errors
@@ -108,7 +108,7 @@ impl Color {
     }
 
     /// Black-or-white text ink readable on THIS color as a background (the
-    /// single source of the HUD/menu/panel text convention; todo-41 polish:
+    /// single source of the HUD/menu/panel text convention; polish rule:
     /// light contrast tokens get dark ink instead of hardcoded white).
     #[must_use]
     pub fn readable_ink(&self) -> Self {

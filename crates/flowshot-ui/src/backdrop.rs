@@ -1,5 +1,5 @@
 //! The frozen-frame backdrop: capture placement, stitching algebra, cursor
-//! compositing, and the dim layer (plan todo 15).
+//! compositing, and the dim layer.
 //!
 //! # Model
 //!
@@ -31,7 +31,7 @@
 //!
 //! Backdrop textures are consumer-issued handles: output `i` registers under
 //! `backdrop_texture_id(i)`, the cursor sprite under
-//! `cursor_texture_id()`. The magnifier (todo 17) samples sub-regions of
+//! `cursor_texture_id()`. The magnifier samples sub-regions of
 //! the same ids via [`Backdrop::texture_size`].
 
 mod pixels;
@@ -146,7 +146,7 @@ impl Backdrop {
     }
 
     /// The upright texture size of output `output_index`'s frozen frame
-    /// (the magnifier's sampling bounds, todo 17); `None` when missing.
+    /// (the magnifier's sampling bounds); `None` when missing.
     #[must_use]
     pub fn texture_size(&self, output_index: usize) -> Option<(u32, u32)> {
         match self.entries.get(output_index)?.state {
@@ -275,12 +275,12 @@ impl Backdrop {
     }
 }
 
-/// The capture orchestration entry (plan todo 15): enumerates the backend's
+/// The capture orchestration entry: enumerates the backend's
 /// outputs and freezes them with `paint_cursor = !hide_cursor` (#3582 fix -
 /// the config decides whether the cursor is baked into the frames).
 ///
 /// The cursor sprite is NOT filled here: the platform cursor image arrives
-/// out-of-band from the platform crate (todo 8 contract), so the binary
+/// out-of-band from the platform crate, so the binary
 /// layer attaches it to [`FrozenCapture::cursor`] when the frames were
 /// captured with `paint_cursor = false`.
 ///

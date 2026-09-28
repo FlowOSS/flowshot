@@ -1,4 +1,4 @@
-//! Pin user-facing strings (Amendment #4 item 8: message-key constants, no
+//! Pin user-facing strings (message-key constants, no
 //! inline literals in logic). English-only v1; the i18n catalog replaces the
 //! values behind these keys on the roadmap. Labels mirror the Flameshot pin
 //! context menu (F27 BORROW) so migrating users see familiar wording.

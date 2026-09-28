@@ -1,4 +1,4 @@
-//! The size-notifier HUD (plan todo 26).
+//! The size-notifier HUD.
 
 use crate::editor::EditorState;
 use crate::render::{Color, DisplayList, Point, Rect, Shape, TextCommand, TextureId};

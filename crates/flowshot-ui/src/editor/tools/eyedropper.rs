@@ -1,4 +1,4 @@
-//! The eyedropper tool (plan todo 27, draft F12 `TYPE_GRAB_COLOR`).
+//! The eyedropper tool (draft F12 `TYPE_GRAB_COLOR`).
 //!
 //! The eyedropper samples the frozen-frame pixel at the click position and
 //! sets the draw color to the sampled value. Activated by `G` (the default

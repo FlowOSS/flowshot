@@ -1,10 +1,10 @@
 //! `org.kde.StatusNotifierItem` wire vocabulary (the freedesktop SNI spec
 //! plus the `com.canonical.dbusmenu` menu protocol).
 //!
-//! Hand-rolled on the daemon's existing zbus-4 connection: the plan cited
-//! `ksni`, but no SNI crate is in the workspace table or the lock and the
+//! Hand-rolled on the daemon's existing zbus-4 connection: `ksni` was
+//! cited, but no SNI crate is in the workspace table or the lock and the
 //! root manifest is orchestrator-owned - so the protocol surface lives
-//! here (task-brief sanctioned; ksni's own wire shapes are the reference).
+//! here (ksni's own wire shapes are the reference).
 
 use serde::Serialize;
 use zbus::zvariant::{Structure, Type, Value};

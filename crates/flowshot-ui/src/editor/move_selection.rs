@@ -1,4 +1,4 @@
-//! The move-selection drag seam (plan todo 27): the Move tool's delta
+//! The move-selection drag seam: the Move tool's delta
 //! funnel - live translation of the selection rect plus every contained
 //! scene object, first-motion snapshot arming, the release commit as ONE
 //! undo unit, and the Esc rollback. Split from the facade at the 250-LOC
@@ -34,7 +34,7 @@ impl EditorState {
         if dx == 0.0 && dy == 0.0 {
             return false;
         }
-        // Snapshot on first non-zero delta (todo 25 discipline: backup at first move).
+        // Snapshot on first non-zero delta (the mutation discipline: backup at first move).
         // Include the selection rect in the snapshot for move-selection undo.
         if self.move_selection_before.is_none() {
             self.move_selection_before = Some(self.snapshot_with_selection(selection.rect()));

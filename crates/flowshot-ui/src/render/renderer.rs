@@ -55,7 +55,7 @@ pub struct FrameStats {
     pub cpu_time: Duration,
 }
 
-/// The batched 2D renderer (plan todo 14).
+/// The batched 2D renderer.
 #[derive(Debug)]
 pub struct Renderer {
     format: wgpu::TextureFormat,
@@ -116,7 +116,7 @@ impl Renderer {
         &self.textures
     }
 
-    /// Upload/remove frozen-frame and icon textures (plan todo 15).
+    /// Upload/remove frozen-frame and icon textures.
     #[must_use]
     pub fn textures_mut(&mut self) -> &mut TextureStore {
         &mut self.textures

@@ -3,9 +3,9 @@
 //!
 //! Startup order matters (zbus caveat): the object server is registered
 //! BEFORE the name is requested, so the winner can serve immediately -
-//! the race-free single-instance property the plan mandates (Oracle r4).
+//! the race-free single-instance property the design mandates (Oracle r4).
 //! Teardown calls `Connection::close()` explicitly: zbus-4 with the
-//! async-io reactor has NO drop-time close (todo-11 regression lesson).
+//! async-io reactor has NO drop-time close.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,15 +36,15 @@ pub struct DaemonOptions {
     /// Loaded configuration (`[daemon]` group drives tray/notifications/
     /// `startup_launch`).
     pub config: Config,
-    /// Shared state; handed out so tray/shortcut/pin hosts (todos 33/34/
-    /// 35) can update persistence reasons on the live daemon.
+    /// Shared state; handed out so the tray/shortcut/pin hosts can update
+    /// persistence reasons on the live daemon.
     pub state: Arc<DaemonState>,
     /// `None` = session bus; `Some(address)` = a private bus (tests/QA).
     pub bus_address: Option<String>,
     /// `Exec=` line for the autostart entry; `None` skips autostart
     /// management (the caller owns it).
     pub autostart_exec: Option<String>,
-    /// Command dispatch seam; defaults to [`LoggingSink`] (todo 35 plugs
+    /// Command dispatch seam; defaults to [`LoggingSink`] (the CLI plugs
     /// the executing sink).
     pub command_sink: Option<Arc<dyn CommandSink>>,
     /// Notification seam; defaults to the config-gated desktop notifier.
@@ -52,11 +52,11 @@ pub struct DaemonOptions {
     /// Time source; defaults to [`TokioClock`] (tests inject accelerated
     /// clocks).
     pub clock: Option<Arc<dyn Clock>>,
-    /// Global-shortcut host configuration (todo 34). Defaults to DISABLED
-    /// so pre-todo-34 callers keep their exact startup behavior; the
+    /// Global-shortcut host configuration. Defaults to DISABLED
+    /// so callers that do not opt in keep their exact startup behavior; the
     /// binary enables it via [`ShortcutOptions::production`].
     pub shortcuts: ShortcutOptions,
-    /// Tray host configuration (todo 33). Seeded from `[daemon].tray` +
+    /// Tray host configuration. Seeded from `[daemon].tray` +
     /// `[ui].accent_color` by the constructors; the tray module owns the
     /// `tray` persistence reason from registration onward.
     pub tray: TrayOptions,
@@ -78,7 +78,7 @@ impl DaemonOptions {
     }
 
     fn new(mode: DaemonMode, config: Config) -> Self {
-        // The tray flag is seeded FALSE: the todo-33 tray module sets it
+        // The tray flag is seeded FALSE: the tray module sets it
         // only after a successful StatusNotifierWatcher registration (an
         // enabled config without a host on the bus must not pin the
         // daemon).
@@ -114,7 +114,7 @@ pub enum Startup {
 pub enum ShutdownReason {
     /// The auto-spawned idle grace elapsed with no persistence reason.
     IdleExit,
-    /// The tray menu's `Quit` entry fired (todo 33).
+    /// The tray menu's `Quit` entry fired.
     Quit,
     /// `SIGINT` (Ctrl-C).
     Interrupted,
@@ -178,7 +178,7 @@ impl Daemon {
         }
         report_ready_to_supervisor();
 
-        // Todo 34: the shortcut ladder runs AFTER readiness reporting - a
+        // The shortcut ladder runs AFTER readiness reporting - a
         // portal confirmation dialog may hold registration for up to its
         // budget while the bus service is already serving.
         let shortcuts = crate::shortcut::start(
@@ -191,7 +191,7 @@ impl Daemon {
         )
         .await;
 
-        // Todo 33: the tray host shares the daemon's connection; watcher
+        // The tray host shares the daemon's connection; watcher
         // registration is async inside its own task, so start() is cheap.
         let tray = crate::tray::start(
             &options.tray,
@@ -254,7 +254,7 @@ impl Daemon {
         Ok(reason)
     }
 
-    /// The notification seam (todos 33/35 dispatch toasts through it).
+    /// The notification seam (the tray and CLI dispatch toasts through it).
     #[must_use]
     pub fn notifier(&self) -> Arc<dyn Notifier> {
         Arc::clone(&self.notifier)

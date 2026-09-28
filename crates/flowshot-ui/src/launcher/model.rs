@@ -8,11 +8,11 @@ use flowshot_core::geometry::OutputInfo;
 use super::request::{GeometryIssue, LauncherRequest, RegionGeometry};
 use super::strings;
 
-/// One monitor dropdown entry (the live probe's output, todo 6).
+/// One monitor dropdown entry (the live probe's output).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MonitorEntry {
     /// The output index in probe order - the daemon's `CaptureScreen`
-    /// vocabulary (the todo-33 tray submenu uses the same indexing).
+    /// vocabulary (the tray submenu uses the same indexing).
     pub screen: u32,
     /// The dropdown label (`Screen {n}: {name}`, the tray's format).
     pub label: String,
@@ -151,7 +151,7 @@ impl LauncherModel {
 }
 
 /// `Screen {n}: {name}` - the live probe's name already carries make, model
-/// AND connector (the todo-33 tray label rule); the connector is the
+/// AND connector (the tray label rule); the connector is the
 /// fallback for a nameless output.
 fn monitor_label(screen: u32, output: &OutputInfo) -> String {
     let display = if output.name.is_empty() {

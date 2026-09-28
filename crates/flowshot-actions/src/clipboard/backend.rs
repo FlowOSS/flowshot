@@ -1,14 +1,14 @@
 //! Clipboard backends and route selection.
 //!
 //! [`WaylandClipboard`] is the production backend: `zwlr_data_control`
-//! via `wl-clipboard-rs` (no `wl-copy` shell-out, no GTK — plan todo 28
-//! Must-NOT). [`MockClipboard`] records offers in memory so the whole
+//! via `wl-clipboard-rs` (no `wl-copy` shell-out, no GTK).
+//! [`MockClipboard`] records offers in memory so the whole
 //! crate tests headless (no compositor).
 //!
 //! [`select_route`] picks between the data-control route and the GNOME
 //! keep-alive fallback ([`super::keepalive`]) from a [`probe_data_control`]
 //! result; the probe is injectable so QA can mask data-control and force
-//! the fallback (plan todo 28 QA failure scenario).
+//! the fallback.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -22,16 +22,16 @@ use crate::error::ClipboardError;
 
 /// Production backend: daemon-owned offers over `zwlr_data_control`.
 ///
-/// # Daemon ownership (plan todo 28, draft F27)
+/// # Daemon ownership (draft F27)
 ///
 /// [`ClipboardBackend::serve`] runs `wl-clipboard-rs` in background mode
 /// with unlimited request serving: the library spawns its serving thread
 /// INSIDE THE CALLING PROCESS and holds the data-control offer for as
-/// long as that process lives. Called from the daemon (todo 32), the
+/// long as that process lives. Called from the daemon, the
 /// offer therefore outlives the capturing UI process — the GUI exits,
 /// `wl-paste` still gets bytes. Daemon exit destroys the offer
-/// (documented behavior, Oracle r1 #3; the daemon's "clipboard offer
-/// held" persistence reason keeps it alive while offered, todo 32).
+/// (documented behavior; the daemon's "clipboard offer
+/// held" persistence reason keeps it alive while offered).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct WaylandClipboard;
 
@@ -130,19 +130,18 @@ impl ClipboardBackend for MockClipboard {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClipboardRoute {
     /// `zwlr_data_control` available (wlroots/Hyprland/KDE): daemon-owned
-    /// offer via [`WaylandClipboard`]. LIVE-verified class (plan todo 28).
+    /// offer via [`WaylandClipboard`]. LIVE-verified class.
     DataControl,
     /// Portal-only GNOME without data-control: keep-alive fallback
     /// (`crate::clipboard::keepalive`). UNIT-LEVEL ONLY — live QA
-    /// deferred, never claimed verified (plan todo 28 verification
-    /// class).
+    /// deferred, never claimed verified.
     GnomeKeepAlive,
 }
 
 /// Select the clipboard route from a data-control probe result.
 ///
 /// The probe result is injectable so QA can mask data-control and assert
-/// the fallback selection (plan todo 28 QA failure scenario).
+/// the fallback selection.
 #[must_use]
 pub fn select_route(data_control_available: bool) -> ClipboardRoute {
     if data_control_available {
@@ -253,7 +252,7 @@ mod tests {
         assert!(log_contents(&buf).contains("data-control"));
     }
 
-    /// Plan todo 28 QA failure scenario: data-control masked (probe
+    /// QA failure scenario: data-control masked (probe
     /// override) -> keep-alive path selected, asserted via the trace.
     #[test]
     fn masked_data_control_selects_keep_alive_route_with_trace() {

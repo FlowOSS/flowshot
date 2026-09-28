@@ -33,7 +33,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     let texel = textureSample(image_texture, image_sampler, in.uv);
     // Atlas/frame content is stored premultiplied; the surface blends
     // premultiplied, so a uniform fade scales every component (the
-    // todo-41 motion alpha: premultiplication is preserved).
+    // motion-path alpha: premultiplication is preserved).
     return texel * in.alpha;
 }
 ";

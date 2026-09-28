@@ -1,4 +1,4 @@
-//! Keyboard selection adjustments (plan todo 16, draft F27).
+//! Keyboard selection adjustments (draft F27).
 //!
 //! CODE values win over the README (F27): every step is 1 logical px.
 //! The edge semantics are Flameshot's verbatim (`selectionwidget.cpp`

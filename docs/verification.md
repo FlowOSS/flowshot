@@ -61,21 +61,21 @@ hand-tuned thresholds.
 ## Evidence trail convention
 
 QA evidence lives in `.omo/evidence/` (local to the working repo, not part
-of the shipped product): one `task-<N>-flowshot.{txt,png,json}` bundle per
-plan todo, recording the environment, the exact commands, the observed
-values, the gate outputs, the verification class of every claim, and honest
-records of deviations and foreign defects found along the way. Evidence
-files record observed values inline because temp artifacts are transient.
+of the shipped product): one bundle per change, recording the environment,
+the exact commands, the observed values, the gate outputs, the verification
+class of every claim, and honest records of deviations and foreign defects
+found along the way. Evidence files record observed values inline because
+temp artifacts are transient.
 
 ## The deferred GUI-QA batch
 
 Visible-window QA (overlays, pins, dialogs, focus behavior) disturbs whoever
 is using the machine, so while the user is present those checks are queued
 instead of run. The queue is `.omo/evidence/gui-qa-batch.md`: append-only,
-one section per todo, each item carrying its verbatim acceptance criterion
+one section per change, each item carrying its verbatim acceptance criterion
 and its repro recipe. Items are executed in one consolidated batch when the
 user explicitly allows visible windows, and they are tracked as user-gated,
-not as failures. A todo may complete with GUI acceptance queued; a todo
+not as failures. A change may complete with GUI acceptance queued; a change
 whose GUI portion is the whole point stops and asks instead of skipping
 silently.
 
@@ -85,10 +85,11 @@ on permission dialogs), `WAYLAND_DISPLAY` and
 `HYPRLAND_INSTANCE_SIGNATURE` must be set, and the oracle/injection tools
 (grim, wtype, ydotool) must be present.
 
-Currently queued (examples, not exhaustive): end-to-end
-`flowshot capture --region WxH+X+Y --instant` save-equals-oracle (needs the
-end-to-end executor plus a visible overlay), live KDE Plasma checks for the
-ScreenShot2 backend (hardware-gated: restricted-interface rejection shape,
-fractional-scale delivery, interactive picker), and the scale-2 cursor
-conversion divergence check. Each is recorded with its acceptance text in
-the batch manifest.
+Currently queued (examples, not exhaustive; the batch manifest is the full
+record): live KDE Plasma checks for the ScreenShot2 backend (hardware-gated:
+restricted-interface rejection shape, fractional-scale delivery, interactive
+picker), the live permission-denial run under Hyprland's
+`ecosystem:enforce_permissions` (needs a compositor restart, so it waits for
+an explicit maintenance window), and the continuous-motion review of the
+animation pass (smoothness at 60 Hz is a human verdict by design). Each is
+recorded with its acceptance text in the batch manifest.

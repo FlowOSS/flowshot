@@ -1,8 +1,8 @@
 # ADR-006: Cross-platform gates and the porting roadmap
 
 Status: accepted (gates SHIPPED: `scripts/purity-gate.sh` +
-`scripts/purity-allowlist.txt`, CI-enforced in `.github/workflows/ci.yml`,
-plan todo 42; the detailed per-phase entry points live in
+`scripts/purity-allowlist.txt`, CI-enforced in `.github/workflows/ci.yml`;
+the detailed per-phase entry points live in
 [docs/porting-roadmap.md](../porting-roadmap.md)). Platforms beyond Wayland
 are **roadmap only: no code exists** for them and none is planned for the
 first release.
@@ -35,13 +35,13 @@ A **purity contract**, enforced by CI audit (grep/AST over the crate graph):
   the Wayland `app_id` (a platform extension); the binary layer injects it
   through a customizer seam. Platform conveniences do not get smuggled in.
 
-## The unsafe allow-list (audit record, todo 42)
+## The unsafe allow-list (audit record)
 
 `#![forbid(unsafe_code)]` is present in every lib crate and both binary
 entry points (`flowshot-cli/src/main.rs`, `flowshot-daemon/src/main.rs`)
 EXCEPT `flowshot-capture-wayland`, which is the single recorded
 unsafe-exempt crate (engineering standard #4). The exemption is reserved
-for the future zero-copy dmabuf FFI path. As of the todo-42 audit the crate
+for the future zero-copy dmabuf FFI path. As of this audit the crate
 contains **zero** `unsafe` blocks: v1 captures into `wl_shm` buffers read
 back with ordinary file I/O (`icc/shm.rs`), so no memory mapping and no
 `unsafe` are needed. The allow-list is therefore a single empty entry —

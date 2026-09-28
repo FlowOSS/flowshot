@@ -1,6 +1,6 @@
 //! Icon button widget (toolbar pill).
 //!
-//! State language (todo 41): the background wash is ONE ink (the contrast
+//! Motion state language: the background wash is ONE ink (the contrast
 //! token) at the [`super::wash_alpha`] ramp - discrete through
 //! [`ButtonState`], or continuous through the animated `wash` level the
 //! chrome's hover/press tweens feed. `alpha` fades the whole button (the
@@ -46,14 +46,14 @@ impl IconButton {
         self
     }
 
-    /// Sets the animated wash level (todo 41 hover/press feedback).
+    /// Sets the animated wash level (hover/press feedback).
     #[must_use]
     pub fn wash(mut self, level: f64) -> Self {
         self.wash = Some(level);
         self
     }
 
-    /// Sets the uniform fade multiplier (todo 41 reveal).
+    /// Sets the uniform fade multiplier (the reveal fade).
     #[must_use]
     pub fn alpha(mut self, alpha: f32) -> Self {
         self.alpha = alpha.clamp(0.0, 1.0);

@@ -1,7 +1,6 @@
-//! Live output probing for the per-monitor submenu (plan todo 33: "live
-//! probe outputs, todo 6").
+//! Live output probing for the per-monitor submenu ("live probe outputs").
 //!
-//! [`WaylandOutputProbe`] wraps the todo-6 `CaptureThread` registry
+//! [`WaylandOutputProbe`] wraps the `CaptureThread` registry
 //! probe: a dedicated wayland connection, no GPU, no capture session,
 //! bounded by the thread's 10 s deadlines. It is INFALLIBLE by contract -
 //! headless boxes, absent sockets and frozen compositors all degrade to an
@@ -19,7 +18,7 @@ pub trait OutputProbe: Send + Sync + std::fmt::Debug {
     fn probe(&self) -> Vec<OutputInfo>;
 }
 
-/// Production probe: the todo-6 [`CaptureThread`](flowshot_capture_wayland::CaptureThread)
+/// Production probe: the [`CaptureThread`](flowshot_capture_wayland::CaptureThread)
 /// registry enumeration, spawned per refresh (connect -> probe -> close;
 /// refreshes are rare - tray start and submenu opens).
 #[derive(Debug, Clone, Copy, Default)]

@@ -1,5 +1,5 @@
-//! The todo-22 text-tool suite: the session state machine (insert/delete/
-//! navigate/multiline/wrap), the plan's IME acceptance sequences
+//! The text-tool suite: the session state machine (insert/delete/
+//! navigate/multiline/wrap), the IME acceptance sequences
 //! (preedit -> commit, cancel-path discard), CJK glyph coverage via swash,
 //! the tool lifecycle (commit/empty-commit/padding/re-edit/paint), and the
 //! full funnel integration through [`OverlayCore::inject_event`] (click ->
@@ -674,7 +674,7 @@ fn funnel_ime_commit_inserts_cjk() {
     core.inject_event(SyntheticInput::ime(SLOT, Ime::Commit("日".to_owned())));
     ctrl_enter(&mut core);
     assert_eq!(committed_text(&core, 0).text, "日");
-    // The shared status tracking (todo 13) survives the editor consumption.
+    // The shared status tracking survives the editor consumption.
     assert_eq!(*core.ime(), crate::input::ImeStatus::Active);
 }
 

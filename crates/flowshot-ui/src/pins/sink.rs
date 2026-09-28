@@ -1,14 +1,14 @@
-//! The pin action seam (plan todo 30: "copy/save items wired via
+//! The pin action seam ("copy/save items wired via
 //! action-callback traits").
 //!
 //! Dependency inversion: the UI crate owns this INTERFACE and never sees
 //! the platform action crates (purity gate - `flowshot-actions` is
-//! Wayland-native by design). The binary layer (todo 35 CLI / todo 32
-//! daemon) implements [`PinActionSink`] by calling
-//! `flowshot_actions::pin::{copy_pin, save_pin}` (the todo-28/29 modules)
-//! and mirrors window lifecycle into
-//! `flowshot_actions::pin::PinRegistry` (the todo-32 "pins alive"
-//! persistence reason). End-to-end assertion is todo 38 flow 8.
+//! Wayland-native by design). The binary layer (CLI or daemon)
+//! implements [`PinActionSink`] by calling
+//! `flowshot_actions::pin::{copy_pin, save_pin}` (the clipboard/export
+//! modules) and mirrors window lifecycle into
+//! `flowshot_actions::pin::PinRegistry` (the daemon's "pins alive"
+//! persistence reason). End-to-end assertion is a binary-layer flow.
 
 /// Host-assigned pin identity (matches `flowshot_actions::pin::PinRegistry`
 /// keys by raw value - the crates share no types by design).
@@ -45,8 +45,8 @@ pub struct PinSnapshot {
     pub rgba: Vec<u8>,
 }
 
-/// The action-callback seam the binary layer implements (todo 28/29
-/// modules behind it). Called on the event-loop thread; implementations
+/// The action-callback seam the binary layer implements (the
+/// clipboard/export modules sit behind it). Called on the event-loop thread; implementations
 /// should be quick (the clipboard backend serves from its own thread, the
 /// export writes one small file).
 pub trait PinActionSink: std::fmt::Debug + Send + Sync + 'static {

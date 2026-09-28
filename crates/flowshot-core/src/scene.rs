@@ -161,14 +161,14 @@ pub trait PaintSink {
     /// Draws a straight line segment with `width` thickness.
     fn draw_line(&mut self, from: Point, to: Point, color: Color, width: f32);
     /// Strokes an open polyline through `points` with `width` thickness
-    /// (joined as ONE path - freehand strokes, plan todo 21).
+    /// (joined as ONE path - freehand strokes).
     fn stroke_polyline(&mut self, points: &[Point], color: Color, width: f32);
     /// Fills the polygon spanned by `points` (arrow heads, chisel-cap marker
     /// quads - fewer than 3 points paint nothing).
     fn fill_polygon(&mut self, points: &[Point], color: Color);
     /// Inverts the colors of everything painted below `rect` (the
-    /// non-destructive region filter of plan todo 21; backends without an
-    /// inversion capability log and skip).
+    /// non-destructive region filter; backends without an inversion
+    /// capability log and skip).
     fn invert_region(&mut self, rect: Rect);
     /// Draws `text` with its layout box anchored at `position` (top-left).
     fn draw_text(&mut self, position: Point, text: &str, font_size: f32, color: Color);
@@ -1463,10 +1463,10 @@ mod tests {
 
     #[test]
     fn bounding_rects_are_sane() {
-        // Todo 21: the arrow head is FILLED geometry scaling from the
-        // thickness (F27 arrowtool math), so the exact bounds now cover the
-        // head corners grown by the shaft's half-width ink - the todo-4 stub
-        // head (two stroked lines inside the endpoint rect) is superseded.
+        // The arrow head is FILLED geometry scaling from the thickness
+        // (F27 arrowtool math), so the exact bounds cover the head corners
+        // grown by the shaft's half-width ink - the earlier stub head (two
+        // stroked lines inside the endpoint rect) is superseded.
         // Arrow (0,0)->(10,5) t=2: len ~11.18 < 18+2t, the head consumes the
         // whole shaft; corners sit at (0,0) +- 7 * unit-normal(-0.447, 0.894).
         let arrow = ArrowObject::new(Point::new(0.0, 0.0), Point::new(10.0, 5.0), RED, 2.0);

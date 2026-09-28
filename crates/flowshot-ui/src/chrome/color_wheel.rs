@@ -1,11 +1,11 @@
-//! The color wheel popover (plan todo 26, draft F27 colorpicker spec).
+//! The color wheel popover (draft F27 colorpicker spec).
 //!
 //! The `[editor].color_palette` swatches sit at EQUAL ANGLES on a circle of
 //! `radius = 3 * count + ` [`BUTTON_BASE_SIZE`] (the F27 formula), the
 //! swatch matching the active draw color wears the 6px accent ring
 //! ([`SELECTED_RING`]), and a rainbow slot trails the palette for the custom
-//! pick - its eyedropper flow is todo 27, so the slot is a rendered seam
-//! only (a press on it logs and keeps the wheel open). The wheel centers on
+//! pick - its eyedropper flow belongs to the eyedropper tool, so the slot
+//! is a rendered seam only (a press on it logs and keeps the wheel open). The wheel centers on
 //! the opening cursor position, clamped fully on-screen (the toolbar's
 //! extreme-corner discipline).
 
@@ -109,7 +109,7 @@ impl ColorWheel {
     }
 
     /// Draws the wheel (circular popover, swatch ring, selected ring,
-    /// rainbow slot) with the todo-41 scale-in evaluated at `now`: the
+    /// rainbow slot) with the scale-in motion evaluated at `now`: the
     /// popover grows from [`WHEEL_SCALE_FROM`] and fades in; hit-testing
     /// stays on the FINAL layout (the motion checklist's interaction-leads-
     /// visual rule).

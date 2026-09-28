@@ -3,8 +3,8 @@
 Status: roadmap only — **no code exists** for any platform beyond
 Linux/Wayland, and none is planned for the first release. This document is
 the concrete entry-point map promised by
-[ADR-006](architecture/adr-006-cross-platform-gates.md) (plan todo 42d,
-draft findings F19/F20/F24). Crate versions were spot-checked against
+[ADR-006](architecture/adr-006-cross-platform-gates.md) (draft findings
+F19/F20/F24). Crate versions were spot-checked against
 crates.io on 2026-09-28 (record at the bottom).
 
 Every capture phase below is the same shape:
@@ -64,7 +64,7 @@ Every capture phase below is the same shape:
    the purity gate by design — they are the composition layer).
 5. Packaging delta for the platform (installer, permissions, manifest).
 
-### Trait-conformance checklist vs draft F20 (todo 42b)
+### Trait-conformance checklist vs draft F20
 
 The F20 leak-list — the platform behaviors the trait had to absorb — and
 where each lives in the shipped contract:
@@ -207,7 +207,8 @@ file in `packaging/`, not a port:
   0.5.0 (the current in-tree implementation talks the `NOTIFY_SOCKET`
   protocol directly behind the feature flag).
 
-The README carries the init-system packaging matrix (todo 39 deliverable).
+These service files land with the packaging milestone; the README's install
+section gains the init-system matrix when they ship.
 
 ## Gate re-run checklist per phase
 

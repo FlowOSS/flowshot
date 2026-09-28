@@ -16,7 +16,7 @@
 //! extends the shared [`CapabilityProbe`] so the negotiation ladder orders
 //! the portal rungs exactly as the native ones.
 //!
-//! # Verification class (plan todo 10)
+//! # Verification class
 //!
 //! `Hyprland`/`XDPH` portal paths are live-verified on the QA session;
 //! GNOME-specific behaviors (the `mutter` picker UX, shell-UI delegation,

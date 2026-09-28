@@ -7,7 +7,7 @@
 //!   itself and never calls `Activate`.
 //! - `Status` idles at `Active` (hosts may HIDE `Passive` items).
 //! - `IconName` stays empty and the pixmaps carry the icon: no `FlowShot`
-//!   themed icon is installed until packaging lands (todo 41/42), and an
+//!   themed icon is installed until packaging lands, and an
 //!   unresolvable name renders broken on some hosts.
 
 use zbus::fdo;

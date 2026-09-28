@@ -58,7 +58,7 @@ bumps together or stays on the manual feed; the comment block in
   binary layer applies it through an injection seam.
 - The stack is headless-testable: input routing, the selection engine, the
   editor, chrome, and pins run against synthetic events with no event loop,
-  which is how most of the 1100-test suite exists.
+  which is how most of the 1200-test suite exists.
 - Idle CPU is near zero by construction (event-driven `WaitUntil` scheduling,
   measured 0.17% over an idle overlay during live QA).
 - Known cost: winit exposes no portable app-id setter and no pinch gestures

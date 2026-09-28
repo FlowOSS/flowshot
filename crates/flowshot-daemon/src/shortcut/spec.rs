@@ -1,18 +1,18 @@
 //! The shortcut vocabulary: what a binding IS (id, description, trigger,
-//! CLI invocation, daemon command) and the plan todo-34 proposed defaults
+//! CLI invocation, daemon command) and the proposed defaults
 //! (Print -> region, Shift+Print -> full, Ctrl+Print -> active monitor;
-//! rebindable through the todo-36 settings tab).
+//! rebindable through the settings tab).
 
 use std::collections::HashMap;
 
 use crate::command::DaemonCommand;
 use crate::request::CaptureRequest;
 
-/// Sentinel screen index meaning "the output under the cursor" (the plan's
-/// "active monitor"). The todo-12/18 cursor-to-output resolution lives in
-/// the capture executor (todo 35), which interprets this value; the daemon
+/// Sentinel screen index meaning "the output under the cursor" (the
+/// "active monitor"). The cursor-to-output resolution lives in
+/// the capture executor, which interprets this value; the daemon
 /// only dispatches it. Mirrors the CLI's argument-less `flowshot capture
-/// screen` (Amendment #2: NO ARG = output under cursor).
+/// screen` (NO ARG = output under cursor).
 pub const ACTIVE_SCREEN: u32 = u32::MAX;
 
 /// One configurable global shortcut.
@@ -27,19 +27,19 @@ pub struct ShortcutSpec {
     /// Stable application-provided identifier (the portal's `shortcut_id`,
     /// the `Activated` signal key).
     pub id: String,
-    /// User-readable purpose (the portal's `description`; the todo-36
+    /// User-readable purpose (the portal's `description`; the
     /// settings row label).
     pub description: String,
     /// Preferred trigger in XDG shortcut syntax (`Print`, `Shift+Print`,
     /// `Ctrl+Print`); the portal may assign a different one on conflict.
     pub trigger: String,
-    /// CLI invocation for compositor-bind snippets (todo-35 surface).
+    /// CLI invocation for compositor-bind snippets.
     pub cli: String,
     /// Daemon command dispatched when the portal reports this id active.
     pub command: DaemonCommand,
 }
 
-/// The plan todo-34 proposed defaults (F12 shortcut rows): Print -> region
+/// The proposed defaults (F12 shortcut rows): Print -> region
 /// capture, Shift+Print -> full, Ctrl+Print -> active monitor.
 #[must_use]
 pub fn default_shortcuts() -> Vec<ShortcutSpec> {
@@ -84,7 +84,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_match_the_plan_todo_34_proposal() {
+    fn defaults_match_the_f12_shortcut_rows() {
         let specs = default_shortcuts();
         let summary: Vec<(&str, &str, &str)> = specs
             .iter()
@@ -105,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn defaults_map_to_the_todo_32_command_vocabulary() {
+    fn defaults_map_to_the_daemon_command_vocabulary() {
         let map = command_map(&default_shortcuts());
         assert_eq!(
             map.get("capture-region"),

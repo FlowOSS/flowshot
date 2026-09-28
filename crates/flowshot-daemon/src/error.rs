@@ -1,4 +1,4 @@
-//! Typed daemon errors (Amendment #4: `thiserror`, no stringly errors
+//! Typed daemon errors (`thiserror`, no stringly errors
 //! across crate boundaries; `anyhow` lives only in the binary).
 
 use std::path::PathBuf;
@@ -44,7 +44,7 @@ pub enum DaemonError {
     Portal(String),
 
     /// `GlobalShortcuts` portal registration failed (absent, denied,
-    /// broken, panicked, or timed out). Non-fatal by design: the todo-34
+    /// broken, panicked, or timed out). Non-fatal by design: the shortcut
     /// ladder logs it and continues with the compositor-bind fallback.
     #[error("global shortcuts portal unavailable: {0}")]
     ShortcutPortal(String),

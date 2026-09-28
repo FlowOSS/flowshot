@@ -202,8 +202,8 @@ equivalent here:
 
 ## Planned keys not yet in the schema
 
-Tracked in the project notepad, pending a future core-config change; do not
-add them to your file expecting behavior:
+Planned for a future schema revision; do not add them to your file expecting
+behavior:
 
 - `[editor] mouse_preview` (spec default true; currently editor-side state
   only).

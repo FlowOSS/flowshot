@@ -1,7 +1,6 @@
-//! `flowshot-daemon` - supervised foreground daemon binary (plan todo 32;
-//! the `flowshot daemon` CLI subcommand of todo 35 calls the same
-//! library). Top-level `anyhow` per Amendment #4; all logic lives in the
-//! library.
+//! `flowshot-daemon` - supervised foreground daemon binary (the
+//! `flowshot daemon` CLI subcommand calls the same library). Top-level
+//! `anyhow`; all logic lives in the library.
 
 #![forbid(unsafe_code)]
 
@@ -45,7 +44,7 @@ struct Args {
 #[derive(Debug, clap::Subcommand)]
 enum Sub {
     /// Run one window session from a spec file (the daemon's
-    /// child-process contract, todo 38 - winit allows one event loop per
+    /// child-process contract - winit allows one event loop per
     /// process, so every window session is a dedicated child).
     #[command(hide = true)]
     Session {
@@ -79,7 +78,7 @@ fn main() -> anyhow::Result<()> {
     options.bus_address = args.bus_address;
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
     options.shortcuts = flowshot_daemon::shortcut::ShortcutOptions::production();
-    // Todo 38: the executing sink (bus/tray/shortcut commands run the real
+    // The executing sink (bus/tray/shortcut commands run the real
     // capture pipeline; the CLI's `flowshot daemon` installs the same).
     options.command_sink = Some(std::sync::Arc::new(
         flowshot_daemon::execute::ExecutingSink::new(flowshot_daemon::execute::ExecCtx {
@@ -112,7 +111,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 /// Loads the config, falling back to defaults when the file is absent
-/// (first run) or unreadable/corrupt (todo-2 resilience rule: never fail
+/// (first run) or unreadable/corrupt (resilience rule: never fail
 /// the daemon over config).
 fn load_config(explicit: Option<&std::path::Path>) -> anyhow::Result<Config> {
     let path = match explicit {

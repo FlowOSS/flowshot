@@ -1,4 +1,4 @@
-//! The chrome state (plan todo 26): the floating-widget owner the route
+//! The chrome state: the floating-widget owner the route
 //! funnel consults BEFORE the F27 editor chain (Qt child-widget parity - a
 //! press on the toolbar / color wheel / side panel never reaches the scene)
 //! and the shell paints after the selection chrome.
@@ -16,7 +16,7 @@
 //!   Esc cascade step cancels the grab ([`ChromeState::cancel_grab`]).
 //!
 //! The draw-color sink is the F27 "drawColor persists to TOML on change"
-//! seam: the binary layer (todo 35) installs a writer; the lib stays pure.
+//! seam: the binary layer installs a writer; the lib stays pure.
 
 mod input;
 
@@ -143,7 +143,7 @@ impl ChromeState {
         self.panel_visible && editor.config().editor.side_panel
     }
 
-    /// Toggles the side panel (Space; plan todo 26). `false` when the
+    /// Toggles the side panel (Space). `false` when the
     /// config gate is off - the key then falls through to the selection
     /// engine untouched.
     pub fn toggle_panel(&mut self, editor: &EditorState) -> bool {
@@ -181,8 +181,8 @@ impl ChromeState {
         self.layer_drag = None;
     }
 
-    /// Drains the toolbar's pending capture-completing actions (todo 38:
-    /// the funnel surfaces them in the route report; the chrome itself
+    /// Drains the toolbar's pending capture-completing actions (the
+    /// funnel surfaces them in the route report; the chrome itself
     /// never executes them).
     pub(crate) fn take_actions(&mut self) -> Vec<Action> {
         std::mem::take(&mut self.pending_actions)
@@ -190,7 +190,7 @@ impl ChromeState {
 
     /// Appends the chrome visuals to `list` (the shell paints this after
     /// the selection chrome; the scale derives from the output). `now`
-    /// evaluates the motion timeline (todo 41): the same instant the frame
+    /// evaluates the motion timeline: the same instant the frame
     /// scheduler ticks with, so offscreen harnesses render deterministic
     /// animation stills from a synthetic clock.
     pub fn paint_into(
@@ -242,7 +242,7 @@ impl ChromeState {
         self.hud.draw(list, editor, &self.tokens, scale, atlas);
     }
 
-    /// The chrome motion timeline (todo 41): the shell's tick advances it,
+    /// The chrome motion timeline: the shell's tick advances it,
     /// the frame scheduler reads its wake, and the paint path evaluates it.
     #[must_use]
     pub const fn motion(&self) -> &ChromeMotion {
@@ -262,7 +262,7 @@ impl ChromeState {
             .tick(now, selection_present, editor_panel, wheel);
     }
 
-    /// The reduced-motion switch (todo 41 failure QA: transitions instant).
+    /// The reduced-motion switch (motion failure QA: transitions instant).
     pub fn set_motion_reduced(&mut self, reduced: bool) {
         self.motion.set_reduced(reduced);
     }

@@ -1,4 +1,4 @@
-//! The production core wiring (todo 38): `configure_core` is the SINGLE
+//! The production core wiring: `configure_core` is the SINGLE
 //! function both the live session child and the headless execution mode
 //! drive, so the offscreen QA path exercises the exact production
 //! configuration (tools, editor frame + config, chrome projection,
@@ -137,7 +137,7 @@ pub fn configure_core(
 }
 
 /// Maps the wire request + config onto the typed launch request (the
-/// launch.rs module-header MAPPING TABLE, todo-18 issues entry).
+/// launch.rs module-header MAPPING TABLE).
 #[must_use]
 pub fn build_launch_request(
     config: &Config,

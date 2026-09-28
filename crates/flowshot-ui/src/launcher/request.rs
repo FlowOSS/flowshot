@@ -41,7 +41,7 @@ pub struct RegionGeometry {
     pub height: u32,
     /// X offset (signed; multi-monitor layouts can be negative). `None` =
     /// centered at the cursor by the executor (the CLI's offset-less
-    /// `WxH` semantics, todo 18).
+    /// `WxH` semantics).
     pub x: Option<i32>,
     /// Y offset (signed). `None` = centered at the cursor by the executor.
     pub y: Option<i32>,
@@ -141,9 +141,9 @@ pub enum LauncherRequest {
         delay_ms: u32,
     },
     /// A monitor from the live probe: the daemon's `CaptureScreen(index)`.
-    /// `delay_ms` rides along for the binary layer (the todo-32
-    /// `CaptureScreen(u32)` wire slot carries no delay - todo 38 owns the
-    /// mapping decision).
+    /// `delay_ms` rides along for the binary layer (the daemon's
+    /// `CaptureScreen(u32)` wire slot carries no delay - the binary layer
+    /// owns the mapping decision).
     Screen {
         /// The output index in probe order (the `CaptureScreen` vocabulary).
         screen: u32,

@@ -1,7 +1,7 @@
-//! The panel property seams (plan todo 26): the selected-object half of the
+//! The panel property seams: the selected-object half of the
 //! side-panel size slider and the color-wheel pick.
 //!
-//! Todo 25 established [`EditorState::mutate_object`] as the PUBLIC
+//! [`EditorState::mutate_object`] is the PUBLIC
 //! property-change funnel (ONE undo unit per change); this module maps the
 //! two panel writes onto it:
 //!
@@ -14,9 +14,9 @@
 //!   color field.
 //!
 //! Kinds without the property (invert is a region effect: no size, no
-//! color; the counter bubble's geometry is todo-24-owned) map to [`None`]
+//! color; the counter tool owns the bubble's geometry) map to [`None`]
 //! and record NO journal unit - a property write that changes nothing must
-//! not pollute the undo history (the todo-25 no-op guard discipline).
+//! not pollute the undo history (the no-op guard discipline).
 
 use flowshot_core::scene::{Color as SceneColor, ToolObject, ToolObjectData};
 
@@ -27,8 +27,8 @@ use super::size::BASE_POINT_SIZE;
 
 /// Writes the dispatched tool size into the object's own size field;
 /// [`None`] for kinds without size semantics (invert, counter). Text stores
-/// the RENDERED point size (`slot + ` [`BASE_POINT_SIZE`], the todo-22
-/// commit value), rectangle stores the corner radius (the F27
+/// the RENDERED point size (`slot + ` [`BASE_POINT_SIZE`], the text
+/// tool's commit value), rectangle stores the corner radius (the F27
 /// `drawRectangleSize` dispatch).
 #[must_use]
 fn sized(data: ToolObjectData, size: u32) -> Option<ToolObjectData> {
@@ -108,7 +108,7 @@ fn colorized(data: ToolObjectData, color: SceneColor) -> Option<ToolObjectData> 
 }
 
 impl EditorState {
-    /// Resizes the selected object as ONE undo unit (the todo-26 panel size
+    /// Resizes the selected object as ONE undo unit (the panel size
     /// slider's selected-object half; the runtime slot write is the caller's
     /// [`EditorState::set_tool_size`]). `false` when nothing is selected or
     /// the kind has no size field - nothing is recorded.
@@ -116,7 +116,7 @@ impl EditorState {
         self.property_of_selected(|data| sized(data, size))
     }
 
-    /// Recolors the selected object as ONE undo unit (the todo-26 color
+    /// Recolors the selected object as ONE undo unit (the color
     /// wheel's selected-object half; the draw-color write is the caller's
     /// [`EditorState::set_color`]). `false` when nothing is selected or the
     /// kind has no color (invert) - nothing is recorded.
@@ -126,7 +126,7 @@ impl EditorState {
 
     /// The shared property write: pre-maps the selected object's data so a
     /// kind WITHOUT the property records no journal unit, then goes through
-    /// the todo-25 [`EditorState::mutate_object`] funnel.
+    /// the [`EditorState::mutate_object`] funnel.
     fn property_of_selected(
         &mut self,
         edit: impl FnOnce(ToolObjectData) -> Option<ToolObjectData>,

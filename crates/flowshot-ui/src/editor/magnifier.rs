@@ -1,7 +1,7 @@
-//! The pixel magnifier (plan todo 17, draft F27 `magnifierwidget.h` cites).
+//! The pixel magnifier (draft F27 `magnifierwidget.h` cites).
 //!
-//! A cursor-following VIEW aid (never a color-picker - todos 26/27 own the
-//! palette/eyedropper flows): it samples a 17x17 source-px window
+//! A cursor-following VIEW aid (never a color-picker - the chrome and the
+//! eyedropper tool own the palette/pick flows): it samples a 17x17 source-px window
 //! (`m_magPixels = 8` radius) around the cursor from the frozen frame,
 //! renders it at zoom 10x (170x170 physical px) offset 16px from the
 //! cursor, and flips to the opposite side near screen edges (all four).
@@ -33,7 +33,7 @@
 //!   construction) into [`MagnifierTexture`] and drawn as one image quad:
 //!   the renderer's single image sampler is linear-filtered, which would
 //!   smear a 10x magnified pixel grid. The CPU path also composites the
-//!   todo-23 pixel-effect layer (the "sample post-effect" seam) and yields
+//!   pixel-effect layer (the "sample post-effect" seam) and yields
 //!   the readout value for free.
 //!
 //! # Sampling source
@@ -41,7 +41,7 @@
 //! The installed editor frame ([`FramePixels`], the same read side the
 //! eyedropper samples - identical conversion math, so the readout and an
 //! eyedropper pick at the same position always agree). No frame or a
-//! cursor outside the frame -> no magnifier (todo 35 decides the
+//! cursor outside the frame -> no magnifier (the binary layer decides the
 //! stitched-vs-per-output production policy).
 
 mod paint;
@@ -120,7 +120,7 @@ impl MagnifierSample {
 }
 
 /// Samples the magnifier window around `at` (global logical) from the
-/// frozen frame with the todo-23 pixel-effect layer composited on top
+/// frozen frame with the pixel-effect layer composited on top
 /// (later effects win - the paint order). `None` when the frame is missing,
 /// smaller than the window, or the cursor is outside the frame.
 pub(super) fn sample(
@@ -134,7 +134,7 @@ pub(super) fn sample(
         tracing::debug!(target: "flowshot_ui::editor", width, height, "magnifier frame smaller than window");
         return None;
     }
-    // The eyedropper's exact conversion (todo 27): global logical ->
+    // The eyedropper's exact conversion: global logical ->
     // frame-local physical, truncated. Readout/pick agreement by contract.
     let local_x = (at.x.0 - frame.origin.x.0) * frame.scale;
     let local_y = (at.y.0 - frame.origin.y.0) * frame.scale;
@@ -178,7 +178,8 @@ pub(super) fn sample(
 }
 
 /// One window pixel: the frozen frame's byte, overridden by every effect
-/// whose baked region covers it (post-effect sampling, the todo-23 seam).
+/// whose baked region covers it (post-effect sampling - the pixel-effect
+/// layer's seam).
 fn sample_one(frame: &FramePixels, effects: &[PixelEffect], px: i64, py: i64) -> [u8; 4] {
     let mut rgba = frame_pixel(frame, px, py);
     for effect in effects {

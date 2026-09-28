@@ -1,4 +1,4 @@
-//! Todo-18 launch-flow tests: the pure resolution math, the production
+//! Launch-flow tests: the pure resolution math, the production
 //! funnel path (via the `test-drive` injection seam), and the region-memory
 //! TOML round-trip through the sink callback.
 
@@ -272,7 +272,7 @@ fn preselect_none_is_a_bare_launch() {
 
 #[test]
 fn screen_target_picks_the_output_containing_the_cursor() {
-    // The `capture screen` no-arg acceptance: output-at-cursor (Amendment #3).
+    // The `capture screen` no-arg acceptance: the output-at-cursor behavior.
     let layout = dual_layout();
     let output = output_at_cursor(&layout, Some(point(2000.0, 500.0)));
     assert_eq!(output.map(|info| info.connector.as_str()), Some("DP-2"));

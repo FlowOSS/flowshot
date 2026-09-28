@@ -7,8 +7,8 @@
 //! Surfacing that frame as a screenshot would silently show the user a black
 //! image, so the capture runner classifies delivered frames and maps a
 //! denial frame onto [`IccError::PermissionDenied`] ->
-//! [`PermissionResult::Denied`] / a typed capture error, per plan todo 7
-//! ("black-frame + denied semantics, never hang").
+//! [`PermissionResult::Denied`] / a typed capture error: black-frame +
+//! denied semantics, never a hang.
 //!
 //! The classifier is deliberately conservative to keep false positives on
 //! real content near zero: a denial frame is (1) almost entirely pure black,

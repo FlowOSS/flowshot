@@ -1,4 +1,4 @@
-//! The non-interactive capture path (plan todo 38 flows 2/3/6/7): full
+//! The non-interactive capture path: full
 //! desktop, single output, delayed, and stdout modes - no overlay window,
 //! so every step here is invisible-protocol QA-able on a live session.
 //!
@@ -34,9 +34,9 @@ pub enum Target {
 /// Which output a [`Target::Screen`] names.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScreenTarget {
-    /// The output under the cursor (todo 12/18 contract).
+    /// The output under the cursor (the cursor-resolution contract).
     Cursor,
-    /// Probe-order index (the todo-6 authority).
+    /// Probe-order index (the registry indexing authority).
     Index(u32),
     /// Connector name (e.g. `DP-1`).
     Connector(String),
@@ -85,7 +85,7 @@ pub async fn capture_and_composite(
     started: Instant,
 ) -> Result<Completion, ExecuteError> {
     // Runtime ladder fallthrough: a rung that probes green can still fail
-    // AT CAPTURE (the todo-7 rotated-headless BufferSizeMismatch class) -
+    // AT CAPTURE (the rotated-headless BufferSizeMismatch class) -
     // the ladder's promise is the next rung, exhausted rungs surface the
     // typed NoBackendAvailable.
     let mut excluded: Vec<flowshot_capture::BackendKind> = Vec::new();
@@ -227,11 +227,11 @@ async fn resolve_screen<'a>(
             if let Some(output) = flowshot_ui::output_at_cursor(layout, cursor) {
                 return Ok(output);
             }
-            // Fallback policy (todo-18 open question, decided here): the
+            // Fallback policy (open question, decided here): the
             // cursor ladder resolved nothing usable - capture the FIRST
             // output with a loud warning instead of failing (deterministic,
             // and the ladder only misses on compositors without cursor
-            // position protocols). Recorded in decisions.md.
+            // position protocols).
             tracing::warn!("cursor position unresolved; falling back to the first output");
             layout
                 .outputs

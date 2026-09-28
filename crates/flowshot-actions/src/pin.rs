@@ -1,25 +1,25 @@
-//! Pin actions and the multi-pin registry (plan todo 30).
+//! Pin actions and the multi-pin registry.
 //!
-//! # Crate placement (task decision, recorded in evidence)
+//! # Crate placement
 //!
 //! Pin WINDOWS are GPU-rendered winit surfaces and live in
 //! `flowshot_ui::pins`; this module holds the two platform-service halves
-//! the plan files under Actions:
+//! of the action layer:
 //!
-//! - [`PinRegistry`] - the multi-pin bookkeeping that feeds the todo-32
-//!   daemon lifecycle ("pins alive" persistence reason; the smart-lifecycle
+//! - [`PinRegistry`] - the multi-pin bookkeeping that feeds the daemon
+//!   lifecycle ("pins alive" persistence reason; the smart-lifecycle
 //!   replacement for the dropped `autoCloseIdleDaemon` flag).
 //! - [`copy_pin`] / [`save_pin`] - the context-menu action implementations
-//!   on the todo-28 clipboard and todo-29 export seams.
+//!   on the clipboard and export seams.
 //!
 //! The UI crate cannot depend on this one (purity gate: this crate is
 //! Wayland-native by design), so the UI exposes the
 //! `flowshot_ui::pins::PinActionSink` callback trait and the BINARY layer
-//! (todo 35 CLI / todo 32 daemon) bridges the two: it converts the UI's
+//! (CLI / daemon) bridges the two: it converts the UI's
 //! `PinSnapshot` into a [`PinImage`] (same field shape, no shared type by
 //! design), calls [`copy_pin`]/[`save_pin`], and mirrors window lifecycle
 //! into a [`PinRegistry`]. `flowshot-ui`'s `examples/pin_window.rs` is the
-//! reference composition; end-to-end assertion is todo 38 flow 8.
+//! reference composition.
 
 mod registry;
 
@@ -49,7 +49,8 @@ pub struct PinImage {
 }
 
 impl PinImage {
-    /// Converts to the image-crate type the todo-28/29 seams consume.
+    /// Converts to the image-crate type the clipboard and export seams
+    /// consume.
     ///
     /// # Errors
     ///
@@ -80,7 +81,7 @@ impl PinImage {
     }
 }
 
-/// Copies a pin to the clipboard through the todo-28 seam (`image/png`
+/// Copies a pin to the clipboard through the clipboard seam (`image/png`
 /// always, `image/jpeg` appended when `[save].clipboard_format = 'jpeg'`).
 ///
 /// # Errors
@@ -97,7 +98,7 @@ pub fn copy_pin(
     Ok(())
 }
 
-/// Saves a pin to disk through the todo-29 seam (strftime pattern,
+/// Saves a pin to disk through the export seam (strftime pattern,
 /// sanitization, collision numeration, format/quality per `[save]`).
 ///
 /// # Errors

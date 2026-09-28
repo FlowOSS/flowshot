@@ -3,7 +3,7 @@
 //! A token-driven popup list: solid contrast background with a medium
 //! elevation shadow, labeled items with a hover highlight, and separators.
 //! Layout metrics derive from the typography/spacing tokens so the pin menu
-//! (plan todo 30) and any later surface share one implementation; the
+//! and any later surface share one implementation; the
 //! entry geometry functions are the single source of truth for both drawing
 //! and hit-testing.
 

@@ -1,13 +1,13 @@
-//! The tool taxonomy (plan todo 20, draft F27/F12).
+//! The tool taxonomy (draft F27/F12).
 //!
-//! [`ToolKind`] is the stable type enum every annotation tool (todos 21-27)
+//! [`ToolKind`] is the stable type enum every annotation tool
 //! registers under. The string ids are the config-compat surface (F27:
 //! "type-enum stability = config compat"): they match the `[ui]`
 //! `toolbar_buttons` entries and the scene's `ToolObject::type_id` family.
 //! The default activation keys are the Flameshot F12 shortcut map
 //! (`confighandler.cpp` `recognizedShortcuts`): P/D/A/S/R/C/M/T/B/I -
 //! counter and move ship unbound (Flameshot binds move to Ctrl+M; the
-//! plan's todo-20 key list omits both), rebindable via
+//! shipped key list omits both), rebindable via
 //! [`super::keys::ToolShortcuts`].
 
 use winit::keyboard::KeyCode;
@@ -15,42 +15,43 @@ use winit::keyboard::KeyCode;
 /// Which annotation tool a [`Tool`](super::Tool) implementation provides.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ToolKind {
-    /// Freehand polyline (todo 21).
+    /// Freehand polyline.
     Pencil,
-    /// Straight two-point line (todo 21; Flameshot `TYPE_DRAWER`).
+    /// Straight two-point line (Flameshot `TYPE_DRAWER`).
     Line,
-    /// Arrow with head geometry (todo 21).
+    /// Arrow with head geometry.
     Arrow,
-    /// Region selection tool (todo 21 family; delegates to the engine).
+    /// Region selection tool (delegates to the engine).
     Selection,
-    /// Rectangle outline with corner radius (todo 21).
+    /// Rectangle outline with corner radius.
     Rectangle,
-    /// Ellipse/circle (todo 21).
+    /// Ellipse/circle.
     Circle,
-    /// Translucent wide marker (todo 21).
+    /// Translucent wide marker.
     Marker,
-    /// Text with IME editing (todo 22).
+    /// Text with IME editing.
     Text,
-    /// Numbered step bubbles (todo 24; id matches the scene's `counter`).
+    /// Numbered step bubbles (the id matches the scene's `counter`).
     Counter,
-    /// Secure pixelate / blur (todo 23).
+    /// Secure pixelate / blur.
     Pixelate,
-    /// The gaussian blur variant of the pixelate tool (todo 23; unbound by
-    /// default like counter/move - the todo-26 panel exposes the mode).
+    /// The gaussian blur variant of the pixelate tool (unbound by
+    /// default like counter/move - the side panel exposes the mode).
     Blur,
-    /// Region color inversion (todo 21).
+    /// Region color inversion.
     Invert,
-    /// Selection/object mover (todo 25 semantics; falls through to the
-    /// selection engine per the Flameshot `startDrawObjectTool` exclusion).
+    /// Selection/object mover (mutation-funnel semantics; falls through to
+    /// the selection engine per the Flameshot `startDrawObjectTool`
+    /// exclusion).
     Move,
-    /// Eyedropper / color picker (todo 27; F12 `TYPE_GRAB_COLOR`).
+    /// Eyedropper / color picker (F12 `TYPE_GRAB_COLOR`).
     Eyedropper,
 }
 
 impl ToolKind {
     /// Every kind, in the Flameshot toolbar order (`buttonTypeOrder`); the
     /// blur variant trails its pixelate parent (no Flameshot toolbar slot -
-    /// it is a pixelate mode); eyedropper trails move (todo 27).
+    /// it is a pixelate mode); eyedropper trails move.
     pub const ALL: [Self; 14] = [
         Self::Pencil,
         Self::Line,
@@ -147,7 +148,7 @@ mod tests {
             assert_eq!(ToolKind::from_id(kind.id()), Some(kind));
         }
         assert_eq!(ToolKind::from_id("nope"), None);
-        // The config default toolbar ids (todo 2) parse as tool kinds.
+        // The config default toolbar ids parse as tool kinds.
         for id in [
             "arrow",
             "rectangle",
@@ -182,7 +183,7 @@ mod tests {
         assert_eq!(ToolKind::Counter.default_key(), None);
         assert_eq!(ToolKind::Move.default_key(), None);
         assert_eq!(ToolKind::Blur.default_key(), None, "blur ships unbound");
-        // No two kinds share a key (Amendment #3 collision rule).
+        // No two kinds share a key (the collision rule).
         let keys: Vec<_> = ToolKind::ALL
             .iter()
             .filter_map(|k| k.default_key())

@@ -1,4 +1,4 @@
-//! The overlay session leg (todo 38): the child's blocking winit run,
+//! The overlay session leg: the child's blocking winit run,
 //! its parameter bundle, and the shared frame/geometry helpers.
 
 use std::path::PathBuf;
@@ -30,7 +30,7 @@ pub struct OverlaySession {
     pub config_path: Option<PathBuf>,
     /// The invocation modifiers.
     pub request: CaptureRequest,
-    /// Resolved cursor (todo-12 ladder) for the launch preselect.
+    /// Resolved cursor (the cursor ladder) for the launch preselect.
     pub cursor: Option<LogicalPoint>,
     /// `flowshot color`: the eyedropper is the whole session.
     pub color_mode: bool,
@@ -98,9 +98,9 @@ pub fn run_overlay_session(session: OverlaySession) -> SessionOutcome {
     }
 }
 
-/// The editor's sampling frame (todo-23 pixelate / todo-17 magnifier /
-/// todo-27 eyedropper read side). DECISION (todo 38, recorded in
-/// decisions.md): the STITCHED scale-1 composite of the whole layout -
+/// The editor's sampling frame (pixelate / magnifier /
+/// eyedropper read side). DECISION (recorded): the STITCHED scale-1
+/// composite of the whole layout -
 /// every output is sampleable (the per-output alternative leaves the
 /// magnifier/pixelate blind on all but the first output); the trade is
 /// logical-resolution sampling on scale>1 outputs (documented degradation,
@@ -128,7 +128,7 @@ pub fn stitched_editor_frame(
 
 /// The capture rect a typed geometry covers (the launcher dispatch +
 /// direct-region captures): explicit offsets land as-is, offset-less
-/// `WxH` centers at the resolved cursor (the todo-18 semantics); `None`
+/// `WxH` centers at the resolved cursor (the geometry semantics); `None`
 /// when offset-less without a cursor.
 #[must_use]
 pub fn region_rect_of(

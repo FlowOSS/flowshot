@@ -1,6 +1,6 @@
-//! The todo-25 wiring table (plan acceptance: mutation-sequence round-trip,
-//! move = exactly ONE undo unit, `undo_limit` eviction, z-order + undo
-//! interleaving, delete + effects round-trip, Amendment #3 shortcut
+//! The mutation wiring table (the acceptance bar: mutation-sequence
+//! round-trip, move = exactly ONE undo unit, `undo_limit` eviction,
+//! z-order + undo interleaving, delete + effects round-trip, shortcut
 //! collision validation).
 //!
 //! Headless at the [`EditorState`] surface (the production funnel path is
@@ -451,7 +451,7 @@ fn configure_applies_a_new_limit_live() {
 }
 
 // ---------------------------------------------------------------------------
-// D. Delete + effects round-trip through the UNIFIED journal (todo 23)
+// D. Delete + effects round-trip through the UNIFIED journal
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -545,7 +545,7 @@ fn undo_and_redo_at_the_ends_are_silent_noops() {
 }
 
 // ---------------------------------------------------------------------------
-// E. Z-order keys (unbound by default) + Amendment #3 collision table
+// E. Z-order keys (unbound by default) + the shortcut collision table
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -599,13 +599,13 @@ fn tool_keys_win_over_duplicate_z_bindings() {
     let mut ed = EditorState::new(EditorTools::default(), registry);
     ed.shortcuts_mut().rebind_z_order(Some(KeyCode::KeyP), None);
     // 'p' is the pencil key; the tool binding is checked first (documented
-    // duplicate-binding resolution until todo 36 validates config).
+    // duplicate-binding resolution until the settings surface validates config).
     assert!(ed.key_press(&env(), KeyCode::KeyP, false, None).consumed);
     assert_eq!(ed.active_tool(), Some(ToolKind::Pencil));
 }
 
 /// The F12 default map as data: every simultaneously-live binding across
-/// the editor and the selection engine. Amendment #3 (the Flameshot
+/// the editor and the selection engine (the Flameshot
 /// Return=accept+upload collision class): no two actions share a
 /// (modifier, key) pair.
 #[test]
@@ -654,7 +654,7 @@ fn shortcut_collision_table_has_no_duplicate_bindings() {
             arrow,
         ));
     }
-    // Z-order ships UNBOUND (plan todo 25: panel-driven) - no table rows,
+    // Z-order ships UNBOUND (panel-driven) - no table rows,
     // and the live default must answer None for every table key.
     for (_, _, key) in &table {
         assert_eq!(shortcuts.z_for_key(*key), None, "z-order unbound");

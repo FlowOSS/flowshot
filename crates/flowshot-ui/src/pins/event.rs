@@ -2,7 +2,7 @@
 //! [`PinInput`], the pure [`super::state::PinState`] answers with
 //! [`PinEffect`]s, and the shell applies them. Every payload is a plain
 //! constructible value, so the whole pin behavior spec is exercisable
-//! headlessly through the `test-drive` seam (the todo-13/16 pattern).
+//! headlessly through the `test-drive` seam (the inject-seam pattern).
 
 use winit::event::{MouseButton, TouchPhase};
 use winit::keyboard::{KeyCode, ModifiersState};
@@ -96,8 +96,8 @@ pub enum PinEffect {
     StartDrag,
     /// Close this pin window.
     Close,
-    /// Hand the current snapshot to the action sink (todo-28 clipboard).
+    /// Hand the current snapshot to the action sink (the clipboard module).
     Copy,
-    /// Hand the current snapshot to the action sink (todo-29 export).
+    /// Hand the current snapshot to the action sink (the export module).
     Save,
 }

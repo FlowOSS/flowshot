@@ -1,5 +1,5 @@
 //! Per-window surface lifecycle: configuration, resize, and frame
-//! presentation for the live overlay (todo 13 shell). The configuration
+//! presentation for the live overlay shell. The configuration
 //! policy itself lives in [`crate::gpu::configure_overlay_surface`] so the
 //! `render_smoke` example and the runtime share one implementation.
 
@@ -108,7 +108,7 @@ impl WindowSurface {
     /// Renders one frame: the optional backdrop/content display list through
     /// the window's [`Renderer`], then the crosshair pass on top. Without
     /// content the frame is a transparent clear plus the crosshair (the
-    /// todo-13 empty-overlay behavior).
+    /// empty-overlay behavior).
     ///
     /// # Errors
     ///

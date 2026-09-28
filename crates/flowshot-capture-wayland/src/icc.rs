@@ -118,7 +118,7 @@ impl CaptureBackend for IccBackend {
         // Region captures never paint the cursor: the stitched composite is
         // content for editors and savers, matching grim's region behavior
         // and the MockBackend contract (cursor painting is a per-output
-        // capture option, todo 8 owns cursor compositing).
+        // capture option; the cursor module owns cursor compositing).
         let captured = spawn_worker("flowshot-icc-region", || {
             run::capture_run(CaptureOpts::new(false), &run::Selection::All)
         })

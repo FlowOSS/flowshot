@@ -1,9 +1,9 @@
 //! Resilient config loading for CLI-side validation.
 //!
-//! Same rule as the daemon binary (todo-2 resilience): a missing,
+//! Same rule as the daemon binary (resilience): a missing,
 //! unreadable, or corrupt config file NEVER fails the command - defaults
-//! apply and a warning is logged. The CLI reads config only where the plan
-//! mandates a CLI-side gate (the `--upload` client-id check, Amendment #3).
+//! apply and a warning is logged. The CLI reads config only where a
+//! CLI-side gate is mandated (the `--upload` client-id check).
 
 use std::path::Path;
 

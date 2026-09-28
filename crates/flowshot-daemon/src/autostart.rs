@@ -1,8 +1,8 @@
 //! Session autostart: the `[daemon].startup_launch` config key mapped to
-//! an XDG `.desktop` autostart entry (plan todo 32).
+//! an XDG `.desktop` autostart entry.
 //!
-//! DECISION (recorded in the notepad): the plan cites the `auto-launch`
-//! crate, but it is absent from the workspace table AND `Cargo.lock`, and
+//! DECISION (recorded): the `auto-launch` crate is absent from the
+//! workspace table AND `Cargo.lock`, and
 //! the root manifest is orchestrator-owned - so the entry is written
 //! directly (the crate's Linux backend does exactly this). Zero new
 //! dependencies, injectable directory, fully unit-testable.

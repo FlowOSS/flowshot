@@ -49,11 +49,11 @@ by the tray submenu and `flowshot capture screen <n>`.
 
 ### `Launcher`
 
-Opens the manual-coordinate capture launcher dialog (todo 37 surface).
+Opens the manual-coordinate capture launcher dialog.
 
 ### `Settings`
 
-Opens the settings UI (todo 36 surface).
+Opens the settings UI.
 
 ### `Invoke(as argv)`
 

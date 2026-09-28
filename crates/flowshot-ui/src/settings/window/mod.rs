@@ -1,13 +1,13 @@
 //! The settings window runtime: a NORMAL winit window (decorated, resizable,
 //! `app_id=flowshot-settings` via the binary-layer customizer seam) hosting
-//! the embedded egui surface on our own wgpu stack - the todo-36 shell.
+//! the embedded egui surface on our own wgpu stack - the settings shell.
 //!
 //! Seams (the lib stays pure; the binary layer owns platform services):
 //! - [`SettingsWindowOptions::window_customizer`] applies the Wayland
 //!   `app_id` (the `pins::WindowCustomizer` precedent).
 //! - [`SettingsWindowOptions::on_applied`] fires after a successful Apply
 //!   write - the binary layer emits the `ConfigChanged` `D-Bus` signal
-//!   (todo 32) and re-projects live surfaces (`EditorState::configure`,
+//!   (daemon-owned) and re-projects live surfaces (`EditorState::configure`,
 //!   chrome, daemon toggles).
 //! - [`PathPicker`] hosts the rfd save-path dialog; [`ClipboardBridge`]
 //!   hosts Ctrl+C/V.

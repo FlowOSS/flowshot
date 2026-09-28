@@ -1,9 +1,9 @@
-//! The object-selection outline (plan todo 20, F27 parity visual): black 3px
+//! The object-selection outline (F27 parity visual): black 3px
 //! solid under white 1px dotted (`capturewidget.cpp` object outline). The
 //! widths and the Qt-DotLine dash rhythm are BEHAVIOR spec constants (like
 //! the selection engine's 3px drag threshold), not theme tokens; the dot
 //! approximation is 1px on / 2px off at the inner width. Split from
-//! [`super::paint`] at the 250-LOC ceiling (todo 21); the scene -> local
+//! [`super::paint`] at the 250-LOC ceiling; the scene -> local
 //! physical conversion helpers stay shared with the [`super::paint::ListSink`].
 
 use flowshot_core::geometry::OutputInfo;

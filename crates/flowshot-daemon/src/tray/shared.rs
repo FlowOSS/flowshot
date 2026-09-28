@@ -85,7 +85,8 @@ impl TrayCore {
     }
 
     /// The attention-state seam: swaps `Status` and emits `NewStatus`
-    /// (nothing drives it in v1; capture-failure UX lands with todo 36/38).
+    /// (nothing drives it in v1; capture-failure UX lands with the
+    /// settings/executor surfaces).
     pub(super) fn set_status(self: &Arc<Self>, status: TrayStatus) {
         *self.lock_status() = status;
         let core = Arc::clone(self);
@@ -118,7 +119,7 @@ impl TrayCore {
         id == ROOT_ID || find_node(&self.menu_nodes(), id).is_some()
     }
 
-    /// Runs one menu id through the dispatch table (the todo-33
+    /// Runs one menu id through the dispatch table (the
     /// [`CommandSink`] seam).
     pub(super) fn dispatch(&self, id: i32) {
         match action_for(id) {

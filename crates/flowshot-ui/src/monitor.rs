@@ -13,8 +13,8 @@
 //! [`Transform::Normal`]. For rotated outputs the logical *size* derived from
 //! the mode is wrong until the window's first `Resized` event refines it via
 //! [`InputRouter::update_surface_size`](crate::InputRouter::update_surface_size);
-//! todo 15 supersedes this layout entirely with the capture-provided one
-//! (true transforms included).
+//! the capture pass supersedes this layout entirely with the capture-provided
+//! one (true transforms included).
 
 use flowshot_core::geometry::{
     LogicalRect, OutputInfo, OutputLayout, PhysicalPoint, PhysicalSize, ToLogical, ToPhysical,
@@ -29,7 +29,7 @@ use crate::error::UiError;
 /// and render the letterbox placeholder.
 const UNBOUND: usize = usize::MAX;
 
-/// Binds winit monitors to a capture-provided layout (plan todo 15: the
+/// Binds winit monitors to a capture-provided layout (the
 /// capture layout supersedes the monitor-derived one - true transforms and
 /// scales included).
 ///

@@ -22,7 +22,7 @@ pub const BLUR_RADIUS: f64 = 14.0;
 /// commits it on Linux discrete wheels (additive drift, asymmetric in/out).
 /// `FlowShot` commits multiplicatively - zoom in `scale *= 1 + STEP`, zoom out
 /// `scale /= 1 + STEP` - so five notches give exactly `1.03^5` and in/out
-/// round-trips are lossless (plan todo 30 acceptance math).
+/// round-trips are lossless (the acceptance math).
 pub const ZOOM_STEP: f64 = 0.03;
 
 /// Wheel accumulator units per committed zoom step.

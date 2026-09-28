@@ -1,8 +1,8 @@
-//! The multi-pin registry (plan todo 30 -> todo 32 lifecycle).
+//! The multi-pin registry (feeds the daemon lifecycle).
 //!
 //! The daemon's smart lifecycle persists while ANY persistence reason
 //! holds; "pins alive" is this registry being non-empty (the replacement
-//! for Flameshot's dropped `autoCloseIdleDaemon` flag, Amendment #3). The
+//! for Flameshot's dropped `autoCloseIdleDaemon` flag). The
 //! hosting process registers a pin when its window spawns and unregisters
 //! it when the window closes (the UI's `PinActionSink::pin_closed`
 //! callback is the bridge).
@@ -58,7 +58,7 @@ impl PinRegistry {
         self.records.len()
     }
 
-    /// Whether no pins are alive - the todo-32 daemon treats `false` as a
+    /// Whether no pins are alive - the daemon treats `false` as a
     /// persistence reason ("pins alive").
     #[must_use]
     pub fn is_empty(&self) -> bool {

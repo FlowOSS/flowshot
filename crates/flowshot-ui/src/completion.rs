@@ -1,13 +1,13 @@
-//! The overlay completion boundary (plan todo 38).
+//! The overlay completion boundary.
 //!
 //! When a capture-completing gesture fires (Enter accept, Ctrl+C /
 //! double-click copy, `--instant` release, or a toolbar action button), the
 //! shell renders the final export offscreen through the REAL production
-//! render path (frozen backdrop 1:1 + the todo-23 pixel-effect quads + the
+//! render path (frozen backdrop 1:1 + the pixel-effect quads + the
 //! annotation scene - no dim, no selection chrome, no crosshair, no
 //! magnifier, no grid), crops it per output in PHYSICAL pixels, composites
 //! the crops into one image, and hands it to the installed
-//! [`CompletionSink`]. The binary layer (todo 35/38 executor) owns encoding
+//! [`CompletionSink`]. The binary layer (the executor) owns encoding
 //! and the post-capture actions; this crate stays platform-pure.
 //!
 //! # Pixel space of the export (physical-first, #4871)

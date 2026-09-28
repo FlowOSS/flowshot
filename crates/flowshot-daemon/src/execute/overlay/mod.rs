@@ -1,4 +1,4 @@
-//! The interactive overlay session (plan todo 38): frozen capture ->
+//! The interactive overlay session: frozen capture ->
 //! `OverlayRuntime` with the full production wiring -> the post-capture
 //! pipeline.
 //!
@@ -95,7 +95,7 @@ pub async fn run_interactive(
             super::post::run_post(completion, &request, &config, config_path.as_deref(), ctx).await
         }
         SessionResult::Color { hex } => {
-            // The PARENT owns the clipboard copy (todo 28: the offer must
+            // The PARENT owns the clipboard copy (the offer must
             // outlive the window session - in daemon mode this process is
             // the resident daemon).
             let clipboard = flowshot_actions::Clipboard::wayland();

@@ -1,11 +1,11 @@
 //! Post-capture action executor.
 //!
 //! Runs an effective action sequence (see [`super::actions`]) against a
-//! captured image: save (todo 29 export pipeline), clipboard copy,
-//! `copy-path` with the uri-list-appended rule, open-with, upload
-//! (todo 31), and the `notify` toast — all gated and recorded
-//! best-effort. Pin (todo 30) reports [`ActionOutcome::Deferred`] until
-//! its module lands; the daemon (todo 32) drives this executor.
+//! captured image: save (the export pipeline), clipboard copy,
+//! `copy-path` with the uri-list-appended rule, open-with, upload, and
+//! the `notify` toast — all gated and recorded best-effort. Pin reports
+//! [`ActionOutcome::Deferred`] until its module lands; the daemon drives
+//! this executor.
 
 use std::fmt::{self, Display};
 use std::path::{Path, PathBuf};
@@ -42,7 +42,7 @@ pub enum ActionOutcome {
     Notified,
     /// `notify` suppressed by the `[daemon].notifications` gate.
     NotificationGated,
-    /// Action module not landed yet (pin = todo 30).
+    /// Action module not landed yet (pin).
     Deferred(Action),
     /// Action failed; the sequence continued best-effort.
     Failed {
@@ -72,11 +72,11 @@ pub struct PostCapture<'a> {
     pub notifications_enabled: bool,
     /// Clipboard facade (daemon-owned backend in production).
     pub clipboard: &'a Clipboard,
-    /// File-dialog seam (todo 29).
+    /// File-dialog seam.
     pub dialog: &'a dyn FileDialogSink,
-    /// Notification seam (todo 29; wired to `notify-rust` in todo 32).
+    /// Notification seam (the daemon wires it to `notify-rust`).
     pub notify: &'a dyn NotifySink,
-    /// Upload backend (todo 31). `None` = upload action deferred.
+    /// Upload backend. `None` = upload action deferred.
     pub uploader: Option<&'a dyn Uploader>,
     /// Upload history for recording successful uploads. `None` = skip
     /// history recording.
@@ -99,7 +99,7 @@ impl fmt::Debug for PostCapture<'_> {
 /// Run the post-capture action sequence.
 ///
 /// Ordering: [`execution_order`] — every `copy-path` runs after the last
-/// `save`. Semantics (plan todo 28):
+/// `save`. Semantics:
 ///
 /// - best-effort: a failing action is recorded as
 ///   [`ActionOutcome::Failed`] and the rest still run;
@@ -241,7 +241,7 @@ async fn handle_upload(ctx: &PostCapture<'_>, report: &mut PostCaptureReport) {
 }
 
 /// Applies the `[daemon].notifications` gate to ALL notifications routed
-/// through the sink (plan todo 28), including the save pipeline's own.
+/// through the sink, including the save pipeline's own.
 struct GatedNotify<'a> {
     inner: &'a dyn NotifySink,
     enabled: bool,
@@ -432,7 +432,7 @@ mod tests {
         };
         assert!(saved.exists());
         assert!(matches!(report.outcomes[2], ActionOutcome::PathCopied(_)));
-        // Combined offer: image first, path entries appended (plan rule).
+        // Combined offer: image first, path entries appended.
         let offer = fixture.mock.last_offer().unwrap_or_default();
         let mimes: Vec<&str> = offer.entries.iter().map(|e| e.mime.as_str()).collect();
         assert_eq!(mimes, [MIME_PNG, MIME_TEXT_PLAIN, MIME_URI_LIST]);

@@ -49,7 +49,7 @@ impl Labels {
     }
 }
 
-/// The layer-row icon for a scene `type_id` token (the todo-25 layer model
+/// The layer-row icon for a scene `type_id` token (the layer model
 /// carries the scene token, which differs from the toolbar id for exactly
 /// one kind: the scene says `ellipse`, the toolbar says `circle`).
 #[must_use]
@@ -61,7 +61,7 @@ fn layer_icon(kind: &str) -> Icon {
 }
 
 /// Draws the panel (the caller gates on visibility: the Space toggle AND
-/// the `[editor].side_panel` config key). `slide` is the todo-41 slide-in
+/// the `[editor].side_panel` config key). `slide` is the slide-in
 /// progress (0 = hidden at the selection edge, 1 = resting); hit-testing
 /// stays on the untranslated layout.
 pub(crate) fn draw(

@@ -1,5 +1,5 @@
-//! The daemon-side execution seams (todo 38): the [`ExecutingSink`] that
-//! replaces the todo-32 `LoggingSink` default, the window-session
+//! The daemon-side execution seams: the [`ExecutingSink`] that
+//! replaces the `LoggingSink` default, the window-session
 //! [`Heartbeat`] that keeps an auto-spawned daemon alive while a session
 //! child is open, and the `flowshot pin` last-capture resolution.
 
@@ -19,7 +19,7 @@ const HEARTBEAT: Duration = Duration::from_secs(20);
 /// non-interruptible sleep made `drop` an up-to-20 s blocking join that
 /// stalled the executor's single-thread runtime, delaying every session
 /// result - including the failure receipts the bus caller waits on). The
-/// four Amendment-#3 persistence reasons stay untouched - an in-flight
+/// four persistence reasons stay untouched - an in-flight
 /// session is transient ACTIVITY (touch), not a residency reason. No-op in
 /// the one-shot CLI process (no daemon state).
 #[derive(Debug)]
@@ -106,7 +106,7 @@ pub(super) async fn pin_last_or_file(
     ))
 }
 
-/// The daemon's executing sink (todo 32's `CommandSink` seam): every
+/// The daemon's executing sink (the `CommandSink` seam): every
 /// command runs on a dedicated thread with a current-thread tokio
 /// runtime, so window sessions block their own thread, the bus dispatch
 /// task never blocks, and the `zbus` async-io reactor stays untouched.
@@ -121,8 +121,7 @@ pub struct ExecutingSink {
 /// (the fire-and-forget UX for window sessions and delayed captures).
 /// Sized to cover a session child's startup death - process spawn, runtime
 /// init, and capture-ladder failure - with margin on debug builds;
-/// failures AFTER the window stay daemon-log-only (recorded limitation,
-/// issues.md).
+/// failures AFTER the window stay daemon-log-only (recorded limitation).
 const STARTUP_REPLY_WINDOW: Duration = Duration::from_secs(5);
 
 impl ExecutingSink {

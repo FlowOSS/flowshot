@@ -1,5 +1,5 @@
 //! Object mutation: the atomic move drag and the property-change seam
-//! (plan todo 25, draft F27 undo spec).
+//! (draft F27 undo spec).
 //!
 //! F27: "object-move = one atomic unit (backup at first move, push at
 //! release)" - a press on an object arms the drag, the FIRST motion with a
@@ -7,13 +7,14 @@
 //! object live (no journal traffic), and the release pushes exactly ONE
 //! (before, after) pair. A click without motion records nothing.
 //!
-//! The core scene vocabulary is closed to UI tasks (todo-23 precedent), and
+//! The core scene vocabulary is closed to the UI layer (the pixel-effect
+//! precedent), and
 //! [`ToolObject`](flowshot_core::scene::ToolObject) carries no translate
 //! method, so mutation goes through the core's OWN persistence roundtrip:
 //! [`Scene::to_data`] -> edit the [`ToolObjectData`] -> [`Scene::from_data`].
 //! Ids, z-order, and counter numbers are preserved by construction (the
 //! roundtrip is the serde-persistence path), and the same funnel serves the
-//! todo-26 panel's property changes ([`EditorState::mutate_object`]).
+//! side panel's property changes ([`EditorState::mutate_object`]).
 
 use flowshot_core::geometry::LogicalPoint;
 use flowshot_core::scene::{Point as ScenePoint, Rect as SceneRect, Scene, ToolObjectData};
@@ -109,7 +110,7 @@ impl EditorState {
                 true
             }
             // Unreachable from a valid scene (z_order passes through
-            // untouched); handled honestly per Amendment #4.
+            // untouched); handled honestly (the no-panic discipline).
             Err(error) => {
                 tracing::warn!(
                     target: "flowshot_ui::editor",
@@ -121,8 +122,8 @@ impl EditorState {
         }
     }
 
-    /// Mutates one object's data as ONE undo unit - the todo-26 panel's
-    /// property-change funnel (plan todo 25: "property change" is a
+    /// Mutates one object's data as ONE undo unit - the side panel's
+    /// property-change funnel ("property change" is a
     /// mutation unit). `false` when the id is invalid (nothing recorded).
     pub fn mutate_object(
         &mut self,

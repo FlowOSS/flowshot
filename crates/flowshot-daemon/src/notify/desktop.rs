@@ -1,12 +1,12 @@
 //! Production notifier: `notify-rust` toasts + click-action -> `OpenURI`
-//! portal (plan todo 32: click-action -> `OpenURI` on the saved path).
+//! portal (click-action -> `OpenURI` on the saved path).
 //!
 //! Threading model: `notify-rust`'s `show()` blocks on its own zbus-5
 //! stack and `wait_for_action` blocks until the notification is acted on
 //! or closed, so every toast runs on a short-lived dedicated thread -
 //! never on an async worker. The click handler opens the URI through a
 //! [`UriOpener`]; the production opener builds a private current-thread
-//! tokio runtime for the `ashpd` portal call (the todo-10 worker pattern:
+//! tokio runtime for the `ashpd` portal call (the worker pattern:
 //! ashpd's zbus-5-tokio tasks die with that runtime, closing the
 //! connection deterministically).
 

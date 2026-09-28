@@ -1,4 +1,4 @@
-//! Handle geometry and hit-testing (plan todo 16, draft F27).
+//! Handle geometry and hit-testing (draft F27).
 //!
 //! Eight handles: four corners and four edges. Hit priority is
 //! corners > edges > center (F27: `selectionwidget.cpp` `getMouseSide`

@@ -1,4 +1,4 @@
-//! Pluggable image uploader (plan todo 31).
+//! Pluggable image uploader.
 //!
 //! The [`Uploader`] trait abstracts the upload provider; [`Imgur`] is the
 //! reference implementation (Imgur API v3). Upload results are recorded
@@ -7,8 +7,8 @@
 //!
 //! # Configuration gate
 //!
-//! The `[upload].client_id` config ships **empty** by design (Amendment
-//! #3: no freeloading on a shared anonymous pool). An upload attempt
+//! The `[upload].client_id` config ships **empty** by design: no
+//! freeloading on a shared anonymous pool. An upload attempt
 //! with an empty client id returns [`UploadError::ConfigurationMissing`]
 //! immediately — the caller surfaces a settings deep-link hint.
 

@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn gnome_probe_with_portals_negotiates_screencast_before_screenshot() {
-        // Plan todo 10(c): on GNOME the ScreenCast portal is the preferred
+        // On GNOME the ScreenCast portal is the preferred
         // rung (own-overlay UX), Screenshot-interactive the rung-5 fallback.
         let mut probe = CapabilityProbe::new(DesktopEnv::Gnome, []);
         PortalAvailability {

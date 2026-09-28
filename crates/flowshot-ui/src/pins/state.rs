@@ -1,10 +1,10 @@
-//! The pure pin state machine (plan todo 30).
+//! The pure pin state machine.
 //!
 //! [`PinState`] holds everything a pin window knows - zoom scale, image
 //! offset (the zoom-to-cursor anchor), rotation, opacity tenths, wheel
 //! accumulator, menu and pinch state - and turns [`PinInput`]s into
 //! [`PinEffect`]s. No windowing, no GPU: the whole F27 pin behavior spec is
-//! unit-testable headlessly through [`PinState::on_input`] (the todo-13/16
+//! unit-testable headlessly through [`PinState::on_input`] (the
 //! inject-seam architecture), and the `test-drive` feature feeds the same
 //! path on a live window.
 //!
@@ -38,7 +38,7 @@ pub struct PinBehavior {
     pub anchor: ResizeAnchor,
     /// Design tokens (menu layout, shadow, typography).
     pub tokens: DesignTokens,
-    /// Reduced-motion switch (todo 41): zoom transitions snap.
+    /// Reduced-motion switch: zoom transitions snap.
     pub reduced_motion: bool,
 }
 
@@ -86,7 +86,7 @@ impl PinState {
     /// `screen`-sized monitor at `scale_factor`, starting at 1:1 zoom
     /// clamped into the screen-fit / `MIN_SIZE` bounds (small images start
     /// magnified to the floor, oversized images start clamped to the
-    /// screen - plan todo 30 failure QA).
+    /// screen - the failure-QA rule).
     #[must_use]
     pub fn new(
         image: (u32, u32),
@@ -129,7 +129,7 @@ impl PinState {
 
     /// Routes one input event; returns the effects for the shell to apply.
     /// `now` is injectable for deterministic double-click timing (the
-    /// todo-16 `SelectionEnv` pattern). The full dispatch lives in the
+    /// selection engine's `SelectionEnv` pattern). The full dispatch lives in the
     /// crate-private `pins::interact` module.
     pub fn on_input(&mut self, input: &PinInput, now: Instant) -> Vec<PinEffect> {
         super::interact::dispatch(self, input, now)

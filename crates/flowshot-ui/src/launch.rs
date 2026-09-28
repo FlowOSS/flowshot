@@ -1,37 +1,37 @@
-//! Launch-time overlay flows (plan todo 18): preselect-at-cursor, region
+//! Launch-time overlay flows: preselect-at-cursor, region
 //! memory, accept-on-select.
 //!
-//! This module is the UI-side launch boundary the binary layer (todo 38)
-//! maps the CLI's typed invocation onto - NO CLI parsing lives here (plan
-//! MUST-NOT; the `--region` grammar is the CLI's, todo 35). The mapping
+//! This module is the UI-side launch boundary the binary layer
+//! maps the CLI's typed invocation onto - NO CLI parsing lives here (a
+//! MUST-NOT; the `--region` grammar is the CLI's). The mapping
 //! contract, from `flowshot-cli`'s `invocation.rs` vocabulary:
 //!
 //! | CLI / config source | UI boundary |
 //! |---|---|
 //! | `RegionToken::Rect { w, h, Some(x), Some(y) }` | [`Preselect::Region`] with `origin: Some` (explicit coords) |
 //! | `RegionToken::Rect { w, h, None, None }` | [`Preselect::Region`] with `origin: None` (centered at cursor) |
-//! | `RegionToken::AtCursor` | [`Preselect::OutputAtCursor`] (the output under the cursor becomes the selection - the interactive form of the Amendment-#3 behavior; recorded decision, todo 38/40 confirm) |
+//! | `RegionToken::AtCursor` | [`Preselect::OutputAtCursor`] (the output under the cursor becomes the selection - the interactive form of the output-at-cursor behavior; recorded decision, the binary layer's launch flows confirm) |
 //! | `request.last_region` + `[capture].last_region` | [`Preselect::LastRegion`] (the binary layer reads the TOML) |
 //! | `request.instant` | [`LaunchRequest::instant`] |
 //! | `[capture].save_last_region` | [`LaunchRequest::save_last_region`] |
-//! | todo-12 `resolve_cursor_pos().position()` | [`LaunchRequest::cursor`] (`None` = `AwaitFirstMotion`) |
-//! | `ScreenSpec::Cursor` (`capture screen`, no arg) | [`output_at_cursor`] - the Amendment-#3 output-at-cursor resolution, NOT an overlay flow |
+//! | the cursor probe's `resolve_cursor_pos().position()` | [`LaunchRequest::cursor`] (`None` = `AwaitFirstMotion`) |
+//! | `ScreenSpec::Cursor` (`capture screen`, no arg) | [`output_at_cursor`] - the output-at-cursor resolution (a recorded decision), NOT an overlay flow |
 //!
 //! `request.delay_ms`/`no_edit`/action flags stay binary-layer concerns
-//! (capture timing and export wiring, todos 15/28/38); they seed no overlay
+//! (capture timing and export wiring in the binary layer); they seed no overlay
 //! state.
 //!
 //! # Coordinate space (Oracle r1 #8iii)
 //!
 //! `--region` coordinates are GLOBAL LOGICAL pixels - the selection
-//! engine's space (todo 16), where one rect spans every monitor. The
+//! engine's space, where one rect spans every monitor. The
 //! physical-first rule applies at export: each output's crop is computed
 //! with that output's OWN scale via
 //! [`OutputLayout::crop_rects`](flowshot_core::geometry::OutputLayout::crop_rects)
 //! (never an averaged factor), so a preselected logical rect on a scale-2
 //! output exports at exactly twice the physical size (pinned in tests).
 //!
-//! # `AwaitFirstMotion` (todo-12 contract)
+//! # `AwaitFirstMotion` (the cursor-resolution contract)
 //!
 //! When the cursor is unresolved ([`LaunchRequest::cursor`] is `None`), a
 //! cursor-dependent preselect (centered region, output-at-cursor) defers to
@@ -67,13 +67,13 @@ pub use resolve::{InitialSelection, PendingPreselect, Preselect, output_at_curso
 /// binary layer owns the TOML path - the `DrawColorSink` precedent).
 pub type RegionSink = Box<dyn Fn(flowshot_core::config::Region) + Send + 'static>;
 
-/// One typed overlay-launch request (the todo-35/38 boundary; see the
+/// One typed overlay-launch request (the binary-layer boundary; see the
 /// module header for the CLI mapping table).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LaunchRequest {
-    /// What the selection engine seeds with (todo 18 preselect vocabulary).
+    /// What the selection engine seeds with (the preselect vocabulary).
     pub preselect: Preselect,
-    /// The resolved global logical cursor position (todo 12
+    /// The resolved global logical cursor position (the cursor probe's
     /// `resolve_cursor_pos`); `None` = `AwaitFirstMotion` (defer a
     /// cursor-dependent preselect to the first overlay motion event).
     pub cursor: Option<LogicalPoint>,
@@ -117,14 +117,14 @@ impl std::fmt::Debug for LaunchState {
 }
 
 impl OverlayCore {
-    /// Seeds the overlay from a typed launch request (plan todo 18).
+    /// Seeds the overlay from a typed launch request.
     ///
     /// Callable before the event loop runs: the router layout arrives on
     /// window spawn, so the preselect resolution runs at
     /// [`Self::launch`]-time when a layout is already installed (headless
     /// cores, the QA harness) and otherwise at the spawn hook. A
     /// cursor-dependent preselect with an unresolved cursor defers to the
-    /// first motion event (the todo-12 `AwaitFirstMotion` contract). A later
+    /// first motion event (the `AwaitFirstMotion` contract). A later
     /// call supersedes an earlier request (last writer wins).
     pub fn launch(&mut self, request: LaunchRequest) {
         tracing::info!(
@@ -196,7 +196,7 @@ impl OverlayCore {
     /// ([`PendingPreselect`]) at the motion's clamped global position and
     /// reports the all-window redraws; empty when nothing is pending. The
     /// pending preselect is consumed whether or not it resolves (the first
-    /// motion IS the todo-12 resolution point - a position outside every
+    /// motion IS the cursor-resolution point - a position outside every
     /// output degrades to no preselect, warned, never retried per motion).
     pub(crate) fn launch_on_motion(&mut self, at: LogicalPoint) -> Vec<Action> {
         let Some(pending) = self.launch.pending.take() else {
@@ -247,7 +247,7 @@ impl OverlayCore {
 
     /// The funnel's exit hook (region memory): when `actions` carries a
     /// capture-completing effect ([`Action::Accept`], [`Action::Copy`], or
-    /// one of the todo-38 toolbar completions Save/Pin/Upload/OpenWith),
+    /// one of the toolbar completions Save/Pin/Upload/OpenWith),
     /// persists the current selection through the [`RegionSink`] (gated on
     /// `[capture].save_last_region`) and disarms the instant accept - any
     /// accept completes the session, so a later release must not re-fire.

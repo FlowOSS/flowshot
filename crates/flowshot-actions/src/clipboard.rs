@@ -1,4 +1,4 @@
-//! Wayland-native clipboard with daemon-owned offers (plan todo 28).
+//! Wayland-native clipboard with daemon-owned offers.
 //!
 //! # Ownership model (draft F27)
 //!
@@ -7,8 +7,8 @@
 //! ([`WaylandClipboard`]) serves it from a thread inside the calling
 //! process over `zwlr_data_control` (`wl-clipboard-rs` — no `wl-copy`
 //! shell-out, no GTK/arboard). The capturing UI exits freely; the offer
-//! lives as long as the daemon, and dies with it (documented behavior,
-//! Oracle r1 #3). The daemon's lifecycle (todo 32) treats a held offer
+//! lives as long as the daemon, and dies with it (documented behavior).
+//! The daemon's lifecycle treats a held offer
 //! as a persistence reason.
 //!
 //! # Routes
@@ -20,7 +20,7 @@
 //! - [`ClipboardRoute::GnomeKeepAlive`] — portal-only GNOME without
 //!   data-control; the `keepalive` state machine (lazy offer,
 //!   notify-on-first-access, 500 ms safety close). UNIT-LEVEL ONLY,
-//!   live QA deferred (plan todo 28 verification class).
+//!   live QA deferred.
 //!
 //! # MIME policy
 //!
@@ -178,9 +178,8 @@ impl Clipboard {
     }
 }
 
-/// PNG always; JPEG additionally when the config selects it (plan
-/// todo 28: "image/png always + image/jpeg when
-/// `[save].clipboard_format='jpeg'`").
+/// PNG always; JPEG additionally when `[save].clipboard_format` selects
+/// it.
 fn encode_for_clipboard(
     image: &DynamicImage,
     config: &SaveConfig,

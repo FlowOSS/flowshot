@@ -22,9 +22,9 @@
       "work_id": "flowshot-a5e7922a",
       "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
       "plan_name": "flowshot",
-      "status": "active",
+      "status": "completed",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-28T18:16:23.302Z",
+      "updated_at": "2026-09-28T23:03:23.083Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -83,7 +83,11 @@
         "opencode:ses_f1703482dffeYuD5vExJbu6OWu",
         "opencode:ses_f16e41333ffesh8JaV53OtYpAH",
         "opencode:ses_f16e4040dffeKaIfdn2i64W49x",
-        "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN"
+        "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN",
+        "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn",
+        "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ",
+        "opencode:ses_f15bde9e8ffekix66An22kjYT4",
+        "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -143,7 +147,11 @@
         "opencode:ses_f1703482dffeYuD5vExJbu6OWu": "appended",
         "opencode:ses_f16e41333ffesh8JaV53OtYpAH": "appended",
         "opencode:ses_f16e4040dffeKaIfdn2i64W49x": "appended",
-        "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN": "appended"
+        "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN": "appended",
+        "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn": "appended",
+        "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ": "appended",
+        "opencode:ses_f15bde9e8ffekix66An22kjYT4": "appended",
+        "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
@@ -291,13 +299,15 @@
           "ended_at": "2026-09-28T18:16:23.302Z",
           "status": "completed"
         }
-      }
+      },
+      "ended_at": "2026-09-28T18:17:08.266Z",
+      "elapsed_ms": 322614189
     }
   },
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
-  "status": "active",
-  "updated_at": "2026-09-28T18:16:23.302Z",
+  "status": "completed",
+  "updated_at": "2026-09-28T23:03:23.083Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -356,7 +366,11 @@
     "opencode:ses_f1703482dffeYuD5vExJbu6OWu",
     "opencode:ses_f16e41333ffesh8JaV53OtYpAH",
     "opencode:ses_f16e4040dffeKaIfdn2i64W49x",
-    "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN"
+    "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN",
+    "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn",
+    "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ",
+    "opencode:ses_f15bde9e8ffekix66An22kjYT4",
+    "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -416,7 +430,11 @@
     "opencode:ses_f1703482dffeYuD5vExJbu6OWu": "appended",
     "opencode:ses_f16e41333ffesh8JaV53OtYpAH": "appended",
     "opencode:ses_f16e4040dffeKaIfdn2i64W49x": "appended",
-    "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN": "appended"
+    "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN": "appended",
+    "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn": "appended",
+    "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ": "appended",
+    "opencode:ses_f15bde9e8ffekix66An22kjYT4": "appended",
+    "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
@@ -565,5 +583,7 @@
       "status": "completed"
     }
   },
-  "agent": "atlas"
+  "agent": "atlas",
+  "ended_at": "2026-09-28T18:17:08.266Z",
+  "elapsed_ms": 322614189
 }

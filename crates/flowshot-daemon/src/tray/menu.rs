@@ -4,7 +4,7 @@
 //!
 //! Ids are STABLE across refreshes (libdbusmenu caches by id): fixed
 //! entries keep their constants, output entries are `SCREEN_BASE + probe
-//! index` (probe order = the todo-6 registry order, which is also the
+//! index` (probe order = the registry order, which is also the
 //! `CaptureScreen(n)` index semantics). Hotplug changes WHICH children
 //! exist, never the id scheme.
 
@@ -22,11 +22,11 @@ pub const TAKE_SCREENSHOT_ID: i32 = 1;
 pub const CAPTURE_FULL_ID: i32 = 2;
 /// Per-monitor submenu root (`children-display = submenu`).
 pub const SCREEN_SUBMENU_ID: i32 = 3;
-/// `Capture Launcher` (todo 37 seam).
+/// `Capture Launcher` (the launcher-dialog seam).
 pub const LAUNCHER_ID: i32 = 4;
 /// Separator below the capture group.
 pub const SEPARATOR_A_ID: i32 = 5;
-/// `Configure` (todo 36 seam).
+/// `Configure` (the settings seam).
 pub const CONFIGURE_ID: i32 = 6;
 /// `About`.
 pub const ABOUT_ID: i32 = 7;
@@ -49,7 +49,7 @@ pub enum TrayAction {
     Command(DaemonCommand),
     /// The About toast (version body).
     About,
-    /// Clean daemon shutdown (the todo-32 lifecycle quit seam).
+    /// Clean daemon shutdown (the lifecycle quit seam).
     Quit,
     /// Separators, submenu roots and placeholders: nothing to dispatch.
     None,

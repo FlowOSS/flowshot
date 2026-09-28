@@ -1,4 +1,4 @@
-//! The hand-authored `flowshot-config.5` roff source (plan todo 35: man
+//! The hand-authored `flowshot-config.5` roff source (man
 //! pages via `clap_mangen` for `flowshot.1` + this file-format page for the
 //! TOML config). `examples/man_pages.rs` writes it next to the generated
 //! `flowshot.1`; the schema documented here mirrors `flowshot_core::config`

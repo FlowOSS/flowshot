@@ -3,7 +3,7 @@
 //!
 //! Pins OUTLIVE the capture overlay: the overlay tears down after the
 //! capture session while pins stay up in the hosting process (CLI one-shot
-//! or daemon, todos 32/35), so they own a separate winit event loop. One
+//! or daemon), so they own a separate winit event loop. One
 //! loop hosts every pin window (multi-pin); the loop exits when the last
 //! pin closes.
 
@@ -30,10 +30,10 @@ pub struct PinSpec {
 }
 
 /// Binary-layer hook applied to every pin window's attributes before
-/// creation. The lib crate stays platform-pure; the binary (todo 35) or a
+/// creation. The lib crate stays platform-pure; the binary layer or a
 /// QA harness uses this to set the Wayland `app_id` (`flowshot-pin`) via
 /// `winit::platform::wayland::WindowAttributesExtWayland` - the same seam
-/// the todo-13 evidence defers `app_id` to.
+/// the overlay shell defers `app_id` to.
 #[derive(Clone)]
 pub struct WindowCustomizer(
     std::sync::Arc<dyn Fn(WindowAttributes) -> WindowAttributes + Send + Sync + 'static>,

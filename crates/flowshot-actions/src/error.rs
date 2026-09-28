@@ -69,7 +69,7 @@ pub enum UploadError {
     Portal(String),
 }
 
-// ---- plan todo 30 (pins) ----
+// ---- pins ----
 /// Errors produced by the pin action helpers ([`crate::pin`]).
 #[derive(Debug, Error)]
 pub enum PinError {
@@ -85,10 +85,10 @@ pub enum PinError {
         /// Byte count actually provided.
         actual: usize,
     },
-    /// The save pipeline failed (todo-29 export).
+    /// The save pipeline failed.
     #[error("pin save failed: {0}")]
     Export(#[from] ExportError),
-    /// The clipboard hand-off failed (todo-28 clipboard).
+    /// The clipboard hand-off failed.
     #[error("pin copy failed: {0}")]
     Clipboard(#[from] ClipboardError),
 }

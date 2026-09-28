@@ -1,4 +1,4 @@
-//! Settings-surface user-facing strings (Amendment #4 item 8: message-key
+//! Settings-surface user-facing strings (message-key
 //! constants, no inline literals in logic). English-only v1; the i18n
 //! catalog replaces the values behind these keys on the roadmap.
 
@@ -43,7 +43,7 @@ pub const BUTTON_CLEAR: &str = "Clear";
 pub const BUTTON_RESET_PATTERN: &str = "Reset to default";
 
 /// Banner shown when the config file failed to parse (defaults displayed;
-/// Apply repairs the file - the todo-36 failure-path QA scenario).
+/// Apply repairs the file - the failure-path QA scenario).
 pub const BANNER_CORRUPT_CONFIG: &str =
     "The config file could not be parsed; defaults are shown. Apply to repair the file.";
 /// Banner prefix when the Apply write failed.
@@ -167,7 +167,7 @@ pub const FIELD_THEME: &str = "Theme";
 /// `[save].filename_pattern`.
 pub const FIELD_FILENAME_PATTERN: &str = "Filename pattern";
 
-/// Hint under an empty `[upload].client_id` (the todo-31 CLI gate).
+/// Hint under an empty `[upload].client_id` (the upload CLI gate).
 pub const HINT_UPLOAD_UNCONFIGURED: &str =
     "Upload is disabled while the client ID is empty (`flowshot upload` exits with a hint).";
 /// Hint under the filename pattern field.

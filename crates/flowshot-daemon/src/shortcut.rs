@@ -1,4 +1,4 @@
-//! Global shortcuts (plan todo 34): the `GlobalShortcuts` portal primary
+//! Global shortcuts: the `GlobalShortcuts` portal primary
 //! path plus the compositor-bind fallback ladder.
 //!
 //! # The ladder
@@ -13,13 +13,13 @@
 //!    the [`detect::PORTAL_OVERRIDE_ENV`] QA harness): generate the
 //!    paste-ready compositor snippets ([`fallback`]) - NO resident daemon
 //!    needed, so the persistence reason stays released. The same text
-//!    feeds the settings tab (todo 36), the docs (todo 40), and
-//!    `flowshot --print-bind-help` (todo 35).
+//!    feeds the settings tab, the docs, and
+//!    `flowshot --print-bind-help`.
 //!
-//! # Shortcut defaults (F12, rebindable in todo 36)
+//! # Shortcut defaults (F12, rebindable in the settings tab)
 //!
 //! `Print` -> region capture, `Shift+Print` -> full, `Ctrl+Print` ->
-//! active monitor ([`spec::ACTIVE_SCREEN`] sentinel; the todo-35 executor
+//! active monitor ([`spec::ACTIVE_SCREEN`] sentinel; the executor
 //! resolves the output under cursor).
 //!
 //! # Restore data (pinned reality, see [`persist`])
@@ -80,7 +80,7 @@ pub struct ShortcutWiring {
 /// every field, the binary uses [`ShortcutOptions::production`]).
 #[derive(Debug, Clone)]
 pub struct ShortcutOptions {
-    /// Master switch (default OFF so pre-todo-34 daemon callers are
+    /// Master switch (default OFF so existing daemon callers are
     /// unaffected; the binary enables it).
     pub enabled: bool,
     /// The actions to register.
@@ -111,7 +111,7 @@ impl Default for ShortcutOptions {
 }
 
 impl ShortcutOptions {
-    /// Production defaults: enabled, plan-default specs, portal unless the
+    /// Production defaults: enabled, default specs, portal unless the
     /// override env masks it, desktop detected lazily at registration.
     #[must_use]
     pub fn production() -> Self {
@@ -145,7 +145,7 @@ pub struct PortalRegistration {
 }
 
 impl PortalRegistration {
-    /// The persisted registration record (the todo-36 settings seam).
+    /// The persisted registration record (the settings seam).
     #[must_use]
     pub const fn restore_data(&self) -> &RestoreData {
         &self.data
@@ -331,7 +331,7 @@ fn restore_path(options: &ShortcutOptions) -> Option<PathBuf> {
     }
 }
 
-/// The restore-data path inside a `FlowShot` config dir (the todo-36
+/// The restore-data path inside a `FlowShot` config dir (the
 /// settings seam; the XDG-home twin lives in [`crate::paths`]).
 #[must_use]
 pub fn restore_path_in(config_dir: &Path) -> PathBuf {
@@ -399,7 +399,7 @@ mod tests {
         };
         assert_eq!(info.flavor, CompositorFlavor::Hyprland);
         assert_eq!(info.desktop, DesktopEnv::Hyprland);
-        // The plan's verbatim hyprland snippet form is in the help text.
+        // The verbatim hyprland snippet form is in the help text.
         assert!(info.help.contains("bind = ,Print,exec,flowshot capture"));
         // The fallback needs NO resident daemon: the reason stays released,
         // nothing persists, and no nudge fires.

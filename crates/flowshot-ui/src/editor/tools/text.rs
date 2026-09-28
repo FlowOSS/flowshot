@@ -1,4 +1,4 @@
-//! The text annotation tool (plan todo 22, F27 text spec).
+//! The text annotation tool (F27 text spec).
 //!
 //! Click places an edit session anchored at the press; typing flows through
 //! the [`TextSession`] state machine (direct keyboard text AND winit `Ime`
@@ -57,7 +57,7 @@ const SELECTION_ALPHA: u8 = 64;
 /// `on_size_changed`).
 const DEFAULT_FONT_SLOT: u32 = 8;
 
-/// The text annotation tool with real IME editing (todo 22).
+/// The text annotation tool with real IME editing.
 #[derive(Debug)]
 pub struct TextTool {
     session: Option<TextSession>,

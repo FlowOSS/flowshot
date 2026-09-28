@@ -62,7 +62,7 @@ impl CaptureState {
                 self.active.stopped = true;
             }
             // v1 captures into wl_shm buffers only: dma-buf advertisements
-            // are ignored by design (todo 7 scope: SHM only). The generated
+            // are ignored by design (SHM-only scope). The generated
             // event enum is #[non_exhaustive].
             _ => {}
         }

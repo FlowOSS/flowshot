@@ -1,12 +1,12 @@
-//! Pin window + GPU spawn (plan todo 30).
+//! Pin window + GPU spawn.
 //!
 //! Window policy: borderless (`with_decorations(false)`), transparent,
 //! always-on-top BEST EFFORT (`WindowLevel::AlwaysOnTop` is advisory on
 //! Wayland - xdg-shell has no stacking protocol; Hyprland's `staysontop`
-//! window rule ships in the todo 39/40 snippet), initial extent = the
+//! window rule ships in the Wayland setup snippet), initial extent = the
 //! state machine's clamped target, and min == max pinned to that extent so
 //! the compositor cannot user-resize the pin out of sync with its image.
-//! NO layer-shell (v1 overlay policy, plan todo 30 Must-NOT).
+//! NO layer-shell (the v1 overlay policy's Must-NOT).
 //!
 //! The clamp screen is the primary monitor's physical size, additionally
 //! capped by the device's `max_texture_dimension_2d` (the downlevel-limits

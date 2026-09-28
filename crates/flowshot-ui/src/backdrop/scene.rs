@@ -1,4 +1,4 @@
-//! Per-window backdrop scene math (plan todo 15).
+//! Per-window backdrop scene math.
 //!
 //! The unified backdrop is LOGICAL: one [`OutputLayout`] positions every
 //! output's frozen frame in global space, and each monitor window renders
@@ -78,7 +78,7 @@ pub(super) struct ResolvedCursor {
     pub top_left: PhysicalPoint,
 }
 
-/// Resolves a global logical cursor position (todo 12's
+/// Resolves a global logical cursor position (the
 /// `resolve_cursor_pos` contract) into the owning output and the sprite's
 /// top-left corner after the hotspot offset. `None` when the position falls
 /// outside every output.
@@ -117,7 +117,7 @@ pub(super) struct WindowScene {
 /// Appends one window's backdrop commands to `list`, in paint order:
 /// letterbox placeholder (uncovered margins only), frozen frame 1:1, cursor
 /// sprite (part of the frozen scene, so BELOW the dim), then the dim layer
-/// with the selection cutout (even-odd, todo 14(d)).
+/// with the selection cutout (the renderer's even-odd rule).
 pub(super) fn push_window_scene(list: &mut DisplayList, scene: &WindowScene) {
     let window = Rect::from_parts(
         0.0,

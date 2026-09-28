@@ -1,8 +1,8 @@
-//! The editor tool framework and event routing (plan todo 20, draft F27).
+//! The editor tool framework and event routing (draft F27).
 //!
-//! The layer bridging the scene graph (`flowshot_core::scene`, todo 4) to
-//! the overlay input funnel (todo 13/16): a [`Tool`] registry every
-//! annotation tool (todos 21-27) plugs into, the F27 event-routing priority
+//! The layer bridging the scene graph (`flowshot_core::scene`) to
+//! the overlay input funnel: a [`Tool`] registry every
+//! annotation tool plugs into, the F27 event-routing priority
 //! chain (picker > right-click > active tool > edit commit > object select >
 //! selection engine), the per-tool size dispatch with the digit/wheel
 //! adjusters, scene commits as single undo units, and the real producers of
@@ -10,7 +10,7 @@
 //!
 //! # Ownership split
 //!
-//! The selection engine (todo 16) owns selection GEOMETRY; the editor owns
+//! The selection engine owns selection GEOMETRY; the editor owns
 //! the annotation scene and the active tool. `OverlayCore` feeds both from
 //! one funnel: the editor sees every pointer/key/wheel event FIRST (the F27
 //! priority) and passes through what it does not consume; the Esc cascade
@@ -31,10 +31,10 @@
 //! - a press that commits an edit widget does NOT also select an object
 //!   (one press, one action),
 //! - sub-threshold wheel deltas ACCUMULATE to the 60-unit step instead of
-//!   Flameshot's 200ms rate limit (plan wording; a 120-unit notch still
-//!   yields exactly ±1),
-//! - deactivating a tool cancels its edit widget (todo 22 may refine the
-//!   commit-on-switch path).
+//!   Flameshot's 200ms rate limit (a recorded deviation; a 120-unit
+//!   notch still yields exactly ±1),
+//! - deactivating a tool cancels its edit widget (the text tool's
+//!   commit-on-switch path may refine this).
 
 mod blur;
 mod editing;
@@ -198,9 +198,9 @@ impl EditorState {
         self.color = parse_draw_color(&config.editor.draw_color);
         // Session toggles re-project from config on a settings apply (the
         // apply is authoritative over the in-session toggle): the magnifier
-        // projects BOTH its config keys (todo 17), and the grid follows the
-        // same pattern (todo 36 alignment - issues.md 2026-09-27 todo-17
-        // follow-up: grid_visible was the lone configure() gap).
+        // projects BOTH its config keys, and the grid follows the
+        // same pattern (issues.md 2026-09-27 follow-up: grid_visible was
+        // the lone configure() gap).
         self.magnifier_visible = config.editor.magnifier;
         self.magnifier_shape = config.editor.magnifier_shape;
         self.grid_visible = config.editor.grid;
@@ -221,7 +221,7 @@ impl EditorState {
     }
 
     /// Mutable registry access (the composition root registers tools before
-    /// the loop starts - todo 35 / QA harnesses).
+    /// the loop starts - the binary layer / QA harnesses).
     pub fn registry_mut(&mut self) -> &mut ToolRegistry {
         &mut self.registry
     }
@@ -257,7 +257,7 @@ impl EditorState {
         self.sizes.get(self.active_kind)
     }
 
-    /// Sets the active tool's size (the todo-26 panel slider seam); digits
+    /// Sets the active tool's size (the side-panel slider seam); digits
     /// and wheel go through the same slot dispatch.
     pub fn set_tool_size(&mut self, size: u32) {
         self.apply_size(size);
@@ -269,7 +269,7 @@ impl EditorState {
         self.color
     }
 
-    /// Sets the draw color (the todo-26 wheel seam; F27 `onColorChanged`).
+    /// Sets the draw color (the color-wheel seam; F27 `onColorChanged`).
     pub fn set_color(&mut self, color: SceneColor) {
         self.color = color;
         if let Some(tool) = self.tool.as_mut() {
@@ -284,7 +284,7 @@ impl EditorState {
         );
     }
 
-    /// The key map (rebindable - the todo-36 settings seam).
+    /// The key map (rebindable - the settings-surface seam).
     #[must_use]
     pub const fn shortcuts(&self) -> &ToolShortcuts {
         &self.shortcuts
@@ -295,7 +295,7 @@ impl EditorState {
         &mut self.shortcuts
     }
 
-    /// Installs the frozen original frame tools sample from (todo 23's
+    /// Installs the frozen original frame tools sample from (the
     /// secure pixelate reads the ORIGINAL through this; `None` clears).
     /// A new frame starts a new capture session: baked pixel effects
     /// reference the PREVIOUS frame's pixels, so they and the undo journal
@@ -312,22 +312,22 @@ impl EditorState {
         self.frame.as_ref()
     }
 
-    /// The active tool's edit-widget geometry (todo 22 producer; drives the
-    /// F27 right-click exception, click-outside commit, and the Esc cascade
-    /// tool-widget stage).
+    /// The active tool's edit-widget geometry (the text tool produces it;
+    /// drives the F27 right-click exception, click-outside commit, and the
+    /// Esc cascade tool-widget stage).
     #[must_use]
     pub fn edit_rect(&self) -> Option<LogicalRect> {
         self.tool.as_ref()?.edit_rect()
     }
 
     /// Whether an edit widget is active: the tool's own edit geometry (the
-    /// todo-22 producer) OR the detached widget flag.
+    /// text tool produces it) OR the detached widget flag.
     #[must_use]
     pub fn editing(&self) -> bool {
         self.widget_present || self.edit_rect().is_some()
     }
 
-    /// Sets the detached edit-widget presence (the todo-22 text-edit
+    /// Sets the detached edit-widget presence (the text tool's edit
     /// producer; drives the F27 right-click exception, the click-outside
     /// commit routing, and the Esc cascade's tool-widget stage).
     pub fn set_edit_widget_present(&mut self, present: bool) {
@@ -357,14 +357,14 @@ impl EditorState {
 
     /// Writes the editor's occupancy into the Esc-cascade seam (stages 1,
     /// 2, and 4; the funnel's `sync_cascade` adds the chrome-owned panel
-    /// and picker stages 3/5 - todo 26).
+    /// and picker stages 3/5).
     pub fn sync_cascade(&self, cascade: &mut CascadeState) {
         cascade.set_tool_checked(self.active_kind.is_some());
         cascade.set_object_selected(self.selected.is_some());
         cascade.set_tool_widget_present(self.editing());
     }
 
-    /// Whether the grid overlay is visible (plan todo 27: `[editor].grid`
+    /// Whether the grid overlay is visible (`[editor].grid`
     /// config + toggle key).
     #[must_use]
     pub const fn grid_visible(&self) -> bool {

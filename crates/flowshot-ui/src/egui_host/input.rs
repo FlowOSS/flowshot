@@ -16,7 +16,7 @@ use winit::event::{ElementState, Ime, MouseButton, MouseScrollDelta, WindowEvent
 use super::keymap;
 
 /// Clipboard access for Ctrl+C/V in egui text fields. The lib stays pure:
-/// the binary layer wires the Wayland clipboard (todo 38); `None` bridge =
+/// the binary layer wires the Wayland clipboard; `None` bridge =
 /// clipboard shortcuts inert (keys still reach egui as plain events).
 #[derive(Clone)]
 pub struct ClipboardBridge {

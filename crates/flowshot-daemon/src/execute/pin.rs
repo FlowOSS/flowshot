@@ -1,4 +1,4 @@
-//! The pin action host (plan todo 30/38): a completed capture becomes a
+//! The pin action host: a completed capture becomes a
 //! floating pin window in a dedicated session CHILD (the winit
 //! one-event-loop-per-process constraint, see [`super::session`]). The
 //! PARENT registers the pin in the daemon registry before the spawn (the
@@ -8,8 +8,8 @@
 //!
 //! Documented trade-off: a pin's clipboard offer is served by the pin
 //! child, so it dies when the pin closes (the daemon-owned offer contract
-//! of todo 28 covers CAPTURE clipboard; a pin-copy outliving its pin
-//! would need a bus-level clipboard handoff - recorded in issues.md).
+//! covers CAPTURE clipboard; a pin-copy outliving its pin
+//! would need a bus-level clipboard handoff - recorded).
 
 use std::sync::Arc;
 use std::time::SystemTime;

@@ -1,4 +1,4 @@
-//! The chrome acceptance table (plan todo 26): the toolbar config order and
+//! The chrome acceptance table: the toolbar config order and
 //! anchor/flip geometry, the color-wheel circular geometry and pick flow
 //! (color + selected-object mutate + persistence sink, each ONE undo unit),
 //! the side-panel per-tool control visibility table, the config gate, the
@@ -547,7 +547,7 @@ fn size_label_table_matches_the_dispatch_slots() {
 }
 
 // ---------------------------------------------------------------------------
-// Side panel controls -> the todo-20/25 seams
+// Side panel controls -> the editor seams
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -575,7 +575,7 @@ fn size_slider_writes_the_slot_and_the_object_as_one_unit() {
     assert_eq!(
         core.editor().tool_size(),
         MAX_TOOL_SIZE / 2,
-        "the runtime slot is not journaled (todo-20 contract)"
+        "the runtime slot is not journaled (the tool-framework contract)"
     );
 }
 
@@ -620,7 +620,7 @@ fn counter_outline_row_toggles_the_config() {
 
 #[test]
 fn pixelate_mode_row_swaps_the_tool_kind() {
-    // The ToolKind::Blur panel exposure (todo-23: blur ships unbound).
+    // The ToolKind::Blur panel exposure (blur ships unbound).
     let mut core = fixture();
     open_panel(&mut core);
     tap(&mut core, KeyCode::KeyB);
@@ -636,7 +636,7 @@ fn pixelate_mode_row_swaps_the_tool_kind() {
 }
 
 // ---------------------------------------------------------------------------
-// Layer list (the todo-25 z-order model)
+// Layer list (the z-order model)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -736,7 +736,7 @@ fn raise_and_lower_buttons_step_the_selection_one_unit_each() {
     assert_eq!(core.editor().scene().z_order(), &[bottom, top]);
     assert_eq!(core.editor().undo_stack().undo_depth(), depth_before + 2);
 
-    // The edge no-op records NOTHING (the todo-25 guard).
+    // The edge no-op records NOTHING (the no-op guard).
     let panel = panel_layout(&core);
     let (x, y) = center(panel.lower_button.unwrap());
     left_click_at(&mut core, x, y);

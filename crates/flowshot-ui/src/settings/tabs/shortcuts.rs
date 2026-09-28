@@ -1,4 +1,4 @@
-//! Shortcuts tab: the per-action recorder over the todo-25 keybind seams
+//! Shortcuts tab: the per-action recorder over the editor keybind seams
 //! ([`ToolShortcuts::rebind`], [`ToolShortcuts::rebind_undo_redo`],
 //! [`ToolShortcuts::rebind_z_order`]), as one section card of grid rows.
 //!
@@ -10,7 +10,7 @@
 //! Persistence: rebinds are session state on the model until the core
 //! `[shortcuts]` config group lands (issues.md 2026-09-26); the binary
 //! layer reads [`SettingsModel::shortcuts`] to project them into the
-//! editor. GLOBAL capture shortcuts (Print…, todo 34) are daemon-owned
+//! editor. GLOBAL capture shortcuts (Print…) are daemon-owned
 //! portal registrations - the hint above the card records the split
 //! honestly.
 

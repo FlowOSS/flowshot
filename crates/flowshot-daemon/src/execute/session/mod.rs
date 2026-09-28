@@ -1,4 +1,4 @@
-//! The window-session child-process contract (plan todo 38).
+//! The window-session child-process contract.
 //!
 //! winit 0.30 permits exactly ONE event loop per process
 //! (`EventLoopBuilder::build` -> `RecreationAttempt` on the second), so a
@@ -14,12 +14,12 @@
 //! Flameshot daemon/GUI split precedent), renders the export through the
 //! production path, and writes the result (JSON + export PNG) to the
 //! spec-mandated temp paths. The PARENT runs post-capture, so the
-//! clipboard offer stays daemon-owned (todo 28), the pin registry and
-//! persistence reasons stay in one process (todo 30/32), and a crashed
+//! clipboard offer stays daemon-owned, the pin registry and
+//! persistence reasons stay in one process, and a crashed
 //! session never takes the daemon down.
 //!
 //! The verb is hidden from the user surface (internal process-model
-//! contract, not a dev subcommand - recorded in decisions.md).
+//! contract, not a dev subcommand - recorded).
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -41,11 +41,11 @@ pub enum SessionKind {
     /// The interactive capture overlay (or the `flowshot color` session
     /// with `color_mode`).
     Overlay,
-    /// The manual-coordinate launcher dialog (todo 37).
+    /// The manual-coordinate launcher dialog.
     Launcher,
-    /// The settings window (todo 36).
+    /// The settings window.
     Settings,
-    /// A pin window session (todo 30).
+    /// A pin window session.
     Pin,
 }
 
@@ -76,7 +76,7 @@ pub struct SessionSpec {
     #[serde(default)]
     pub color_mode: bool,
     /// Launcher child: forward the dispatch to the daemon over the bus
-    /// (production mapping, todo 37) instead of capturing in-process.
+    /// (production mapping) instead of capturing in-process.
     #[serde(default)]
     pub forward_to_daemon: bool,
     /// Pin-session parameters.
@@ -113,7 +113,7 @@ pub enum SessionResult {
     },
     /// The session window closed normally (settings/pins).
     Closed,
-    /// The session failed; `exit_code` carries the shared todo-35 table.
+    /// The session failed; `exit_code` carries the shared exit-code table.
     Failed {
         /// Human-readable error.
         error: String,
@@ -239,7 +239,7 @@ pub fn read_export(image_path: &Path) -> Result<flowshot_ui::ExportedImage, Exec
 }
 
 /// The child-side config load (explicit path or the platform default,
-/// corrupt/missing -> defaults with a warning - the todo-2 contract).
+/// corrupt/missing -> defaults with a warning - the resilience contract).
 #[must_use]
 pub fn load_config(path: Option<&Path>) -> flowshot_core::Config {
     match path {

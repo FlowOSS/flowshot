@@ -6,13 +6,13 @@
 //! `setWindowOpacity` fades the whole translucent window. The image quad
 //! draws at `margin + offset` with the zoom-scaled extent; sampling is
 //! always linear-filtered (pin zoom is ALWAYS antialiased - the
-//! `antialiasingPinZoom` toggle is DROPPED per Amendment #3).
+//! `antialiasingPinZoom` toggle was deliberately DROPPED).
 //!
 //! [`frame_list`] is a PURE function of the state machine: the live shell
 //! and the offscreen QA verify path (`examples/pin_window.rs
 //! --verify-offscreen`) render the identical list through the identical
 //! [`crate::render::Renderer`], so the offscreen readback is ground truth
-//! for what the surface stores (the todo-15 verify-offscreen pattern).
+//! for what the surface stores (the backdrop's verify-offscreen pattern).
 
 use std::time::Instant;
 
@@ -35,7 +35,7 @@ pub(super) fn render_pin(gpu: &GpuContext, entry: &mut PinEntry) {
 }
 
 /// Builds one pin frame: shadow -> image quad -> context menu. `now`
-/// evaluates the zoom transition (todo 41): the same instant the shell
+/// evaluates the zoom transition: the same instant the shell
 /// schedules with, so offscreen renders are deterministic stills.
 #[must_use]
 pub fn frame_list(state: &PinState, now: Instant) -> DisplayList {

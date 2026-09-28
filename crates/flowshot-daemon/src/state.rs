@@ -1,21 +1,20 @@
 //! Shared daemon state: the persistence-reason inputs of the smart
-//! lifecycle (Amendment #3) plus last-activity tracking.
+//! lifecycle plus last-activity tracking.
 //!
-//! The four persistence reasons (plan todo 32):
+//! The four persistence reasons:
 //!
 //! 1. tray enabled - `[daemon].tray` at startup, runtime-updatable by the
-//!    todo-33 tray module;
-//! 2. global shortcuts registered - the todo-34 portal triggers need a
+//!    tray module;
+//! 2. global shortcuts registered - the portal triggers need a
 //!    resident daemon, so registration pins the process;
-//! 3. pins alive - the todo-30 [`PinRegistry`] hosted by this daemon;
-//! 4. clipboard offer held - the todo-28 daemon-owned data-control offer
+//! 3. pins alive - the [`PinRegistry`] hosted by this daemon;
+//! 4. clipboard offer held - the daemon-owned data-control offer
 //!    dies with the process, so holding one pins it.
 //!
 //! Clipboard-release detection caveat: `wl-clipboard-rs` gives no
 //! "selection replaced" callback, so the offer flag is set when the daemon
 //! serves a capture copy and cleared through [`DaemonState::set_clipboard_offer_held`]
-//! by whoever observes the release (todo 35/38 wiring); recorded in the
-//! notepad.
+//! by whoever observes the release (the CLI/executor wiring).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -28,16 +27,16 @@ use tokio::sync::Notify;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "the four independent Amendment-#3 persistence reasons ARE the truth table"
+    reason = "the four independent persistence reasons ARE the truth table"
 )]
 pub struct PersistenceReasons {
-    /// `[daemon].tray` (or a runtime tray registration, todo 33).
+    /// `[daemon].tray` (or a runtime tray registration).
     pub tray: bool,
-    /// Global shortcuts registered through the portal (todo 34).
+    /// Global shortcuts registered through the portal.
     pub shortcuts: bool,
-    /// At least one pin window is alive (todo 30 registry).
+    /// At least one pin window is alive (the pin registry).
     pub pins_alive: bool,
-    /// A daemon-owned clipboard offer is held (todo 28).
+    /// A daemon-owned clipboard offer is held.
     pub clipboard_offer: bool,
 }
 
@@ -120,26 +119,26 @@ impl DaemonState {
     }
 
     /// Sets the tray persistence reason (`[daemon].tray` at startup, the
-    /// todo-33 tray module at runtime).
+    /// tray module at runtime).
     pub fn set_tray(&self, enabled: bool) {
         self.tray.store(enabled, Ordering::Release);
         self.wake.notify_one();
     }
 
-    /// Sets the global-shortcuts persistence reason (todo 34).
+    /// Sets the global-shortcuts persistence reason.
     pub fn set_shortcuts_registered(&self, registered: bool) {
         self.shortcuts.store(registered, Ordering::Release);
         self.wake.notify_one();
     }
 
-    /// Sets the clipboard-offer persistence reason (todo 28 flag; see the
+    /// Sets the clipboard-offer persistence reason (see the
     /// module docs for the release-detection caveat).
     pub fn set_clipboard_offer_held(&self, held: bool) {
         self.clipboard_offer.store(held, Ordering::Release);
         self.wake.notify_one();
     }
 
-    /// Tracks a live pin (todo 30 host bridge).
+    /// Tracks a live pin (the registry host bridge).
     pub fn register_pin(&self, record: PinRecord) {
         self.lock_pins().register(record);
         self.wake.notify_one();
@@ -158,7 +157,7 @@ impl DaemonState {
         self.lock_pins().ids()
     }
 
-    /// Remembers the most recent completed capture (todo 38: `flowshot
+    /// Remembers the most recent completed capture (`flowshot
     /// pin` with no FILE pins the last capture - the daemon-resident
     /// in-memory history slot; ONE image, replaced on every completion).
     pub fn set_last_capture(&self, image: flowshot_ui::ExportedImage) {

@@ -1,8 +1,8 @@
-//! Offscreen export rendering (plan todo 38).
+//! Offscreen export rendering.
 //!
 //! ONE export implementation shared by the live shell and the headless QA
 //! harnesses: each prepared output renders through the real production
-//! render path (frozen backdrop 1:1 + the todo-23 pixel-effect quads + the
+//! render path (frozen backdrop 1:1 + the pixel-effect quads + the
 //! annotation scene via [`EditorState::paint_export_into`]) into an
 //! offscreen target - no dim, no selection chrome, no crosshair, no
 //! magnifier, no grid - reads back as upright RGBA, and
@@ -95,7 +95,7 @@ pub fn render_output_export(
     }))
 }
 
-/// The live shell's completion render (todo 38): every bound window's
+/// The live shell's completion render: every bound window's
 /// renderer draws its output's export frame (effect textures synced first -
 /// a keyboard-committed effect may not have reached this renderer yet),
 /// then the crops composite physical-first. `None` when a cropped output
@@ -181,7 +181,7 @@ pub fn render_export(
 }
 
 /// Syncs one renderer's pixel-effect texture set to the editor's effect
-/// layer (todo 23): uploads new bakes, drops textures of undone/replaced
+/// layer: uploads new bakes, drops textures of undone/replaced
 /// effects (each bake can be megabytes - retired ids must not linger).
 /// A failed upload logs and keeps the id marked uploaded: the renderer's
 /// magenta placeholder is the visible failure signal, retried never per
@@ -232,7 +232,7 @@ fn normalize_to_rgba(format: wgpu::TextureFormat, bytes: &mut [u8]) {
 }
 
 impl crate::app::OverlayApp {
-    /// The capture-completion path (todo 38): renders the export offscreen
+    /// The capture-completion path: renders the export offscreen
     /// through the production render path, composites it physical-first,
     /// hands it to the installed [`CompletionSink`](crate::CompletionSink),
     /// and tears down. The binary layer owns encoding and post-capture

@@ -19,7 +19,7 @@ pub struct CursorSprite {
     pub hotspot: PhysicalPoint,
 }
 
-/// A cursor sprite frozen at a global logical position (todo 12's
+/// A cursor sprite frozen at a global logical position (the
 /// `resolve_cursor_pos` output space).
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlacedCursor {
@@ -73,7 +73,7 @@ pub struct BackdropOptions {
     /// carry a backend-painted cursor).
     pub cursor_visible: bool,
     /// The INITIAL selection in global logical space, seeded into the
-    /// selection engine at runtime construction (todo 16); from then on the
+    /// selection engine at runtime construction; from then on the
     /// live engine rect drives the dim cutout. Direct [`Backdrop::commands`]
     /// callers (tests, offscreen verification) consume it as the cutout.
     ///

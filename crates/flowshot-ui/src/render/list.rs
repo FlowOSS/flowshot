@@ -1,8 +1,8 @@
 //! The display list: the renderer's pure draw-command vocabulary.
 //!
-//! The renderer is a **pure draw-command consumer** (plan todo 14 "Must
-//! NOT"): editor and widget layers (todos 19-27) build a [`DisplayList`] per
-//! frame in physical pixels and hand it to [`super::Renderer`]. No scene or
+//! The renderer is a **pure draw-command consumer**: editor and widget
+//! layers build a [`DisplayList`] per frame in physical pixels and hand it
+//! to [`super::Renderer`]. No scene or
 //! editor semantics live here, and every visual value (colors, radii, blur,
 //! spacing) arrives from `flowshot_core::tokens` via the caller - the list
 //! itself hardcodes nothing.
@@ -141,8 +141,8 @@ impl ShadowSpec {
 }
 
 /// An image quad: a registered texture drawn into `dst`, optionally sampling
-/// the pixel sub-region `src` (the magnifier's zoom window, todo 17), at a
-/// uniform `alpha` fade (the todo-41 motion seam; 1.0 = opaque).
+/// the pixel sub-region `src` (the magnifier's zoom window), at a
+/// uniform `alpha` fade (the motion seam; 1.0 = opaque).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ImageCommand {
     /// Which uploaded texture to sample.
@@ -175,7 +175,7 @@ pub enum Command {
         /// Fill color (token-derived).
         color: Color,
     },
-    /// Strokes a shape outline; `width` is physical px (plan todo 14(a)).
+    /// Strokes a shape outline; `width` is physical px.
     Stroke {
         /// The geometry.
         shape: Shape,
@@ -185,7 +185,7 @@ pub enum Command {
         color: Color,
     },
     /// The dim layer: `bounds` filled minus every cutout rect, using the
-    /// even-odd rule (plan todo 14(d), contrastOpacity token via
+    /// even-odd rule (the contrastOpacity token via
     /// [`Color::dim_from_palette`]).
     Dim {
         /// The dimmed region (typically the whole output).
@@ -195,7 +195,7 @@ pub enum Command {
         /// Dim color with token opacity.
         color: Color,
     },
-    /// Inverts everything painted below `rect` (the todo-21 invert tool's
+    /// Inverts everything painted below `rect` (the invert tool's
     /// non-destructive region filter). The complement runs in the renderer's
     /// linear-light compositing space (`1 - dst` per channel, destination
     /// alpha preserved), so channel extremes invert exactly while midtones
@@ -205,7 +205,7 @@ pub enum Command {
         rect: Rect,
     },
     /// Draws an image quad. A missing texture renders the magenta
-    /// placeholder and logs a tracing error (todo 14 failure path).
+    /// placeholder and logs a tracing error (the renderer's failure path).
     Image(ImageCommand),
     /// Draws a drop shadow behind (below in list order) its content.
     Shadow {
@@ -271,7 +271,7 @@ impl DisplayList {
         self.push(Command::Fill { shape, color });
     }
 
-    /// Strokes a shape outline; `width` is physical px (plan todo 14(a)).
+    /// Strokes a shape outline; `width` is physical px.
     pub fn stroke(&mut self, shape: Shape, width: f32, color: Color) {
         self.push(Command::Stroke {
             shape,
@@ -280,7 +280,7 @@ impl DisplayList {
         });
     }
 
-    /// Dims `bounds` with an even-odd selection cutout (plan todo 14(d)).
+    /// Dims `bounds` with an even-odd selection cutout.
     pub fn dim(&mut self, bounds: Rect, cutouts: Vec<Rect>, color: Color) {
         self.push(Command::Dim {
             bounds,
@@ -289,7 +289,7 @@ impl DisplayList {
         });
     }
 
-    /// Inverts everything painted below `rect` (plan todo 21 invert tool).
+    /// Inverts everything painted below `rect` (the invert tool).
     pub fn invert(&mut self, rect: Rect) {
         self.push(Command::Invert { rect });
     }
@@ -299,7 +299,7 @@ impl DisplayList {
         self.image_faded(texture, dst, src, 1.0);
     }
 
-    /// Draws an image quad at a uniform opacity (the todo-41 fade seam;
+    /// Draws an image quad at a uniform opacity (the motion fade seam;
     /// `alpha` clamps into `[0, 1]`).
     pub fn image_faded(&mut self, texture: TextureId, dst: Rect, src: Option<Rect>, alpha: f32) {
         self.push(Command::Image(ImageCommand {

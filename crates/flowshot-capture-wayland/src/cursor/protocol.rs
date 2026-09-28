@@ -81,16 +81,15 @@ pub enum CursorPositionSpace {
     /// exactly local/2 short): Hyprland's `sendCursorEvents` reports
     /// `untransformedPosition() - logicalBox().pos()`, which arrives
     /// LOGICAL-relative - converting adds it to the output origin WITHOUT
-    /// dividing. The two spaces coincide at scale 1 (todo-8 live evidence).
+    /// dividing. The two spaces coincide at scale 1 (live evidence).
     /// Rotated-output behavior under Hyprland remains unverified (no
     /// rotated scale!=1 hardware probed yet).
     LogicalHyprland,
 }
 
 impl CursorPositionSpace {
-    /// The space for a sniffed desktop (the todo-8 "compositor-aware
-    /// handling" its RISKS section queued for exactly this live-confirmed
-    /// Hyprland scale-2 deviation).
+    /// The space for a sniffed desktop: compositor-aware handling of the
+    /// live-confirmed Hyprland scale-2 deviation.
     #[must_use]
     pub const fn for_desktop(desktop: flowshot_capture::DesktopEnv) -> Self {
         match desktop {

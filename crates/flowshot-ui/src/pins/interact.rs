@@ -1,8 +1,8 @@
 //! The pin input dispatch: [`PinState`] event handlers (the child-module
-//! impl pattern of todo 16 - private fields stay in [`super::state`], the
-//! behavior lives here).
+//! impl pattern the selection engine established - private fields stay in
+//! [`super::state`], the behavior lives here).
 //!
-//! Behavior map (F27 pin spec + plan todo 30):
+//! Behavior map (the F27 pin spec):
 //! - wheel: accumulate-then-commit zoom ANCHORED AT CURSOR (center-zoom
 //!   AVOIDED);
 //! - left press + move: `drag_window()` (the `startSystemMove` BORROW;
@@ -12,7 +12,7 @@
 //! - right release: toggle the context menu at the cursor;
 //! - keys 0-9: absolute opacity 1.0..0.1 (F27 table: `0` -> 1.0, `d` ->
 //!   d/10); R / Shift+R: rotate clockwise / counter-clockwise (the bindable
-//!   rotate keys; todo 36 makes them configurable);
+//!   rotate keys; the settings surface makes them configurable);
 //! - touch: two-finger pinch preview + commit ([`super::pinch`]).
 
 use std::time::{Duration, Instant};

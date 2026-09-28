@@ -1,11 +1,11 @@
-//! The per-window editor paint bridge (plan todo 20/22).
+//! The per-window editor paint bridge.
 //!
 //! [`EditorView`] is the shell-supplied snapshot one window's paint needs;
 //! [`EditorState::paint_into`] appends the baked pixel-effect overlay
-//! (todo 23: image quads above the backdrop, BELOW the scene - Flameshot
+//! (image quads above the backdrop, BELOW the scene - Flameshot
 //! bakes redactions into the pixmap under all annotations), the scene
 //! (paint order), the selected object's outline, and the active tool's live
-//! visuals - the in-progress stroke, the mouse preview, and (todo 22) the
+//! visuals - the in-progress stroke, the mouse preview, and the
 //! open edit session with its caret, selection, and IME composition
 //! overlay - into the window's physical-px [`DisplayList`] with the
 //! output's own scale.
@@ -45,7 +45,7 @@ impl EditorState {
             return;
         };
         // The edit session paints from its own anchor - a missing cursor
-        // track must not hide the text being edited (todo 22).
+        // track must not hide the text being edited.
         let editing = tool.edit_rect().is_some();
         let preview = self.config.mouse_preview && tool.show_mouse_preview();
         if !self.drawing && !preview && !editing {
@@ -71,8 +71,8 @@ impl EditorState {
         tool.paint(&ctx, &mut sink);
     }
 
-    /// Appends ONLY the committed export layer (todo 38): the baked
-    /// pixel-effect overlay (todo 23: image quads above the backdrop, below
+    /// Appends ONLY the committed export layer: the baked
+    /// pixel-effect overlay (image quads above the backdrop, below
     /// the scene) plus the scene in paint order - no selected-object
     /// outline, no live tool visuals. This is exactly what the completion
     /// export renders, so the saved image never carries editing chrome.

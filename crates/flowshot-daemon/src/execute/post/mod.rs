@@ -1,4 +1,4 @@
-//! The post-capture pipeline (plan todo 38): one completed image ->
+//! The post-capture pipeline: one completed image ->
 //! effective action set -> clipboard/save/upload/notify/pin, the stdout
 //! modes (`--raw`, `--print-geometry`), region-memory persistence, and the
 //! daemon persistence-reason updates.
@@ -47,7 +47,7 @@ pub fn validate_stdout_modes(request: &CaptureRequest) -> Result<(), ExecuteErro
 /// # Errors
 ///
 /// [`ExecuteError`] for stdout/IO failures; per-action failures are
-/// best-effort inside the report (the todo-28 contract).
+/// best-effort inside the report.
 pub async fn run_post(
     completion: Completion,
     request: &CaptureRequest,
@@ -112,9 +112,9 @@ pub async fn run_post(
         .contains(&flowshot_actions::clipboard::ActionOutcome::Copied)
         && let Some(state) = ctx.state.as_ref()
     {
-        // The daemon process now serves the data-control offer (todo 28
+        // The daemon process now serves the data-control offer (a
         // persistence reason); release detection is the known wl-clipboard
-        // gap (issues.md 2026-09-26) - conservative direction.
+        // gap (observed 2026-09-26) - conservative direction.
         state.set_clipboard_offer_held(true);
     }
     if pin_requested {
@@ -125,7 +125,7 @@ pub async fn run_post(
 }
 
 /// The gesture/flag/config merge into one ordered effective action set
-/// (the Amendment-#3 `[save].actions` model: flags ADD per-invocation,
+/// (the `[save].actions` model: flags ADD per-invocation,
 /// toolbar gestures RESTRICT to themselves).
 fn effective_actions(
     kind: CompletionKind,

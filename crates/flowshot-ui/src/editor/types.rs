@@ -19,7 +19,7 @@ pub struct EditorEnv {
     pub modifiers: ModifiersState,
     /// The event timestamp (digit-accumulator clock - injectable).
     pub now: Instant,
-    /// Whether the color picker is visible (Esc-cascade stage 5, todo 26).
+    /// Whether the color picker is visible (Esc-cascade stage 5).
     pub picker_visible: bool,
     /// The last tracked cursor position (wheel hover, edit commits).
     pub mouse: Option<LogicalPoint>,
@@ -28,11 +28,11 @@ pub struct EditorEnv {
 /// A shell-facing editor effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EditorEffect {
-    /// Right-click: open the color wheel at the cursor (todo 26 seam - the
-    /// F27 P2 priority, emitted by the editor since todo 20).
+    /// Right-click: open the color wheel at the cursor (a chrome seam - the
+    /// F27 P2 priority, emitted by the editor).
     ColorWheel,
-    /// The eyedropper sampled a color (todo 27/38 seam - the funnel
-    /// delivers it to the standalone color-pick sink).
+    /// The eyedropper sampled a color (the funnel delivers it
+    /// to the standalone color-pick sink - a binary-layer seam).
     ColorPicked(flowshot_core::scene::Color),
 }
 
