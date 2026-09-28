@@ -1,4 +1,4 @@
-//! The pin zoom transition (plan todo 41, D8(d) "pin zoom easing").
+//! The pin zoom transition (D8(d) "pin zoom easing").
 //!
 //! A committed zoom resizes the WINDOW immediately (the compositor-driven
 //! min==max mechanism of [`super::zoom`] cannot animate), but the painted

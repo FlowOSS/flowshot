@@ -1,21 +1,21 @@
-//! Z-order operations and the layer-list model (plan todo 25).
+//! Z-order operations and the layer-list model.
 //!
 //! Raise/lower the SELECTED object through the core scene's z-order ops
-//! (todo 4: `raise`/`lower`/`raise_to_top`/`lower_to_bottom`), each as ONE
+//! (`raise`/`lower`/`raise_to_top`/`lower_to_bottom`), each as ONE
 //! undo unit; an op that cannot move (already at the edge, nothing
 //! selected) records nothing. Parity: z-order is PANEL-DRIVEN with NO
-//! default keys (plan todo 25) - the todo-26 side panel hosts the buttons
+//! default keys - the side panel hosts the buttons
 //! and the layer list this module models ([`EditorState::layers`]:
 //! bottom-to-top entries, click = select, drag = [`EditorState::move_layer`]
 //! which maps to the same core ops as one undo unit). Optional key slots
 //! exist in [`ToolShortcuts`](super::ToolShortcuts) for config/QA rebinding
-//! only (the todo-23 blur-rebind precedent); they ship unbound.
+//! only (the blur-rebind precedent); they ship unbound.
 
 use flowshot_core::scene::{Scene, ToolObject};
 
 use super::EditorState;
 
-/// One layer-list row (the todo-26 panel model), listed BOTTOM-TO-TOP
+/// One layer-list row (the side-panel model), listed BOTTOM-TO-TOP
 /// (paint order, matching [`Scene::z_order`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LayerEntry {
@@ -28,7 +28,7 @@ pub struct LayerEntry {
 }
 
 impl EditorState {
-    /// The layer list, bottom-to-top (todo-26 panel rows).
+    /// The layer list, bottom-to-top (the side-panel rows).
     #[must_use]
     pub fn layers(&self) -> Vec<LayerEntry> {
         self.scene

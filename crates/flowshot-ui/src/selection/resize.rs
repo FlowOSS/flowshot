@@ -1,4 +1,4 @@
-//! Resize and bounds math for the drag machine (plan todo 16, draft F27).
+//! Resize and bounds math for the drag machine (draft F27).
 //!
 //! The resize mirrors Flameshot's `parentMouseMoveEvent` exactly: Ctrl
 //! constrains the aspect ratio with the per-handle formulas (edge drags move

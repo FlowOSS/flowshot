@@ -195,5 +195,5 @@ box (verified live); enable it with `[daemon] tray = true` (see
 ## Not yet verified on this desktop
 
 Nothing desktop-specific. The remaining open items are platform-wide
-(end-to-end CLI-to-capture wiring, settings UI, packaging) and are listed in
-the README's project status.
+(packaging, plus the hardware-gated live checks) and are listed in the
+README's project status.

@@ -26,8 +26,8 @@ use crate::error::{BackendError, IccError};
 use crate::session::CaptureState;
 
 /// Deadline for each capture phase group: session collection and every
-/// per-output capture each get a fresh 10 seconds (plan todo 7: a stalled
-/// compositor surfaces as [`CaptureError::Timeout`], never a hang).
+/// per-output capture each get a fresh 10 seconds (a stalled compositor
+/// surfaces as [`CaptureError::Timeout`], never a hang).
 ///
 /// [`CaptureError::Timeout`]: flowshot_capture::CaptureError::Timeout
 pub(crate) const CAPTURE_TIMEOUT: Duration = Duration::from_secs(10);

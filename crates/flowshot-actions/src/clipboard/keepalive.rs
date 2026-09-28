@@ -8,12 +8,12 @@
 //! it take over the offer), and force-close after a 500 ms safety window
 //! if the compositor never fetches.
 //!
-//! VERIFICATION CLASS (plan todo 28, Metis #2): this path is UNIT-LEVEL
+//! VERIFICATION CLASS: this path is UNIT-LEVEL
 //! ONLY — live QA deferred, never claimed verified. The data-control
 //! route ([`super::backend`]) is the live-verified one.
 //!
 //! This module is the pure state machine; the runtime that registers the
-//! actual lazy offer on GNOME (no GTK allowed, plan todo 28 Must-NOT)
+//! actual lazy offer on GNOME (no GTK allowed)
 //! wires these states and effects when it lands.
 
 use std::time::Duration;
@@ -163,7 +163,7 @@ mod tests {
         );
     }
 
-    /// Full transition table (plan todo 28: "state-machine unit-tested").
+    /// Full transition table.
     #[test]
     fn transition_table() {
         struct Case {

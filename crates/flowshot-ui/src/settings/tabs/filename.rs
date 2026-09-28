@@ -1,5 +1,5 @@
 //! Filename Editor tab: `[save].filename_pattern` with a live preview and a
-//! reset-to-default (plan todo 36 tab 3), as one section card.
+//! reset-to-default (tab 3), as one section card.
 //!
 //! [`preview_filename`] mirrors the authoritative expander in
 //! `flowshot-actions::export::pattern` (expand + sanitize); the actions

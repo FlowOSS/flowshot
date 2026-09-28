@@ -1,7 +1,7 @@
 //! The pin context menu model: the Flameshot-parity item set (F27 BORROW:
 //! copy / save / rotate right / rotate left / increase opacity / decrease
 //! opacity / close, in that order with the two original separators), built
-//! on the todo-19 [`ContextMenu`] widget. The widget owns layout metrics;
+//! on the [`ContextMenu`] widget. The widget owns layout metrics;
 //! this module owns the action mapping and window-relative placement.
 
 use flowshot_core::tokens::DesignTokens;
@@ -19,9 +19,9 @@ const MENU_WIDTH: f32 = 170.0;
 /// What a clicked menu entry does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuAction {
-    /// Copy the pin to the clipboard (todo-28 seam).
+    /// Copy the pin to the clipboard (an action-crate seam).
     Copy,
-    /// Save the pin to a file (todo-29 seam).
+    /// Save the pin to a file (an action-crate seam).
     Save,
     /// Rotate 90 degrees clockwise.
     RotateRight,

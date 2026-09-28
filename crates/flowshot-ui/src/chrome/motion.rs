@@ -1,19 +1,19 @@
-//! The chrome motion owner (plan todo 41, draft D8(d)).
+//! The chrome motion owner (draft D8(d)).
 //!
 //! One place knows when the chrome animates: the toolbar's staggered
 //! fade+slide reveal (120-180ms band), the side-panel slide, the color-wheel
 //! popover scale-in, and the per-button hover/press wash. Every transition is
 //! a token-eased [`Tween`] evaluated at the `now` the caller was handed -
 //! pure functions of time, zero background work. The shell's frame scheduler
-//! consults [`ChromeMotion::active_at`] / [`ChromeMotion::wake`] (the shell's
+//! consults [`ChromeMotion::active_at`] / `ChromeMotion::wake` (the shell's
 //! frame scheduler consults the motion's wake deadline to pace the frame
-//! rate): settled chrome schedules NOTHING (the todo-13 idle zero-CPU
+//! rate): settled chrome schedules NOTHING (the shell's idle zero-CPU
 //! contract), and the reduced-motion switch ([`ChromeMotion::set_reduced`])
 //! snaps every transition to its target.
 //!
 //! Hit-testing deliberately uses the FINAL geometry (the transitions are
 //! <=180ms; interaction leads the visual, so a panel is never unclickable
-//! mid-slide) - recorded in the todo-41 motion checklist.
+//! mid-slide) - recorded in the motion checklist.
 
 use std::time::{Duration, Instant};
 

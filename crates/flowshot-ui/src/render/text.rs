@@ -1,7 +1,7 @@
 //! Text rendering: cosmic-text shaping + swash rasterization through a
 //! texture atlas.
 //!
-//! This is the crate's single text stack (plan todo 14(b), atlas-first per
+//! This is the crate's single text stack (atlas-first per
 //! Metis #17 - no custom SDF). glyphon could not be used: no glyphon release
 //! pairs with the workspace's wgpu 0.20 pin (crates.io-verified in the root
 //! manifest note), so the atlas lives here - the same architecture glyphon
@@ -11,7 +11,7 @@
 //! are linearized) and draw as tinted quads.
 //!
 //! Shaping runs per command per frame (cosmic-text `Buffer`s are cheap for
-//! overlay-scale text); a shaped-buffer cache is a todo-19 concern if
+//! overlay-scale text); a shaped-buffer cache is a later polish concern if
 //! profiling ever shows the need.
 
 use std::collections::HashMap;
@@ -163,7 +163,7 @@ impl TextStack {
 
     /// Shapes `command` and appends its glyph quads to the staging buffers.
     /// Invalid metrics are logged and skipped (cosmic-text rejects a zero
-    /// line height, and lib code never panics - Amendment #4).
+    /// line height, and lib code never panics).
     pub(crate) fn prepare(
         &mut self,
         queue: &wgpu::Queue,

@@ -31,7 +31,7 @@
 //! KDE additionally gates restricted interfaces through the caller's
 //! desktop entry: the shipped `packaging/flowshot.desktop.in` carries
 //! `X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2` (installed
-//! by plan todo 39).
+//! by the packaging).
 //!
 //! # Capture semantics
 //!
@@ -48,7 +48,7 @@
 //! ([`cursor_events`](flowshot_capture::CaptureBackend::cursor_events) is
 //! `None` - a documented degradation, never a failure).
 //!
-//! # Verification class (plan todo 11)
+//! # Verification class
 //!
 //! NOT live-testable on the Hyprland QA machine: build + clippy +
 //! private-bus stub unit tests only, with the contract pinned to the

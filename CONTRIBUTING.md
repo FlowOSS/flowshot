@@ -5,7 +5,7 @@ build, test, and commit conventions used during development.
 
 ## Prerequisites
 
-- Rust stable (pinned in `rust-toolchain.toml`; currently 1.98.1)
+- Rust stable (channel pinned in `rust-toolchain.toml`)
 - A Wayland compositor (Hyprland, sway, COSMIC, niri, KDE Plasma, or GNOME)
 - A D-Bus session bus
 - For portal features: `xdg-desktop-portal` plus your desktop's portal backend
@@ -85,9 +85,9 @@ All must pass. CI (`.github/workflows/ci.yml`) runs the same gates.
 
 ## QA evidence conventions
 
-Live-session QA produces evidence files in `.omo/evidence/` (gitignored). Each
-todo's evidence is recorded at `task-{N}-flowshot.{txt,png,json}`. The evidence
-policy and its conventions are documented in `docs/verification.md`.
+Live-session QA produces evidence files in `.omo/evidence/` (gitignored), one
+bundle per verified change. The evidence policy and its conventions are
+documented in `docs/verification.md`.
 
 Visible-window QA items (requiring a user-present compositor session) are
 queued in `.omo/evidence/gui-qa-batch.md` and treated as user-gated, not

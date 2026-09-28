@@ -1,4 +1,4 @@
-//! The editor toolbar (plan todo 26; motion pass todo 41).
+//! The editor toolbar (motion pass included).
 //!
 //! The reveal animation (D8(d)): the plate fades in while each button runs
 //! a staggered fade+slide (per-button 120ms, the last landing at 180ms -

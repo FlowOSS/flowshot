@@ -13,7 +13,7 @@ use crate::input::Action;
 use super::EscStep;
 
 /// The config keys the selection engine consumes (`[editor]` group). No
-/// other behavior constant is tunable (plan todo 16 "Must NOT").
+/// other behavior constant is tunable (the engine's no-tuning rule).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SelectionConfig {
     /// HUD position 0-5 ([`HudPosition::from_config`](super::HudPosition::from_config)).
@@ -58,13 +58,15 @@ pub struct SelectionEnv {
 /// A shell-facing effect of a selection interaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Effect {
-    /// Enter on a selection: run the accept/export path (todo 35 wires it).
+    /// Enter on a selection: run the accept/export path (the binary layer
+    /// wires it).
     Accept,
-    /// Ctrl+C or a configured double-click: copy the selection (todo 28/35).
+    /// Ctrl+C or a configured double-click: copy the selection (the binary
+    /// layer's clipboard pipeline).
     Copy,
     /// Ctrl+Q, or the Esc cascade reaching its end: close the overlay.
     Exit,
-    /// Right-click: open the color wheel at the cursor (todo 26 seam; the
+    /// Right-click: open the color wheel at the cursor (a chrome seam; the
     /// position is the shared cursor track).
     ColorWheel,
 }
@@ -103,7 +105,7 @@ pub struct SelectionUpdate {
     /// any monitor).
     pub changed: bool,
     /// The Esc-cascade step this event popped; `None` for every other key.
-    /// The funnel applies the editor-side reaction (todo 20: deselect the
+    /// The funnel applies the editor-side reaction (deselect the
     /// tool / object / edit widget) - the cascade ORDER stays owned here.
     pub esc_step: Option<EscStep>,
 }

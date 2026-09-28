@@ -1,11 +1,11 @@
-//! Post-capture action-set semantics (Amendment #3, plan todo 28).
+//! Post-capture action-set semantics.
 //!
 //! The ordered `[save].actions` set `{copy, copy-path, save, pin, upload,
 //! notify, open-with}` replaces Flameshot's `saveAfterCopy` /
 //! `copyPathAfterSave` boolean flags. This module owns the two sequencing
 //! rules:
 //!
-//! - MERGE RULE (Oracle r4 F-5.iv): effective set = configured order
+//! - MERGE RULE: effective set = configured order
 //!   first, then legacy-flag-implied additions deduped at the end.
 //! - `copy-path` executes AFTER the last `save` in the effective
 //!   sequence; with no save in the sequence the order is unchanged and
@@ -16,10 +16,10 @@ use serde::{Deserialize, Serialize};
 
 /// One post-capture action from the ordered `[save].actions` set.
 ///
-/// Serializes with the plan's kebab-case vocabulary (`copy-path`,
+/// Serializes with the kebab-case vocabulary (`copy-path`,
 /// `open-with`). The core config enum ([`SaveAction`]) currently covers
-/// only the four variants it can round-trip; the CLI (todo 35) and daemon
-/// (todo 32) construct the remaining variants per invocation.
+/// only the four variants it can round-trip; the CLI and daemon
+/// construct the remaining variants per invocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
@@ -29,9 +29,9 @@ pub enum Action {
     CopyPath,
     /// Write the image to disk.
     Save,
-    /// Open the image as a floating pin (module lands in todo 30).
+    /// Open the image as a floating pin (see [`crate::pin`]).
     Pin,
-    /// Upload the image (module lands in todo 31).
+    /// Upload the image (see [`crate::upload`]).
     Upload,
     /// Explicit success-toast request (gated by `[daemon].notifications`).
     Notify,
@@ -55,7 +55,7 @@ impl From<SaveAction> for Action {
 
 /// Legacy Flameshot boolean action flags, for config migration.
 ///
-/// Amendment #3 replaced these with the ordered `[save].actions` set;
+/// The ordered `[save].actions` set replaced these;
 /// the merge rule below folds configs that still carry them into an
 /// effective action sequence.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -66,7 +66,7 @@ pub struct LegacyFlags {
     pub copy_path_after_save: bool,
 }
 
-/// MERGE RULE (Oracle r4 F-5.iv): effective set = configured order first,
+/// MERGE RULE: effective set = configured order first,
 /// then flag-implied additions deduped at the end.
 #[must_use]
 pub fn effective_actions(configured: &[Action], flags: LegacyFlags) -> Vec<Action> {
@@ -91,8 +91,7 @@ pub fn effective_actions(configured: &[Action], flags: LegacyFlags) -> Vec<Actio
 /// positioned before the last `save`) move — to just after that save —
 /// so the configured order is otherwise preserved. With no `save` in
 /// the sequence the order is unchanged; the executor warns + no-ops
-/// `copy-path` at runtime ("warn+no-op when no save occurred", plan
-/// todo 28).
+/// `copy-path` at runtime ("warn+no-op when no save occurred").
 #[must_use]
 pub fn execution_order(effective: &[Action]) -> Vec<Action> {
     let Some(last_save) = effective.iter().rposition(|action| *action == Action::Save) else {

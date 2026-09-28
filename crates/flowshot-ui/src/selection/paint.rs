@@ -1,4 +1,4 @@
-//! Per-window selection painting (plan todo 16): outline, grips, HUD.
+//! Per-window selection painting: outline, grips, HUD.
 //!
 //! The selection lives in GLOBAL LOGICAL space; each monitor window derives
 //! its own physical-px commands from the same geometry (the #4894 spanning
@@ -65,7 +65,7 @@ pub(super) struct SelectionPaint<'a> {
     /// HUD box corner radius (radii token, logical px).
     pub hud_radius: f64,
     /// Per-grip radius multiplier at the paint instant (`Handle::index`
-    /// order; the todo-41 hover-grow, 1.0 = resting).
+    /// order; the hover-grow motion, 1.0 = resting).
     pub grip_scales: [f64; 8],
 }
 

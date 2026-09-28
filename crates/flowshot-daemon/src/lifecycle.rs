@@ -1,4 +1,4 @@
-//! Smart daemon lifecycle (Amendment #3 - REPLACES Flameshot's dropped
+//! Smart daemon lifecycle (REPLACES Flameshot's dropped
 //! `autoCloseIdleDaemon` flag).
 //!
 //! Contract: an AUTO-SPAWNED helper daemon exits once it has been idle for
@@ -20,9 +20,9 @@ use crate::state::{DaemonState, PersistenceReasons};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DaemonMode {
     /// `flowshot daemon` under a supervisor (systemd unit, a terminal, the
-    /// todo-35 CLI): always persists; the init system decides when it dies.
+    /// CLI): always persists; the init system decides when it dies.
     Supervised,
-    /// Helper auto-spawned by a client invocation (todo 35 handshake):
+    /// Helper auto-spawned by a client invocation (the CLI handshake):
     /// exits after the idle grace when no persistence reason holds.
     AutoSpawned,
 }
@@ -219,7 +219,7 @@ mod tests {
         }
     }
 
-    // ---- the pure truth table (Amendment #3 smart lifecycle) ----
+    // ---- the pure truth table (smart lifecycle) ----
 
     #[test]
     fn auto_spawned_exits_only_after_grace_without_reasons() {

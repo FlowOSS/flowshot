@@ -1,4 +1,4 @@
-//! Zoom-to-cursor and size-clamp math (pure functions, plan todo 30).
+//! Zoom-to-cursor and size-clamp math (pure functions).
 //!
 //! # The anchor invariant (F27 "zoom-from-center AVOID")
 //!
@@ -75,7 +75,7 @@ pub struct ScaleBounds {
 ///
 /// Degenerate screens (smaller than the frame) and `min > max` conflicts
 /// resolve toward `max`: fitting the screen wins over the `MIN_SIZE` floor
-/// (a pin can never be larger than the screen - plan todo 30 failure QA).
+/// (a pin can never be larger than the screen - the failure-QA rule).
 #[must_use]
 pub fn scale_bounds(
     image: (u32, u32),

@@ -1370,3 +1370,66 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - egui 0.28 scrollbar empirics (pixel-measured, do not re-derive): the reserved solid bar is pinned to the CLIP rect's right edge (window edge), owning the right window-margin band; `bar_outer_margin` shifts the pin but ALSO eats that width from the content column; floating bars fade out at idle. `VisibleWhenNeeded` + `style.animation_time = 0` makes the two-frame offscreen harness deterministic (animate_bool snaps instead of fading over the zero-delta frame pair).
 - `f32: From<u32>` still does not exist (hit again in tests/settings_offscreen.rs) - use `as f32` under the file's cast_precision_loss allow.
 - Centered content column: 52em cap via FormMetrics::content_width/content_offset; label ratio raised 0.45->0.48 so the 22em cap wins inside the capped column; field/combo caps 24em/20em keep short controls honest while path+slider fill the column's right edge.
+
+## Docs review pass (2026-09-29): status claims drift faster than reference claims
+- README "Project status" and the per-desktop guides went stale when the F3 batch closed the settings/launcher/E2E items: the docs were written while those were open and nobody re-derived the claims from the batch closeouts. When editing shipped status prose, re-derive from .omo/evidence/gui-qa-batch.md closeout state, never from memory of the plan.
+- doc_sync.rs asserts leaf-key PRESENCE only (backtick-quoted name anywhere in config-reference.md). Defaults, ranges, and migration prose can drift silently; the defaults table is hand-synced, so a config-default change needs a manual doc diff.
+- rust-toolchain.toml pins only channel = "stable", no version. CONTRIBUTING had invented "currently 1.98.1". Check the file before citing a toolchain version.
+- Test-count claims rot: ADR-003 said "1100-test suite" while the workspace measures 1226 (cargo test --workspace -- --list | grep -c ': test$'). Prefer round numbers with "+" or re-measure.
+- porting-roadmap.md claimed the README carries the init-system packaging matrix; it does not (packaging is user-gated). Cross-doc "X lives in Y" claims need an existence check on Y.
+
+## Plan-reference scrub (2026-09-29): the grep gate is narrower than the directive
+- The zero-hit sweep regex `todo[-_ ]?[0-9]+|task[-_ ]?[0-9]+` does NOT match the plural
+  form "todos 33/34" (the `s` breaks the pattern) - 3 such refs survived pass 1 and needed a
+  second `todos [0-9]` sweep. When a directive says "no plan references", grep the FAMILY
+  (todo/task/todos/plan/brief/Amendment/notepad/decisions.md/issues.md), not just the gate.
+- The gate reached past comments: 2 test-fn names (`defaults_match_the_plan_todo_34_proposal`)
+  and 9 `#[expect(..., reason = "...todo-11 STUB_LOCK...")]` attribute strings match the regex.
+  "Comments only" vs "zero grep hits" conflicts there; resolved by behavior-inert renames
+  (test fns unreferenced, reason strings unasserted) - all 1225 tests stayed green.
+- Keep/reword boundary: PROCESS labels (Amendment #N, task brief, "the plan cites", recorded-in
+  decisions.md/issues.md/notepad, plan flow N) get reworded to the decision itself; FINDING/SPEC
+  citations (Oracle r4, Metis #10, F12/F14/F-3/F-5.ii, xdp-wlr#240) stay verbatim. Most
+  Amendment rewords are pure label-drops - the sentence already states the decision.
+- todo-N -> subject map used for rewrites (every ref already named its subject adjacent, so
+  rewrites are label-drops, not research): 2=config resilience, 6=CaptureThread registry,
+  7=rotated-headless class, 10=worker pattern, 11=stub harness/no-drop-close, 12/18=cursor+
+  geometry, 28=daemon-owned clipboard, 30=pin registry, 32=daemon lifecycle/bus, 33=tray,
+  34=shortcuts, 35=CLI, 36=settings, 37=launcher dialog, 38=executor, 39-42=packaging/docs.
+
+## Plan-reference scrub, flowshot-ui (2026-09-29): multi-line refs + the plural blind spot
+- Same gate-vs-directive gap as the cli/daemon pass, but flowshot-ui's dominant form was the
+  PLURAL "todos N-M" / "todos N/M" (todos 21-27, todos 20/26, todos 39/40, todos 15/28/38) -
+  20 hits the gate regex `todo[-_ ]?[0-9]+` never matches (the `s` breaks it). Always run a
+  second `grep -rniE "todos? [0-9]"` sweep; the mandated two-pattern gate is NOT sufficient.
+- Gate reached past comments into 3 code lines, all behaviorally inert and all unreferenced
+  (verified: no .snap, no caller, test fns are #[test]-discovered not name-called):
+  a `tracing::debug!` msg ("...eyedropper flow lands with todo 27"), an assert msg
+  ("(todo-20 contract)"), and fn `recorder_binds_through_the_todo25_seams`. "Comments only"
+  vs "zero grep hits" conflicts here; resolved by reword/rename. All 626 ui tests stayed green.
+- flowshot-ui doc comments wrap the ref ACROSS lines ("(todo 12\n/// `resolve_cursor_pos`)",
+  "the binary layer (todo\n//! 35/32)"), so per-line sed corrupts them. Used exact multi-line
+  substring replacement in Python with a per-edit count assertion + fail-fast-no-write: a
+  transcription typo (dropped "the ") surfaced as a MISMATCH before any file was touched.
+- Adjacent plan-process prose the gate misses but the directive forbids - reworded since the
+  line was already open: "the plan mandates", "plan wording", "this task may not touch",
+  "the task brief sanctions", "plan-exact", "the plan's <noun>", "documented per the plan's".
+- flowshot-ui todo-N -> subject map (every ref named its subject adjacent; rewrites are
+  label-drops): 2=config schema, 3=physical-first rule, 4=core scene vocab, 6=output probe,
+  7=4K capture buffers, 8=platform-crate contract, 12=cursor resolution/AwaitFirstMotion,
+  13=overlay shell (spawn/idle-zero-CPU/test-drive), 14=batched 2D renderer (a=stroke px,
+  b=text atlas, d=even-odd/contrastOpacity), 15=frozen-frame backdrop/capture orchestration,
+  16=selection engine, 17=magnifier, 18=launch preselect/region memory, 19=widget layer/icon
+  atlas/vendored fonts, 20=editor tool framework/size dispatch, 21=shape tools, 22=text tool
+  (IME), 23=destructive pixel ops/pixel-overlay layer, 24=circle-count, 25=mutation funnel
+  (ONE-undo-unit)/z-order, 26=chrome (side panel/color wheel/toolbar), 27=object tools
+  (selection/move/eyedropper)+grid, 28=clipboard action, 29=export action, 30=pins,
+  31=upload CLI gate, 32=daemon, 33=tray, 34=global capture shortcuts, 35=binary layer/CLI
+  composition root, 36=settings surface, 37=launcher dialog, 38=binary-layer capture-completion
+  actions, 39/40=Wayland layer-shell snippet, 41=motion pass, 42a=purity gate.
+- Amendment rewords: #4 = the no-panic/typed-error discipline (mostly pure label-drops - the
+  sentence already said "lib code never panics"); #3 = dropped the reversible/insecure pixelate
+  mosaic + the shortcut collision rule + output-at-cursor behavior + message-catalog convention;
+  #2 = tray Capture-Launcher dispatch. Kept verbatim: F27/F12/F8/D7/D8, Oracle/Metis findings,
+  #4871/#4894/#4920/#1659/#3582, upstream .cpp cites. Verified by count-diffing every KEEP token
+  backup-vs-result: all identical (F27 239=239, capturewidget.cpp 10=10, etc.).

@@ -2,20 +2,20 @@
 //! (`Window::set_cursor_visible(false)`), so `FlowShot` draws its own - the
 //! #1659-class invisibility fix: never rely on compositor cursors.
 //!
-//! This is the functional todo-13 crosshair (two 1-px full-window arms via a
-//! `LineList` pipeline); todo 14's renderer replaces the visuals while the
+//! This is the functional shell crosshair (two 1-px full-window arms via a
+//! `LineList` pipeline); the batched renderer replaces the visuals while the
 //! cursor-tracking contract stays. The vertex math is pure and unit-tested;
 //! only the pipeline touches wgpu.
 
 use std::borrow::Cow;
 
 /// Fallback crosshair color (opaque white) when the token accent fails to
-/// parse; visible on both light and dark backdrops. Todo 14 enforces
-/// token-only colors in the renderer.
+/// parse; visible on both light and dark backdrops. The renderer enforces
+/// token-only colors.
 pub(crate) const FALLBACK_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
 /// Parses a `#RRGGBB` design-token color into RGBA floats (sRGB-encoded,
-/// matching the todo-13 crosshair pipeline's direct-write shading). Delegates
+/// matching the crosshair pipeline's direct-write shading). Delegates
 /// to the renderer's canonical token parser.
 pub(crate) fn parse_srgb_hex(hex: &str) -> Option<[f32; 4]> {
     let color = crate::render::Color::from_hex_token(hex)?;

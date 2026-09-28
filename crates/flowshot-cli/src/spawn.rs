@@ -1,11 +1,11 @@
-//! Auto-spawn of the helper daemon (the winner branch of the todo-35
+//! Auto-spawn of the helper daemon (the winner branch of the
 //! dispatch handshake).
 //!
-//! Todo-34 finding (portal app id): `xdp` `GlobalShortcuts` requires the
+//! Finding (portal app id): `xdp` `GlobalShortcuts` requires the
 //! daemon to run under an `app-*` systemd unit, so when a systemd USER
 //! session is present the spawn is wrapped in
 //! `systemd-run --user --scope --unit app-org.flowoss.FlowShot-<nonce>`.
-//! The wrap is a pure enhancement (Amendment #3 init-agnostic): without
+//! The wrap is a pure enhancement (init-agnostic): without
 //! systemd - or when `systemd-run` fails to spawn - the helper starts
 //! directly and everything except portal shortcuts keeps working.
 
@@ -86,10 +86,10 @@ pub fn helper_args(bus_address: Option<&str>) -> Vec<OsString> {
     args
 }
 
-/// The scope unit name (todo-34: the `app-` prefix is what the portal's
+/// The scope unit name (the `app-` prefix is what the portal's
 /// `GlobalShortcuts` backend accepts as an app id). The nonce is DECIMAL:
-/// xdp derives the app id by splitting the unit at the LAST dash, and the
-/// todo-38 flow-11 live probe confirmed the digit-random form registers
+/// xdp derives the app id by splitting the unit at the LAST dash, and a
+/// live probe confirmed the digit-random form registers
 /// (an extra dash segment corrupts the derived app id -> `NotAllowed`).
 #[must_use]
 pub fn scope_unit(nonce: u128) -> String {

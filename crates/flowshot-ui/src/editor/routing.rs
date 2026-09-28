@@ -14,7 +14,7 @@
 //!    the committing press; one press does ONE thing here),
 //! 5. object select at pos - topmost object under the press wins,
 //! 6. otherwise the selection engine (region create/move/resize - the
-//!    todo-16 engine owns selection geometry; with a draw tool active the
+//!    selection engine owns selection geometry; with a draw tool active the
 //!    tool wins over the handles, Flameshot parity: `startDrawObjectTool`
 //!    runs before any selection handling).
 //!
@@ -34,11 +34,11 @@ use winit::event::MouseButton;
 )]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PressRoute {
-    /// The color picker (wheel) is visible - cascade stage 5 (todo 26).
+    /// The color picker (wheel) is visible - cascade stage 5.
     pub picker_visible: bool,
     /// The button that pressed.
     pub button: MouseButton,
-    /// A tool edit widget (todo 22 text box) is active.
+    /// A tool edit widget (the text tool's box) is active.
     pub text_editing: bool,
     /// The press position lies inside the edit widget.
     pub edit_contains: bool,
@@ -54,7 +54,7 @@ pub struct PressRoute {
 /// Who consumes a pointer press.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PressTarget {
-    /// P1: the visible picker consumes (todo 26).
+    /// P1: the visible picker consumes.
     Picker,
     /// P2 exception / P4 inside: the active tool's edit mode consumes.
     ToolEdit,
@@ -86,7 +86,7 @@ pub fn route_press(route: &PressRoute) -> PressTarget {
         }
         MouseButton::Left => route_left(route),
         // Middle/back/forward have no editor semantics; the selection
-        // engine ignores them too (todo-16 contract).
+        // engine ignores them too (the engine contract).
         MouseButton::Middle | MouseButton::Back | MouseButton::Forward | MouseButton::Other(_) => {
             PressTarget::Selection
         }
@@ -127,11 +127,11 @@ fn route_left(route: &PressRoute) -> PressTarget {
 /// [`PressRoute`] pattern: independent F27 priority conditions as data).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SessionRoute {
-    /// The color picker (wheel) is visible - cascade stage 5 (todo 26).
+    /// The color picker (wheel) is visible - cascade stage 5.
     pub picker_visible: bool,
     /// A draw session is open (press routed, release pending).
     pub drawing: bool,
-    /// An object drag is armed (todo 25: select-object press, release
+    /// An object drag is armed (select-object press, release
     /// pending - the Flameshot `TYPE_MOVESELECTION` implicit grab).
     pub object_move: bool,
 }
@@ -139,11 +139,11 @@ pub struct SessionRoute {
 /// Who consumes a pointer motion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoveTarget {
-    /// P1: the visible picker consumes (todo 26).
+    /// P1: the visible picker consumes.
     Picker,
     /// P3: the open draw session extends (`drawMove`).
     ToolDraw,
-    /// P5 drag: the armed object move translates live (todo 25 - one undo
+    /// P5 drag: the armed object move translates live (one undo
     /// unit lands at release, F27 "backup at first move, push at release").
     Object,
     /// P6: the selection engine (region drag; no-op without one).
@@ -151,7 +151,7 @@ pub enum MoveTarget {
 }
 
 /// Routes one pointer motion: an open draw session owns every move until
-/// release (the implicit-grab continuity of the todo-13 router feeds it
+/// release (the implicit-grab continuity of the input router feeds it
 /// across monitors), then an armed object drag; otherwise the selection
 /// engine sees it.
 #[must_use]
@@ -170,11 +170,11 @@ pub fn route_move(route: &SessionRoute) -> MoveTarget {
 /// Who consumes a pointer release.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReleaseTarget {
-    /// P1: the visible picker consumes (todo 26).
+    /// P1: the visible picker consumes.
     Picker,
     /// P3: the open draw session ends (`drawEnd` -> scene commit).
     ToolDraw,
-    /// P5 drag: the armed object move ends (todo 25: ONE undo unit when any
+    /// P5 drag: the armed object move ends (ONE undo unit when any
     /// motion happened).
     Object,
     /// P6: the selection engine (region release).
@@ -222,7 +222,7 @@ mod tests {
         }
     }
 
-    /// The acceptance table (plan todo 20: >= 12 cases incl. the
+    /// The acceptance table (>= 12 cases incl. the
     /// right-during-text-edit exception).
     #[test]
     fn press_priority_table() {

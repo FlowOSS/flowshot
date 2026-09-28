@@ -1,9 +1,9 @@
-//! Notification vocabulary and seams (plan todo 32; Flameshot's
+//! Notification vocabulary and seams (Flameshot's
 //! `showDesktopNotification` / `showAbortNotification` folded into the
-//! `[daemon].notifications` gate per Amendment #3).
+//! `[daemon].notifications` gate).
 //!
-//! Layering: consumers (the actions pipeline bridge, the todo-33 tray, the
-//! todo-35 capture executor) talk to the [`Notifier`] trait; the
+//! Layering: consumers (the actions pipeline bridge, the tray, the
+//! capture executor) talk to the [`Notifier`] trait; the
 //! production implementation ([`DesktopNotifier`]) owns `notify-rust` and
 //! the click-action -> `OpenURI` portal wiring; [`GatedNotifier`] applies
 //! the config gate; [`RecordingNotifier`] captures dispatches in tests.
@@ -31,13 +31,13 @@ pub enum NotificationRecord {
     /// Error toast; payload is the message.
     Error(String),
     /// ONE-TIME nudge after the first successful portal shortcut
-    /// registration (todo 34): recommends autostart + the settings
+    /// registration: recommends autostart + the settings
     /// surface. Emitted at most once per install (the restore-data file
     /// carries the notified flag).
     ShortcutsRegistered,
-    /// Tray `About` entry (todo 33): the payload is the toast body
+    /// Tray `About` entry: the payload is the toast body
     /// ([`crate::strings::about_body`]). A full About surface lands with
-    /// the todo-36 settings stack - recorded deviation.
+    /// the settings stack - recorded deviation.
     About(String),
 }
 
@@ -49,7 +49,7 @@ pub trait Notifier: Send + Sync + std::fmt::Debug {
 }
 
 /// Config gate: `[daemon].notifications = false` suppresses every toast
-/// (the Amendment-#3 single bool replacing Flameshot's
+/// (a single bool replacing Flameshot's
 /// `showDesktopNotification` + `showAbortNotification` pair).
 #[derive(Debug)]
 pub struct GatedNotifier {
@@ -75,7 +75,7 @@ impl Notifier for GatedNotifier {
     }
 }
 
-/// Captures dispatches in memory (the plan's "notification dispatch
+/// Captures dispatches in memory (the "notification dispatch
 /// captured via mock" test seam).
 #[derive(Debug, Clone, Default)]
 pub struct RecordingNotifier {
@@ -108,7 +108,7 @@ impl Notifier for RecordingNotifier {
     }
 }
 
-/// Bridges the todo-28/29 [`NotifySink`] seam (flowshot-actions) onto a
+/// Bridges the [`NotifySink`] seam (flowshot-actions) onto a
 /// [`Notifier`]: the actions pipeline toasts through the daemon's
 /// notification module (Metis #18 placement resolution).
 #[derive(Debug)]

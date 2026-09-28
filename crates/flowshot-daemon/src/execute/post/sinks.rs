@@ -1,5 +1,5 @@
-//! The production seam implementations the post-capture pipeline consumes
-//! (todo 38): the pictures-directory dialog stand-in (no `rfd` in the
+//! The production seam implementations the post-capture pipeline consumes:
+//! the pictures-directory dialog stand-in (no `rfd` in the
 //! workspace) and the daemon-notifier bridge.
 
 use std::path::{Path, PathBuf};

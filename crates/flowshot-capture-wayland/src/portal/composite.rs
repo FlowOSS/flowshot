@@ -4,8 +4,8 @@
 //! metadata. Its pixel space is implementation-defined (`XDPH` composites
 //! with `grim` and delivers PHYSICAL pixels; other frontends may deliver
 //! logical), so it is DETECTED at runtime by comparing the decoded image
-//! dimensions against the layout's physical and logical bounding boxes
-//! (plan todo 10). Physical space crops exactly; logical space with any
+//! dimensions against the layout's physical and logical bounding boxes.
+//! Physical space crops exactly; logical space with any
 //! output at scale != 1 is a typed v1 limitation - honoring the
 //! physical-first rule (never rescale) is impossible from a downsampled
 //! composite.
@@ -101,8 +101,8 @@ pub(crate) fn composite_layout(outputs: &[OutputInfo]) -> Result<CompositeLayout
     })
 }
 
-/// Detects the composite's pixel space from its dimensions (plan todo 10:
-/// DETECT AT RUNTIME, never assume).
+/// Detects the composite's pixel space from its dimensions (DETECT AT
+/// RUNTIME, never assume).
 ///
 /// # Errors
 ///

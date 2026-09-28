@@ -1,11 +1,11 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-//! The `FlowShot` session daemon (plan todo 32).
+//! The `FlowShot` session daemon.
 //!
 //! Owns the `org.flowoss.FlowShot` session-bus service at
 //! `/org/flowoss/FlowShot` (org namespace = `FlowOSS`, product = `FlowShot`,
-//! User Amendment #2 + Metis #10 - NEVER `org.flameshot.*` or
+//! Metis #10 - NEVER `org.flameshot.*` or
 //! `org.flowshot.*`, so a parallel `Flameshot` install coexists).
 //!
 //! # Pieces
@@ -15,7 +15,7 @@
 //! - [`instance`] - single-instance handshake: bus-name acquisition is
 //!   ATOMIC on the bus (exactly one winner, race-free by construction);
 //!   losers forward their command line through `Invoke` and exit 0;
-//! - [`lifecycle`] + [`state`] - the Amendment-#3 smart lifecycle: an
+//! - [`lifecycle`] + [`state`] - the smart lifecycle: an
 //!   auto-spawned helper exits after the idle grace iff NO persistence
 //!   reason holds (tray / shortcuts / pins / clipboard offer);
 //!   `flowshot daemon` (supervised) always persists and is init-agnostic
@@ -23,14 +23,14 @@
 //! - [`notify`] - desktop notifications (`notify-rust`): post-save/upload
 //!   toasts with click-action -> `OpenURI` portal, abort + error toasts,
 //!   the `[daemon].notifications` gate, and the `NotifySink` bridge the
-//!   todo-28/29 actions pipeline toasts through;
-//! - [`shortcut`] - global shortcuts (todo 34): the `GlobalShortcuts`
+//!   actions pipeline toasts through;
+//! - [`shortcut`] - global shortcuts: the `GlobalShortcuts`
 //!   portal primary path (`ashpd`) with the `Activated` -> [`CommandSink`]
 //!   dispatch, restore-data persistence, the one-time autostart nudge, the
 //!   `shortcuts` persistence reason, and the compositor-bind fallback
 //!   ladder (paste-ready Hyprland/Sway/GNOME snippets, `KGlobalAccel`
-//!   guidance) behind `flowshot --print-bind-help` (todo 35);
-//! - [`tray`] - the SNI tray (todo 33): `org.kde.StatusNotifierItem` +
+//!   guidance) behind `flowshot --print-bind-help`;
+//! - [`tray`] - the SNI tray: `org.kde.StatusNotifierItem` +
 //!   `com.canonical.dbusmenu` hand-rolled on the same zbus-4 connection,
 //!   the F12-parity menu dispatching into [`CommandSink`], the
 //!   `[daemon].tray` gate, the absent-watcher degrade (warn, never
@@ -40,7 +40,7 @@
 //! - [`daemon`] - the composition root ([`Daemon::start`] /
 //!   [`Daemon::run`]).
 //!
-//! # Executor decision (todo 32, recorded per the task brief)
+//! # Executor decision (recorded)
 //!
 //! The daemon's OWN bus stays on workspace **zbus 4** (default features =
 //! async-io reactor), driven from a **tokio** runtime. Source-verified
@@ -48,16 +48,15 @@
 //! each connection owns a PRIVATE `async-executor` instance plus a dedicated
 //! driver thread (`zbus::Connection executor`) that ticks until the
 //! connection's tasks end - so zbus-4 futures are drivable from ANY
-//! executor (the todo-11-proven pattern) with no interference with tokio.
+//! executor (the stub-harness-proven pattern) with no interference with tokio.
 //! Portal-facing async coexists on the same runtime: `ashpd` (zbus 5 +
 //! tokio reactor) runs inside private current-thread runtimes at its call
-//! sites (the todo-10 worker pattern), and `notify-rust` (zbus 5, blocking
+//! sites (the worker pattern), and `notify-rust` (zbus 5, blocking
 //! `show()`) only ever runs on dedicated notification threads. A direct
 //! zbus-5 dependency was REJECTED: it would deepen the existing duplicate
 //! zbus family for zero functional gain. Teardown discipline: zbus-4
 //! async-io has NO drop-time close, so [`daemon::Daemon::run`] and
-//! [`instance::acquire_or_forward`] close connections explicitly (todo-11
-//! lesson).
+//! [`instance::acquire_or_forward`] close connections explicitly.
 
 pub mod autostart;
 pub mod bus;
@@ -101,7 +100,7 @@ pub use tray::{TrayHandle, TrayOptions, TrayWiring};
 
 use std::time::Duration;
 
-/// Default idle grace for the auto-spawned helper mode (the plan fixes no
-/// constant; 60 s matches the "lean on-demand daemon" intent - the binary
-/// exposes `--idle-grace` and todo 39's packaging may revisit).
+/// Default idle grace for the auto-spawned helper mode (no spec constant
+/// fixes this; 60 s matches the "lean on-demand daemon" intent - the binary
+/// exposes `--idle-grace` and packaging may revisit).
 pub const DEFAULT_IDLE_GRACE: Duration = Duration::from_secs(60);

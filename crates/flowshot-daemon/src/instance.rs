@@ -1,11 +1,11 @@
 //! Single-instance handshake: atomic bus-name acquisition + argv
-//! forwarding (plan todo 32, Oracle r4 race-free-by-construction).
+//! forwarding (Oracle r4 race-free-by-construction).
 //!
 //! The well-known name is the single-instance token: `RequestName` with
 //! `DoNotQueue` is ATOMIC on the bus, so exactly one process ever receives
 //! `PrimaryOwner`. Every loser forwards its command line through the
 //! winner's `Invoke(argv)` method and exits 0 (parity UX). The same
-//! primitives compose the todo-35 CLI dispatch: winner becomes/spawns the
+//! primitives compose the CLI dispatch: winner becomes/spawns the
 //! daemon, then self-invokes.
 
 use std::time::Duration;
@@ -43,8 +43,8 @@ pub const fn ownership_from_reply(reply: &RequestNameReply) -> Ownership {
 /// Outcome of the full client-side handshake.
 #[derive(Debug)]
 pub enum Acquisition {
-    /// No daemon was running: the caller owns the name (and per todo 35
-    /// becomes/spawns the daemon, then self-invokes). Carries the
+    /// No daemon was running: the caller owns the name (and per the CLI
+    /// dispatch becomes/spawns the daemon, then self-invokes). Carries the
     /// name-holding connection.
     Owner(Connection),
     /// A running daemon received the forwarded argv; the caller exits 0.
@@ -94,7 +94,7 @@ pub async fn request_ownership(
 /// # Errors
 ///
 /// - [`DaemonError::ForeignNameHolder`] when the name is held by a process
-///   that does not answer `Invoke` (the plan's failure QA: typed error +
+///   that does not answer `Invoke` (failure QA: typed error +
 ///   hint) - whether it replies with an unknown-object error or stays
 ///   silent until the timeout;
 /// - [`DaemonError::OwnerVanished`] when the owner exited mid-handshake;
@@ -148,7 +148,7 @@ fn classify_method_error(service: &str, name: &str, detail: &str) -> Result<(), 
 }
 
 /// The full client-side handshake: acquire the name or forward `argv` to
-/// whoever holds it. This is the composition todo 35's CLI dispatch calls.
+/// whoever holds it. This is the composition the CLI dispatch calls.
 ///
 /// # Errors
 ///
@@ -163,7 +163,7 @@ pub async fn acquire_or_forward(
         Ownership::Acquired => Ok(Acquisition::Owner(connection)),
         Ownership::HeldByOther => {
             let forwarded = forward_argv(&connection, service, argv).await;
-            // zbus-4-async-io has NO drop-time close (todo-11): the loser
+            // zbus-4-async-io has NO drop-time close: the loser
             // connection is closed explicitly on EVERY path.
             close_quietly(connection).await;
             forwarded?;
@@ -211,7 +211,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn forward_argv_delivers_the_exact_argv_to_the_owner() {
         let _guard = stub_guard();
@@ -233,7 +233,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn foreign_name_holder_yields_typed_error_with_hint() {
         let _guard = stub_guard();
@@ -266,11 +266,11 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn request_ownership_on_p2p_is_local_self_identification() {
         // p2p connections have no broker: request_name always reports
-        // PrimaryOwner locally (todo-11 fact) - the atomic contention path
+        // PrimaryOwner locally - the atomic contention path
         // is covered by the private-broker integration test.
         let _guard = stub_guard();
         let sink = RecordingSink::new();

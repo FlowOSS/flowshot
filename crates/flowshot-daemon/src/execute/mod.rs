@@ -1,24 +1,24 @@
-//! The executing command pipeline (plan todo 38): `DaemonCommand` ->
+//! The executing command pipeline: `DaemonCommand` ->
 //! capture -> overlay/editor -> post-capture actions.
 //!
 //! One executor, three drivers:
 //!
 //! - the DAEMON ([`ExecutingSink`]): every bus/tray/shortcut command runs
 //!   on a dedicated thread with its own current-thread runtime (the zbus-4
-//!   async-io reactor must never host blocking window loops, todo-32
-//!   executor decision);
+//!   async-io reactor must never host blocking window loops - the
+//!   recorded executor decision);
 //! - the CLI ONE-SHOT path (`--no-daemon`, `--raw`, `--print-geometry`):
 //!   `flowshot-cli` awaits [`execute`] directly inside its tokio runtime
 //!   (the blocking overlay leg rides `spawn_blocking`);
 //! - the HEADLESS execution mode (feature `test-drive`,
-//!   [`headless`](mod@headless)): the same core wiring
+//!   `headless`: the same core wiring
 //!   ([`overlay::configure_core`]) and the same export implementation
 //!   ([`flowshot_ui::render_export`]) driven by synthetic input with
 //!   offscreen GPU renders - no window, no compositor disturbance. This is
 //!   the minimal honest stand-in for the visible overlay session (a
-//!   virtual seat would need a nested compositor, which the plan forbids);
-//!   the winit/Wayland window leg itself is covered by the per-todo live
-//!   evidence (todos 13-37) and the deferred GUI-QA batch.
+//!   virtual seat would need a nested compositor, which is forbidden);
+//!   the winit/Wayland window leg itself is covered by the per-module live
+//!   evidence and the deferred GUI-QA batch.
 //!
 //! Perf budget instrumentation (Metis #12): every stage emits
 //! `target: "flowshot_perf"` events with monotonic `elapsed_us` from the
@@ -65,8 +65,8 @@ pub struct ExecCtx {
     /// config-gated desktop notifier.
     pub notifier: Option<Arc<dyn Notifier>>,
     /// Upload endpoint override (QA knob, the `bus_address` precedent):
-    /// `Some(base_url)` points the Imgur provider at a stub (wiremock e2e,
-    /// plan todo 38 flow 9); `None` = the production endpoint.
+    /// `Some(base_url)` points the Imgur provider at a stub (wiremock e2e);
+    /// `None` = the production endpoint.
     pub upload_base_url: Option<String>,
 }
 
@@ -95,8 +95,8 @@ impl ExecCtx {
     }
 
     /// Loads the config fresh per execution (a settings apply takes effect
-    /// on the next capture - the todo-36 "no `ConfigChanged` signal yet"
-    /// decision), falling back to defaults with a warning (the todo-2
+    /// on the next capture - the "no `ConfigChanged` signal yet"
+    /// decision), falling back to defaults with a warning (the
     /// corrupt-file contract).
     #[must_use]
     pub fn load_config(&self) -> (Config, Option<PathBuf>) {
@@ -126,7 +126,7 @@ pub enum ExecOutcome {
     ColorPicked(String),
 }
 
-/// Executor failures, mapped onto the CLI exit-code table (todo 35) by
+/// Executor failures, mapped onto the CLI exit-code table by
 /// `flowshot-cli`.
 #[derive(Debug, thiserror::Error)]
 pub enum ExecuteError {
@@ -158,7 +158,7 @@ pub enum ExecuteError {
     #[error("executor task failed: {0}")]
     Task(String),
     /// A window-session child failed; `exit_code` is the child's mapping
-    /// of its own failure onto the shared todo-35 table (the one-shot CLI
+    /// of its own failure onto the shared exit-code table (the one-shot CLI
     /// propagates it verbatim).
     #[error("session child failed (exit {exit_code}): {error}")]
     Child {

@@ -1,6 +1,6 @@
-//! `flowshot` - the `FlowShot` CLI binary (plan todo 35, User Amendment #2
-//! surface). Top-level `anyhow` per Amendment #4; all logic lives in the
-//! [`flowshot_cli`] library, and every failure exits through the todo-35
+//! `flowshot` - the `FlowShot` CLI binary (the authoritative command
+//! surface). Top-level `anyhow`; all logic lives in the
+//! [`flowshot_cli`] library, and every failure exits through the
 //! exit-code table.
 
 #![forbid(unsafe_code)]
@@ -50,7 +50,7 @@ fn run_command(
     if let Invocation::Capture(capture) = invocation
         && capture.request.upload
     {
-        // The only CLI-side config gate (Amendment #3): unconfigured
+        // The only CLI-side config gate: unconfigured
         // upload is a usage-class rejection with a settings hint.
         invocation::validate_upload(&capture.request, &flowshot_cli::config::load(None))?;
     }

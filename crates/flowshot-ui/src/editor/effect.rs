@@ -1,12 +1,12 @@
-//! The pixel-overlay layer: todo 23's WRITE side (plan todo 23, the
-//! destructive region ops' committed form).
+//! The pixel-overlay layer: the WRITE side of the destructive region ops
+//! (their committed form).
 //!
-//! # Mechanism (documented per the plan's "operates on frame COPY" rule)
+//! # Mechanism (documented per the "operates on frame COPY" rule)
 //!
 //! Pixelate and blur are destructive pixel ops, but the pristine frozen
 //! frame ([`FramePixels`], the read side installed via
 //! [`OverlayCore::install_frame`](crate::OverlayCore::install_frame)) is
-//! NEVER modified - the plan's "never modify origScreenshot" and Flameshot's
+//! NEVER modified - the "never modify origScreenshot" rule and Flameshot's
 //! `origScreenshot` retention for undo. Instead each committed op BAKES its
 //! redacted output into an immutable [`PixelEffect`] buffer that the editor
 //! paints as an image quad (`Command::Image`, above the backdrop, BELOW the
@@ -16,10 +16,10 @@
 //! - EXPORT carries the redaction with zero reconstruction surface: the
 //!   overlay holds only post-redaction bytes (the secure pixelate never even
 //!   reads the region interior), and any renderer-path export composites the
-//!   same quads. A CPU-sink export (todo 38) composites the effect layer
+//!   same quads. The CPU-sink export composites the effect layer
 //!   through [`EditorState::pixel_effects`](super::EditorState::pixel_effects).
 //! - UNDO restores the ORIGINAL pixels losslessly by construction: undo
-//!   drops the effect (the plan's "undo = remove object") and the untouched
+//!   drops the effect ("undo = remove object") and the untouched
 //!   pristine frame shows through - no pixel snapshot can be stale because
 //!   nothing was overwritten. The unified (scene, effects) snapshot journal
 //!   lives in [`super::undo`].

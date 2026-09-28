@@ -1,6 +1,6 @@
 //! Central input router: window-local physical pixels to global logical space.
 //!
-//! This module is the cross-monitor spanning enabler (plan todo 13). During a
+//! This module is the cross-monitor spanning enabler. During a
 //! drag, the compositor's implicit pointer grab keeps delivering motion events
 //! to the window where the drag started, even while the cursor is logically
 //! over another monitor: positions arrive surface-local and *beyond the
@@ -18,7 +18,7 @@
 //! - *Surface-local physical*: fractional pixels relative to the top-left of
 //!   one window's surface, as delivered by winit `CursorMoved`.
 //! - *Global logical*: the shared desktop space of [`OutputLayout`], in which
-//!   selections and crops are expressed (physical-first rule, todo 3).
+//!   selections and crops are expressed (the physical-first rule).
 //!
 //! # Example
 //!
@@ -87,7 +87,7 @@ impl InputRouter {
     /// Creates a router for `layout`.
     ///
     /// `bindings[i]` is the index into `layout.outputs` of the output that
-    /// [`WindowSlot::new(i)`] fullscreen-covers. Out-of-range indices behave
+    /// `WindowSlot::new(i)` fullscreen-covers. Out-of-range indices behave
     /// like unbound slots.
     #[must_use]
     pub fn new(layout: OutputLayout, bindings: Vec<usize>) -> Self {
@@ -117,7 +117,7 @@ impl InputRouter {
     }
 
     /// The layout index of the output bound to `slot`, when known (the
-    /// backdrop's per-output key, plan todo 15).
+    /// backdrop's per-output key).
     #[must_use]
     pub fn output_index_for(&self, slot: WindowSlot) -> Option<usize> {
         let index = self.bindings.get(slot.index()).copied().flatten()?;
@@ -220,10 +220,10 @@ impl InputRouter {
     /// extent (post-transform physical px, as reported by winit `Resized`).
     ///
     /// winit does not expose the output transform, so spawned outputs start
-    /// with the monitor's pre-transform mode size and [`Transform::Normal`];
+    /// with the monitor's pre-transform mode size and `Transform::Normal`;
     /// the first `Resized` corrects size and derived logical rect for rotated
-    /// outputs. Todo 15 supersedes this layout with the capture-provided one
-    /// (true transforms included). Unbound slots are a silent no-op.
+    /// outputs. The capture pass supersedes this layout with the capture-provided
+    /// one (true transforms included). Unbound slots are a silent no-op.
     ///
     /// # Errors
     ///

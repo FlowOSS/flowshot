@@ -1,4 +1,4 @@
-//! Shell completion generation (plan todo 35: bash/zsh/fish/elvish/pwsh via
+//! Shell completion generation (bash/zsh/fish/elvish/pwsh via
 //! `clap_complete`, nushell via `clap_complete_nushell`; wayshot precedent,
 //! draft F6). Generated scripts are the artifact: they go to stdout for
 //! shell-level redirection or packaging install.

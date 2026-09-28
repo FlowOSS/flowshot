@@ -1,4 +1,4 @@
-//! The drag state machine: create, move, resize (plan todo 16, draft F27).
+//! The drag state machine: create, move, resize (draft F27).
 //!
 //! Clean-room reimplementation of the Flameshot `SelectionWidget` mouse
 //! semantics (`selectionwidget.cpp` @2d478061), with two `FlowShot`

@@ -1,4 +1,4 @@
-//! The arrow tool (plan todo 21, draft F27 arrow spec).
+//! The arrow tool (draft F27 arrow spec).
 //!
 //! A two-point stroke (Ctrl snaps H/V/45deg - the F27 marker/arrow
 //! adjustment flags) committing an [`ArrowObject`]: the head geometry scales

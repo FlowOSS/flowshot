@@ -46,7 +46,7 @@ pub enum InputEvent {
         /// `true` when the press is an auto-repeat.
         repeat: bool,
         /// The text the key produced (winit `KeyEvent.text`): `None` on
-        /// releases, non-text keys, and presses an IME consumed. The todo-22
+        /// releases, non-text keys, and presses an IME consumed. The text tool's
         /// edit sessions insert this payload; with text-input-v3 active the
         /// compositor/IME keyboard grab guarantees text arrives through
         /// EITHER this field OR `Ime::Commit`, never both (the iced model).
@@ -56,7 +56,7 @@ pub enum InputEvent {
     /// The mouse wheel rotated, in angle-delta units (a standard notch is
     /// ±120; the shell converts winit's line/pixel deltas at
     /// [`WHEEL_ANGLE_PER_LINE`](crate::editor::WHEEL_ANGLE_PER_LINE) - the
-    /// todo-20 tool-size adjuster consumes this).
+    /// editor tool-size adjuster consumes this).
     Wheel {
         /// Vertical angle delta (positive = away from the user).
         delta_y: i32,
@@ -64,18 +64,17 @@ pub enum InputEvent {
 
     /// The keyboard modifier snapshot changed (winit delivers modifiers as
     /// their own event; the selection engine reads the tracked state when
-    /// routing keys and pointer events - plan todo 16).
+    /// routing keys and pointer events).
     Modifiers(ModifiersState),
 
-    /// An input-method event, plumbed through for the text tool (todo 22).
+    /// An input-method event, plumbed through for the text tool.
     Ime(Ime),
 }
 
 /// A synthetic input targeted at one window slot.
 ///
 /// This is the payload of the `test-drive` seam
-/// ([`OverlayCore::inject_event`](crate::OverlayCore::inject_event) and
-/// `OverlayHandle::inject_event`), making mouse paths QA-able without
+/// (`OverlayCore::inject_event` and `OverlayHandle::inject_event`), making mouse paths QA-able without
 /// external injection tools.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SyntheticInput {
@@ -109,7 +108,7 @@ impl SyntheticInput {
         }
     }
 
-    /// A key-press event carrying produced text (the todo-22 text-input
+    /// A key-press event carrying produced text (the text tool's input
     /// seam: edit sessions insert the payload).
     #[must_use]
     pub fn key_text(slot: WindowSlot, code: KeyCode, text: &str) -> Self {
@@ -183,22 +182,22 @@ pub enum Action {
     /// Tear down every window and exit the event loop.
     Exit,
     /// The selection was accepted (Enter): the binary layer runs the export
-    /// actions (todo 35 wires accept -> export -> teardown).
+    /// actions (accept -> export -> teardown).
     Accept,
     /// The selection was copied (Ctrl+C or a configured double-click): the
-    /// binary layer runs the clipboard pipeline (todos 28/35).
+    /// binary layer runs the clipboard pipeline.
     Copy,
-    /// Toolbar save: the binary layer saves the export to disk (todo 38).
+    /// Toolbar save: the binary layer saves the export to disk.
     Save,
-    /// Toolbar pin: the binary layer pins the export to the screen (todo 38).
+    /// Toolbar pin: the binary layer pins the export to the screen.
     Pin,
-    /// Toolbar upload: the binary layer uploads the export (todo 38).
+    /// Toolbar upload: the binary layer uploads the export.
     Upload,
     /// Toolbar open-app: the binary layer saves + opens the export with
-    /// another application (todo 38).
+    /// another application.
     OpenWith,
     /// Right-click: open the color wheel at the shared cursor position
-    /// (todo 26 seam).
+    /// (a chrome seam).
     ColorWheel,
     /// The eyedropper sampled a color (the funnel already delivered it to
     /// the color-pick sink; the shell arm is a no-op).

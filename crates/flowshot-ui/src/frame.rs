@@ -1,8 +1,8 @@
-//! The overlay frame builder (plan todo 41 extraction).
+//! The overlay frame builder.
 //!
 //! ONE display-list construction path shared by the live shell
-//! ([`crate::app::OverlayApp`]'s `render_window`) and the offscreen QA harnesses (the
-//! todo-15 `--verify-offscreen` pattern, the todo-41 QA bundle): backdrop ->
+//! (the `render_window` method) and the offscreen QA harnesses (the
+//! `--verify-offscreen` pattern, the motion QA bundle): backdrop ->
 //! grid -> editor -> selection chrome -> editor chrome -> magnifier, in the
 //! production paint order, evaluated at a caller-supplied `now` so motion
 //! stills are deterministic under a synthetic clock.
@@ -29,8 +29,8 @@ pub struct OverlayFrame {
 
 /// Builds `slot`'s frame from the core state. `backdrop` supplies the frozen
 /// frame textures and options (`None` = the empty overlay); the LIVE
-/// selection rect always supersedes the backdrop option (the todo-16 drag
-/// contract). The crosshair is NOT part of the list - it rides the surface's
+/// selection rect always supersedes the backdrop option (the selection
+/// engine's drag contract). The crosshair is NOT part of the list - it rides the surface's
 /// vertex-overlay pipeline in the live shell only.
 #[must_use]
 pub fn build_overlay_frame(
@@ -72,7 +72,7 @@ pub fn build_overlay_frame(
     OverlayFrame { list, magnifier }
 }
 
-/// Paints the magnifier (todo 17) into `list` when `slot` owns the cursor
+/// Paints the magnifier into `list` when `slot` owns the cursor
 /// track (the crosshair's slot rule); returns the CPU-built zoom texture
 /// for upload.
 fn magnifier_pass(

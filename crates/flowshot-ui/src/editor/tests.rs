@@ -1,4 +1,4 @@
-//! The todo-20 editor state-machine table (plan acceptance: routing
+//! The editor state-machine table (the acceptance bar: routing
 //! priority, size dispatch, digit accumulation clip, wheel threshold,
 //! stroke commit, undo integration, Esc cascade with the real tool stage).
 //!
@@ -6,7 +6,7 @@
 //! - [`EditorState`] driven directly with synthetic [`Instant`]s (the
 //!   digit-accumulator clock never sleeps),
 //! - [`OverlayCore::inject_event`] - the exact production funnel real winit
-//!   events take (the todo-13 test-drive seam).
+//!   events take (the shell's test-drive seam).
 //!
 //! The stub tools log through a thread-local (the registry's `fn`-pointer
 //! factories cannot capture), so lifecycle order is assertable across the
@@ -42,7 +42,7 @@ use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
 
 // ---------------------------------------------------------------------------
-// Stub tools (the concrete tools are todos 21-27; these prove the framework)
+// Stub tools (the concrete tools live in `tools/`; these prove the framework)
 // ---------------------------------------------------------------------------
 
 thread_local! {
@@ -64,7 +64,7 @@ fn pt(at: LogicalPoint) -> ScenePoint {
 const RED: SceneColor = SceneColor::new(255, 0, 0, 255);
 
 /// Pencil stand-in: a one-line stroke committed as an [`ArrowObject`] (the
-/// scene's line-capable object until todo 21 lands pencil/line types).
+/// scene's line-capable object).
 #[derive(Debug)]
 struct StubLineTool {
     from: Option<ScenePoint>,
@@ -391,7 +391,7 @@ fn stroke_commits_one_object_as_one_undo_unit() {
 
 #[test]
 fn zero_length_stroke_commits_nothing() {
-    // The todo-21 acceptance rule, enforced by the tool's own validity:
+    // The shape tools' acceptance rule, enforced by the tool's own validity:
     // click without move -> draw_end yields None -> scene stays empty.
     let mut ed = editor();
     let env = env_at(Instant::now());
@@ -717,7 +717,7 @@ fn context_carries_frame_selection_color_size_and_counter() {
 }
 
 // ---------------------------------------------------------------------------
-// F. Edit-widget routing (the todo-22 seams, framework level)
+// F. Edit-widget routing (the text-tool seams, framework level)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -835,7 +835,7 @@ fn sync_cascade_mirrors_the_editor_occupancy() {
     ed.select_object_at(at(10.0, 10.0));
     ed.sync_cascade(&mut cascade);
     assert!(cascade.tool_checked() && cascade.object_selected() && cascade.tool_widget_present());
-    // Panel/picker flags (todo 26) are never touched by the sync.
+    // Panel/picker flags (chrome-owned) are never touched by the sync.
     cascade.set_panel_visible(true);
     cascade.set_picker_visible(true);
     ed.deactivate_tool();
@@ -1002,7 +1002,7 @@ fn funnel_tool_drag_commits_a_stroke_and_leaves_the_region_alone() {
 
 #[test]
 fn funnel_without_a_tool_still_creates_the_selection() {
-    // Todo-16 regression: the editor passes region presses through.
+    // Regression: the editor passes region presses through.
     let mut core = funnel_core();
     move_to(&mut core, 100.0, 100.0);
     click(&mut core, MouseButton::Left, true);
@@ -1080,8 +1080,8 @@ fn funnel_esc_deselects_the_object_stage() {
 
 #[test]
 fn funnel_picker_swallows_presses_until_click_away() {
-    // Todo 26: stage 5 is CHROME-driven (raw cascade pokes are futile - the
-    // todo-20 stage 1/2/4 precedent); the real producer is the right-click
+    // Stage 5 is CHROME-driven (raw cascade pokes are futile - the
+    // editor's stage 1/2/4 precedent); the real producer is the right-click
     // wheel-open through the funnel.
     let mut core = funnel_core();
     move_to(&mut core, 100.0, 100.0);
@@ -1144,7 +1144,7 @@ fn funnel_undo_redo_toggle_the_stroke_visibly() {
 
 #[test]
 fn funnel_selection_keys_still_reach_the_engine() {
-    // Ctrl+A / Enter are the selection engine's (todo-16 contract) even
+    // Ctrl+A / Enter are the selection engine's (its contract) even
     // with a tool active.
     let mut core = funnel_core();
     tap(&mut core, KeyCode::KeyP);

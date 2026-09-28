@@ -1,4 +1,4 @@
-//! The plain two-point tools (plan todo 21): line and invert.
+//! The plain two-point tools: line and invert.
 //!
 //! The line is the F27 `TYPE_DRAWER` stroke (Ctrl snaps H/V/45deg via the
 //! shared [`TwoPoint`] constrain). The invert tool is the region-filter
@@ -87,7 +87,7 @@ impl Tool for LineTool {
     }
 }
 
-/// The region color-inversion tool (plan todo 21; no size semantics - the
+/// The region color-inversion tool (no size semantics - the
 /// dispatched thickness slot is ignored).
 #[derive(Debug, Default)]
 pub struct InvertTool {

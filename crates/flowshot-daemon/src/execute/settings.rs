@@ -1,12 +1,12 @@
-//! The settings-window session (plan todo 36/38, `DaemonCommand::Settings`
+//! The settings-window session (`DaemonCommand::Settings`
 //! and CLI `flowshot settings`): the window runs in a session CHILD (the
-//! winit one-loop constraint). The todo-36 binary-layer checklist is wired
+//! winit one-loop constraint). The binary-layer checklist is wired
 //! in the child: `app_id=flowshot-settings`, the config path, the Apply
 //! notification (the executor re-reads the config on every execution, so
-//! Apply needs no bus signal - the recorded todo-36 decision), the
+//! Apply needs no bus signal - the recorded decision), the
 //! clipboard bridge, and the ashpd system-theme query. `rfd` is not a
 //! workspace dependency, so the `PathPicker` stays unset (Browse disabled
-//! - documented, todo-39 packaging revisit).
+//! - documented, packaging revisit).
 
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::pins::WindowCustomizer;
@@ -72,8 +72,8 @@ pub fn settings_child(spec: &SessionSpec) -> SessionResult {
         clipboard: Some(clipboard_bridge()),
         on_applied: Some(flowshot_ui::settings::AppliedCallback::new(|config| {
             // The executor re-reads the config on every execution (the
-            // todo-36 "re-read on next capture" decision - no ConfigChanged
-            // signal exists on the frozen todo-32 bus vocabulary), so the
+            // "re-read on next capture" decision - no ConfigChanged
+            // signal exists on the frozen bus vocabulary), so the
             // callback only logs the projection.
             tracing::info!(
                 accent = %config.ui.accent_color,
@@ -128,7 +128,7 @@ pub fn query_system_theme() -> ThemeMode {
 /// The Ctrl+C/V bridge for the egui text fields: writes go through the
 /// actions-crate clipboard; reads return `None` (a data-control READER is
 /// not in the actions crate's offer-serving surface - paste stays
-/// disabled, recorded in issues.md for the packaging wave).
+/// disabled, recorded for the packaging wave).
 #[must_use]
 pub fn clipboard_bridge() -> ClipboardBridge {
     ClipboardBridge::new(

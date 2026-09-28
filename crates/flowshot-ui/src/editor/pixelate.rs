@@ -1,4 +1,4 @@
-//! The F27 SECURE pixelate bake (plan todo 23, `pixelatetool.cpp`
+//! The F27 SECURE pixelate bake (`pixelatetool.cpp`
 //! clean-room).
 //!
 //! # Why fringe pseudo-pixelation, not block averaging
@@ -10,9 +10,9 @@
 //! interpolates between the fringes, and drowns the result in seeded
 //! gaussian noise. The interior contributes ZERO bytes to the output, so
 //! there is nothing to recover - strictly stronger than average-downsample.
-//! The plan mandates this algorithm EXACTLY; the insecure
-//! downscale-upscale mosaic is dropped entirely (Amendment #3: no
-//! reversible pixelate code path exists anywhere in the crate).
+//! This algorithm is mandated EXACTLY; the insecure
+//! downscale-upscale mosaic is dropped entirely - no
+//! reversible pixelate code path exists anywhere in the crate.
 //!
 //! # Algorithm (F27 constants, all pinned by tests)
 //!
@@ -78,7 +78,7 @@ pub(super) fn grid_size(region: BakeRegion, size: u32) -> Option<(u32, u32)> {
 }
 
 /// Bakes the secure pseudo-pixelation of `region`: the nearest-upscaled
-/// mosaic, region-sized RGBA (the pixel-overlay buffer of todo 23).
+/// mosaic, region-sized RGBA (the pixel-overlay buffer).
 pub(super) fn bake_pixelate(frame: &FramePixels, region: BakeRegion, size: u32) -> Option<Vec<u8>> {
     let started = std::time::Instant::now();
     let (grid, grid_w, grid_h) = pixelate_grid(frame, region, size)?;

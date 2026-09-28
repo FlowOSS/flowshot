@@ -1,9 +1,9 @@
-//! The todo-23 secure-pixelate algorithm suite (plan acceptance:
+//! The secure-pixelate algorithm suite (the acceptance bar:
 //! determinism, irreversibility, the F27 constants, the 1x1 no-op failure
 //! path, the 4K perf gate).
 //!
-//! The plan's "SIMD path == scalar path byte-identical" acceptance is
-//! STRUCTURAL in this task: the dependency freeze (no root Cargo.lock
+//! The "SIMD path == scalar path byte-identical" acceptance is
+//! STRUCTURAL here: the dependency freeze (no root Cargo.lock
 //! edits) keeps `rayon`/`fast_image_resize` out, so only the scalar path ships;
 //! byte-identity-by-construction is secured the way the plan mandates -
 //! the noise buffer is pre-generated in canonical pixel order
@@ -154,7 +154,7 @@ fn golden_grid_fingerprint_pins_the_exact_algorithm() {
 }
 
 // ---------------------------------------------------------------------------
-// C. SECURITY: the interior is never an input (Amendment #3)
+// C. SECURITY: the interior is never an input
 // ---------------------------------------------------------------------------
 
 #[test]

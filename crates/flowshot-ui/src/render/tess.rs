@@ -1,12 +1,12 @@
 //! Lyon tessellation bridge: display-list shapes to flat-shaded triangles.
 //!
 //! Geometry is tessellated in physical-pixel space exactly as the display
-//! list specifies it (stroke widths are physical px, plan todo 14(a)).
+//! list specifies it (stroke widths are physical px).
 //! Antialiasing comes from the 4x-multisampled render target the renderer
 //! draws into (lyon emits exact geometry; the resolve averages edge
 //! coverage), which is why fills and strokes share one flat-color pipeline.
 //! Tessellation failures are logged and skip the shape - a degraded frame,
-//! never a panic (Amendment #4).
+//! never a panic (the crate-wide no-panic rule).
 
 use lyon::math::{Box2D, Point as LPoint, point};
 use lyon::path::{Builder as PathBuilderOwner, Path, Winding};
@@ -90,7 +90,7 @@ impl Tessellator {
 
     /// Strokes `shape` with `width` in physical px; round caps and joins are
     /// the renderer's annotation-friendly default (flameshot-parity look,
-    /// todo 21 tools draw through this path).
+    /// the shape tools draw through this path).
     pub(crate) fn stroke_shape(
         &mut self,
         shape: &Shape,
@@ -119,7 +119,7 @@ impl Tessellator {
     }
 
     /// The dim layer: `bounds` minus every cutout, even-odd filled in one
-    /// mesh (plan todo 14(d) selection cutout).
+    /// mesh (the selection cutout).
     pub(crate) fn dim(
         &mut self,
         bounds: Rect,
@@ -189,7 +189,7 @@ fn shape_path(shape: &Shape) -> Option<Path> {
         Shape::Path { segments } => {
             use super::list::PathSegment;
             // lyon's builder panics on out-of-order verbs; the guards keep a
-            // malformed display list a skipped shape instead (Amendment #4).
+            // malformed display list a skipped shape instead (no panics).
             let mut open = false;
             for segment in segments {
                 match *segment {

@@ -1,7 +1,8 @@
 //! GPU adapter selection policy and device-limits floor.
 //!
-//! The plan requires 4K headroom (todo 7 captures 3840x2160 buffers, todo 14
-//! renders 4K frames), and the live 2-monitor session panicked when downlevel
+//! The design requires 4K headroom (the capture backend delivers 3840x2160
+//! buffers and the renderer paints 4K frames), and the live 2-monitor session
+//! panicked when downlevel
 //! defaults capped textures at 2048 px against a 2560x1440 output (issues.md
 //! 2026-09-25 "downlevel wgpu limits = live-only bug class"). The policy here
 //! is pure data - candidate snapshots instead of live `wgpu::Adapter`s - so
@@ -90,7 +91,7 @@ pub(crate) fn select_adapter(candidates: &[AdapterCandidate]) -> Option<usize> {
 /// `max_texture_dimension_2d` is `limit`.
 ///
 /// Checked BEFORE every `wgpu::Surface::configure`: wgpu panics on oversized
-/// configs, and Amendment #4 forbids panics - the caller converts `false`
+/// configs, and this crate forbids panics - the caller converts `false`
 /// into a typed [`UiError::SurfaceSizeExceedsLimits`](crate::UiError::SurfaceSizeExceedsLimits).
 pub(crate) const fn surface_size_fits(width: u32, height: u32, limit: u32) -> bool {
     width <= limit && height <= limit
@@ -126,7 +127,7 @@ mod tests {
         let cases = [
             // The live bug: DP-3 2560x1440 against the 2048 downlevel cap.
             (2048, 2560, 1440, false),
-            // Todo 7's 4K capture buffers against the downlevel cap.
+            // The capture backend's 4K buffers against the downlevel cap.
             (2048, 3840, 2160, false),
             // The required floor covers the live session.
             (4096, 2560, 1440, true),

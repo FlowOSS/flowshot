@@ -42,7 +42,7 @@ fn dual_core() -> OverlayCore {
 
 #[test]
 fn inject_motion_emits_global_coords() {
-    // Acceptance (plan todo 13): inject motion -> router emits global coords.
+    // Acceptance: inject motion -> router emits global coords.
     let mut core = dual_core();
     let report = core.inject_event(SyntheticInput::pointer_moved(
         WindowSlot::new(1),
@@ -147,7 +147,7 @@ fn inject_ime_sequence_is_plumbed() {
     assert_eq!(core.last_commit(), Some("日"));
     core.inject_event(SyntheticInput::ime(slot, Ime::Disabled));
     assert_eq!(*core.ime(), ImeStatus::Inactive);
-    // Commit survives disable (todo 22 consumes it).
+    // Commit survives disable (the text tool consumes it).
     assert_eq!(core.last_commit(), Some("日"));
 }
 
@@ -174,7 +174,7 @@ fn unknown_slot_injection_is_inert() {
 
 #[test]
 fn motion_frames_are_paced_and_settle_to_idle() {
-    // The todo-13 idle contract under the todo-41 motion pass: a reveal
+    // The shell's idle contract under the motion pass: a reveal
     // schedules paced frames, paints ONE settled frame, then the core
     // demands no wake at all (ControlFlow::Wait, zero CPU).
     let mut core = dual_core();
@@ -206,7 +206,7 @@ fn motion_frames_are_paced_and_settle_to_idle() {
 
 #[test]
 fn reduced_motion_snaps_and_never_schedules_frames() {
-    // The todo-41 failure QA (unit leg): reduced motion -> transitions
+    // The motion failure QA (unit leg): reduced motion -> transitions
     // instant, no animation frames at all.
     let mut core = dual_core();
     core.set_motion_reduced(true);

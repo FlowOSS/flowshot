@@ -1,6 +1,6 @@
 //! Interface tab: theme selection, `[ui]` accent/contrast pickers, dim
 //! opacity, the `[ui].toolbar_buttons` order list, and the
-//! `[editor].color_palette` swatch editor (plan todo 36 tab 2) - as three
+//! `[editor].color_palette` swatch editor (tab 2) - as three
 //! section cards (Appearance / Toolbar button order / Color palette).
 //!
 //! The accent/contrast pickers re-theme this window LIVE: the frame closure

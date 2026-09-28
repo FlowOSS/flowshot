@@ -3,7 +3,7 @@
 
 //! `FlowShot` user-interface runtime: the multi-monitor screenshot overlay.
 //!
-//! # Architecture (plan todo 13)
+//! # Architecture
 //!
 //! Two layers, split so the interesting logic never touches a GPU or a
 //! display:
@@ -25,11 +25,11 @@
 //!   (#1659-class fix), wgpu surfaces (`Bgra8UnormSrgb` preferred,
 //!   premultiplied alpha, `Fifo` present mode), and a `RedrawRequested`
 //!   frame scheduler that keeps an idle overlay at zero CPU.
-//! - **2D renderer** ([`render::Renderer`], plan todo 14): the batched
+//! - **2D renderer** ([`render::Renderer`]): the batched
 //!   draw-command consumer the shell and every later layer render through -
 //!   lyon vector tessellation, cosmic-text glyph atlas, image quads, dim /
 //!   shadow / rounded-clip effects, all token-driven.
-//! - **Selection engine** ([`SelectionState`], plan todo 16): the full
+//! - **Selection engine** ([`SelectionState`]): the full
 //!   Flameshot selection behavior spec (draft F27) as a pure state machine -
 //!   drag-create behind a 3px manhattan threshold, 8 token-derived handles,
 //!   Shift mirror / Ctrl aspect resize, 1px keyboard nudges, the 10x10
@@ -37,8 +37,8 @@
 //!   cascade. The selection lives in global logical space, so ONE rect
 //!   spans every monitor (#4894 restored); the shell feeds it through
 //!   [`OverlayCore`] and paints it per window.
-//! - **Editor tool framework** ([`EditorState`], plan todo 20): the scene
-//!   bridge every annotation tool (todos 21-27) plugs into - the [`Tool`]
+//! - **Editor tool framework** ([`EditorState`]): the scene
+//!   bridge every annotation tool plugs into - the [`Tool`]
 //!   lifecycle (drawStart/Move/End/pressed) with the F27 [`EditorContext`],
 //!   the exact F27 event-routing priority (picker > right-click > active
 //!   tool > edit commit > object select > selection engine), per-tool size
@@ -51,12 +51,12 @@
 //! compilation, no protocol crates: winit and wgpu *are* the portable layer,
 //! and platform code lives in the capture crates. The single environment
 //! probe (`WAYLAND_DISPLAY`, see [`UiError::NoDisplayServer`]) is a portable
-//! std call mandated by the todo-13 failure-path acceptance.
+//! std call mandated by the shell's failure-path contract.
 //!
 //! # Test seam
 //!
-//! With feature `test-drive`, [`OverlayCore::inject_event`] (headless) and
-//! [`OverlayHandle::inject_event`] (live loop) feed [`SyntheticInput`] through
+//! With feature `test-drive`, `OverlayCore::inject_event` (headless) and
+//! `OverlayHandle::inject_event` (live loop) feed [`SyntheticInput`] through
 //! the exact production routing path, so mouse paths are QA-able without
 //! external injection tools.
 

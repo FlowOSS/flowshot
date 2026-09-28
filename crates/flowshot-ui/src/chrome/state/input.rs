@@ -1,7 +1,7 @@
 //! The chrome input half (split from [`super`] at the 250-LOC ceiling): the
 //! widget hit-tests behind the funnel's chrome-first ordering, the color
 //! pick with its persistence sink, the panel control writes (through the
-//! todo-20/25 editor seams ONLY - `set_tool_size` / `resize_selected` /
+//! editor seams ONLY - `set_tool_size` / `resize_selected` /
 //! `recolor_selected` / `configure` / `activate_tool` / the z-order ops),
 //! and the layer drag-reorder ([`EditorState::move_layer`], ONE undo unit).
 
@@ -40,7 +40,7 @@ impl ChromeState {
         let left = button == MouseButton::Left;
 
         // F27 P1: a visible wheel consumes EVERY press - a swatch picks,
-        // the rainbow slot is the todo-27 eyedropper seam, anywhere else
+        // the rainbow slot is the eyedropper seam, anywhere else
         // hides (and the press dies with it).
         if self.color_wheel.visible {
             if left {
@@ -55,7 +55,7 @@ impl ChromeState {
                 if wheel.rainbow.contains(local_pt) {
                     tracing::debug!(
                         target: "flowshot_ui::chrome",
-                        "rainbow slot pressed; the custom-pick eyedropper flow lands with todo 27"
+                        "rainbow slot pressed; the custom-pick flow is owned by the eyedropper tool"
                     );
                     return true;
                 }
@@ -130,8 +130,8 @@ impl ChromeState {
         true
     }
 
-    /// The color pick: the draw color (todo-20 seam), the selected object's
-    /// color (the todo-25 property funnel, ONE undo unit, invert excluded),
+    /// The color pick: the draw color (an editor seam), the selected object's
+    /// color (the property funnel, ONE undo unit, invert excluded),
     /// the persistence sink (F27 TOML write - the binary layer's seam), and
     /// the wheel hides.
     fn pick_color(&mut self, hex: &str, editor: &mut EditorState) {
@@ -257,16 +257,16 @@ impl OverlayCore {
             .release(at, &mut self.editor, selection, output, Instant::now())
     }
 
-    /// The funnel's Space seam: the side-panel toggle (plan todo 26);
+    /// The funnel's Space seam: the side-panel toggle;
     /// `false` when the config gate is off and the key falls through.
     pub(crate) fn chrome_space(&mut self) -> bool {
         self.chrome.toggle_panel(&self.editor)
     }
 }
 
-/// One toolbar button press: tools activate; undo/redo drive the todo-25
+/// One toolbar button press: tools activate; undo/redo drive the
 /// journal; the W5 action ids (copy/save/upload/pin/open-app/exit) become
-/// shell actions (todo 38 wiring - the chrome queues, the funnel drains,
+/// shell actions (the chrome queues, the funnel drains,
 /// the shell/binary layer executes).
 fn toolbar_action(button: &ToolbarButton, editor: &mut EditorState) -> Option<Action> {
     match button {
@@ -301,7 +301,7 @@ fn toolbar_action(button: &ToolbarButton, editor: &mut EditorState) -> Option<Ac
     }
 }
 
-/// Writes a tool-config change through the todo-20 settings seam
+/// Writes a tool-config change through the editor settings seam
 /// ([`EditorState::configure`]), preserving what the panel must not stomp:
 /// the active tool's runtime size slot (wheel/digit adjustments) and the
 /// wheel-picked draw color (the config string still carries the old hex).

@@ -1,13 +1,13 @@
-//! The route funnel (plan todo 13/16/20): coordinate mapping plus the F27
+//! The route funnel: coordinate mapping plus the F27
 //! event-routing priority - the editor sees every pointer/key/wheel event
 //! FIRST and consumes per the priority chain (picker > right-click > active
 //! tool > edit commit > object select); whatever it passes through belongs
-//! to the selection engine (region geometry - the todo-16 contract). The
+//! to the selection engine (region geometry - the engine's contract). The
 //! Esc cascade stays in the selection engine (its six-stage order is the
 //! final contract); this funnel applies the popped step's editor-side
 //! reaction and keeps the cascade flags in sync after every event.
 //!
-//! The pointer half (motion + buttons, with the todo-18 launch hooks) lives
+//! The pointer half (motion + buttons, with the launch hooks) lives
 //! in [`pointer`](mod@pointer) - the 250-LOC ceiling split following the
 //! `editor/events/pointer.rs` precedent.
 
@@ -55,7 +55,7 @@ impl OverlayCore {
         repeat: bool,
         text: Option<&str>,
     ) -> RouteReport {
-        // Latency span + elapsed sample feed the todo-38 keypress->map budget.
+        // Latency span + elapsed sample feed the completion path's keypress->map budget.
         let started = Instant::now();
         let _span =
             tracing::trace_span!("input.key_to_map", window = slot.index(), pressed, repeat)
@@ -71,7 +71,7 @@ impl OverlayCore {
             }
             actions.extend(editor_actions(outcome, self.router.window_count()));
             if !consumed {
-                // Space toggles the side panel (plan todo 26) between the
+                // Space toggles the side panel between the
                 // editor (a text edit session owns the key while typing) and
                 // the selection engine (which has no Space binding).
                 if code == KeyCode::Space && !repeat && self.chrome_space() {
@@ -91,7 +91,7 @@ impl OverlayCore {
                     actions.extend(update_actions(update, self.router.window_count()));
                 }
             }
-            // Region memory (todo 18): an Enter accept (or Ctrl+C copy)
+            // Region memory (a launch flow): an Enter accept (or Ctrl+C copy)
             // persists the selection when [capture].save_last_region is on.
             self.launch_persist(&actions);
             self.sync_cascade();
@@ -118,7 +118,7 @@ impl OverlayCore {
         }
     }
 
-    /// The IME funnel (todo 22): the shared status tracking first, then the
+    /// The IME funnel: the shared status tracking first, then the
     /// editor's active edit session (the always-on model of draft D7 -
     /// winit `Ime` events route here from every window).
     fn route_ime(&mut self, ime: &Ime) -> RouteReport {
@@ -154,7 +154,7 @@ impl OverlayCore {
             EscStep::DeselectTool => self.editor.deactivate_tool(),
             EscStep::DeselectObject => self.editor.deselect_object(),
             EscStep::DeleteToolWidget => self.editor.delete_tool_widget(),
-            // The panel/picker stages are chrome-owned (todo 26).
+            // The panel/picker stages are chrome-owned.
             EscStep::HidePanel => self.chrome.hide_panel(),
             EscStep::HidePicker => self.chrome.hide_color_wheel(),
             // Close is the Exit effect the selection engine already emitted.

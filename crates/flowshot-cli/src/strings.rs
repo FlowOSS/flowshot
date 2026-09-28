@@ -1,4 +1,4 @@
-//! User-facing message-key constants (Amendment #4 item 8: i18n-ready - no
+//! User-facing message-key constants (i18n-ready - no
 //! inline literals in logic; English-only v1, message-catalog-ready).
 
 /// Rejection line for legacy Flameshot verbs (format arg 0: the verb).
@@ -17,7 +17,7 @@ pub const HINT_LEGACY_LAUNCHER: &str =
 pub const HINT_LEGACY_SCREEN: &str = "did you mean: flowshot capture screen [<n|connector>]   \
 (no argument = the output under the cursor)";
 
-/// `--upload` while `[upload].client_id` is empty (Amendment #3: the shared
+/// `--upload` while `[upload].client_id` is empty (the shared
 /// default client-id was dropped; upload is disabled until configured).
 pub const UPLOAD_UNCONFIGURED: &str =
     "--upload is not configured: set upload.client_id (flowshot settings)";

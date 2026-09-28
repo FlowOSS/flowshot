@@ -1,4 +1,4 @@
-//! Pin state-machine tests (plan todo 30): the zoom-to-cursor anchor
+//! Pin state-machine tests: the zoom-to-cursor anchor
 //! invariant, the `screen`/`MIN_SIZE` clamps, the F27 opacity table, rotation
 //! dimension swaps, the menu action map, and the close/drag behaviors -
 //! all headless through [`PinState::on_input`] (no GPU, no window).
@@ -56,7 +56,7 @@ fn initial_window_is_image_plus_frame() {
 
 #[test]
 fn five_wheel_notches_scale_dims_by_1_03_pow_5() {
-    // The plan todo 30 acceptance math: base * 1.03^5 +/- 2 px.
+    // The acceptance math: base * 1.03^5 +/- 2 px.
     let mut state = pin();
     let t0 = Instant::now();
     moved(&mut state, 207.0, 157.0, t0);
@@ -139,7 +139,7 @@ fn top_left_anchor_policy_holds_too() {
 
 #[test]
 fn oversized_image_starts_clamped_to_screen() {
-    // Plan todo 30 failure QA (unit half): 3000x2000 on 1920x1080.
+    // Failure QA (unit half): 3000x2000 on 1920x1080.
     let mut state = PinState::new((3000, 2000), (1920, 1080), 1.0, PinBehavior::default());
     let (w, h) = state.target_window();
     assert!(w <= 1920 && h <= 1080, "window {w}x{h} exceeds the screen");

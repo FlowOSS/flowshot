@@ -250,3 +250,10 @@ at the end (avoids redundant workspace rebuilds between waves).
   visible-windows policy; unit frame-schedule asserts + offscreen bundle landed as substitutes).
 - side_panel/paint.rs sits at 230 pure LOC (warning band) — next edit there should split the
   layers-section half.
+
+## 2026-09-28: evidence-file race — orchestrator instruction deleted a real artifact
+The tail worker was instructed to "delete the stray 0-byte task-14-flowshot.png" WHILE the
+orchestrator was concurrently re-capturing the real oracle at the same path — the worker
+deleted the real 7.3MB capture. LESSON: never hand a worker a destructive instruction on a
+path the orchestrator is actively writing; sequence destructive steps or namespace them.
+Caught by the F1 re-reviewer's filesystem check (the txt claimed the artifact existed).

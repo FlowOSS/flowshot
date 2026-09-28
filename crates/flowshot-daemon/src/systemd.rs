@@ -1,6 +1,6 @@
 //! Optional `sd_notify(3)` handshake (cargo feature `systemd`).
 //!
-//! Amendment #3: the daemon is INIT-AGNOSTIC - `flowshot daemon` runs in
+//! The daemon is INIT-AGNOSTIC - `flowshot daemon` runs in
 //! the foreground under ANY supervisor; this module only speaks the
 //! readiness datagram when systemd asked for it (`NOTIFY_SOCKET` set).
 //! Hand-rolled (~20 lines) instead of adding the `sd-notify` crate: it is

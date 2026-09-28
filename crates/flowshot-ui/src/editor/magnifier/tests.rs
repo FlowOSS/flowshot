@@ -1,4 +1,4 @@
-//! The todo-17 magnifier table: the plan's acceptance formula (zoomed
+//! The magnifier table: the acceptance formula (zoomed
 //! pixel == source[cursor-8+i][cursor-8+j]), the four-border edge flip,
 //! the corner on-screen guarantee, the hex readout format, the shape
 //! variants, the toggle key, and the config projection.
@@ -181,7 +181,7 @@ fn sample_honors_frame_scale_and_origin() {
 
 #[test]
 fn sample_composites_the_pixel_effect_layer() {
-    // The todo-23 seam: a baked effect over the cursor redacts what the
+    // The pixel-effect seam: a baked effect over the cursor redacts what the
     // magnifier shows (post-effect sampling, never the pristine frame).
     let mut frame = frame_with(64, 48, 1.0, (0.0, 0.0));
     for pixel in frame.rgba.as_chunks_mut::<4>().0 {

@@ -1,5 +1,5 @@
-//! The CLI -> daemon `D-Bus` mapping (the todo-32 wire contract; the
-//! CLI<->`D-Bus` mapping table the todo-40 docs record).
+//! The CLI -> daemon `D-Bus` mapping (the wire contract; the
+//! CLI<->`D-Bus` mapping table the docs record).
 //!
 //! Forwarding prefers the TYPED members whenever they are lossless:
 //!
@@ -10,7 +10,7 @@
 //! | `capture screen <n>` (no modifiers) | `CaptureScreen(u)` |
 //! | `capture --dialog` | `Launcher` |
 //! | `settings` | `Settings` |
-//! | everything else (`full`/`screen` WITH modifiers, `screen` at-cursor or by connector, `pin`, `color`) | `Invoke(as)` - the lossless argv channel; the daemon re-parses it with this crate's clap surface (todo 38) |
+//! | everything else (`full`/`screen` WITH modifiers, `screen` at-cursor or by connector, `pin`, `color`) | `Invoke(as)` - the lossless argv channel; the daemon re-parses it with this crate's clap surface |
 //!
 //! One-shot invocations (`--no-daemon`, `--raw`, `--print-geometry`) never
 //! reach this module: stdout is never routed over `D-Bus` (Oracle r4

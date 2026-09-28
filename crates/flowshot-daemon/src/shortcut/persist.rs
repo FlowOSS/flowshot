@@ -1,8 +1,8 @@
-//! Restore-data persistence (plan todo-34: "persist portal restore-data in
+//! Restore-data persistence ("persist portal restore-data in
 //! config dir"; acceptance: "restore-data file created + reused across
 //! daemon restarts").
 //!
-//! PINNED API REALITY (ashpd 0.10.3, source-verified - the plan's
+//! PINNED API REALITY (ashpd 0.10.3, source-verified - the
 //! "restore-data" wording assumes `ScreenCast`-style restore tokens):
 //! `GlobalShortcuts` has NO `restore_token`/`persist_mode`, and ashpd
 //! exposes neither the session handle nor the handle tokens
@@ -10,7 +10,7 @@
 //! therefore CANNOT survive a daemon restart; what persists is the
 //! RE-REGISTRATION set (ids, descriptions, triggers, the portal-assigned
 //! trigger descriptions) plus the one-time-notification state, so a restart
-//! re-binds the identical shortcuts without re-nagging the user. The todo-36
+//! re-binds the identical shortcuts without re-nagging the user. The
 //! settings tab reads this file to list the registered shortcuts.
 
 use std::path::Path;
@@ -24,7 +24,7 @@ use crate::error::DaemonError;
 /// Current on-disk schema version (bump + migrate when the shape changes).
 pub const RESTORE_DATA_VERSION: u32 = 1;
 
-/// One registered shortcut as persisted (the todo-36 settings row).
+/// One registered shortcut as persisted (the settings row).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PersistedShortcut {
     /// The application-provided id.
@@ -44,7 +44,7 @@ pub struct RestoreData {
     /// Schema version.
     pub version: u32,
     /// Whether the one-time autostart-recommendation notification was
-    /// already emitted (the plan's FIRST-successful-registration rule).
+    /// already emitted (the FIRST-successful-registration rule).
     pub first_registration_notified: bool,
     /// When the current registration was recorded.
     pub registered_at: Option<SystemTime>,
@@ -99,7 +99,7 @@ impl RestoreData {
     }
 
     /// Loads the file: absent -> `None` (first run); corrupt -> `None` with
-    /// a warning (todo-2 resilience rule: never fail the daemon over a
+    /// a warning (resilience rule: never fail the daemon over a
     /// data file - the cost is one repeated autostart nudge, documented).
     #[must_use]
     pub fn load(path: &Path) -> Option<Self> {

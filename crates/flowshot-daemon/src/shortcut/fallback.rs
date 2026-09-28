@@ -1,21 +1,21 @@
-//! The compositor-bind fallback (plan todo-34 ladder rung 2, F14): when the
+//! The compositor-bind fallback (ladder rung 2, F14): when the
 //! `GlobalShortcuts` portal is absent or denied (bare wlroots/sway per
 //! xdp-wlr#240, or a masked portal), `FlowShot` generates PASTE-READY
 //! compositor snippets instead of grabbing keys itself. Snippet binds invoke
 //! the `flowshot` CLI directly and need NO resident daemon (Oracle r4 F-3 -
-//! the residency difference vs the portal path is documented in the todo-40
+//! the residency difference vs the portal path is documented in the
 //! per-desktop guides).
 //!
-//! [`bind_help`] is the single source for every surface the plan names:
-//! the settings tab (todo 36 reads it), the docs (todo 40), and
-//! `flowshot --print-bind-help` (todo 35). Golden-file tests pin the exact
+//! [`bind_help`] is the single source for every surface:
+//! the settings tab (which reads it), the docs, and
+//! `flowshot --print-bind-help`. Golden-file tests pin the exact
 //! output per flavor.
 //!
-//! KDE note (task brief "`KGlobalAccel` D-Bus"): KDE is served by the portal
-//! in practice (xdp-kde, F14 ✅), so the plan's fallback ladder stays at
+//! KDE note (`KGlobalAccel` D-Bus): KDE is served by the portal
+//! in practice (xdp-kde, F14 ✅), so the fallback ladder stays at
 //! DOCUMENTED guidance for `KGlobalAccel` (System Settings / the
 //! `org.kde.kglobalaccel` service) - no paste-ready file snippet exists for
-//! Plasma's shortcut store. Recorded in the notepad.
+//! Plasma's shortcut store.
 
 use flowshot_capture::DesktopEnv;
 
@@ -39,7 +39,7 @@ pub enum CompositorFlavor {
 }
 
 impl CompositorFlavor {
-    /// The fallback-selection table (task brief: per-desktop, table-tested).
+    /// The fallback-selection table (per-desktop, table-tested).
     #[must_use]
     pub const fn for_desktop(desktop: DesktopEnv) -> Self {
         match desktop {
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn snippet_lines_use_the_plan_verbatim_forms() {
         let specs = default_shortcuts();
-        // The plan's exact examples: hyprland `bind = ,Print,exec,flowshot
+        // The exact documented examples: hyprland `bind = ,Print,exec,flowshot
         // capture`; sway `bindsym Print exec flowshot capture`.
         assert_eq!(
             hyprland_bind(&specs[0]),

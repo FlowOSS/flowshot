@@ -1,4 +1,4 @@
-//! The move-selection tool (plan todo 27, draft F12 `TYPE_MOVESELECTION`).
+//! The move-selection tool (draft F12 `TYPE_MOVESELECTION`).
 //!
 //! The move-selection tool drags the entire selection contents-aware: it
 //! moves the selection rect AND every annotation whose bounding box lies

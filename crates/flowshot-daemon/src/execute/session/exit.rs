@@ -1,6 +1,6 @@
-//! The shared exit-code mapping (the todo-35 table; the CLI's `exit.rs`
+//! The shared exit-code mapping (the CLI's `exit.rs`
 //! constants are the user-facing documentation of these numbers). Extracted
-//! from [`super`](super) at the 250-LOC ceiling.
+//! from [`super`] at the 250-LOC ceiling.
 
 use crate::execute::ExecuteError;
 

@@ -1,7 +1,7 @@
-//! The pointer-event execution half of the funnel (plan todo 20/25; split
+//! The pointer-event execution half of the funnel (split
 //! from [`super`] at the 250-LOC ceiling): the F27 press/move/release
 //! decisions from [`crate::editor::routing`] applied to the draw-session
-//! lifecycle, the object-select press with its armed drag (todo 25), and
+//! lifecycle, the object-select press with its armed drag, and
 //! the two commit channels.
 
 use flowshot_core::geometry::LogicalPoint;
@@ -18,7 +18,7 @@ use super::super::routing::{
 use super::super::tools;
 use super::super::types::{EditorEffect, EditorEnv, EditorUpdate};
 
-/// The two commit channels a draw release can produce (todo 23: the
+/// The two commit channels a draw release can produce (the
 /// destructive pixel-effect channel is checked first - a tool implements
 /// exactly one of the two).
 enum StrokeCommit {
@@ -45,7 +45,7 @@ impl EditorState {
             object_at: self.object_at(at).is_some(),
         };
         match route_press(&route) {
-            // The picker consumes silently until todo 26 wires its input.
+            // The picker consumes silently here; the chrome owns the wheel's input.
             PressTarget::Picker => EditorUpdate::eaten(false),
             PressTarget::ToolEdit => {
                 self.with_ctx(env, at, |ctx, tool| tool.pressed(ctx, button, at));
@@ -60,7 +60,7 @@ impl EditorState {
                 self.begin_stroke(env, button, at);
                 // Eyedropper seam: if the active tool is Eyedropper and it
                 // sampled a color, apply it immediately and report the pick
-                // (the funnel delivers it to the color-pick sink, todo 38).
+                // (the funnel delivers it to the color-pick sink).
                 let picked = if self.active_kind == Some(ToolKind::Eyedropper)
                     && let Some(tool) = self.tool.as_ref()
                     && let Some(eyedropper) = tool.as_any().downcast_ref::<tools::EyedropperTool>()
@@ -160,7 +160,7 @@ impl EditorState {
     }
 
     /// Opens a draw session: a FRESH tool instance per stroke (Flameshot
-    /// `tool()->copy()` per press), then the todo-22 re-edit probe (an
+    /// `tool()->copy()` per press), then the text-tool re-edit probe (an
     /// object under the press the tool can take over replaces the draw
     /// start), then `pressed` (which may consume) and `draw_start`.
     fn begin_stroke(&mut self, env: &EditorEnv, button: MouseButton, at: LogicalPoint) {

@@ -1,6 +1,6 @@
-//! The seven shape tools of plan todo 21: pencil, line, arrow, rectangle,
+//! The seven shape tools: pencil, line, arrow, rectangle,
 //! ellipse, marker, invert - registered onto a [`ToolRegistry`] by
-//! [`register_shape_tools`] (the composition roots: the todo-35 binary and
+//! [`register_shape_tools`] (the composition roots: the binary and
 //! the QA harnesses).
 //!
 //! Shared mechanics live in [`geometry`]: the F27 two-point stroke with the
@@ -12,7 +12,7 @@
 //! Every tool: press/drag/release lifecycle with a live preview painting
 //! the EXACT committed geometry, commit as one scene object (one undo unit
 //! via the framework's `commit_object`), zero-length drags commit nothing,
-//! color from `[editor].draw_color` and size from the todo-20 dispatch
+//! color from `[editor].draw_color` and size from the tool-size dispatch
 //! (shared `draw_thickness`; `[tools.marker].size`; the rectangle's slot IS
 //! `[tools.rectangle].corner_radius`).
 
@@ -53,7 +53,7 @@ pub use text::{TEXT_PADDING, TextTool};
 use super::kind::ToolKind;
 use super::registry::ToolRegistry;
 
-/// Registers all seven todo-21 shape tools on `registry` (idempotent;
+/// Registers all seven shape tools on `registry` (idempotent;
 /// replaces any prior factory for the same kind).
 pub fn register_shape_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Pencil, || Box::new(PencilTool::default()));
@@ -65,12 +65,12 @@ pub fn register_shape_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Invert, || Box::new(InvertTool::default()));
 }
 
-/// Registers the todo-22 text tool (IME editing) on `registry`.
+/// Registers the text tool (IME editing) on `registry`.
 pub fn register_text_tool(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Text, || Box::new(TextTool::default()));
 }
 
-/// Registers the todo-23 destructive region tools (secure pixelate + its
+/// Registers the destructive region tools (secure pixelate + its
 /// blur variant) on `registry`.
 pub fn register_pixelate_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Pixelate, || Box::new(PixelateTool::default()));
@@ -79,12 +79,12 @@ pub fn register_pixelate_tools(registry: &mut ToolRegistry) {
     });
 }
 
-/// Registers the todo-24 circle-count tool on `registry`.
+/// Registers the circle-count tool on `registry`.
 pub fn register_counter_tool(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Counter, || Box::new(CounterTool::default()));
 }
 
-/// Registers the todo-27 selection/move/eyedropper tools on `registry`.
+/// Registers the selection/move/eyedropper tools on `registry`.
 pub fn register_selection_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Selection, || Box::new(SelectionTool));
     registry.register(ToolKind::Move, || Box::new(MoveSelectionTool::default()));

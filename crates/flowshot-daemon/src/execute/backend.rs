@@ -1,4 +1,4 @@
-//! The capture-ladder runner (plan todo 5/38): probe the live session,
+//! The capture-ladder runner: probe the live session,
 //! negotiate the backend order, and construct the first backend that
 //! actually serves outputs - the negotiation ladder made executable.
 
@@ -17,7 +17,7 @@ pub struct CaptureSession {
     pub backend: Box<dyn CaptureBackend>,
     /// Which ladder rung won (log/evidence token).
     pub kind: BackendKind,
-    /// The outputs as probed (registry order = the todo-6 indexing
+    /// The outputs as probed (registry order = the indexing
     /// authority for `capture screen <n>`).
     pub outputs: Vec<OutputInfo>,
 }
@@ -45,7 +45,7 @@ pub async fn open_session() -> Result<CaptureSession, ExecuteError> {
 
 /// [`open_session`] skipping rungs that already failed at CAPTURE time
 /// (the runtime fallthrough: a backend can probe green and still fail a
-/// capture - e.g. the todo-7 rotated-headless `BufferSizeMismatch` class -
+/// capture - e.g. the rotated-headless `BufferSizeMismatch` class -
 /// and the ladder's promise is the next rung, not a hard error).
 ///
 /// # Errors
@@ -108,7 +108,7 @@ fn construct(kind: BackendKind) -> Box<dyn CaptureBackend> {
         BackendKind::PortalScreenshot => Box::new(PortalScreenshotBackend::new()),
         // Roadmap kinds never come out of `negotiate` (v1 gate); treating
         // them as a backend absence keeps the match exhaustive without a
-        // panic path (Amendment #4).
+        // panic path.
         BackendKind::X11 | BackendKind::Windows | BackendKind::MacOs => {
             tracing::error!(?kind, "roadmap backend kind reached construction");
             Box::new(IccBackend::new())
@@ -116,7 +116,7 @@ fn construct(kind: BackendKind) -> Box<dyn CaptureBackend> {
     }
 }
 
-/// Resolves the live cursor through the todo-12 layered strategy (ICC
+/// Resolves the live cursor through the layered strategy (ICC
 /// cursor session -> Hyprland IPC -> first-motion deferral).
 pub async fn resolve_cursor() -> Option<LogicalPoint> {
     let source = flowshot_capture_wayland::resolve_cursor_pos(Some(IccBackend::new())).await;

@@ -49,7 +49,7 @@ const WL_SHM_VERSION: u32 = 1;
 const WL_SEAT_VERSION: u32 = 5;
 /// The `wlr-screencopy-unstable-v1` manager version this crate binds. Version
 /// 3 adds the `buffer_done` event, the constraint-complete signal the v1
-/// backend waits on (plan todo 9: v3 only, no v1/v2 paths).
+/// backend waits on (v3 only, no v1/v2 paths).
 const WLR_SCREENCOPY_MANAGER_VERSION: u32 = 3;
 
 /// User data attached to output-scoped proxies (`wl_output`,

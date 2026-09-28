@@ -1,6 +1,6 @@
-//! The text-editing session state machine (plan todo 22).
+//! The text-editing session state machine.
 //!
-//! The editing buffer the plan mandates: a cosmic-text [`Editor`] (cursor,
+//! The mandated editing buffer: a cosmic-text [`Editor`] (cursor,
 //! selection, backspace/delete, arrows, home/end, word wrap within the
 //! drag-defined box) plus the IME preedit state. The preedit follows the
 //! iced 0.14 reference model (plan F26 cite, `iced/winit/src/window.rs`

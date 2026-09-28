@@ -1,4 +1,4 @@
-//! The editor-side font-system seam (plan todo 22).
+//! The editor-side font-system seam.
 //!
 //! cosmic-text editing operations need a [`FontSystem`] (shaping after every
 //! mutation), but tool instances are created fresh per stroke by `fn`-pointer
@@ -9,7 +9,7 @@
 //! Re-entrancy contract: [`with_font_system`] hands out ONE borrow at a time
 //! per thread; session methods call it at their top level and never nest
 //! (a nested call would find the cell already borrowed, log, and return the
-//! caller's fallback - lib code never panics, Amendment #4).
+//! caller's fallback - lib code never panics).
 
 use std::cell::RefCell;
 

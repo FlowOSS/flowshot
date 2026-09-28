@@ -8,7 +8,7 @@ use zbus::zvariant::{OwnedValue, Value};
 use crate::error::DaemonError;
 
 /// Wire keys of the `Capture(options)` vardict. Stable contract; the
-/// CLI<->`D-Bus` mapping table is recorded in todo 40 docs.
+/// CLI<->`D-Bus` mapping table is recorded in the docs.
 pub const CAPTURE_OPTION_KEYS: &[&str] = &[
     "delay_ms",
     "instant",
@@ -24,12 +24,12 @@ pub const CAPTURE_OPTION_KEYS: &[&str] = &[
     "last_region",
 ];
 
-/// The typed form of one `Capture(options)` call: the Amendment #2 CLI
+/// The typed form of one `Capture(options)` call: the CLI
 /// modifier set as data.
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "each flag is an independent spec-mandated capture modifier (Amendment #2 surface)"
+    reason = "each flag is an independent spec-mandated capture modifier (the CLI surface)"
 )]
 pub struct CaptureRequest {
     /// `-d/--delay <ms>`: wait before capturing.
@@ -47,14 +47,14 @@ pub struct CaptureRequest {
     /// `--upload`: add the upload action.
     pub upload: bool,
     /// `--raw`: PNG bytes to the invoker's stdout (forces one-shot mode in
-    /// todo 35 - stdout never routes over `D-Bus`).
+    /// the CLI - stdout never routes over `D-Bus`).
     pub raw: bool,
     /// `--print-geometry`: `WxH+X+Y` to stdout (same one-shot rule).
     pub print_geometry: bool,
     /// `--hide-cursor`: exclude the cursor from the capture.
     pub hide_cursor: bool,
     /// `--region <WxH[+X+Y]|at-cursor>`: preselected region (grammar is
-    /// parsed by the capture executor, todo 18/35 - the wire carries the
+    /// parsed by the capture executor - the wire carries the
     /// raw token).
     pub region: Option<String>,
     /// `--last-region`: repeat the persisted `[capture].last_region`.

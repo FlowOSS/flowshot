@@ -1,7 +1,7 @@
-//! The pointer half of the route funnel (plan todo 13/16/20/25): motion
+//! The pointer half of the route funnel: motion
 //! mapping with the editor-first priority and the move-selection seam, and
-//! the button funnel with the chrome-first ordering (todo 26) and the
-//! launch-time hooks (todo 18: deferred preselect on first motion, instant
+//! the button funnel with the chrome-first ordering and the
+//! launch-time hooks (deferred preselect on first motion, instant
 //! accept on first release, region-memory persistence). Split from
 //! [`super::route`] at the 250-LOC ceiling (the `events/pointer.rs`
 //! precedent); the key/wheel/IME half and the shared helpers stay there.
@@ -31,7 +31,7 @@ impl OverlayCore {
         }
         let mut actions = Vec::new();
         if let Some(clamped) = clamped {
-            // Grip hover-grow + toolbar button wash (todo 41): tracked on
+            // Grip hover-grow + toolbar button wash: tracked on
             // EVERY motion regardless of editor consumption - the handles
             // and toolbar cells stay hoverable under an active tool.
             let now = std::time::Instant::now();
@@ -40,7 +40,7 @@ impl OverlayCore {
                 let selection = self.selection.rect();
                 self.chrome.hover(clamped, selection, output, now);
             }
-            // The deferred preselect (todo 18, AwaitFirstMotion contract)
+            // The deferred preselect (the AwaitFirstMotion contract)
             // applies on the FIRST motion, before the editor/selection see
             // it - the motion that reveals the cursor also reveals the
             // preselection in the same frame.
@@ -89,7 +89,7 @@ impl OverlayCore {
         // delivers motion before buttons; injections must do the same).
         if let Some(cursor) = self.cursor {
             let at = cursor.clamped;
-            // Chrome FIRST (todo 26, Qt child-widget parity): a press on the
+            // Chrome FIRST (Qt child-widget parity): a press on the
             // toolbar / color wheel / side panel never reaches the F27 chain,
             // and a chrome-consumed press grabs its release (the layer
             // drag-reorder lands even when the cursor drifts).
@@ -101,7 +101,7 @@ impl OverlayCore {
             if chrome_ate {
                 // Toolbar W5 buttons queue capture-completing actions (todo
                 // 38); a completing gesture off the chrome branch persists
-                // the region memory explicitly (the todo-18 contract: the
+                // the region memory explicitly (the launch-flow contract: the
                 // early return skips the main-path launch_persist).
                 actions.extend(self.chrome.take_actions());
                 actions.extend(
@@ -134,7 +134,7 @@ impl OverlayCore {
                 self.chrome.show_color_wheel(at);
             }
             // The eyedropper's sample goes to the standalone color-pick sink
-            // here (todo 38, `flowshot color`); the shell's
+            // here (the binary layer's `flowshot color`); the shell's
             // Action::ColorPicked arm is a no-op.
             if let Some(color) = outcome.effects.iter().find_map(|effect| match effect {
                 EditorEffect::ColorPicked(color) => Some(*color),
@@ -154,7 +154,7 @@ impl OverlayCore {
                 });
                 actions.extend(update_actions(update, self.router.window_count()));
             }
-            // Launch-time flows (todo 18): --instant accepts on the first
+            // Launch-time flows: --instant accepts on the first
             // left release that leaves a selection; any capture-completing
             // action (Accept/Copy) persists the region memory.
             if !pressed && button == MouseButton::Left {

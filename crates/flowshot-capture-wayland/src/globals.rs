@@ -1,7 +1,7 @@
 //! Registry global tracking and capture-protocol feature detection.
 //!
 //! Detection is by interface name (the wire ABI, stable by protocol policy):
-//! todo 6 binds only what output enumeration needs (`wl_output`,
+//! this module binds only what output enumeration needs (`wl_output`,
 //! `zxdg_output_manager_v1`); the capture backends bind their own managers
 //! when they build sessions on top of this module.
 
@@ -32,7 +32,7 @@ const ZWP_FRACTIONAL_SCALE_MANAGER: &str = "zwp_fractional_scale_manager_v1";
 /// Interface name of the core output global.
 pub(crate) const WL_OUTPUT: &str = "wl_output";
 /// Interface name of the core seat global (pointer capability gates the
-/// `ext-image-copy-capture-v1` cursor session; todo 8).
+/// `ext-image-copy-capture-v1` cursor session).
 pub(crate) const WL_SEAT: &str = "wl_seat";
 
 /// One global advertised by the compositor's `wl_registry`.
@@ -124,7 +124,7 @@ impl ProtocolGlobals {
     /// foreign-toplevel source manager (window capture) is recorded in
     /// [`ProtocolGlobals`] but does not enable output capture. `KWin` and the
     /// portals are `D-Bus` services, invisible to the Wayland registry - the
-    /// later backend todos extend the probe with those checks.
+    /// dedicated D-Bus probes cover those checks.
     #[must_use]
     pub fn to_capability_probe(&self, desktop: DesktopEnv) -> CapabilityProbe {
         let mut probe = CapabilityProbe::new(desktop, []);

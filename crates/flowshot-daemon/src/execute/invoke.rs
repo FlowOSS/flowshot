@@ -1,16 +1,16 @@
-//! The daemon-side `Invoke(argv)` parser (plan todo 32/35/38).
+//! The daemon-side `Invoke(argv)` parser.
 //!
 //! The CLI forwards exactly four shapes over the lossless argv channel
 //! (the `wire.rs` mapping table): `capture full|screen [<n|connector>]`
 //! WITH modifiers, `pin [FILE]`, and `color`. A daemon cannot re-parse
 //! with the CLI's clap surface (flowshot-cli depends on this crate - the
 //! reverse edge would be circular), so this module hand-parses that FROZEN
-//! subset with the CLI's grammar rules mirrored 1:1 (the todo-37
+//! subset with the CLI's grammar rules mirrored 1:1 (the
 //! `RegionGeometry` precedent; a shared core home is the recorded
 //! orchestrator follow-up). Unknown verbs/flags are typed usage errors,
 //! never silent drops. Beyond the forwarded subset it also accepts the
 //! bare/interactive `capture` forms so `busctl` callers get the full
-//! surface (plan flow 10).
+//! surface.
 
 use std::path::PathBuf;
 

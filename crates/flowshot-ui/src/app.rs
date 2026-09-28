@@ -1,9 +1,9 @@
 //! Overlay application state and frame rendering.
 //!
 //! Frames are rendered only in response to `RedrawRequested` (input, resize,
-//! spawn); the dispatch half lives in [`crate::handler`] and deliberately
+//! spawn); the dispatch half lives in `crate::handler` and deliberately
 //! idles in `about_to_wait`, so the default `ControlFlow::Wait` keeps an idle
-//! overlay at zero CPU (plan todo 13).
+//! overlay at zero CPU.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -31,11 +31,11 @@ pub(crate) struct WindowEntry {
     pub window: Arc<Window>,
     pub surface: Option<WindowSurface>,
     pub monitor_name: String,
-    /// The window's own renderer (todo 15): holds THIS output's frozen-frame
+    /// The window's own renderer: holds THIS output's frozen-frame
     /// texture, so per-window redraws never thrash a shared MSAA target.
     pub renderer: Option<Renderer>,
     /// The pixel-effect texture ids currently uploaded to THIS window's
-    /// renderer (todo 23: the sync diff base - effects are editor state,
+    /// renderer (the effect-texture sync diff base - effects are editor state,
     /// textures are per-renderer).
     pub effect_textures: Vec<TextureId>,
 }
@@ -51,14 +51,14 @@ pub(crate) struct OverlayApp {
     /// must abort the loop; [`OverlayRuntime::run`](crate::OverlayRuntime)
     /// returns it after teardown so the process exits 1, never panics.
     pub fatal_error: Option<UiError>,
-    /// The frozen-frame backdrop (plan todo 15); `None` = the empty overlay
-    /// (todo-13 behavior: transparent clear + crosshair only).
+    /// The frozen-frame backdrop; `None` = the empty overlay
+    /// (transparent clear + crosshair only).
     pub backdrop: Option<Backdrop>,
     pub backdrop_options: BackdropOptions,
     /// The binary-layer window-attributes hook (Wayland `app_id`; the
     /// `pins::WindowCustomizer` seam - the lib stays platform-pure).
     pub customizer: Option<crate::pins::WindowCustomizer>,
-    /// The last IME cursor area sent to a window (todo 22: the caret mirror
+    /// The last IME cursor area sent to a window (the text tool's caret mirror
     /// for `set_ime_cursor_area`, deduplicated so the compositor is not
     /// spammed on every event).
     pub ime_area: Option<(WindowSlot, [i32; 4])>,
@@ -101,8 +101,8 @@ impl OverlayApp {
                     }
                 }
                 // Capture-completing gestures: the shell renders the export
-                // offscreen and hands it to the installed CompletionSink
-                // (todo 38); encoding/actions are the binary layer's.
+                // offscreen and hands it to the installed CompletionSink;
+                // encoding/actions are the binary layer's.
                 Action::Accept
                 | Action::Copy
                 | Action::Save
@@ -123,7 +123,7 @@ impl OverlayApp {
     }
 
     /// Mirrors the text-edit caret into the window's IME cursor area so the
-    /// compositor anchors the IME popup at the caret (todo 22; the iced
+    /// compositor anchors the IME popup at the caret (the iced
     /// `enable_ime` parity - global logical caret rect converted to THIS
     /// window's local physical px, deduplicated per change).
     pub(crate) fn sync_ime_area(&mut self, slot: WindowSlot) {
@@ -178,7 +178,7 @@ impl OverlayApp {
         // The crosshair follows the window that last received motion; during
         // an implicit grab that is the drag-origin window even while the
         // cursor is logically over a neighbor. The active tool may suppress
-        // it (todo 20 cursor change: the tool's own preview is the cursor).
+        // it (the tool-cursor change: the tool's own preview is the cursor).
         let vertices = self
             .core
             .cursor()
@@ -189,7 +189,7 @@ impl OverlayApp {
                 let (width, height) = surface.size();
                 crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
             });
-        // The todo-23 pixel-effect textures must exist in THIS renderer
+        // The pixel-effect textures must exist in THIS renderer
         // before the display list references them (missing ids draw the
         // magenta placeholder).
         if let Some(renderer) = entry.renderer.as_mut() {
@@ -200,11 +200,11 @@ impl OverlayApp {
                 tracing::error!(%error, window = slot.index(), "pixel effect texture sync failed");
             }
         }
-        // The frame's display list builds through the SHARED builder (todo
-        // 41 extraction): the live shell and the offscreen QA harnesses run
-        // the identical paint path.
-        // The frozen-frame backdrop (todo 15) with the LIVE selection
-        // cutout (todo 16: the engine's rect supersedes the construction-
+        // The frame's display list builds through the SHARED builder (the
+        // extracted frame module): the live shell and the offscreen QA
+        // harnesses run the identical paint path.
+        // The frozen-frame backdrop with the LIVE selection
+        // cutout (the engine's rect supersedes the construction-
         // time option, so the dim follows the drag).
         let options = BackdropOptions {
             selection: self.core.selection().rect(),
@@ -218,7 +218,7 @@ impl OverlayApp {
             Instant::now(),
         );
         let list = frame.list;
-        // Magnifier (todo 17): the zoom texture is CPU-built per frame and
+        // Magnifier: the zoom texture is CPU-built per frame and
         // must be uploaded before the list renders (a missing id draws the
         // magenta placeholder).
         if let (Some(renderer), Some(texture)) = (entry.renderer.as_mut(), frame.magnifier.as_ref())

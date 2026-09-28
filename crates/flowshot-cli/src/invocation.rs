@@ -1,7 +1,7 @@
 //! The validated typed invocation: clap's raw [`Cli`] becomes an
 //! [`Invocation`] exactly once (parse, don't validate), carrying the
 //! daemon's [`CaptureRequest`] for the modifier bag. Everything downstream
-//! (wire mapping, dispatch, the todo-38 execution seam) consumes typed
+//! (wire mapping, dispatch, the execution seam) consumes typed
 //! values, never argv strings.
 
 use std::ffi::OsString;
@@ -23,7 +23,7 @@ use crate::strings;
 /// only ever sees [`Resolved::Command`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resolved {
-    /// `<exe> session --spec PATH`: the todo-38 window-session child
+    /// `<exe> session --spec PATH`: the window-session child
     /// (internal process-model contract; runs runtime-free at entry).
     Session(PathBuf),
     /// Every user-facing verb (dispatched inside the CLI's tokio runtime).
@@ -36,7 +36,7 @@ pub enum Invocation {
     /// `flowshot` / `flowshot capture ...`.
     Capture(CaptureInvocation),
     /// `flowshot capture --dialog`: the manual-coordinate launcher dialog
-    /// (the daemon's `Launcher` wire member; todo-37 surface).
+    /// (the daemon's `Launcher` wire member; the launcher-dialog surface).
     Launcher {
         /// In-process instead of daemon-forwarded (`--no-daemon`).
         one_shot: bool,
@@ -60,7 +60,7 @@ pub enum Invocation {
 pub struct CaptureInvocation {
     /// What gets captured.
     pub selection: CaptureSelection,
-    /// The Amendment-#2 modifier bag (daemon wire vocabulary).
+    /// The modifier bag (daemon wire vocabulary).
     pub request: CaptureRequest,
     /// In-process one-shot: `--no-daemon`, or a stdout-producing flag
     /// (`--raw`/`--print-geometry` FORCE one-shot - stdout never routes
@@ -83,9 +83,8 @@ pub enum CaptureSelection {
 /// Which output `capture screen` targets.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScreenSpec {
-    /// No argument: the output under the cursor (todo 12/18 contract,
-    /// Amendment #3 - fixes the capability Flameshot hard-blocks on
-    /// Wayland).
+    /// No argument: the output under the cursor (fixes the capability
+    /// Flameshot hard-blocks on Wayland).
     Cursor,
     /// Numeric output index (from 0).
     Index(u32),
@@ -106,7 +105,7 @@ pub struct DaemonRun {
 
 /// The parsed `--region` grammar (`WxH[+X+Y]|at-cursor`, Oracle r4). The
 /// WIRE carries the raw token ([`CaptureRequest::region`]); the executor
-/// (todo 18/38) re-parses it against the output layout. This typed form is
+/// re-parses it against the output layout. This typed form is
 /// the CLI-side validation: malformed tokens exit 2 before anything is
 /// forwarded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,7 +138,7 @@ pub fn resolve(cli: Cli) -> Result<Resolved, CliError> {
     }
     match cli.command {
         Some(Command::Session { spec }) => Ok(Resolved::Session(spec)),
-        // Bare `flowshot` = `flowshot capture` (Amendment #2).
+        // Bare `flowshot` = `flowshot capture`.
         None => capture(&CaptureArgs::default()).map(Resolved::Command),
         Some(Command::Capture(args)) => capture(&args).map(Resolved::Command),
         Some(Command::Pin { file }) => Ok(Resolved::Command(Invocation::Pin(file))),
@@ -157,8 +156,7 @@ pub fn resolve(cli: Cli) -> Result<Resolved, CliError> {
 }
 
 /// The argv tail (everything after argv\[0\]) as the `Invoke(as)` wire
-/// carries it. The daemon re-parses it with THIS crate's clap surface
-/// (todo 38).
+/// carries it. The daemon re-parses it with THIS crate's clap surface.
 ///
 /// # Errors
 ///
@@ -269,7 +267,7 @@ pub fn parse_screen_spec(spec: &str) -> Result<ScreenSpec, CliError> {
 }
 
 /// Validates the `--region` grammar: `at-cursor`, `WxH`, or `WxH±X±Y`
-/// (each offset independently signed; global logical pixels per todo 18).
+/// (each offset independently signed; global logical pixels).
 ///
 /// # Errors
 ///
@@ -325,7 +323,7 @@ fn parse_coordinate(text: &str) -> Option<i32> {
     text.parse::<i32>().ok()
 }
 
-/// The `--upload` gate (Amendment #3): the shared default client-id was
+/// The `--upload` gate: the shared default client-id was
 /// dropped, so upload with an unconfigured `[upload].client_id` is a
 /// usage-class rejection with a settings hint.
 ///

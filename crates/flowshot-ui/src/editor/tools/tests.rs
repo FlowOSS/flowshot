@@ -1,4 +1,4 @@
-//! The todo-21 shape-tool suite: per-tool stroke lifecycle through the real
+//! The shape-tool suite: per-tool stroke lifecycle through the real
 //! [`EditorState`] event surface (press/move/release + the test-drive funnel),
 //! committed scene-object geometry, the F27 Ctrl drag conventions, the
 //! marker blend constant, the size-slot dispatch, and the zero-length rule.
@@ -249,7 +249,7 @@ fn rect_commits_radius_from_its_slot_and_stroke_from_config() {
     assert_eq!(rect.stroke_width, 3.0, "[editor].draw_thickness");
     assert!(!rect.filled);
 
-    // Digits write the rect slot = the corner radius (todo-20 dispatch).
+    // Digits write the rect slot = the corner radius (the size dispatch).
     let mut ed = editor();
     ed.activate_tool(ToolKind::Rectangle);
     ed.set_tool_size(7);
@@ -382,7 +382,7 @@ fn marker_ctrl_snaps_like_the_f27_adjustment_flags() {
 #[test]
 fn ctrl_applies_at_use_so_paint_and_commit_agree() {
     // Press Ctrl mid-drag WITHOUT a further motion: the painted preview is
-    // already constrained (the EditorView.modifiers contract of todo 20).
+    // already constrained (the EditorView.modifiers contract).
     let now = Instant::now();
     let mut ed = editor();
     ed.activate_tool(ToolKind::Line);
@@ -435,7 +435,7 @@ fn invert_and_pencil_ignore_ctrl() {
 }
 
 // ---------------------------------------------------------------------------
-// D. Size dispatch through digits and wheel (todo-20 seams)
+// D. Size dispatch through digits and wheel (the editor seams)
 // ---------------------------------------------------------------------------
 
 #[test]

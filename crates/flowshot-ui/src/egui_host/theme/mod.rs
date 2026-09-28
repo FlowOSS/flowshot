@@ -1,10 +1,10 @@
-//! Token-driven egui theming (plan todo 36: "`egui::Visuals` built FROM
+//! Token-driven egui theming ("`egui::Visuals` built FROM
 //! design tokens").
 //!
-//! The settings window (todo 36) and the capture launcher dialog (todo 37)
+//! The settings window and the capture launcher dialog
 //! are the only egui surfaces (draft D8(b) exception), and both must still
 //! look like `FlowShot`: every color, radius, and spacing value projected
-//! into [`egui::Style`] comes from [`DesignTokens`] (todo 2) and the `[ui]`
+//! into [`egui::Style`] comes from [`DesignTokens`] and the `[ui]`
 //! config group - accent/contrast pickers in the Interface tab re-theme the
 //! window LIVE (immediate-mode re-projection each frame), which is the
 //! "live-apply where safe (tokens-driven)" contract.
@@ -26,7 +26,7 @@
 //! the purity gate keeps portal crates out of flowshot-ui); `ThemeChoice::
 //! System` defers to it.
 //!
-//! Fonts: the vendored Inter family (OFL-1.1, todo 19 asset - regular,
+//! Fonts: the vendored Inter family (OFL-1.1 - regular,
 //! medium, and semibold weights) replaces egui's proportional default; the
 //! monospace family keeps egui's bundled face. The medium/semibold weights
 //! back the typographic hierarchy (section titles, active tab, primary

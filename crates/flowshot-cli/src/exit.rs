@@ -1,16 +1,16 @@
-//! The exit-code table (plan todo 35) and the CLI's typed error.
+//! The exit-code table and the CLI's typed error.
 //!
 //! | Code | Class | Source |
 //! |------|-------|--------|
 //! | 0 | success | - |
 //! | 1 | generic infrastructure | bus transport, helper spawn, I/O, config |
 //! | 2 | usage | clap rejections, grammar validation, unconfigured `--upload` |
-//! | 3 | user-cancelled | capture aborted in the overlay/editor (todo 38 seam) |
-//! | 4 | capture-backend | `flowshot_capture::CaptureError` (todo 38 seam) |
-//! | 5 | permission denied | portal/protocol permission refusal (todo 38 seam) |
-//! | 6 | action-export | `flowshot_actions` export failures incl. the todo-29 unwritable-dir class (Oracle r4 F-5.ii; todo 38 seam) |
+//! | 3 | user-cancelled | capture aborted in the overlay/editor (executor seam) |
+//! | 4 | capture-backend | `flowshot_capture::CaptureError` (executor seam) |
+//! | 5 | permission denied | portal/protocol permission refusal (executor seam) |
+//! | 6 | action-export | `flowshot_actions` export failures incl. the unwritable-dir class (Oracle r4 F-5.ii; executor seam) |
 //!
-//! Codes 3-6 are produced by the todo-38 execution wiring:
+//! Codes 3-6 are produced by the execution wiring:
 //! [`exec_exit_code`] maps the executor's outcome/error onto this table.
 
 use std::ffi::OsString;
@@ -107,7 +107,7 @@ fn exec_error_code(error: &ExecuteError) -> u8 {
 }
 
 /// Walks the capture error's source chain for the protocol permission
-/// refusal (the todo-7 denial mapping: compositor denial frame ->
+/// refusal (the denial mapping: compositor denial frame ->
 /// `IccError::PermissionDenied` inside `CaptureError::Backend`).
 fn is_permission_denied(error: &ExecuteError) -> bool {
     let ExecuteError::Capture(capture) = error else {
@@ -132,7 +132,7 @@ pub const fn exit_code(error: &CliError) -> u8 {
         CliError::Usage(_)
         | CliError::NonUnicodeArg(_)
         | CliError::Daemon(DaemonError::InvalidArgs(_)) => USAGE,
-        // Todo-38 seam: CANCELLED (overlay abort), CAPTURE_BACKEND
+        // Executor seam: CANCELLED (overlay abort), CAPTURE_BACKEND
         // (CaptureError), PERMISSION_DENIED (portal/protocol refusal), and
         // ACTION_EXPORT (flowshot_actions failures) map here.
         CliError::Dbus(_)
@@ -143,7 +143,7 @@ pub const fn exit_code(error: &CliError) -> u8 {
     }
 }
 
-/// Did-you-mean hints for the rejected legacy Flameshot verbs (plan todo 35:
+/// Did-you-mean hints for the rejected legacy Flameshot verbs (
 /// `gui`/`launcher`/`screen` exit 2 with a capture hint).
 #[must_use]
 pub fn legacy_hint(verb: &str) -> Option<&'static str> {

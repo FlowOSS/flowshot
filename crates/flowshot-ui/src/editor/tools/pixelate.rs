@@ -1,4 +1,4 @@
-//! The destructive region tools (plan todo 23): secure pixelate + blur.
+//! The destructive region tools: secure pixelate + blur.
 //!
 //! One two-point drag tool type in the Flameshot `pixelatetool.cpp` mold
 //! with the two F27 modes (blur is Flameshot's size-driven pixelate
@@ -11,7 +11,7 @@
 //! [`Tool::draw_end_effect`] channel - these tools produce no scene object;
 //! see [`super::super::effect`] for the mechanism).
 //!
-//! Region rules (plan todo 23): the drag rect is clamped to the selection
+//! Region rules: the drag rect is clamped to the selection
 //! bounds (when a selection exists) and to the frame; a zero-length drag,
 //! an empty intersection, or a region whose F27 output grid collapses to
 //! zero commits NOTHING (the 1x1 no-op failure path, no panic).
@@ -34,8 +34,8 @@ const PREVIEW_BLACK: SceneColor = SceneColor::new(0, 0, 0, 255);
 
 /// The destructive region tool: the F27 secure pseudo-pixelation (default
 /// mode, F12 key B - the ONLY pixelate mode; the insecure reversible mosaic
-/// is dropped per Amendment #3) or its gaussian blur variant (unbound by
-/// default like counter/move; the todo-26 panel exposes the mode switch,
+/// was deliberately dropped) or its gaussian blur variant (unbound by
+/// default like counter/move; the side panel exposes the mode switch,
 /// QA harnesses rebind the key).
 #[derive(Debug)]
 pub struct PixelateTool {

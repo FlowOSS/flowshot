@@ -1,4 +1,4 @@
-//! User-facing message-key constants (Amendment #4 item 8: i18n-ready -
+//! User-facing message-key constants (i18n-ready -
 //! no inline literals in logic; English-only v1, catalog-ready).
 
 /// Application name reported to the notification daemon.
@@ -31,10 +31,10 @@ pub const ACTION_OPEN_LABEL: &str = "Open";
 pub const ACTION_KEY_DEFAULT: &str = "default";
 
 /// Summary for the ONE-TIME toast after the first successful portal
-/// shortcut registration (plan todo 34, Oracle r4 F-3: portal hotkeys need
+/// shortcut registration (Oracle r4 F-3: portal hotkeys need
 /// daemon residency across logins, so the nudge recommends autostart and
 /// points at the settings surface - the clickable settings deep-link lands
-/// with the todo-36 settings UI; recorded deviation).
+/// with the settings UI; recorded deviation).
 pub const SUMMARY_SHORTCUTS_REGISTERED: &str = "Global shortcuts registered";
 
 /// Body of the one-time shortcut-registration toast.
@@ -54,7 +54,7 @@ pub const AUTOSTART_COMMENT: &str = "FlowShot screenshot daemon (session autosta
 /// `Id` property of the tray item (host-side identification token).
 pub const TRAY_ID: &str = "flowshot";
 
-/// Tray tooltip and `Title` property (plan todo 33: tooltip `FlowShot`).
+/// Tray tooltip and `Title` property (tooltip `FlowShot`).
 pub const TRAY_TITLE: &str = "FlowShot";
 
 /// Tray menu: interactive region capture (F12 parity label).
@@ -69,14 +69,14 @@ pub const MENU_CAPTURE_SCREEN: &str = "Capture Screen";
 /// Tray menu: per-monitor submenu placeholder while no output is known.
 pub const MENU_NO_OUTPUTS: &str = "No outputs detected";
 
-/// Tray menu: manual-coordinate launcher dialog (todo 37 surface).
+/// Tray menu: manual-coordinate launcher dialog.
 pub const MENU_CAPTURE_LAUNCHER: &str = "Capture Launcher";
 
-/// Tray menu: settings surface (todo 36).
+/// Tray menu: settings surface.
 pub const MENU_CONFIGURE: &str = "Configure";
 
 /// Tray menu: about entry (v1 = version toast; a full About surface lands
-/// with the todo-36 settings stack - recorded deviation).
+/// with the settings stack - recorded deviation).
 pub const MENU_ABOUT: &str = "About";
 
 /// Tray menu: clean daemon shutdown.
@@ -91,7 +91,7 @@ pub fn about_body(version: &str) -> String {
     format!("Version {version}")
 }
 
-/// The exclusive stdout modes requested together (todo 38 executor).
+/// The exclusive stdout modes requested together (the executor rejects).
 pub const STDOUT_MODES_CONFLICT: &str = "--raw and --print-geometry both own stdout; pick one";
 
 /// The bus reply when the executor thread died (panic or spawn failure)

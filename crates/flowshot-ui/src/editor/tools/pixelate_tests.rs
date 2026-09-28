@@ -1,4 +1,4 @@
-//! The todo-23 destructive-region-tool suite at the editor surface: the
+//! The destructive-region-tool suite at the editor surface: the
 //! draw lifecycle through the real [`EditorState`], the pixel-overlay
 //! commit channel, region clamping (frame + selection), the no-op failure
 //! paths, the unified undo (original pixels restored losslessly because
@@ -260,10 +260,10 @@ fn drags_outside_every_bound_commit_nothing() {
 fn zero_length_and_one_pixel_drags_are_noops() {
     let (mut ed, _) = editor_with_frame();
     ed.activate_tool(ToolKind::Pixelate);
-    // Click without move (the todo-21 zero-length rule).
+    // Click without move (the shape tools' zero-length rule).
     ed.pointer_press(&env(), MouseButton::Left, at(10.0, 10.0));
     ed.pointer_release(&env(), MouseButton::Left, at(10.0, 10.0));
-    // 1x1 region: the F27 grid collapses to zero (plan failure QA).
+    // 1x1 region: the F27 grid collapses to zero (failure QA).
     stroke(&mut ed, &env(), (10.0, 10.0), (11.0, 11.0));
     assert!(ed.pixel_effects().is_empty());
     assert_eq!(ed.undo_stack().undo_depth(), 0);

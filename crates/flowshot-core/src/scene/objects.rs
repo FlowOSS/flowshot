@@ -1,4 +1,4 @@
-//! The todo-21 shape-tool scene objects: freehand pencil paths, straight
+//! The shape-tool scene objects: freehand pencil paths, straight
 //! lines, translucent chisel-cap marker strokes, and non-destructive color
 //! inversion regions.
 //!
@@ -18,7 +18,7 @@ use super::{Color, PaintSink, Point, Rect, ToolObject, ToolObjectData};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PencilPath {
     /// The stroke points in draw order (simplified at commit - the tool's
-    /// Ramer-Douglas-Peucker pass, plan todo 21).
+    /// Ramer-Douglas-Peucker pass).
     pub points: Vec<Point>,
     /// Stroke color.
     pub color: Color,
@@ -104,7 +104,7 @@ impl ToolObject for LineObject {
 
 /// A translucent highlighter stroke between two points, painted as a
 /// chisel-cap (flat-ended) quad of `width` - the marker color carries the
-/// ~0.5 blend alpha (plan todo 21).
+/// ~0.5 blend alpha.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MarkerObject {
     /// Start point.
@@ -183,8 +183,7 @@ impl ToolObject for MarkerObject {
 
 /// A non-destructive color-inversion region: painting emits
 /// [`PaintSink::invert_region`], so the frame pixels themselves are never
-/// modified (undo = remove the object; the plan todo-21 filter-object
-/// contract).
+/// modified (undo = remove the object; the filter-object contract).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InvertObject {
     /// The inverted region.

@@ -1,11 +1,11 @@
 //! Image quads: frozen-frame textures and sub-region sampling.
 //!
-//! Frames are uploaded once per capture (plan todo 15) as linear-filtered,
+//! Frames are uploaded once per capture as linear-filtered,
 //! mip-free RGBA textures - frozen content is drawn 1:1 (physical-first
-//! rule) or magnified by the magnifier (todo 17), both of which want linear
+//! rule) or magnified by the magnifier, both of which want linear
 //! filtering without mip chains. A missing texture renders the magenta
-//! placeholder and logs a tracing error (todo 14 failure path); magenta is a
-//! diagnostic signal, not a design-token color.
+//! placeholder and logs a tracing error (the renderer's failure path);
+//! magenta is a diagnostic signal, not a design-token color.
 
 use std::collections::HashMap;
 
@@ -183,7 +183,7 @@ impl TextureStore {
     }
 
     /// The bind group to draw `id` with: the registered texture, or the
-    /// magenta placeholder plus a tracing error (todo 14 failure path).
+    /// magenta placeholder plus a tracing error (the renderer's failure path).
     pub(crate) fn resolve(&self, id: TextureId) -> &wgpu::BindGroup {
         if let Some(entry) = self.entries.get(&id) {
             &entry.bind_group
@@ -275,7 +275,7 @@ pub(crate) fn uv_rect(src: Option<Rect>, tex_width: u32, tex_height: u32) -> [f3
 
 /// The four corner vertices (top-left, bottom-left, top-right, bottom-right)
 /// of an image quad and its triangle indices; `alpha` fades the whole quad
-/// (premultiplied-safe, the todo-41 motion seam).
+/// (premultiplied-safe, the motion seam).
 pub(crate) fn image_quad(dst: Rect, uv: [f32; 4], alpha: f32) -> ([ImageVertex; 4], [u32; 6]) {
     let (x0, y0) = (dst.origin.x, dst.origin.y);
     let (x1, y1) = (dst.right(), dst.bottom());

@@ -1,12 +1,12 @@
 //! wgpu device management and per-window surface lifecycle.
 //!
-//! Surface policy (plan todo 13): `Bgra8UnormSrgb` preferred, alpha mode
+//! Surface policy: `Bgra8UnormSrgb` preferred, alpha mode
 //! `PreMultiplied` (transparent overlay windows), present mode `Fifo`
 //! (vsync, guaranteed-available, zero tearing). Frames are rendered only on
 //! `RedrawRequested`, so an idle overlay performs no GPU work at all.
 //!
 //! Adapter policy (issues.md 2026-09-25 "downlevel wgpu limits"): adapters
-//! are enumerated and filtered by the [`crate::adapter::MIN_TEXTURE_DIMENSION_2D`] texture-size floor,
+//! are enumerated and filtered by the `crate::adapter::MIN_TEXTURE_DIMENSION_2D` texture-size floor,
 //! and every surface extent is validated against the device limits BEFORE
 //! `Surface::configure` (which panics on oversized extents), so GPU failures
 //! are typed [`UiError`]s end to end.
@@ -174,8 +174,8 @@ pub fn configure_overlay_surface(
     configure_surface(surface, adapter, device, width, height, monitor, true)
 }
 
-/// Configures `surface` for an OPAQUE normal window (the todo-36 settings
-/// surface and the todo-37 launcher dialog): same format/present policy as
+/// Configures `surface` for an OPAQUE normal window (the settings
+/// surface and the launcher dialog): same format/present policy as
 /// the overlay, `Opaque` compositing (the window is not transparent).
 ///
 /// # Errors

@@ -1,4 +1,4 @@
-//! The editor's input surface (plan todo 20): the event entry points
+//! The editor's input surface: the event entry points
 //! [`OverlayCore`](crate::OverlayCore) feeds from its route funnel. Split
 //! from the facade so [`super::EditorState`] keeps owning state and
 //! accessors while this file owns the event semantics - the same discipline
@@ -7,7 +7,7 @@
 //!
 //! Routing follows the exact F27 priority chain via [`super::routing`];
 //! these files execute the decisions: draw-session lifecycle, edit-widget
-//! commits, object selection and its atomic move drag (todo 25), the
+//! commits, object selection and its atomic move drag, the
 //! digit/wheel size adjusters, and the undo/redo/delete scene ops.
 
 mod pointer;
@@ -24,9 +24,9 @@ use super::{EditorState, kind::ToolKind};
 impl EditorState {
     /// A key press (auto-repeat feeds digits and undo/redo like Flameshot's
     /// shortcut repeat, but never re-toggles tools). `text` is the winit
-    /// `KeyEvent.text` payload (the todo-22 edit-session input); while an
+    /// `KeyEvent.text` payload (the edit-session input); while an
     /// edit widget is active every non-Escape key belongs to the session
-    /// ([`EditorState::editing_key_press`]) and the normal key map is
+    /// (`editing_key_press`) and the normal key map is
     /// skipped - typing never toggles tools or resizes.
     pub fn key_press(
         &mut self,
@@ -71,12 +71,12 @@ impl EditorState {
                 self.toggle_tool(kind);
                 return EditorUpdate::eaten(true);
             }
-            // Grid toggle key (todo 27): unbound by default, rebindable.
+            // Grid toggle key: unbound by default, rebindable.
             if !repeat && code == KeyCode::KeyF {
                 self.toggle_grid();
                 return EditorUpdate::eaten(true);
             }
-            // Magnifier toggle key (todo 17): F12/Flameshot binds no
+            // Magnifier toggle key: F12/Flameshot binds no
             // magnifier key (recognizedShortcuts has no TYPE_MAGNIFIER
             // row), so L (lens) ships as the unbound-key choice - the
             // grid-F precedent, documented in the magnifier module.
@@ -84,7 +84,7 @@ impl EditorState {
                 self.toggle_magnifier();
                 return EditorUpdate::eaten(true);
             }
-            // Z-order keys ship UNBOUND (plan todo 25: panel-driven); when
+            // Z-order keys ship UNBOUND (panel-driven); when
             // rebound, a duplicate binding loses to the tool key above and
             // auto-repeat never stacks journal entries.
             if !repeat && let Some(action) = self.shortcuts.z_for_key(code) {
@@ -103,7 +103,7 @@ impl EditorState {
 
     /// A wheel angle-delta (the shell converts winit's line/pixel deltas):
     /// the active tool gets first refusal on the thresholded step (the
-    /// counter bubble increment, todo 24), otherwise the tool size moves ±1.
+    /// counter bubble increment), otherwise the tool size moves ±1.
     pub fn wheel(&mut self, env: &EditorEnv, delta: i32) -> EditorUpdate {
         if env.picker_visible {
             return EditorUpdate::eaten(false);

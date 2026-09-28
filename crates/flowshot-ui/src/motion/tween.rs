@@ -4,7 +4,7 @@
 //! start instant, and [`MotionSpec`], and every consumer evaluates it with
 //! the `now` it was handed (the shell's `Instant::now()`, the offscreen QA
 //! harness's synthetic clock). Nothing ticks in the background, so a settled
-//! tween costs zero CPU and zero frames (the todo-13 idle contract).
+//! tween costs zero CPU and zero frames (the shell's idle contract).
 
 use std::time::{Duration, Instant};
 

@@ -21,7 +21,7 @@ use crate::error::ExportError;
 
 /// Callback for user-visible notifications (save success, errors).
 ///
-/// Wired by the daemon (todo 32) to the real notification backend.
+/// Wired by the daemon to the real notification backend.
 /// The daemon gates every call through `[daemon].notifications` (the
 /// post-capture executor in `crate::clipboard::pipeline` applies the
 /// gate for the whole action run).
@@ -30,7 +30,7 @@ pub trait NotifySink: Send + Sync {
     fn on_saved(&self, path: &Path);
     /// Called when an action fails.
     fn on_error(&self, message: &str);
-    /// Explicit success-toast request (the `notify` action, todo 28).
+    /// Explicit success-toast request (the `notify` action).
     ///
     /// `saved_path` is `Some` when the capture was also saved to disk.
     fn on_success(&self, saved_path: Option<&Path>);
@@ -38,7 +38,7 @@ pub trait NotifySink: Send + Sync {
 
 /// Callback for file-save dialogs.
 ///
-/// The library never opens a dialog directly; the CLI (todo 35) wires
+/// The library never opens a dialog directly; the CLI wires
 /// this to `rfd` or another backend.
 pub trait FileDialogSink: Send + Sync {
     /// Ask the user for a save path. Returns `None` if cancelled.

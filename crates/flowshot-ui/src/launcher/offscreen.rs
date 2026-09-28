@@ -1,4 +1,4 @@
-//! The launcher dialog's headless QA path (todo 41 bundle): drives ONE
+//! The launcher dialog's headless QA path: drives ONE
 //! launcher frame through the shared embedded egui stack
 //! ([`crate::egui_host`]) into a texture and reads it back - no window, no
 //! display server (the no-visible-windows QA policy path, mirroring

@@ -45,7 +45,7 @@ impl OverlayHandle {
             .map_err(|_| UiError::EventLoopClosed)
     }
 
-    /// TEST SEAM (feature `test-drive`, plan todo 13): injects a synthetic
+    /// TEST SEAM (feature `test-drive`): injects a synthetic
     /// input event into the running loop, routed exactly like a real one -
     /// mouse paths become QA-able without external injection tools.
     ///
@@ -104,14 +104,14 @@ impl OverlayRuntime {
         })
     }
 
-    /// Creates the runtime around a frozen capture (plan todo 15): every
+    /// Creates the runtime around a frozen capture: every
     /// window renders its output's frozen frame 1:1 as the backdrop, with
     /// the dim layer, selection cutout, and cursor sprite per `options`.
     ///
     /// The capture-provided layout supersedes the winit monitor report
     /// (true transforms and scales); windows bind to outputs by connector
     /// name, then physical origin. `options.selection` seeds the selection
-    /// engine (todo 16) - from then on the live engine rect drives the dim
+    /// engine - from then on the live engine rect drives the dim
     /// cutout.
     ///
     /// # Errors
@@ -149,8 +149,8 @@ impl OverlayRuntime {
         })
     }
 
-    /// The overlay's headless core before [`Self::run`] (the preselect seam,
-    /// todo 18: seed the selection, cascade flags, or config).
+    /// The overlay's headless core before [`Self::run`] (the preselect seam:
+    /// launch flows seed the selection, cascade flags, or config).
     pub fn core_mut(&mut self) -> &mut OverlayCore {
         &mut self.app.core
     }
@@ -168,7 +168,7 @@ impl OverlayRuntime {
 
     /// Registers the binary-layer window-attributes hook (Wayland
     /// `app_id=flowshot` via `WindowAttributesExtWayland`, applied by the
-    /// daemon's session child - the todo-13 deviation-A queue item; the
+    /// daemon's session child - a recorded shell deviation; the
     /// `pins::WindowCustomizer` precedent keeps this crate platform-pure).
     #[must_use]
     pub fn with_window_customizer(mut self, customizer: crate::pins::WindowCustomizer) -> Self {

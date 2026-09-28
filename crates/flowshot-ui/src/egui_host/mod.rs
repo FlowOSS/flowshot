@@ -1,11 +1,11 @@
 //! The embedded egui stack (draft D8(b), the Ruffle pattern): an
 //! [`egui::Context`] + [`egui_wgpu::Renderer`] pair driven by OUR winit/wgpu
 //! runtime - egui is a guest in this crate's renderer, never a second
-//! windowing stack (plan MUST-NOT).
+//! windowing stack (a MUST-NOT).
 //!
-//! Shared by the two egui windows the plan sanctions: the settings surface
-//! (todo 36, [`crate::settings`]) and the capture launcher dialog (todo 37,
-//! [`crate::launcher`]). The overlay and editor never touch egui.
+//! Shared by the two sanctioned egui windows: the settings surface
+//! ([`crate::settings`]) and the capture launcher dialog
+//! ([`crate::launcher`]). The overlay and editor never touch egui.
 //!
 //! egui-winit is deliberately absent (version dead end - see the crate
 //! manifest note): [`input::InputState`] feeds the context from raw winit

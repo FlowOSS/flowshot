@@ -1,5 +1,5 @@
-//! The interactive overlay session (plan todo 38): frozen capture ->
-//! [`OverlayRuntime`] with the full production wiring -> the post-capture
+//! The interactive overlay session: frozen capture ->
+//! `OverlayRuntime` with the full production wiring -> the post-capture
 //! pipeline.
 //!
 //! Process topology (the winit one-event-loop-per-process constraint, see
@@ -8,9 +8,9 @@
 //! daemon-owned); the CHILD owns the winit loop and the export render and
 //! hands the image back as a temp PNG.
 //!
-//! Splits: [`wiring`] holds [`configure_core`] (the SINGLE wiring function
+//! Splits: `wiring` holds `configure_core` (the SINGLE wiring function
 //! shared with the headless execution mode) and the launch mapping;
-//! [`session`](mod@session) holds the child's blocking winit leg and the
+//! `session` holds the child's blocking winit leg and the
 //! frame/geometry helpers.
 
 mod session;
@@ -95,7 +95,7 @@ pub async fn run_interactive(
             super::post::run_post(completion, &request, &config, config_path.as_deref(), ctx).await
         }
         SessionResult::Color { hex } => {
-            // The PARENT owns the clipboard copy (todo 28: the offer must
+            // The PARENT owns the clipboard copy (the offer must
             // outlive the window session - in daemon mode this process is
             // the resident daemon).
             let clipboard = flowshot_actions::Clipboard::wayland();

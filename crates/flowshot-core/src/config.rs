@@ -903,7 +903,7 @@ mod tests {
     fn daemon_config_defaults_are_correct() {
         let config = Config::default();
         assert!(!config.daemon.tray);
-        assert!(config.daemon.notifications); // Default is true per plan
-        assert!(!config.daemon.startup_launch); // Default is false per plan
+        assert!(config.daemon.notifications);
+        assert!(!config.daemon.startup_launch);
     }
 }

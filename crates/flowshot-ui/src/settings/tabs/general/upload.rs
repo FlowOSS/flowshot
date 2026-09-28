@@ -1,5 +1,5 @@
-//! The `[upload]` group, including the empty-client-id hint (the todo-31
-//! CLI gate surfaced where the user can fix it).
+//! The `[upload]` group, including the empty-client-id hint (the
+//! upload CLI gate surfaced where the user can fix it).
 
 use egui::Ui;
 use flowshot_core::config::Config;

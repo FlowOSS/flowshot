@@ -1,20 +1,20 @@
 //! The `org.flowoss.FlowShot` session-bus interface.
 //!
-//! Naming (User Amendment #2, Metis #10): org namespace = `FlowOSS`,
+//! Naming (Metis #10): org namespace = `FlowOSS`,
 //! product = `FlowShot`. This service must NEVER claim `org.flameshot.*`
 //! or `org.flowshot.*` - coexistence with a parallel `Flameshot` install
 //! is a hard requirement.
 //!
 //! Wire contract (own API; the CLI<->`D-Bus` mapping table is recorded in
-//! todo 40 docs):
+//! the docs):
 //!
 //! | Member          | Signature | Purpose                              |
 //! |-----------------|-----------|--------------------------------------|
 //! | `Capture`       | `a{sv}`   | region capture with modifiers        |
 //! | `CaptureFull`   | (none)    | full-desktop capture                 |
 //! | `CaptureScreen` | `u`       | single output by index               |
-//! | `Launcher`      | (none)    | manual-coordinate dialog (todo 37)   |
-//! | `Settings`      | (none)    | settings surface (todo 36)           |
+//! | `Launcher`      | (none)    | manual-coordinate dialog             |
+//! | `Settings`      | (none)    | settings surface                     |
 //! | `Invoke`        | `as`      | second-instance argv forwarding      |
 
 use std::collections::HashMap;
@@ -78,7 +78,7 @@ impl FlowShotInterface {
 
 #[zbus::interface(name = "org.flowoss.FlowShot")]
 impl FlowShotInterface {
-    /// Region capture with the Amendment #2 modifier bag (`a{sv}`; keys
+    /// Region capture with the CLI modifier bag (`a{sv}`; keys
     /// per [`crate::request::CAPTURE_OPTION_KEYS`]).
     async fn capture(&self, options: HashMap<String, OwnedValue>) -> fdo::Result<()> {
         let request = CaptureRequest::from_vardict(&options)
@@ -96,12 +96,12 @@ impl FlowShotInterface {
         self.accept(DaemonCommand::CaptureScreen(screen)).await
     }
 
-    /// Open the capture launcher dialog (todo 37 surface).
+    /// Open the capture launcher dialog.
     async fn launcher(&self) -> fdo::Result<()> {
         self.accept(DaemonCommand::Launcher).await
     }
 
-    /// Open the settings surface (todo 36).
+    /// Open the settings surface.
     async fn settings(&self) -> fdo::Result<()> {
         self.accept(DaemonCommand::Settings).await
     }
@@ -178,7 +178,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn early_execution_failure_replies_typed_failed() {
         // Given: a sink whose execution fails inside the reply window.
@@ -195,7 +195,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn dropped_receipt_replies_executor_thread_died() {
         // Given: a sink whose executor thread died before reporting.
@@ -209,7 +209,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn resolved_ok_receipt_replies_acceptance() {
         // Given: a sink whose execution reported success.
@@ -242,7 +242,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn every_method_lands_on_the_sink_with_typed_payload() {
         let _guard = stub_guard();
@@ -282,7 +282,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn wrong_typed_option_replies_invalid_args() {
         let _guard = stub_guard();
@@ -309,7 +309,7 @@ mod tests {
     #[tokio::test]
     #[expect(
         clippy::await_holding_lock,
-        reason = "intentional cross-test serialization (todo-11 STUB_LOCK); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
+        reason = "intentional cross-test serialization (the STUB_LOCK precedent); each #[tokio::test] is a current-thread runtime, so the guard never crosses a task boundary"
     )]
     async fn accepted_calls_touch_the_activity_stamp() {
         let _guard = stub_guard();

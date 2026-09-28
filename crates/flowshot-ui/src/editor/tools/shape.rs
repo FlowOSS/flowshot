@@ -1,11 +1,11 @@
-//! The bounded-shape two-point tools (plan todo 21): rectangle and ellipse.
+//! The bounded-shape two-point tools: rectangle and ellipse.
 //!
 //! Both use the F27 diagonal-only adjustment (`rectangletool.cpp` /
 //! `circletool.cpp` set ONLY `m_supportsDiagonalAdj`): Ctrl snaps the drag
 //! vector to 45deg, which locks the rectangle to a square aspect and the
-//! ellipse to a circle - the plan's "Ctrl = aspect lock" / "circle lock".
+//! ellipse to a circle - the "Ctrl = aspect lock" / "circle lock" convention.
 //!
-//! Size semantics (the todo-20 dispatch): the ellipse stroke width is the
+//! Size semantics (the tool-size dispatch): the ellipse stroke width is the
 //! shared `draw_thickness` slot (its `tool_size`); the rectangle's
 //! `tool_size` IS the corner radius (`[tools.rectangle].corner_radius`,
 //! digits/wheel-adjustable), so its stroke width comes from the persisted
@@ -99,7 +99,7 @@ impl Tool for RectTool {
         self.color = color;
     }
 
-    /// The rectangle's dispatched size IS the corner radius (todo-20 slot).
+    /// The rectangle's dispatched size IS the corner radius (its size slot).
     fn on_size_changed(&mut self, size: u32) {
         self.radius = f32_from_u32(size);
     }

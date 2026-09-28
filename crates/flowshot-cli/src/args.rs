@@ -1,6 +1,6 @@
-//! The clap-derive command surface (User Amendment #2 - the authoritative
-//! interface spec is the plan todo-35 text; Flameshot interface parity is
-//! deliberately dropped, capability parity kept).
+//! The clap-derive command surface (the authoritative interface spec;
+//! Flameshot interface parity is deliberately dropped, capability parity
+//! kept).
 //!
 //! Parsing only produces the raw [`Cli`]; semantic validation (region
 //! grammar, screen specs, cross-flag rules clap cannot express) happens in
@@ -60,7 +60,7 @@ pub enum Command {
     /// init supervisor; the daemon is init-agnostic).
     Daemon(DaemonArgs),
     /// Internal: run one window session from a spec file (the daemon's
-    /// child-process contract, todo 38 - winit allows one event loop per
+    /// child-process contract - winit allows one event loop per
     /// process; hidden from the user surface).
     #[command(hide = true)]
     Session {
@@ -92,12 +92,12 @@ pub enum CaptureTarget {
 
 /// `flowshot capture` arguments: one optional target selector (positional
 /// target OR one of --full/--screen/--region/--last-region) plus the
-/// Amendment-#2 modifier set.
+/// modifier set.
 // The boolean flags are the independent spec-mandated capture modifiers of
-// the Amendment-#2 surface (same shape as the daemon's CaptureRequest).
+// the CLI surface (same shape as the daemon's CaptureRequest).
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "each flag is an independent spec-mandated capture modifier (Amendment #2 surface)"
+    reason = "each flag is an independent spec-mandated capture modifier (the CLI surface)"
 )]
 #[derive(Debug, Clone, Default, PartialEq, Eq, Args)]
 pub struct CaptureArgs {

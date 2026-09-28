@@ -1,5 +1,5 @@
 //! The pin winit shell: event translation, effect application, and window
-//! lifecycle (plan todo 30). The pure decisions live in
+//! lifecycle. The pure decisions live in
 //! [`super::state::PinState`]; this layer only translates
 //! [`WindowEvent`](winit::event::WindowEvent)s into [`PinInput`]s and
 //! applies the returned [`PinEffect`]s to real windows.
@@ -91,7 +91,7 @@ impl PinApp {
 
     /// Routes one input through the pin's state machine and applies the
     /// effects (shared by real events and `test-drive` injections - the
-    /// todo-13 single-seam rule).
+    /// single-seam rule).
     pub(crate) fn route(&mut self, target: &ActiveEventLoop, index: usize, input: &PinInput) {
         let Some((effects, id)) = self
             .entries
@@ -219,7 +219,7 @@ impl ApplicationHandler<PinUiEvent> for PinApp {
     }
 
     fn about_to_wait(&mut self, target: &ActiveEventLoop) {
-        // Zoom-transition frames (todo 41): paced redraws while any pin's
+        // Zoom-transition frames: paced redraws while any pin's
         // zoom eases, capped at its settle deadline; idle pins keep the
         // loop in ControlFlow::Wait (zero CPU).
         let now = Instant::now();

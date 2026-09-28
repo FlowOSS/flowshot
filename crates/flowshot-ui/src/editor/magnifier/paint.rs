@@ -1,4 +1,4 @@
-//! The magnifier's paint half (plan todo 17): widget placement with the
+//! The magnifier's paint half: widget placement with the
 //! four-edge flip, the CPU nearest-neighbor zoom buffer, and the
 //! display-list commands for both shape variants (square border + arms,
 //! circle clip + ring) plus the pixel grid. The readout bar lives in
@@ -29,9 +29,9 @@ const MAGNIFIER_TEXTURE_RAW: u64 = 1 << 14;
 /// pen `setWidth(4)`).
 const RING_WIDTH: f32 = 4.0;
 
-/// The pixel-grid line ink: neutral gray at 38% (the todo-27 `paint_grid`
-/// precedent - the palette carries no neutral token yet; todo 36 theming
-/// action recorded in the notepad).
+/// The pixel-grid line ink: neutral gray at 38% (the grid's `paint_grid`
+/// precedent - the palette carries no neutral token yet; the settings
+/// theming action is recorded in the notepad).
 const GRID_COLOR: Color = Color {
     r: 128.0 / 255.0,
     g: 128.0 / 255.0,

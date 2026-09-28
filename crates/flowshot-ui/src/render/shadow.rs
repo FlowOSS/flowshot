@@ -1,6 +1,6 @@
 //! Drop shadows: a single-pass signed-distance-field gaussian shader.
 //!
-//! The plan allows "two-pass gaussian or shader" (todo 14(d)); the shader
+//! The design allows "two-pass gaussian or shader"; the shader
 //! path avoids an offscreen target per shadow. Each shadow is one quad
 //! expanded to three sigma around the (offset) rounded rect; the fragment
 //! shader evaluates the exact round-box SDF and applies a gaussian falloff,

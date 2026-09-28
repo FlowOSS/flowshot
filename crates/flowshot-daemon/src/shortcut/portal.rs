@@ -1,8 +1,8 @@
-//! The `org.freedesktop.portal.GlobalShortcuts` client (plan todo-34
+//! The `org.freedesktop.portal.GlobalShortcuts` client (the
 //! primary path) on `ashpd` 0.10.3.
 //!
-//! PINNED API REALITY (vendored source read before coding, per the task
-//! brief - the plan cites 0.13-era expectations):
+//! PINNED API REALITY (vendored 0.10.3 source read before coding;
+//! 0.13-era API expectations do NOT apply):
 //!
 //! - `GlobalShortcuts::new()` -> `create_session()` -> `bind_shortcuts(
 //!   session, &[NewShortcut], None)`; the parent-window identifier stays
@@ -114,7 +114,8 @@ pub async fn register(specs: &[ShortcutSpec]) -> Result<PortalParts, DaemonError
 pub struct ListenerContext {
     /// Shortcut id -> command (ids outside the map are ignored).
     pub commands: HashMap<String, DaemonCommand>,
-    /// Where triggered commands go (todo 32 seam; todo 35 plugs execution).
+    /// Where triggered commands go (the daemon seam; the CLI wiring plugs
+    /// execution).
     pub sink: Arc<dyn CommandSink>,
     /// Activity stamp + persistence reason owner.
     pub state: Arc<DaemonState>,
@@ -185,8 +186,7 @@ fn classify(error: &ashpd::Error) -> DaemonError {
                 "no portal frontend owns org.freedesktop.portal.Desktop (is xdg-desktop-portal running?)".to_owned(),
             )
         }
-        // ashpd::Error is #[non_exhaustive] -> documented catch-all
-        // (todo-10 lesson).
+        // ashpd::Error is #[non_exhaustive] -> documented catch-all.
         other => DaemonError::ShortcutPortal(other.to_string()),
     }
 }

@@ -23,7 +23,8 @@
 //! `ext-image-copy-capture-v1` (manager + per-output source manager) ->
 //! `ExtImageCopyCapture`, `zwlr_screencopy_manager_v1` -> `WlrScreencopy`.
 //! `KWin` and portal backends are `D-Bus` services, invisible to the
-//! Wayland registry; the backend todos extend the probe with those checks.
+//! Wayland registry; the dedicated D-Bus probes extend the capability
+//! picture there.
 //! `zwp_linux_dmabuf_v1` and the fractional-scale manager are detect-only
 //! in v1.
 //!
@@ -86,8 +87,8 @@
 //! answered: the ICC pointer-cursor session one-shot
 //! ([`CursorSource::IccCursorSession`]), the raw Hyprland IPC socket - never
 //! a spawned `hyprctl` ([`CursorSource::HyprlandIpc`]), and the universal
-//! overlay-first-motion handoff ([`CursorSource::AwaitFirstMotion`]) for
-//! todos 16/18. [`cursor_capabilities`] exports the per-desktop capability
+//! overlay-first-motion handoff ([`CursorSource::AwaitFirstMotion`]).
+//! [`cursor_capabilities`] exports the per-desktop capability
 //! table for the docs build. Desktop detection ([`desktop`]) is the full
 //! `XDG_CURRENT_DESKTOP` + `WAYLAND_DISPLAY` + `HYPRLAND_INSTANCE_SIGNATURE`
 //! sniff with the honest [`DesktopEnv::Other`](flowshot_capture::DesktopEnv)

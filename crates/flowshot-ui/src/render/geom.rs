@@ -5,7 +5,7 @@
 //! logical layout coordinates via `flowshot_core::geometry` before building
 //! commands. These types deliberately do not reuse the core newtype spaces
 //! (`PhysicalPx(i32)` / `Logical(f64)`): the renderer needs subpixel `f32`
-//! precision, and stroke widths are physical by contract (plan todo 14(a)).
+//! precision, and stroke widths are physical by contract.
 
 /// A point in physical pixels.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]

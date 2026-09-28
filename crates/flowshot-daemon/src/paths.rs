@@ -10,10 +10,10 @@ use crate::error::DaemonError;
 /// The product config directory name under the XDG config home.
 pub const CONFIG_DIR_NAME: &str = "flowshot";
 
-/// The config file name (plan todo 2: `~/.config/flowshot/flowshot.toml`).
+/// The config file name (`~/.config/flowshot/flowshot.toml`).
 pub const CONFIG_FILE_NAME: &str = "flowshot.toml";
 
-/// The shortcut restore-data file name (plan todo 34: "persist portal
+/// The shortcut restore-data file name ("persist portal
 /// restore-data in config dir"; contents per [`crate::shortcut::persist`]).
 pub const SHORTCUTS_RESTORE_FILE_NAME: &str = "shortcuts-restore.json";
 

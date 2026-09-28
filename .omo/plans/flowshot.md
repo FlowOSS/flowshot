@@ -456,13 +456,13 @@ Your next move: start execution in a worker session, or request the dual high-ac
 
 ## Final verification wave
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
-- [ ] F1. Plan compliance audit
+- [x] F1. Plan compliance audit
   Every todo 1-42: acceptance criteria actually executed (command outputs in evidence), evidence file exists at its recorded path, commit exists with the planned message; parity_matrix.toml (todo 38) has ZERO unmapped rows; structural re-check of this plan (row grammar, categories present).
-- [ ] F2. Code quality review
+- [x] F2. Code quality review
   `cargo clippy --workspace -- -D warnings` zero; `cargo deny check` passes; `cargo test --workspace` green; unsafe audit: every unsafe block inside the recorded allowlist (wayland/dmabuf FFI) WITH SAFETY comment; crate-boundary purity job (todo 42) green; public API docs on all exported items; no TODO/FIXME/unimplemented!() left; dependency set == pinned list + recorded additions only; ENGINEERING-STANDARDS audit (Amendment #4): lints.workspace inheritance in all crates, unwrap_used/expect_used deny honored in lib crates (grep + clippy run), thiserror-libs/anyhow-bins boundary respected (anyhow absent from lib crate Cargo.tomls), //! module headers present, missing_docs coverage on core+capture public APIs, no panic!/unreachable! in lib sources outside tests.
-- [ ] F3. Real manual QA
+- [x] F3. Real manual QA
   Full todo-38 suite re-executed FRESH end-to-end on the live Hyprland session (all 16 flows + perf budgets + QA-env preflight); draft F9 fix-list: every row re-asserted per todo 38's FOUR-WAY disposition (FIXED with oracle evidence | N/A-on-Hyprland #3761 | moot-by-design #2974 | DOCUMENTED-DEGRADED GNOME cursor-preselect) - Oracle r2 F-1 fix; visual bundle (todo 41) regenerated and token-conformance re-sampled; F12 parity checklist spot-reverify 10 random rows live.
-- [ ] F4. Scope fidelity
+- [x] F4. Scope fidelity
   Must-NOT audit: no recording/OCR/scroll-capture, no X11/Win/mac backend code (purity audit output), no GNOME extension, no runtime shell-outs (grep audit for Command::new/process::Command outside allowlisted dev-tools), no Flameshot C++ code (clean-room attestation vs F27 spec), no xcap on Linux, no webview/Tauri, no update checker, no Flameshot ini import; announced defaults in draft == shipped behavior (name, license file GPL-3.0-or-later, TOML config, Imgur default client-id = EMPTY/disabled per Amendment #3 - draft amendment record is the authoritative announcement).
 
 ## Commit strategy

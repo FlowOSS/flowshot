@@ -37,7 +37,7 @@ fn default_model_config_roundtrips_byte_stable() {
     let first = model.config().to_toml_string().unwrap();
     let reloaded = SettingsModel::from_toml_str(&first);
     let second = reloaded.config().to_toml_string().unwrap();
-    // Then: bytes are stable and the configs equal (todo-2 rule)
+    // Then: bytes are stable and the configs equal (the config round-trip rule)
     assert_eq!(first, second);
     assert_eq!(model.config(), reloaded.config());
     assert_eq!(reloaded.banner(), None);
@@ -178,7 +178,7 @@ fn reset_restores_defaults_preserving_config_version() {
 }
 
 #[test]
-fn recorder_binds_through_the_todo25_seams() {
+fn recorder_binds_through_the_shortcut_rebind_seams() {
     // Given: an armed tool recorder
     let mut model = SettingsModel::default();
     model.start_recording(RecorderTarget::Tool(crate::editor::ToolKind::Pencil));
@@ -303,7 +303,7 @@ fn fonts_install_the_vendored_inter() {
 
 #[test]
 fn vendored_inter_is_a_real_truetype_file() {
-    // Regression guard for the todo-19 corrupt-asset defect (issues.md
+    // Regression guard for the corrupt-asset defect (issues.md
     // 2026-09-27: the vendored "TTFs" were GitHub 404 HTML pages, latent
     // until this surface became the first include_bytes consumer).
     let fonts = theme::fonts();
@@ -524,7 +524,7 @@ fn fonts_register_the_hierarchy_weights() {
     );
     // Regular Inter backs the weight families as the fallback chain
     assert_eq!(semibold.get(1).map(String::as_str), Some("Inter"));
-    // The weight faces are real TrueType files (the todo-19 asset guard)
+    // The weight faces are real TrueType files (the asset guard)
     for family in [theme::MEDIUM_FAMILY, theme::SEMIBOLD_FAMILY] {
         let face = fonts.font_data.get(family).unwrap();
         let magic: &[u8] = &face.font[..4];

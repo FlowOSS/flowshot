@@ -1,4 +1,4 @@
-//! Shared stroke geometry for the shape tools (plan todo 21, draft F27).
+//! Shared stroke geometry for the shape tools (draft F27).
 //!
 //! Two clean-room Flameshot patterns power all seven tools:
 //!
@@ -6,7 +6,7 @@
 //!   point pair with the Ctrl drag conventions applied AT USE time (paint and
 //!   commit see the same constrained endpoint, so pressing Ctrl mid-drag
 //!   updates the live preview without waiting for the next motion - the
-//!   `EditorView.modifiers` paint contract of todo 20). [`adjusted`] is the
+//!   `EditorView.modifiers` paint contract). [`adjusted`] is the
 //!   `adjustedVector` snap math: H/V/45deg for the orthogonal+diagonal tools
 //!   (line/arrow/marker), 45deg-only for the diagonal tools (rectangle
 //!   square-lock, ellipse circle-lock).
@@ -21,7 +21,7 @@ use crate::render::f32_from_f64;
 
 use super::super::tool::EditorContext;
 
-/// The pencil simplification epsilon in scene px (plan todo 21: "point
+/// The pencil simplification epsilon in scene px ("point
 /// simplification on drawEnd - Ramer-Douglas-Peucker epsilon = 0.5px").
 pub const RDP_EPSILON: f32 = 0.5;
 
@@ -81,7 +81,7 @@ impl TwoPoint {
 
     /// The constrained endpoint pair, or `None` before `start`. The pair is
     /// degenerate (equal points) exactly when the drag had zero length - the
-    /// commit-validity rule of plan todo 21.
+    /// commit-validity rule of the shape tools.
     pub(super) fn endpoints(
         &self,
         ctx: &EditorContext<'_>,
@@ -104,7 +104,7 @@ impl TwoPoint {
     }
 
     /// Ends the stroke: the constrained endpoint pair when the drag was
-    /// non-degenerate (the zero-length rule of plan todo 21), clearing the
+    /// non-degenerate (the shape tools' zero-length rule), clearing the
     /// state so the hover preview never repaints the committed shape.
     pub(super) fn finish(
         &mut self,

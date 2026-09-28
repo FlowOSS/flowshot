@@ -1,10 +1,10 @@
-//! Scene operations of the editor (plan todo 20): stroke commit, delete,
+//! Scene operations of the editor: stroke commit, delete,
 //! undo/redo, and the object hit-test/selection behind F27 priority 5.
 //!
 //! Every mutation is ONE undo unit (a full before/after snapshot pair -
 //! the core [`UndoStack`] contract, F27 "snapshot approach kept"): the
 //! draw-end commit, the Delete removal (the core renumbers counters), and
-//! the todo-25 additions (move-release, text-commit, property change) all
+//! the mutation-funnel additions (move-release, text-commit, property change) all
 //! push through [`EditorState::commit_object`]-style pairs. Undo/redo
 //! restore whole scenes, so object ids are invalidated - the selection is
 //! cleared on every restore (Flameshot deselects on undo too).
@@ -25,14 +25,14 @@ impl EditorState {
         &self.scene
     }
 
-    /// The undo history (depth/limit introspection for the todo-26 panel).
+    /// The undo history (depth/limit introspection for the side panel).
     #[must_use]
     pub const fn undo_stack(&self) -> &EditorUndo {
         &self.undo
     }
 
-    /// The baked pixel-overlay layer in paint order (todo 23; the shell
-    /// syncs its textures and the todo-38 export composites it).
+    /// The baked pixel-overlay layer in paint order (the shell
+    /// syncs its textures and the completion export composites it).
     #[must_use]
     pub fn pixel_effects(&self) -> &[PixelEffect] {
         &self.effects
@@ -69,7 +69,7 @@ impl EditorState {
     }
 
     /// Commits a finished object to the scene as ONE undo unit (the
-    /// draw-end / edit-commit / todo-25 mutation funnel).
+    /// draw-end / edit-commit / mutation funnel).
     pub fn commit_object(&mut self, object: Box<dyn ToolObject>) -> usize {
         let before = self.snapshot();
         let id = self.scene.add_object(object);
@@ -84,7 +84,7 @@ impl EditorState {
         id
     }
 
-    /// Commits a baked pixel effect as ONE undo unit (the todo-23
+    /// Commits a baked pixel effect as ONE undo unit (the
     /// destructive-op funnel; the editor assigns the identity that drives
     /// the effect's texture id).
     pub fn commit_effect(&mut self, effect: PixelEffect) -> u64 {
@@ -159,8 +159,8 @@ impl EditorState {
     }
 
     /// Removes the selected object as ONE undo unit; the core scene owns
-    /// the counter renumbering (plan todo 20: "Delete removes selected w/
-    /// counter renumber (core op)"). `false` when nothing is selected.
+    /// the counter renumbering (Delete removes selected w/
+    /// counter renumber - a core op). `false` when nothing is selected.
     pub fn delete_selected(&mut self) -> bool {
         let Some(id) = self.selected else {
             return false;

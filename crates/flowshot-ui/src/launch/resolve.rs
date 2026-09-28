@@ -1,4 +1,4 @@
-//! The pure launch-resolution math (plan todo 18): the preselect vocabulary,
+//! The pure launch-resolution math: the preselect vocabulary,
 //! its resolution against the output layout and the resolved cursor, and the
 //! logical-rect <-> persisted-`Region` conversions. No state lives here -
 //! [`super::LaunchState`] and the route funnel consume these functions.
@@ -13,7 +13,7 @@
 //! - cursor-centered (`--region WxH`): shifted into the layout preserving
 //!   the requested size (the acceptance contract: the export dimensions
 //!   stay EXACTLY `WxH`); a size larger than the layout crops to bounds.
-//! - any side below the engine minimum (10x10, todo 16) expands to it, so a
+//! - any side below the engine minimum (10x10) expands to it, so a
 //!   seeded rect always satisfies the selection engine's invariants.
 
 use flowshot_core::config::Region;
@@ -22,8 +22,8 @@ use flowshot_core::geometry::{LogicalPoint, LogicalRect, LogicalSize, OutputInfo
 use crate::selection::{MIN_SELECTION_SIDE, fit_into_bounds};
 
 /// What the overlay should preselect at launch (the `--region` /
-/// `--last-region` vocabulary, already parsed - the grammar is the CLI's,
-/// todo 35; see the [`super`] mapping table).
+/// `--last-region` vocabulary, already parsed - the grammar is the CLI's;
+/// see the [`super`] mapping table).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Preselect {
     /// No preselection: a bare interactive launch.
@@ -39,8 +39,9 @@ pub enum Preselect {
         origin: Option<LogicalPoint>,
     },
     /// `--region at-cursor`: the whole output under the cursor becomes the
-    /// initial selection (the interactive form of the Amendment-#3
-    /// output-at-cursor behavior; recorded decision - todo 38/40 confirm).
+    /// initial selection (the interactive form of the
+    /// output-at-cursor behavior; a recorded decision - the binary layer's
+    /// launch flows confirm).
     OutputAtCursor,
     /// `--last-region` / `capture last`: the persisted
     /// `[capture].last_region` (the binary layer reads the TOML; `None` =
@@ -66,7 +67,7 @@ impl Preselect {
 
     /// Resolves the preselect against the layout and the resolved cursor:
     /// either the rect to seed now, or the pending form for the
-    /// `AwaitFirstMotion` deferral (the todo-12 layer-3 contract).
+    /// `AwaitFirstMotion` deferral (the layer-3 cursor contract).
     #[must_use]
     pub fn resolve(&self, cursor: Option<LogicalPoint>, layout: &OutputLayout) -> InitialSelection {
         match *self {
@@ -98,7 +99,7 @@ pub enum InitialSelection {
     /// preselect - a bare interactive session, or a request that did not
     /// overlap the layout).
     Ready(Option<LogicalRect>),
-    /// The cursor is unresolved (todo-12 `AwaitFirstMotion`): apply the
+    /// The cursor is unresolved (`AwaitFirstMotion`): apply the
     /// pending form on the first pointer motion the overlay receives.
     Deferred(PendingPreselect),
 }
@@ -138,12 +139,12 @@ impl PendingPreselect {
 }
 
 /// The output containing the resolved cursor: what `flowshot capture screen`
-/// (no arg) targets - the Amendment-#3 BEHAVIOR (not a config flag) fixing
+/// (no arg) targets - the recorded BEHAVIOR (not a config flag) fixing
 /// the capability Flameshot hard-blocks on Wayland (F8 `screengrabber`
-/// L249-255). `None` when the cursor is unresolved (todo-12
-/// `AwaitFirstMotion` - there is no overlay to await motion on for a
-/// non-interactive capture) or lies outside every output; the caller
-/// (todo 38) owns the fallback policy.
+/// L249-255). `None` when the cursor is unresolved
+/// (`AwaitFirstMotion` - there is no overlay to await motion on for a
+/// non-interactive capture) or lies outside every output; the calling
+/// binary layer owns the fallback policy.
 #[must_use]
 pub fn output_at_cursor(
     layout: &OutputLayout,
@@ -210,7 +211,7 @@ fn output_rect_at(at: LogicalPoint, layout: &OutputLayout) -> Option<LogicalRect
     rect
 }
 
-/// Expands any side below the selection engine's minimum (10x10, todo 16)
+/// Expands any side below the selection engine's minimum (10x10)
 /// so a seeded rect always satisfies the engine's invariants.
 fn with_minimum(size: LogicalSize) -> LogicalSize {
     LogicalSize::from_raw(

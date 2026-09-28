@@ -1,4 +1,4 @@
-//! The selection engine's input surface (plan todo 16): the four event
+//! The selection engine's input surface: the four event
 //! entry points [`OverlayCore`](crate::OverlayCore) feeds from its route
 //! funnel. Split from the facade so [`super::SelectionState`] keeps owning
 //! state, accessors, and paint while this file owns the event semantics.
@@ -29,7 +29,7 @@ impl SelectionState {
                 SelectionUpdate::with(effects, false)
             }
             MouseButton::Right => {
-                // Color-wheel seam (todo 26); Flameshot shows the picker at
+                // Color-wheel seam (chrome-owned); Flameshot shows the picker at
                 // the press position - the shared cursor track carries it.
                 SelectionUpdate::with(vec![Effect::ColorWheel], false)
             }

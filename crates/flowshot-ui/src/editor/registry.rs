@@ -1,9 +1,9 @@
-//! The tool registry (plan todo 20, F27 factory-switch equivalent).
+//! The tool registry (the F27 factory-switch equivalent).
 //!
 //! Flameshot's `ToolFactory` is a compile-time switch over the type enum;
-//! `FlowShot` inverts it: the binary layer (todo 35) and the QA harnesses
+//! `FlowShot` inverts it: the binary layer and the QA harnesses
 //! REGISTER factories per [`ToolKind`] - concrete tools land incrementally
-//! (todos 21-27) without the framework knowing them, and an unregistered
+//! without the framework knowing them, and an unregistered
 //! kind is a typed `None` (warn-logged at activation), never a panic.
 //! Factories are plain `fn` pointers: tools are default-constructible and
 //! receive color/size/config through the [`Tool`] lifecycle hooks.

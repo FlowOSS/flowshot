@@ -1,4 +1,4 @@
-//! The Esc cascade (plan todo 16, draft F27).
+//! The Esc cascade (draft F27).
 //!
 //! Flameshot `deleteToolWidgetOrClose` (`capturewidget.cpp` L561-589) walks
 //! SIX stages in an exact order, popping the topmost occupied one per Esc
@@ -11,9 +11,9 @@
 //! 5. hide picker (the color wheel)
 //! 6. close
 //!
-//! Stages 1-5 belong to the editor layers (todos 20/26) which do not exist
-//! yet; [`CascadeState`] is their seam - those todos set and clear the
-//! flags, and the cascade order below is already the final contract. Every
+//! Stages 1-5 belong to the editor and chrome layers;
+//! [`CascadeState`] is their seam - those layers set and clear the
+//! flags, and the cascade order below is the final contract. Every
 //! step logs its stable stage token (`flowshot_ui::selection`, field
 //! `stage`), so the QA assertion is on structured tokens, never prose.
 
@@ -37,31 +37,31 @@ impl CascadeState {
         Self(0)
     }
 
-    /// Whether a tool is checked (todo 20 seam).
+    /// Whether a tool is checked (an editor seam).
     #[must_use]
     pub const fn tool_checked(&self) -> bool {
         self.0 & Self::TOOL != 0
     }
 
-    /// Whether an object is selected (todo 20 seam).
+    /// Whether an object is selected (an editor seam).
     #[must_use]
     pub const fn object_selected(&self) -> bool {
         self.0 & Self::OBJECT != 0
     }
 
-    /// Whether the side panel is visible (todo 26 seam).
+    /// Whether the side panel is visible (a chrome seam).
     #[must_use]
     pub const fn panel_visible(&self) -> bool {
         self.0 & Self::PANEL != 0
     }
 
-    /// Whether a tool widget exists (todo 20 seam).
+    /// Whether a tool widget exists (an editor seam).
     #[must_use]
     pub const fn tool_widget_present(&self) -> bool {
         self.0 & Self::WIDGET != 0
     }
 
-    /// Whether the color picker is visible (todo 26 seam).
+    /// Whether the color picker is visible (a chrome seam).
     #[must_use]
     pub const fn picker_visible(&self) -> bool {
         self.0 & Self::PICKER != 0

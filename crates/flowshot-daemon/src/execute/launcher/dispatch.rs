@@ -1,4 +1,4 @@
-//! The launcher child's Capture dispatch legs (todo 37/38): the
+//! The launcher child's Capture dispatch legs: the
 //! daemon-resident argv handoff and the one-shot in-child direct capture.
 //!
 //! F3 fix (2026-09-28, live-QA found): the daemon-resident leg used to
@@ -19,7 +19,7 @@ use super::super::session::{self, SessionResult, SessionSpec};
 use super::super::{ExecuteError, direct};
 
 /// The daemon-resident dispatch: translate the request into the lossless
-/// `Invoke` argv (the todo-37 mapping, same vocabulary the bus forward
+/// `Invoke` argv (the launcher mapping, same vocabulary the bus forward
 /// used: `Region` -> `capture --region TOKEN [-d MS]` = interactive
 /// overlay preselect; `Screen` -> `capture screen N [-d MS]`).
 pub(super) fn dispatch_argv(request: &LauncherRequest) -> SessionResult {
@@ -47,7 +47,7 @@ fn push_delay(argv: &mut Vec<String>, delay_ms: u32) {
 }
 
 /// The one-shot dispatch: capture the typed geometry directly in the
-/// child (no second event loop exists for an overlay; the todo-37 harness
+/// child (no second event loop exists for an overlay; the launcher harness
 /// semantics) and write the export PNG for the parent's post-capture.
 pub(super) fn capture_in_child(request: &LauncherRequest, spec: &SessionSpec) -> SessionResult {
     let runtime = match tokio::runtime::Builder::new_current_thread()

@@ -1,7 +1,7 @@
-//! Per-tool size dispatch and the two size adjusters (plan todo 20, F27).
+//! Per-tool size dispatch and the two size adjusters (F27).
 //!
 //! F27 size model (`confighandler.cpp` `setToolSize`/`toolSize`): text uses
-//! the font size (rendered at `size + ` [`BASE_POINT_SIZE`], todo 22),
+//! the font size (rendered at `size + ` [`BASE_POINT_SIZE`]),
 //! rectangle/marker/pixelate/counter own independent `[tools.*]` slots, and
 //! every other tool shares `[editor].draw_thickness` (default 3). Digit keys
 //! accumulate `10 * acc + digit` clipped to [`MAX_TOOL_SIZE`] (Flameshot
@@ -38,7 +38,7 @@ pub const WHEEL_ANGLE_PER_LINE: f32 = 40.0;
 /// `hidden` signal zeroes `m_toolSizeByKeyboard`.
 pub const DIGIT_RESET_DELAY: Duration = Duration::from_millis(600);
 /// Text tools render at `tool_size + BASE_POINT_SIZE` points (F27 text spec;
-/// consumed by the todo-22 text tool).
+/// consumed by the text tool).
 pub const BASE_POINT_SIZE: u32 = 8;
 
 /// The per-tool size slots (F27 dispatch table), projected from the config

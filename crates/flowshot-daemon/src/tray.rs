@@ -1,4 +1,4 @@
-//! SNI tray host (plan todo 33): the `org.kde.StatusNotifierItem` surface
+//! SNI tray host: the `org.kde.StatusNotifierItem` surface
 //! on the daemon's existing zbus-4 connection.
 //!
 //! # Pieces
@@ -9,12 +9,12 @@
 //! - [`menu`] - the F12-parity menu model and the pure id -> action
 //!   dispatch table;
 //! - [`outputs`] - the live output probe behind the per-monitor submenu
-//!   (todo 6 `CaptureThread`, headless-safe);
+//!   (`CaptureThread`, headless-safe);
 //! - `item` / `dbusmenu` - the two registered bus objects;
 //! - `watcher` - `StatusNotifierWatcher` registration with the
 //!   absent-watcher degrade + late-arrival retry.
 //!
-//! # Lifecycle coupling (todo 32)
+//! # Lifecycle coupling
 //!
 //! The tray persistence reason is owned HERE, not by the config seed:
 //! `state.set_tray(true)` happens only after a successful
@@ -25,11 +25,10 @@
 //!
 //! # Deviations (recorded)
 //!
-//! - The plan cited `ksni`; no SNI crate exists in the workspace table or
-//!   the lock and the root manifest is orchestrator-owned, so the protocol
-//!   is hand-rolled on zbus 4 (task-brief sanctioned, ksni wire shapes as
-//!   the reference).
-//! - `About` is a version toast until the todo-36 settings stack provides
+//! - `ksni` was the proposed crate; no SNI crate exists in the workspace
+//!   table or the lock and the root manifest is orchestrator-owned, so the
+//!   protocol is hand-rolled on zbus 4 (ksni wire shapes as the reference).
+//! - `About` is a version toast until the settings stack provides
 //!   a real surface.
 
 pub mod icon;
@@ -65,7 +64,7 @@ use spec::{ITEM_PATH, MENU_PATH, TrayStatus};
 #[derive(Debug, Clone)]
 pub struct TrayOptions {
     /// Master switch - the `[daemon].tray` gate (default false = lean
-    /// on-demand daemon, Amendment #3).
+    /// on-demand daemon).
     pub enabled: bool,
     /// `#RRGGBB` accent for the procedural glyph (`[ui].accent_color`).
     pub accent_color: String,
@@ -142,7 +141,7 @@ impl TrayHandle {
 
     /// The attention-state seam: swaps the `Status` property and emits
     /// `NewStatus`. Nothing drives it in v1 (capture-failure UX lands with
-    /// the todo-36/38 surfaces); QA and tests exercise it.
+    /// the settings/executor surfaces); QA and tests exercise it.
     pub fn set_status(&self, status: TrayStatus) {
         if let Some(core) = &self.core {
             Arc::clone(core).set_status(status);
@@ -180,7 +179,7 @@ impl TrayHandle {
 /// Starts the tray host: registers the SNI + menu objects, kicks the
 /// initial output probe, and spawns the watcher-registration task.
 /// Infallible by design - every failure degrades to an inert handle with
-/// a warn log (plan: "absent SNI host -> zero daemon impact").
+/// a warn log ("absent SNI host -> zero daemon impact").
 pub async fn start(options: &TrayOptions, wiring: TrayWiring) -> TrayHandle {
     let connection = wiring.connection.clone();
     let state = Arc::clone(&wiring.state);

@@ -1,5 +1,5 @@
 //! Motion unit tests: bezier solver, tween settle/retarget/no-drift, and the
-//! staggered reveal schedule (plan todo 41 acceptance: "animation timeline
+//! staggered reveal schedule (the acceptance bar: "animation timeline
 //! unit tests - progress curves, settle behavior, no drift").
 
 #![allow(

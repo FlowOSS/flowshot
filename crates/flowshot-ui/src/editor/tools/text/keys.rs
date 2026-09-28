@@ -1,4 +1,4 @@
-//! The text tool's input handlers (plan todo 22): the edit-key map and the
+//! The text tool's input handlers: the edit-key map and the
 //! winit `Ime` event routing into the session state machine. Split from
 //! [`super::TextTool`] at the 250-LOC ceiling; the lifecycle lives there.
 

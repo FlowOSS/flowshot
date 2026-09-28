@@ -64,7 +64,7 @@ impl Toggle {
             thumb_radius * 2.0,
         );
 
-        // The thumb ink derives from the track color (todo-41 audit: white
+        // The thumb ink derives from the track color (audit finding: white
         // was hardcoded - unreadable on a light accent token).
         let thumb_ink = if self.checked {
             accent.readable_ink()

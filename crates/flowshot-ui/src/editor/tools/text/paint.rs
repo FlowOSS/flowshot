@@ -1,4 +1,4 @@
-//! The text tool's edit-overlay paint (plan todo 22): the buffer text, the
+//! The text tool's edit-overlay paint: the buffer text, the
 //! selection highlights, the caret bar, and the underlined IME composition
 //! overlay at the caret. Split from [`super::TextTool`] at the 250-LOC
 //! ceiling; everything paints through the SAME [`PaintSink`] vocabulary the

@@ -1,7 +1,7 @@
 //! The pin transform operations: zoom commits, rotation, scale-factor
 //! changes, and pinch application (split from [`super::interact`] for the
 //! 250-LOC ceiling; both files extend the same [`PinState`] impl - the
-//! todo-16 child-module pattern).
+//! selection engine's child-module pattern).
 
 use std::time::Instant;
 

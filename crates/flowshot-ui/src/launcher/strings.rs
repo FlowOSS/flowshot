@@ -1,8 +1,8 @@
 //! The launcher dialog's user-facing strings (English-only v1; the
-//! message-catalog-ready convention per Amendment #3 - every literal lives
+//! message-catalog-ready convention - every literal lives
 //! here, never inline in the widget code).
 
-/// Window title (also the tray item label that dispatches it, todo 33).
+/// Window title (also the tray item label that dispatches it).
 pub const WINDOW_TITLE: &str = "Capture Launcher";
 
 /// Target dropdown label.

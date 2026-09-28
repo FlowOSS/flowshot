@@ -17,7 +17,7 @@
 //!    no-shell-out).
 //! 3. **Overlay first motion** - [`CursorSource::AwaitFirstMotion`]: the
 //!    position arrives with the first `wl_pointer.motion` after the overlay
-//!    maps (todos 16/18). Universal: every Wayland compositor delivers
+//!    maps. Universal: every Wayland compositor delivers
 //!    pointer motion to a mapped fullscreen window, which covers KDE
 //!    without a `KWin` script and GNOME (no public cursor-position API at
 //!    all - draft F13).
@@ -36,7 +36,7 @@
 //! # Capability table
 //!
 //! [`cursor_capabilities`] documents which layers answer on which desktop
-//! (consumed by the docs build, todo 40). The runtime ladder is
+//! (consumed by the docs build). The runtime ladder is
 //! probe/environment-driven, never table-driven: a compositor that grows
 //! ICC support is picked up without a release.
 
@@ -51,7 +51,7 @@ use crate::icc::IccBackend;
 pub enum CursorSource {
     /// Layer 1: the `ext-image-copy-capture-v1` pointer-cursor session
     /// one-shot. The position is global logical, matching `hyprctl
-    /// cursorpos` exactly on Hyprland (live-verified, todo 8).
+    /// cursorpos` exactly on Hyprland (live-verified).
     IccCursorSession {
         /// The resolved global logical position.
         position: (i32, i32),
@@ -63,7 +63,7 @@ pub enum CursorSource {
         position: (i32, i32),
     },
     /// Layer 3: no position is available before the overlay maps. The
-    /// consumer (todos 16/18) defers cursor-preselect until the first
+    /// consumer defers cursor-preselect until the first
     /// `wl_pointer.motion` arrives - universal across desktops.
     AwaitFirstMotion,
 }
@@ -187,7 +187,7 @@ pub struct CursorCapabilities {
     pub hyprland_ipc: bool,
 }
 
-/// Every desktop the capability table covers, for docs generation (todo 40).
+/// Every desktop the capability table covers, for docs generation.
 pub const CURSOR_CAPABILITY_DESKTOPS: [DesktopEnv; 7] = [
     DesktopEnv::Hyprland,
     DesktopEnv::Sway,
@@ -203,7 +203,7 @@ pub const CURSOR_CAPABILITY_DESKTOPS: [DesktopEnv; 7] = [
 /// Evidence per row (the runtime ladder never consults this table - the
 /// live probe and environment decide):
 ///
-/// - `Hyprland`: ICC live-verified (todo 8: exact `hyprctl cursorpos`
+/// - `Hyprland`: ICC live-verified (exact `hyprctl cursorpos`
 ///   match); IPC live-verified (v1 socket, JSON `cursorpos` reply).
 /// - `Sway`: ICC from wlroots 0.19+ / sway 1.10+ (cursor-session behavior
 ///   source-verified against wlroots; `wayland.app` lists Sway 1.11 with
@@ -215,7 +215,7 @@ pub const CURSOR_CAPABILITY_DESKTOPS: [DesktopEnv; 7] = [
 /// - `Niri`: no ICC (`wayland.app` lists niri 26.04 without the manager;
 ///   upstream PR #3942 is open and implements no cursor session).
 /// - `Kde`: no ICC (`KWin` 6.7 does not implement it; capture there is the
-///   `ScreenShot2` `D-Bus` path, todo 11). The `KWin`-script cursor bridge
+///   `ScreenShot2` `D-Bus` path). The `KWin`-script cursor bridge
 ///   is a roadmap enhancement (module docs).
 /// - `Gnome`: no ICC (mutter does not implement it, and GNOME exposes no
 ///   public cursor-position API at all - draft F13).

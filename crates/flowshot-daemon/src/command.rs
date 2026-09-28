@@ -2,7 +2,7 @@
 //!
 //! Bus methods parse their arguments ([`crate::request`]) and hand a typed
 //! [`DaemonCommand`] to the configured [`CommandSink`]. The default sink
-//! logs (todo 32 scope: the service shell); todo 35's CLI wiring plugs a
+//! logs (the service shell); the CLI wiring plugs a
 //! sink that executes captures, and [`ChannelSink`] streams commands to any
 //! consumer task.
 
@@ -21,10 +21,10 @@ pub enum DaemonCommand {
     CaptureFull,
     /// `CaptureScreen(n)`: single output by index.
     CaptureScreen(u32),
-    /// `Launcher`: open the manual-coordinate launcher dialog (todo 37
-    /// surface; dispatched by the todo-33 tray item and CLI `--dialog`).
+    /// `Launcher`: open the manual-coordinate launcher dialog (dispatched
+    /// by the tray item and CLI `--dialog`).
     Launcher,
-    /// `Settings`: open the settings surface (todo 36).
+    /// `Settings`: open the settings surface.
     Settings,
     /// `Invoke(argv)`: a second `flowshot` process forwarded its command
     /// line (single-instance parity UX).
@@ -72,8 +72,8 @@ pub type ExecutionOutcome = Result<(), String>;
 /// is itself a surfaced failure on the bus side.
 pub type ExecutionReceipt = tokio::sync::oneshot::Receiver<ExecutionOutcome>;
 
-/// Default sink: one stable structured log line per command (the todo-32
-/// acceptance greps `invoke received`).
+/// Default sink: one stable structured log line per command (acceptance
+/// greps `invoke received`).
 #[derive(Debug, Clone, Copy)]
 pub struct LoggingSink;
 
@@ -88,7 +88,7 @@ impl CommandSink for LoggingSink {
     }
 }
 
-/// Streams commands to a consumer task (the todo-35 execution seam).
+/// Streams commands to a consumer task (the execution seam).
 #[derive(Debug, Clone)]
 pub struct ChannelSink {
     commands: mpsc::UnboundedSender<DaemonCommand>,

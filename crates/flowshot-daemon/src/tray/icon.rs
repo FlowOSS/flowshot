@@ -1,12 +1,12 @@
 //! Procedural tray icon: the `FlowShot` selection-frame glyph rendered
 //! straight into the SNI `IconPixmap` ARGB32 wire format.
 //!
-//! Asset decision (recorded): todo 19's vendored set is editor-tool SVGs
+//! Asset decision (recorded): the vendored icon set is editor-tool SVGs
 //! rasterized into a `flowshot-ui` build-time atlas - it carries no app
 //! logo, and consuming the atlas would drag the GPU stack plus a PNG
 //! decoder into the daemon. The glyph below is drawn from the brand
 //! accent token instead: zero deps, deterministic, unit-testable. When
-//! packaging lands (todo 41/42) an installed themed icon can take over
+//! packaging lands an installed themed icon can take over
 //! via the `IconName` property (hosts prefer it over the pixmap).
 
 use super::spec::IconWire;
@@ -15,7 +15,7 @@ use super::spec::IconWire;
 pub const SIZES: [u32; 5] = [16, 22, 24, 32, 48];
 
 /// Attention-state glyph color (red 600): the core palette has no danger
-/// token yet (todo 36's settings pass may add one - recorded).
+/// token yet (the settings pass may add one - recorded).
 const ATTENTION_RGB: (u8, u8, u8) = (220, 38, 38);
 
 /// Fallback when the configured accent does not parse.

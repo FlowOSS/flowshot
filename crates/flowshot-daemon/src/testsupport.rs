@@ -1,7 +1,7 @@
-//! Private-bus stub harnesses (todo-11 recipe): both p2p sides are built
+//! Private-bus stub harnesses: both p2p sides are built
 //! CONCURRENTLY - a server built alone blocks forever waiting for the
 //! client's SASL handshake. Teardown closes both connections explicitly:
-//! zbus-4-async-io has NO drop-time close (todo-11 regression lesson).
+//! zbus-4-async-io has NO drop-time close.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -17,7 +17,7 @@ use crate::command::CommandSink;
 use crate::lifecycle::TokioClock;
 use crate::state::DaemonState;
 
-/// Serializes all stub-based tests (todo-11 `STUB_LOCK` precedent): their
+/// Serializes all stub-based tests (the `STUB_LOCK` precedent): their
 /// p2p sockets, dedicated zbus driver threads, and the process-global
 /// async-io reactor are shared process-wide resources, and one observed
 /// 60 s stall under heavy external CPU contention motivated bounding +
@@ -30,9 +30,9 @@ pub(crate) fn stub_guard() -> MutexGuard<'static, ()> {
 }
 
 /// Every test-side wire await is bounded: a stall becomes a loud named
-/// failure instead of hanging the suite. 45 s since todo 38: the 15 s
+/// failure instead of hanging the suite. 45 s because the 15 s
 /// budget flaked under full-workspace parallel-test contention (observed
-/// 15.21 s suite run, green standalone - the issues.md 2026-09-26 kwin
+/// 15.21 s suite run, green standalone - the 2026-09-26 kwin
 /// stub-deadline family; bumping test budgets is the recorded remedy).
 pub(crate) const CALL_TIMEOUT: Duration = Duration::from_secs(45);
 
@@ -106,8 +106,8 @@ impl ServiceStub {
         &self.state
     }
 
-    /// Deterministic teardown: explicit close on BOTH ends (todo-11:
-    /// dropping a zbus-4-async-io connection leaks the socket fd with the
+    /// Deterministic teardown: explicit close on BOTH ends (dropping a
+    /// zbus-4-async-io connection leaks the socket fd with the
     /// reader task parked on the global pool).
     pub(crate) async fn shutdown(self) {
         self.client.close().await.unwrap();
@@ -116,7 +116,7 @@ impl ServiceStub {
 }
 
 /// A stub that holds the well-known name but serves NO interface: the
-/// "foreign holder" of the plan's failure QA scenario.
+/// "foreign holder" of the failure QA scenario.
 pub(crate) struct ForeignStub {
     client: Connection,
     server: Connection,

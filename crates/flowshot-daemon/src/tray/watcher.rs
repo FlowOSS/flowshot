@@ -1,12 +1,12 @@
 //! `StatusNotifierWatcher` registration: the handshake that makes the tray
 //! visible, and the degrade path that keeps the daemon alive without it.
 //!
-//! Contract (plan todo 33): an ABSENT watcher disables the tray with a
+//! Contract: an ABSENT watcher disables the tray with a
 //! warn log - never an error, never a crash, zero daemon impact. The
 //! registration task keeps listening for `NameOwnerChanged` so a watcher
 //! that appears LATER (a panel restarting after the daemon) still picks
 //! the item up, and a vanishing watcher releases the tray persistence
-//! reason (todo 32's lifecycle flag).
+//! reason (the lifecycle flag).
 
 use std::sync::Arc;
 

@@ -8,7 +8,7 @@
 //!
 //! Opacity premultiplies in LINEAR light (decode -> multiply -> re-encode)
 //! because the image pipeline samples `Rgba8UnormSrgb` and blends
-//! `PREMULTIPLIED_ALPHA_BLENDING` (the todo-15 cursor-sprite lesson:
+//! `PREMULTIPLIED_ALPHA_BLENDING` (the cursor-sprite lesson:
 //! half-alpha white stores as 188, not 128).
 
 use flowshot_core::geometry::Transform;
@@ -165,7 +165,7 @@ impl PinImage {
 /// `store = encode(linear(c) * opacity)`, `alpha = opacity * 255`. A fully
 /// opaque buffer at full opacity returns the input unchanged (identity
 /// fast path - no re-encode round-trip, no per-pixel pow); any translucent
-/// texel (an alpha-bearing PNG pinned via todo 35) goes through the
+/// texel (an alpha-bearing PNG pinned via the binary layer) goes through the
 /// normalization so the premultiplied image pipeline never misreads
 /// straight-alpha content as premultiplied.
 #[expect(
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn half_opacity_premultiplies_in_linear_light() {
-        // The todo-15 verified constant: half-alpha white stores as 188.
+        // The verified constant: half-alpha white stores as 188.
         let composed = fixture()
             .composed(Rotation::Up0, 0.5)
             .unwrap_or_else(|e| panic!("{e}"));
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn translucent_input_normalizes_to_premultiplied_at_full_opacity() {
         // Straight-alpha white at 50% (a pinned alpha PNG) must upload as
-        // the premultiplied equivalent (the todo-15 constant: 188).
+        // the premultiplied equivalent (the verified constant: 188).
         let image = PinImage::new(1, 1, vec![255, 255, 255, 128]).unwrap_or_else(|e| panic!("{e}"));
         let composed = image
             .composed(Rotation::Up0, 1.0)

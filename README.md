@@ -43,8 +43,7 @@ Capture modes:
   output by index or connector name, output under the cursor, repeat last
   region, delayed capture, accept-on-select (`--instant`), region preselect
   (`--region WxH[+X+Y]|at-cursor`).
-- Manual-coordinate capture launcher dialog (`--dialog`; the dialog window
-  itself is in progress, see [Project status](#project-status)).
+- Manual-coordinate capture launcher dialog (`--dialog`).
 - D-Bus triggers for scripting and second-instance forwarding.
 
 Annotation editor:
@@ -81,13 +80,13 @@ Application shell:
 - Status tray (SNI) with a per-monitor capture submenu.
 - Global shortcuts via the XDG portal, with per-compositor bind snippets as
   the fallback (`flowshot --print-bind-help`).
-- TOML configuration with versioned migration and a settings UI (in
-  progress). Shell completions (bash, zsh, fish, elvish, PowerShell, nushell)
-  and man pages (`flowshot(1)`, `flowshot-config(5)`).
+- TOML configuration with versioned migration and a settings UI. Shell
+  completions (bash, zsh, fish, elvish, PowerShell, nushell) and man pages
+  (`flowshot(1)`, `flowshot-config(5)`).
 
 ## Install
 
-Pre-built packages are in progress and land with the packaging milestone:
+Pre-built packages land with the packaging milestone:
 
 - AUR (`flowshot`, `flowshot-git`): **TBD**
 - Nix flake: **TBD**
@@ -124,7 +123,7 @@ flowshot capture --raw > out.png  # PNG bytes to stdout
 flowshot capture --print-geometry # print WxH+X+Y of the selection
 flowshot pin [FILE]               # pin the last capture, or an image file
 flowshot color                    # pick a color, hex to clipboard
-flowshot settings                 # settings UI (in progress)
+flowshot settings                 # open the settings UI
 flowshot daemon                   # foreground daemon (what the systemd unit runs)
 flowshot completions bash         # shell completions
 flowshot --print-bind-help        # paste-ready hotkey snippets for your desktop
@@ -222,15 +221,17 @@ recorded as ADRs in [docs/architecture/](docs/architecture/).
 ## Project status
 
 The capture backends, overlay, annotation editor, pins, export actions,
-daemon, tray, shortcuts, and CLI are implemented and verified per-module
-(unit/property tests plus live-session QA; see
+daemon, tray, shortcuts, settings UI, launcher dialog, and the CLI wired end
+to end through the daemon are implemented and verified (unit/property tests
+plus live-session QA; see
 [docs/verification.md](docs/verification.md)). Still open before the first
 release:
 
-- End-to-end wiring of the CLI to the executing capture pipeline, the
-  integration suite, and performance budgets (**TBD**, in progress).
-- The settings UI and the capture launcher dialog (**TBD**, in progress).
 - Packaging: AUR, Nix flake, Flatpak (**TBD**).
+- The live checks this QA machine cannot run: KDE Plasma and GNOME sessions
+  (stub/source-verified meanwhile), and a Hyprland permission-denial pass
+  that needs a compositor restart. The queue and its classes are documented
+  in [docs/verification.md](docs/verification.md).
 
 What FlowShot deliberately does not do: no screen recording, no OCR, no scroll
 capture, no telemetry, no update checker, no importing Flameshot's old config,

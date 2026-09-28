@@ -1,6 +1,6 @@
 //! Window spawn and GPU surface initialization.
 //!
-//! Spawn policy (plan todo 13): one borderless-fullscreen window per monitor,
+//! Spawn policy: one borderless-fullscreen window per monitor,
 //! transparent, undecorated, always-on-top best effort (advisory on Wayland -
 //! compositor policy decides; the stale `with_always_on_top` builder does not
 //! exist in winit 0.30, Oracle r1 #2). Event dispatch lives in
@@ -26,8 +26,8 @@ use crate::surface::{SurfaceSpec, WindowSurface};
 impl OverlayApp {
     pub(crate) fn spawn(&mut self, target: &ActiveEventLoop) -> Result<(), UiError> {
         let monitors: Vec<MonitorHandle> = target.available_monitors().collect();
-        // The capture-provided layout supersedes the monitor-derived one
-        // (plan todo 15): true transforms and scales from the capture pass.
+        // The capture-provided layout supersedes the monitor-derived one:
+        // true transforms and scales from the capture pass.
         let (layout, bindings) = if let Some(backdrop) = self.backdrop.as_ref() {
             monitor::bindings_for_layout(backdrop.layout(), &monitors)
         } else {
@@ -36,7 +36,7 @@ impl OverlayApp {
             (layout, bindings)
         };
         self.core.router_mut().install(layout, bindings);
-        // The launch preselect (todo 18) resolves against the real layout,
+        // The launch preselect resolves against the real layout,
         // which only exists now (the binary layer's `launch()` call runs
         // before the event loop).
         self.core.apply_launch();
@@ -121,9 +121,9 @@ impl OverlayApp {
         Ok(())
     }
 
-    /// Builds each window's renderer and uploads the frozen-frame textures
-    /// (plan todo 15). The renderer exists even without a backdrop - the
-    /// selection visuals (todo 16) render through it on the empty overlay
+    /// Builds each window's renderer and uploads the frozen-frame textures.
+    /// The renderer exists even without a backdrop - the selection visuals
+    /// render through it on the empty overlay
     /// too. Upload failure is fatal and typed - the overlay never presents a
     /// silent black frame.
     fn init_renderers(&mut self, gpu: &GpuContext) -> Result<(), UiError> {

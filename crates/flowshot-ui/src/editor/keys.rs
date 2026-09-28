@@ -1,11 +1,11 @@
-//! The editor key map (plan todo 20: "tool activation keys per F12 shortcut
-//! map (P/D/A/S/R/C/M/T/B/I + configurable)").
+//! The editor key map: tool activation keys per the F12 shortcut
+//! map (P/D/A/S/R/C/M/T/B/I + configurable).
 //!
 //! Defaults are the Flameshot `recognizedShortcuts` table
 //! (`confighandler.cpp` L156+): single unmodified letters activate tools,
 //! undo = Ctrl+Z, redo = Ctrl+Shift+Z (`TYPE_UNDO`/`TYPE_REDO`). The map is
 //! DATA: [`ToolShortcuts::rebind`] is the configurable seam the settings
-//! surface (todo 36) and the `[shortcuts]` config group write into. Tool
+//! surface and the `[shortcuts]` config group write into. Tool
 //! keys require EMPTY modifiers by design - Ctrl/Shift combos stay free for
 //! the selection engine (Ctrl+C copy, Ctrl+A select-all, Ctrl+Q exit) and
 //! shift+letter produces symbols on many layouts.
@@ -14,8 +14,8 @@ use winit::keyboard::KeyCode;
 
 use super::kind::ToolKind;
 
-/// A z-order step the key map can dispatch (todo 25; panel-driven by
-/// default - the key slots ship unbound per the plan).
+/// A z-order step the key map can dispatch (panel-driven by
+/// default - the key slots ship unbound).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZOrderAction {
     /// Raise the selected object one step.
@@ -60,7 +60,7 @@ impl ToolShortcuts {
     }
 
     /// Rebinds a tool's activation key (`None` unbinds). Configurable-seam
-    /// (todo 36 settings / `[shortcuts]` group).
+    /// (the settings surface / `[shortcuts]` group).
     pub fn rebind(&mut self, kind: ToolKind, key: Option<KeyCode>) {
         self.bindings.retain(|(existing, _)| *existing != kind);
         if let Some(key) = key {
@@ -90,13 +90,13 @@ impl ToolShortcuts {
     }
 
     /// Rebinds undo/redo (they share the Ctrl / Ctrl+Shift modifier
-    /// convention; todo 25 wires the config `[shortcuts]` group).
+    /// convention; the config `[shortcuts]` group wires them).
     pub fn rebind_undo_redo(&mut self, undo: KeyCode, redo: KeyCode) {
         self.undo = undo;
         self.redo = redo;
     }
 
-    /// The current undo key (Ctrl+…; settings-surface read seam, todo 36).
+    /// The current undo key (Ctrl+…; a settings-surface read seam).
     #[must_use]
     pub const fn undo_key(&self) -> KeyCode {
         self.undo

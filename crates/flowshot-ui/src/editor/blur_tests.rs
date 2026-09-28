@@ -1,4 +1,4 @@
-//! The todo-23 blur-variant suite: kernel normalization (plan acceptance),
+//! The blur-variant suite: kernel normalization (the acceptance bar),
 //! the F27 radius clamp, spread, determinism, and the no-op paths.
 
 #![allow(

@@ -1,20 +1,20 @@
-//! The blur variant's bake (plan todo 23: "blur variant = gaussian ...
+//! The blur variant's bake ("blur variant = gaussian ...
 //! (size -> radius mapping 10-12 parity)").
 //!
 //! Flameshot renders the region through a `QGraphicsBlurEffect` TWICE
 //! ("multiple repeat for make blur effect stronger") with blur radii 10
-//! then 12; the plan distills that to `radius = clamp(size, 10, 12)`
+//! then 12; the design distills that to `radius = clamp(size, 10, 12)`
 //! (qBound parity) applied as two gaussian passes. The workspace's
-//! `fast_image_resize` pin is NOT in the lockfile and this task may not
-//! touch it, so the gaussian is a hand-rolled separable 2-pass convolution
-//! (the task brief sanctions "stack blur or 2-pass gaussian"): exact
+//! `fast_image_resize` pin is NOT in the lockfile, so the gaussian is a
+//! hand-rolled separable 2-pass convolution ("stack blur or 2-pass
+//! gaussian" are the sanctioned choices): exact
 //! normalized kernel, edge-extend sampling, u8 quantization between the
 //! passes (Flameshot's 8-bit intermediate render). Deterministic by
 //! construction (fixed f64 kernel, fixed summation order).
 //!
 //! SECURITY NOTE: blur is the aesthetic variant, NOT the secure redaction -
 //! the secure path is the fringe pseudo-pixelation of [`super::pixelate`]
-//! (Amendment #3 dropped the reversible mosaic; a gaussian blur of
+//! (the reversible mosaic was deliberately dropped; a gaussian blur of
 //! sufficient radius carries no exact-inverse, but only pixelate has the
 //! interior-never-sampled guarantee).
 

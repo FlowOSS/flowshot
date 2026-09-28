@@ -13,8 +13,8 @@ use crate::pins::WindowCustomizer;
 
 use super::request::LauncherRequest;
 
-/// The live output probe seam (todo 6): the binary layer wires the capture
-/// backend's probe (the daemon side already runs one for the todo-33 tray
+/// The live output probe seam: the binary layer wires the capture
+/// backend's probe (the daemon side already runs one for the tray
 /// submenu); `None` probe = the dropdown offers manual geometry only
 /// (headless-safe, the tray's infallible-probe contract).
 #[derive(Clone)]
@@ -73,7 +73,7 @@ pub struct LauncherWindowOptions {
     /// The resolved system dark/light preference (binary layer, ashpd
     /// Settings portal).
     pub system_theme: ThemeMode,
-    /// The live output probe (todo 6); `None` = manual geometry only.
+    /// The live output probe; `None` = manual geometry only.
     pub monitor_probe: Option<MonitorProbe>,
     /// The Capture dispatch seam; `None` = the request is only logged.
     pub on_capture: Option<LaunchCallback>,

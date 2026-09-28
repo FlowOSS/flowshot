@@ -1,4 +1,4 @@
-//! Layout measurement for the text session (plan todo 22).
+//! Layout measurement for the text session.
 //!
 //! The read-only half of [`TextSession`]: caret geometry (also the IME
 //! cursor-area source), the laid-out extent (the edit box), selection

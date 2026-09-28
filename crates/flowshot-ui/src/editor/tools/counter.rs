@@ -1,11 +1,11 @@
-//! The circle-count tool (plan todo 24, draft F27 circlecount spec).
+//! The circle-count tool (draft F27 circlecount spec).
 //!
 //! Numbered step bubbles: click places the next count (the scene's max+1
-//! rule, todo 4), diameter from `[tools.counter].size`, outline toggle from
+//! rule in the core scene), diameter from `[tools.counter].size`, outline toggle from
 //! `[tools.counter].outline`, fill = current draw color, number centered
 //! contrasting. Wheel while hovering a bubble increments/decrements ITS
-//! number (F12 row 10); delete triggers the core renumber op (todo 4:
-//! subsequent bubbles decrement); undo restores via max+1 rule.
+//! number (F12 row 10); delete triggers the core renumber op
+//! (subsequent bubbles decrement); undo restores via max+1 rule.
 //!
 //! The tool commits a [`CounterObject`] with `count = 0` (unassigned); the
 //! scene's `add_object` auto-numbers it with the max+1 rule. The outline
@@ -20,7 +20,7 @@ use super::super::kind::ToolKind;
 use super::super::tool::{EditorContext, Tool};
 use crate::render::{f32_from_f64, f32_from_u32};
 
-/// The circle-count tool (numbered step bubbles, todo 24).
+/// The circle-count tool (numbered step bubbles).
 #[derive(Debug, Default)]
 pub struct CounterTool {
     /// The press position (click placement, no drag).
@@ -125,7 +125,7 @@ impl Tool for CounterTool {
         // The wheel-on-bubble logic requires hit-testing the cursor against
         // committed counter objects; the framework does not pass the scene
         // to the tool's wheel method. The wheel adjustment is handled at
-        // the editor level (todo 24: "wheel while hovering a bubble =
+        // the editor level ("wheel while hovering a bubble =
         // increment/decrement ITS number"); the tool's wheel method is a
         // no-op (returns false to let the framework adjust the tool size).
         false

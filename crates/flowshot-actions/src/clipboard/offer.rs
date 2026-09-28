@@ -4,7 +4,7 @@
 //! image offers (`image/png` always, `image/jpeg` appended when
 //! `[save].clipboard_format = 'jpeg'`), path offers (`text/plain` +
 //! `text/uri-list`), and the combined image+path offer used by the
-//! `copy-path` action's "uri-list appended" rule (plan todo 28).
+//! `copy-path` action's "uri-list appended" rule.
 
 use std::path::Path;
 
@@ -60,7 +60,7 @@ pub struct ClipboardOffer {
 }
 
 /// Image offer: `image/png` always; `image/jpeg` appended when the
-/// `[save].clipboard_format` config selects JPEG (plan todo 28 rule).
+/// `[save].clipboard_format` config selects JPEG.
 #[must_use]
 pub fn image_offer(png: Vec<u8>, jpeg: Option<Vec<u8>>) -> ClipboardOffer {
     let mut entries = vec![OfferEntry::new(MIME_PNG, png)];
@@ -97,7 +97,7 @@ pub fn path_offer(path: &Path) -> ClipboardOffer {
 
 /// Combined offer for `copy-path` after an image copy: the image entries
 /// with the path entries appended ("`text/uri-list` appended when
-/// `copy-path` in effective set + saved", plan todo 28).
+/// `copy-path` in effective set + saved").
 #[must_use]
 pub fn image_and_path_offer(png: Vec<u8>, jpeg: Option<Vec<u8>>, path: &Path) -> ClipboardOffer {
     let mut offer = image_offer(png, jpeg);

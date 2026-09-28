@@ -52,7 +52,8 @@ output's expected buffer size.
   convert DPR exactly once for window dressing and never divide by it.
 - The cost is discipline: new code cannot lazily pass `f64` around. This is
   the point.
-- One open verification item: Hyprland computes cursor-session positions
-  logical-relative, the protocol specifies physical; the two coincide at
-  scale 1 (live-verified) and the scale-2 divergence check is queued in the
-  GUI QA batch (see [../verification.md](../verification.md)).
+- One recorded protocol deviation, found and fixed by the live QA batch:
+  Hyprland computes cursor-session positions logical-relative while the
+  protocol specifies physical; the two coincide at scale 1. The cursor
+  conversion picks the position space per compositor
+  (`CursorPositionSpace`), live-verified exact at scale 1 and at scale 2.

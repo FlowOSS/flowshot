@@ -1,15 +1,15 @@
-//! The settings model: typed edit state over the todo-2 [`Config`].
+//! The settings model: typed edit state over the [`Config`].
 //!
 //! One model instance backs the whole window: the tabs mutate it in place,
 //! [`SettingsModel::validate`] gates Apply, and the window layer persists
 //! `config()` through [`Config::save`] (migration-safe: the load path
 //! already migrated the file to [`CONFIG_VERSION`], and the write stamps it
-//! back - the todo-36 "Apply repairs a corrupt file" contract). A corrupt
+//! back - the "Apply repairs a corrupt file" contract). A corrupt
 //! load degrades to defaults plus a banner instead of failing (the CLI's
 //! resilient-load rule).
 //!
 //! Shortcut state rides along as the editor's own [`ToolShortcuts`] (the
-//! todo-25 rebind seams are the write path); persistence of rebinds waits
+//! rebind seams are the write path); persistence of rebinds waits
 //! on the core `[shortcuts]` group (issues.md 2026-09-26 - core is not
 //! editable from this crate), so rebinds are session state handed to the
 //! binary layer through [`SettingsModel::shortcuts`].
@@ -93,7 +93,7 @@ pub enum Banner {
     Validation,
 }
 
-/// A validation issue, tied to a field label from [`strings`].
+/// A validation issue, tied to a field label from `strings`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FieldIssue {
     /// The offending field's label constant.
@@ -164,7 +164,7 @@ impl SettingsModel {
     }
 
     /// Loads from TOML text; a corrupt document degrades to defaults with
-    /// [`Banner::CorruptConfig`] (the todo-36 failure-path scenario) instead
+    /// [`Banner::CorruptConfig`] (the failure-path scenario) instead
     /// of failing - the same resilient-load rule the CLI and daemon follow.
     #[must_use]
     pub fn from_toml_str(text: &str) -> Self {
@@ -189,7 +189,7 @@ impl SettingsModel {
         &mut self.config
     }
 
-    /// The editor shortcut map under edit (todo-25 seam consumer).
+    /// The editor shortcut map under edit (the rebind seams' consumer).
     #[must_use]
     pub const fn shortcuts(&self) -> &ToolShortcuts {
         &self.shortcuts
@@ -281,7 +281,7 @@ impl SettingsModel {
         self.recorder = None;
     }
 
-    /// Feeds a captured key to the armed recorder through the todo-25
+    /// Feeds a captured key to the armed recorder through the
     /// rebind seams; returns true when a slot consumed it. Keys without a
     /// physical `KeyCode` (Colon/Pipe/Questionmark) cannot back a binding
     /// and are rejected without disarming the recorder.
@@ -316,8 +316,8 @@ impl SettingsModel {
         true
     }
 
-    /// Restores factory defaults, preserving `config_version` (plan todo 36:
-    /// "Reset = defaults preserving `config_version`").
+    /// Restores factory defaults, preserving `config_version`
+    /// ("Reset = defaults preserving `config_version`").
     pub fn reset(&mut self) {
         self.config = Config {
             config_version: self.config.config_version,
@@ -330,7 +330,7 @@ impl SettingsModel {
     }
 
     /// Every validation issue in the current edit state (empty = Apply is
-    /// allowed). Ranges per F27/todo-2: undo limit 0..=999, JPEG quality
+    /// allowed). Ranges per F27 and the config schema: undo limit 0..=999, JPEG quality
     /// 1..=100, colors `#RRGGBB`.
     #[must_use]
     pub fn validate(&self) -> Vec<FieldIssue> {

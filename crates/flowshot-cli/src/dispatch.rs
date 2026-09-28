@@ -1,6 +1,6 @@
 //! Command dispatch: the local surfaces (completions, bind help), the
 //! in-process one-shot seam, and the `D-Bus` handshake with the daemon
-//! (plan todo 35 dispatch rules, Oracle r4).
+//! (Oracle r4).
 //!
 //! # Handshake
 //!
@@ -11,12 +11,12 @@
 //! - acquired here -> this process won the race, so it RELEASES the token,
 //!   spawns the auto-spawned helper daemon ([`crate::spawn`], wrapped in a
 //!   `systemd-run --user --scope` unit when systemd is present per the
-//!   todo-34 portal app-id finding), waits for the helper to acquire the
+//!   portal app-id finding), waits for the helper to acquire the
 //!   name, then forwards. A concurrent second winner degrades gracefully:
 //!   its helper exits `AlreadyRunning` and both CLIs forward to whoever
 //!   holds the name.
 //!
-//! # Execution (todo 38)
+//! # Execution
 //!
 //! The one-shot path runs the executor IN-PROCESS
 //! (`flowshot_daemon::execute`); daemon-forwarded invocations execute
@@ -92,7 +92,7 @@ pub async fn dispatch(
     }
 }
 
-/// The stdout-producing local surface: `--print-bind-help` (todo-34
+/// The stdout-producing local surface: `--print-bind-help` (the
 /// compositor-bind fallback snippets; the same text feeds the settings tab
 /// and the docs).
 #[expect(
@@ -104,7 +104,7 @@ fn print_bind_help() {
     print!("{}", bind_help(flavor, &default_shortcuts()));
 }
 
-/// The in-process one-shot capture (todo 38): the same executor library
+/// The in-process one-shot capture: the same executor library
 /// the daemon runs, on this process (documented trade-off: a one-shot
 /// clipboard offer dies with this process - the `--no-daemon` help text).
 async fn one_shot_capture(capture: &CaptureInvocation) -> Result<ExitCode, CliError> {
@@ -177,7 +177,7 @@ async fn handshake(
         Ownership::Acquired => {
             // Winner: release the token so the spawned helper can acquire
             // it - the helper serves the command and outlives this process
-            // (clipboard offers/pins persist in the daemon, todos 28/30).
+            // (clipboard offers/pins persist in the daemon).
             connection.release_name(SERVICE).await?;
             spawn::helper(bus_address)?;
             let daemon = wait_for_owner(bus_address).await?;
@@ -221,7 +221,7 @@ async fn name_has_owner(connection: &Connection) -> bool {
 
 /// `flowshot daemon`: the same library the `flowshot-daemon` helper binary
 /// runs (foreground; the systemd user unit and other init supervisors
-/// start it - Amendment #3 init-agnostic).
+/// start it - init-agnostic).
 async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCode, CliError> {
     let config = crate::config::load(run.config.as_deref());
     let mut options = if run.auto_spawned {
@@ -233,7 +233,7 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
     options.bus_address = bus_address.map(ToOwned::to_owned);
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
     options.shortcuts = ShortcutOptions::production();
-    // Todo 38: the executing sink replaces the todo-32 LoggingSink default
+    // The executing sink replaces the LoggingSink default
     // (bus/tray/shortcut commands run the real capture pipeline).
     options.command_sink = Some(Arc::new(ExecutingSink::new(ExecCtx {
         config_path: run.config.clone(),
@@ -253,8 +253,8 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
     Ok(ExitCode::SUCCESS)
 }
 
-/// Explicit connection close (zbus-4 async-io has NO drop-time close,
-/// todo-11 lesson); close errors are teardown noise.
+/// Explicit connection close (zbus-4 async-io has NO drop-time close);
+/// close errors are teardown noise.
 async fn close(connection: Connection) {
     if let Err(error) = connection.close().await {
         tracing::debug!(%error, "the bus connection close reported an error");
