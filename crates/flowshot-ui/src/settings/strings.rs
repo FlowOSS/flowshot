@@ -28,8 +28,9 @@ pub const BUTTON_CLOSE: &str = "Close";
 pub const BUTTON_MOVE_UP: &str = "↑";
 /// Move a list row down.
 pub const BUTTON_MOVE_DOWN: &str = "↓";
-/// Remove a list row / palette swatch.
-pub const BUTTON_REMOVE: &str = "✕";
+/// Remove a list row / palette swatch (U+00D7 multiplication sign - the
+/// vendored Inter has no U+2715 glyph, which would render as tofu).
+pub const BUTTON_REMOVE: &str = "×";
 /// Add a palette swatch.
 pub const BUTTON_ADD_SWATCH: &str = "Add swatch";
 /// Add a toolbar button from the known vocabulary.
@@ -74,6 +75,10 @@ pub const GROUP_PIN: &str = "Pin";
 pub const GROUP_UPLOAD: &str = "Upload";
 /// Group header: `[daemon]`.
 pub const GROUP_DAEMON: &str = "Daemon";
+/// Group header: the Interface tab's theme + `[ui]` color card.
+pub const GROUP_APPEARANCE: &str = "Appearance";
+/// Group header: the editor shortcut recorder card.
+pub const GROUP_EDITOR_SHORTCUTS: &str = "Editor shortcuts";
 
 /// `[capture].hide_cursor`.
 pub const FIELD_HIDE_CURSOR: &str = "Hide mouse cursor in captures";

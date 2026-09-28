@@ -2,7 +2,12 @@
 //! recorder seams, theme projection, keymap consistency, and the filename
 //! preview.
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::float_cmp,
+    clippy::cast_possible_truncation
+)]
 
 use chrono::{Local, NaiveDate, NaiveTime, TimeZone};
 use egui::Key;
@@ -370,4 +375,204 @@ fn tab_vocabulary_covers_the_four_f12_tabs() {
             .len(),
         4
     );
+}
+
+// --- the settings-rework layout grid + theme projection -------------------
+
+use super::layout::FormMetrics;
+use flowshot_core::config::UiConfig;
+
+#[test]
+fn form_metrics_derive_the_grid_from_tokens() {
+    // Given: the default tokens (base 14, spacing 4/8/16, radii 4/8)
+    let m = FormMetrics::from_tokens(&DesignTokens::default());
+    // Then: the grid math follows the token derivations
+    assert_eq!(m.base_size(), 14.0);
+    assert_eq!(m.control_height(), 14.0 * 1.25 + 2.0 * 4.0);
+    assert_eq!(m.row_pitch(), m.control_height() + 4.0);
+    assert_eq!(m.window_margin(), 16.0);
+    assert_eq!(m.card_padding(), 16.0);
+    assert_eq!(m.gutter(), 8.0);
+    assert_eq!(m.content_left(), 32.0);
+    // The label column: em cap wins on wide layouts ...
+    assert_eq!(m.label_width(1000.0), 14.0 * 22.0);
+    // ... the 45% ratio wins on medium ones ...
+    assert_eq!(m.label_width(600.0), 270.0);
+    // ... and the control-column floor wins on narrow ones
+    assert_eq!(m.label_width(160.0), 160.0 - 14.0 * 6.0 - 8.0);
+    // The control column's x is content_left + label + gutter
+    assert_eq!(m.control_x(1000.0), 32.0 + 308.0 + 8.0);
+}
+
+#[test]
+fn form_metrics_follow_token_changes() {
+    // Given: tokens with a larger base size and generous spacing
+    let mut tokens = DesignTokens::default();
+    tokens.typography.base_size = 16;
+    tokens.spacing.large = 24;
+    tokens.spacing.small = 6;
+    // When: projected
+    let m = FormMetrics::from_tokens(&tokens);
+    // Then: every derived metric moved with the tokens
+    assert_eq!(m.content_left(), 48.0);
+    assert_eq!(m.label_width(2000.0), 16.0 * 22.0);
+    assert_eq!(m.control_height(), 16.0 * 1.25 + 2.0 * 6.0);
+    assert_eq!(m.card_radius(), f32::from(tokens.radii.large as u8));
+}
+
+#[test]
+fn settings_style_projects_token_geometry() {
+    // Given: the default tokens
+    let tokens = DesignTokens::default();
+    let ui = UiConfig::default();
+    // When: the settings style is projected
+    let style = theme::settings_style(&tokens, &ui, ThemeMode::Dark);
+    let m = FormMetrics::from_tokens(&tokens);
+    // Then: the uniform control height floors every widget
+    assert_eq!(style.spacing.interact_size.y, m.control_height());
+    assert_eq!(style.spacing.icon_width, m.base_size());
+    // The scrollbar is solid + reserved (a floating bar has no affordance)
+    assert!(!style.spacing.scroll.floating);
+    assert_eq!(style.spacing.scroll.bar_width, 8.0);
+    // Crisp clipping at the scroll viewport
+    assert_eq!(style.visuals.clip_rect_margin, 0.0);
+
+    // Given: bigger typography + spacing tokens
+    let mut big = DesignTokens::default();
+    big.typography.base_size = 18;
+    big.spacing.small = 6;
+    // When: projected
+    let style2 = theme::settings_style(&big, &ui, ThemeMode::Dark);
+    // Then: the geometry follows (token change -> style change)
+    let m2 = FormMetrics::from_tokens(&big);
+    assert_eq!(style2.spacing.interact_size.y, m2.control_height());
+    assert!(style2.spacing.interact_size.y > style.spacing.interact_size.y);
+    assert_eq!(style2.spacing.icon_width, 18.0);
+}
+
+#[test]
+fn surfaces_derive_from_the_contrast_token() {
+    let tokens = DesignTokens::default();
+    let ui = UiConfig::default();
+    // Dark: the window IS the contrast token; the card lifts off it
+    let dark = theme::surfaces_for(&tokens, &ui, ThemeMode::Dark);
+    assert_eq!(dark.window, egui::Color32::from_rgb(0x0F, 0x17, 0x2A));
+    assert_ne!(dark.card, dark.window);
+    assert!(dark.card.r() > dark.window.r());
+    assert!(dark.field.r() < dark.card.r());
+    // Light: white cards on a contrast-tinted window
+    let light = theme::surfaces_for(&tokens, &ui, ThemeMode::Light);
+    assert_eq!(light.card, egui::Color32::WHITE);
+    assert_ne!(light.window, light.card);
+    // A different contrast token re-derives the whole scale (an empty
+    // config color defers to the palette token - the resolution order)
+    let mut teal = DesignTokens::default();
+    teal.palette.contrast = "#102030".to_owned();
+    let unconfigured = UiConfig {
+        contrast_color: String::new(),
+        ..Default::default()
+    };
+    let dark2 = theme::surfaces_for(&teal, &unconfigured, ThemeMode::Dark);
+    assert_eq!(dark2.window, egui::Color32::from_rgb(0x10, 0x20, 0x30));
+    assert_ne!(dark2.card, dark.card);
+}
+
+#[test]
+fn fonts_register_the_hierarchy_weights() {
+    let fonts = theme::fonts();
+    assert!(fonts.font_data.contains_key(theme::MEDIUM_FAMILY));
+    assert!(fonts.font_data.contains_key(theme::SEMIBOLD_FAMILY));
+    let semibold = fonts
+        .families
+        .get(&egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into()))
+        .unwrap();
+    assert_eq!(
+        semibold.first().map(String::as_str),
+        Some(theme::SEMIBOLD_FAMILY)
+    );
+    // Regular Inter backs the weight families as the fallback chain
+    assert_eq!(semibold.get(1).map(String::as_str), Some("Inter"));
+    // The weight faces are real TrueType files (the todo-19 asset guard)
+    for family in [theme::MEDIUM_FAMILY, theme::SEMIBOLD_FAMILY] {
+        let face = fonts.font_data.get(family).unwrap();
+        let magic: &[u8] = &face.font[..4];
+        assert!(
+            magic == [0x00, 0x01, 0x00, 0x00]
+                || magic == b"true"
+                || magic == b"ttcf"
+                || magic == b"OTTO",
+            "{family} must be a real font file, got magic {magic:02X?}"
+        );
+    }
+}
+
+/// Every row label the tabs render, measured against the label column.
+const ROW_LABELS: [&str; 41] = [
+    super::strings::FIELD_HIDE_CURSOR,
+    super::strings::FIELD_SAVE_LAST_REGION,
+    super::strings::FIELD_SAVE_PATH,
+    super::strings::FIELD_PATH_FIXED,
+    super::strings::FIELD_EXTENSION,
+    super::strings::FIELD_JPEG_QUALITY,
+    super::strings::FIELD_CLIPBOARD_FORMAT,
+    super::strings::FIELD_DRAW_COLOR,
+    super::strings::FIELD_DRAW_THICKNESS,
+    super::strings::FIELD_FONT_FAMILY,
+    super::strings::FIELD_FONT_SIZE,
+    super::strings::FIELD_MAGNIFIER,
+    super::strings::FIELD_MAGNIFIER_SHAPE,
+    super::strings::FIELD_HUD_POSITION,
+    super::strings::FIELD_HUD_HIDE_TIME,
+    super::strings::FIELD_GRID,
+    super::strings::FIELD_UNDO_LIMIT,
+    super::strings::FIELD_DOUBLE_CLICK_COPIES,
+    super::strings::FIELD_SIDE_PANEL,
+    super::strings::FIELD_ARROW_STYLE,
+    super::strings::FIELD_ARROW_REVERSE,
+    super::strings::FIELD_MARKER_SIZE,
+    super::strings::FIELD_PIXELATE_SIZE,
+    super::strings::FIELD_CORNER_RADIUS,
+    super::strings::FIELD_COUNTER_START,
+    super::strings::FIELD_COUNTER_OUTLINE,
+    super::strings::FIELD_PIN_MIN_SIZE,
+    super::strings::FIELD_UPLOAD_PROVIDER,
+    super::strings::FIELD_UPLOAD_CLIENT_ID,
+    super::strings::FIELD_UPLOAD_NO_CONFIRM,
+    super::strings::FIELD_UPLOAD_COPY_URL,
+    super::strings::FIELD_UPLOAD_HISTORY_MAX,
+    super::strings::FIELD_TRAY,
+    super::strings::FIELD_NOTIFICATIONS,
+    super::strings::FIELD_STARTUP_LAUNCH,
+    super::strings::FIELD_ACCENT_COLOR,
+    super::strings::FIELD_CONTRAST_COLOR,
+    super::strings::FIELD_DIM_OPACITY,
+    super::strings::FIELD_THEME,
+    super::strings::FIELD_FILENAME_PATTERN,
+    super::strings::LABEL_PREVIEW,
+];
+
+#[test]
+fn label_column_fits_every_row_label_on_one_line() {
+    // Given: the vendored Inter at the default token size
+    let ctx = egui::Context::default();
+    ctx.set_fonts(theme::fonts());
+    // ctx.fonts() needs one begun frame (pixels_per_point is unknown before)
+    let _ = ctx.run(egui::RawInput::default(), |_| {});
+    let tokens = DesignTokens::default();
+    let m = FormMetrics::from_tokens(&tokens);
+    // The offscreen QA window (900px) leaves >= 800px of card content
+    let label_width = m.label_width(800.0);
+    let font = egui::FontId::proportional(m.base_size());
+    for label in ROW_LABELS {
+        // When: the label is shaped with the real font
+        let width = ctx
+            .fonts(|fonts| fonts.layout_no_wrap(label.into(), font.clone(), egui::Color32::WHITE))
+            .size()
+            .x;
+        // Then: it fits the column without wrapping (uniform row height)
+        assert!(
+            width <= label_width,
+            "{label:?} shapes to {width}px but the column is {label_width}px"
+        );
+    }
 }

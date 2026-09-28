@@ -1,22 +1,38 @@
 //! The four settings tabs (F12 parity: General / Interface / Filename
-//! Editor / Shortcuts) plus the shared widget helpers every tab builds on.
+//! Editor / Shortcuts) plus the shared form primitives every tab builds on.
 //!
 //! Tabs are pure immediate-mode projections of [`SettingsModel`]: they read
 //! and mutate the model in place and report change through the return
 //! value - no widget state lives here beyond egui's own id-keyed memory.
+//!
+//! The window layout: a pill tab bar, a scroll region carrying the active
+//! tab's section cards, and a bottom action bar that stays visible while
+//! the cards scroll (the bar is a docked in-panel strip, not a row after
+//! the scroll area - the pre-rework layout pushed it off-window whenever
+//! the content overflowed).
 
+mod fields;
 mod filename;
-pub use filename::preview_filename;
+mod form;
 mod general;
 mod interface;
 mod shortcuts;
 
-use egui::Ui;
+pub use filename::preview_filename;
 
+use egui::{Align, Frame, Layout, Margin, TopBottomPanel, Ui};
+
+use super::layout::FormMetrics;
 use super::model::{Banner, SettingsModel, Tab};
 use super::strings;
 use super::window::PathPicker;
 use crate::egui_host::theme::ThemeMode;
+
+use form::pill_tab;
+use form::primary_button;
+
+/// The banner frame's background tint: the warning ink at this alpha.
+const BANNER_TINT_ALPHA: f32 = 0.12;
 
 /// What a rendered frame asks the window layer to do.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -51,6 +67,9 @@ pub struct TabContext<'a> {
     /// The save-path dialog seam (binary layer wires rfd); `None` disables
     /// the Browse button.
     pub path_picker: Option<&'a PathPicker>,
+    /// The token-derived form-grid metrics every row/card is laid out on
+    /// (the same numbers the offscreen pixel asserts consume).
+    pub metrics: FormMetrics,
 }
 
 /// Renders the tab bar, the active tab body, and the bottom action bar;
@@ -60,41 +79,68 @@ pub(super) fn show(
     model: &mut SettingsModel,
     context: &TabContext<'_>,
 ) -> FrameAction {
+    let m = &context.metrics;
     ui.horizontal(|ui| {
         for tab in Tab::ALL {
-            ui.selectable_value(model.active_tab_mut(), tab, tab.label());
+            let selected = model.active_tab() == tab;
+            if pill_tab(ui, m, selected, tab.label()).clicked() {
+                *model.active_tab_mut() = tab;
+            }
         }
     });
-    ui.separator();
-    egui::ScrollArea::vertical().show(ui, |ui| match model.active_tab() {
-        Tab::General => general::show(ui, model, context),
-        Tab::Interface => interface::show(ui, model),
-        Tab::Filename => filename::show(ui, model),
-        Tab::Shortcuts => shortcuts::show(ui, model),
+    ui.add_space(m.medium());
+    let bar = TopBottomPanel::bottom("settings-action-bar")
+        .resizable(false)
+        .frame(Frame::none().inner_margin(Margin {
+            left: 0.0,
+            right: 0.0,
+            top: m.medium(),
+            bottom: 0.0,
+        }));
+    let mut action = FrameAction::None;
+    bar.show_inside(ui, |ui| {
+        action = show_action_bar(ui, m, model);
     });
-    ui.separator();
-    show_action_bar(ui, model)
+    egui::ScrollArea::vertical()
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+        .show(ui, |ui| match model.active_tab() {
+            Tab::General => general::show(ui, model, context),
+            Tab::Interface => interface::show(ui, model, context),
+            Tab::Filename => filename::show(ui, model, context),
+            Tab::Shortcuts => shortcuts::show(ui, model, context),
+        });
+    action
 }
 
 /// The banner + Apply/Reset/Close bar; returns the requested action.
-fn show_action_bar(ui: &mut Ui, model: &mut SettingsModel) -> FrameAction {
+fn show_action_bar(ui: &mut Ui, m: &FormMetrics, model: &mut SettingsModel) -> FrameAction {
     if let Some(banner) = model.banner().cloned() {
         let message = match &banner {
             Banner::CorruptConfig => strings::BANNER_CORRUPT_CONFIG.to_owned(),
             Banner::SaveFailed(detail) => format!("{}: {detail}", strings::BANNER_SAVE_FAILED),
             Banner::Validation => strings::BANNER_VALIDATION.to_owned(),
         };
-        ui.colored_label(ui.visuals().warn_fg_color, message);
+        let tint = ui.visuals().warn_fg_color.gamma_multiply(BANNER_TINT_ALPHA);
+        Frame::none()
+            .fill(tint)
+            .rounding(egui::Rounding::same(m.control_radius()))
+            .inner_margin(Margin::same(m.small()))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.colored_label(ui.visuals().warn_fg_color, message);
+            });
+        ui.add_space(m.small());
     }
     let mut action = FrameAction::None;
     let issues = model.validate();
     ui.horizontal(|ui| {
-        if ui
-            .add_enabled(
-                model.is_dirty() && issues.is_empty(),
-                egui::Button::new(strings::BUTTON_APPLY),
-            )
-            .clicked()
+        if primary_button(
+            ui,
+            m,
+            strings::BUTTON_APPLY,
+            model.is_dirty() && issues.is_empty(),
+        )
+        .clicked()
         {
             action = FrameAction::Apply;
         }
@@ -107,106 +153,11 @@ fn show_action_bar(ui: &mut Ui, model: &mut SettingsModel) -> FrameAction {
         for issue in &issues {
             ui.colored_label(ui.visuals().warn_fg_color, issue.to_string());
         }
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if ui.button(strings::BUTTON_CLOSE).clicked() {
                 action = FrameAction::Close;
             }
         });
     });
     action
-}
-
-/// A checkbox row; returns whether the value changed.
-pub(super) fn toggle(ui: &mut Ui, label: &str, value: &mut bool) -> bool {
-    ui.checkbox(value, label).changed()
-}
-
-/// A default-open collapsing group; returns the body's change flag (`None`
-/// body = collapsed this frame = no change).
-pub(super) fn group(ui: &mut Ui, title: &str, body: impl FnOnce(&mut Ui) -> bool) -> bool {
-    egui::CollapsingHeader::new(title)
-        .default_open(true)
-        .show(ui, body)
-        .body_returned
-        .unwrap_or(false)
-}
-
-/// A clamped integer drag row; returns whether the value changed.
-pub(super) fn drag_u32(
-    ui: &mut Ui,
-    label: &str,
-    range: std::ops::RangeInclusive<u32>,
-    value: &mut u32,
-) -> bool {
-    ui.add(
-        egui::DragValue::new(value)
-            .range(range)
-            .prefix(format!("{label}: ")),
-    )
-    .changed()
-}
-
-/// A clamped `u8` drag row; returns whether the value changed.
-pub(super) fn drag_u8(
-    ui: &mut Ui,
-    label: &str,
-    range: std::ops::RangeInclusive<u8>,
-    value: &mut u8,
-) -> bool {
-    ui.add(
-        egui::DragValue::new(value)
-            .range(range)
-            .prefix(format!("{label}: ")),
-    )
-    .changed()
-}
-
-/// A single-line text row bound directly to the config string; returns
-/// whether the value changed.
-pub(super) fn text_field(ui: &mut Ui, label: &str, value: &mut String) -> bool {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        ui.text_edit_singleline(value).changed()
-    })
-    .inner
-}
-
-/// A `#RRGGBB` color row: swatch picker (writes canonical uppercase hex)
-/// plus a free-text field (validation flags malformed input); returns
-/// whether the value changed.
-pub(super) fn hex_color(ui: &mut Ui, label: &str, value: &mut String) -> bool {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        let mut rgb = crate::egui_host::theme::parse_hex_rgb(value).unwrap_or([0x7F, 0x7F, 0x7F]);
-        let mut changed = ui.color_edit_button_srgb(&mut rgb).changed();
-        if changed {
-            *value = format!("#{:02X}{:02X}{:02X}", rgb[0], rgb[1], rgb[2]);
-        }
-        changed |= ui.text_edit_singleline(value).changed();
-        changed
-    })
-    .inner
-}
-
-/// A combo row over `(value, label)` options; returns whether the selection
-/// changed.
-pub(super) fn combo<T: PartialEq + Copy>(
-    ui: &mut Ui,
-    label: &str,
-    value: &mut T,
-    options: &[(T, &str)],
-) -> bool {
-    let selected = options
-        .iter()
-        .find(|(option, _)| option == value)
-        .map_or(label, |(_, text)| *text);
-    egui::ComboBox::from_label(label)
-        .selected_text(selected)
-        .show_ui(ui, |ui| {
-            for (option, text) in options {
-                ui.selectable_value(value, *option, *text);
-            }
-        })
-        .response
-        .changed()
 }

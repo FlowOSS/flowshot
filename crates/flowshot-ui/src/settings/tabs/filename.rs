@@ -1,5 +1,5 @@
 //! Filename Editor tab: `[save].filename_pattern` with a live preview and a
-//! reset-to-default (plan todo 36 tab 3).
+//! reset-to-default (plan todo 36 tab 3), as one section card.
 //!
 //! [`preview_filename`] mirrors the authoritative expander in
 //! `flowshot-actions::export::pattern` (expand + sanitize); the actions
@@ -13,28 +13,32 @@ use flowshot_core::config::SaveConfig;
 
 use super::super::model::SettingsModel;
 use super::super::strings;
-use super::text_field;
+use super::TabContext;
+use super::fields::text_field;
+use super::form::{card, hint, readout, row};
 
-pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel) {
-    let mut changed = false;
-    {
+pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<'_>) {
+    let m = &context.metrics;
+    let changed = card(ui, m, strings::TAB_FILENAME, |ui| {
         let config = model.config_mut();
-        changed |= text_field(
+        let mut changed = text_field(
             ui,
+            m,
             strings::FIELD_FILENAME_PATTERN,
             &mut config.save.filename_pattern,
         );
-        ui.label(egui::RichText::new(strings::HINT_FILENAME_PATTERN).weak());
+        hint(ui, m, strings::HINT_FILENAME_PATTERN);
         let preview = preview_filename(&config.save.filename_pattern, Local::now());
-        ui.horizontal(|ui| {
-            ui.label(strings::LABEL_PREVIEW);
-            ui.monospace(preview);
+        row(ui, m, strings::LABEL_PREVIEW, |ui| readout(ui, m, &preview));
+        let reset = row(ui, m, "", |ui| {
+            ui.button(strings::BUTTON_RESET_PATTERN).clicked()
         });
-        if ui.button(strings::BUTTON_RESET_PATTERN).clicked() {
+        if reset {
             config.save.filename_pattern = SaveConfig::default().filename_pattern;
             changed = true;
         }
-    }
+        changed
+    });
     if changed {
         model.mark_dirty();
     }
