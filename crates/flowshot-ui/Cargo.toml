@@ -78,3 +78,7 @@ workspace = true
 
 [build-dependencies]
 resvg = { workspace = true }
+
+[[example]]
+name = "qa_bundle"
+required-features = ["test-drive"]

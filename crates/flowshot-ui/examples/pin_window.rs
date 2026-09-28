@@ -201,7 +201,7 @@ fn verify_offscreen(out: &str, width: u32, height: u32, rotations: u32, tenths: 
         eprintln!("texture insert failed: {error}");
         return ExitCode::from(1);
     }
-    let list = frame_list(&state);
+    let list = frame_list(&state, std::time::Instant::now());
     let Ok(target) = renderer.create_offscreen_target(&gpu.device, tw, th) else {
         eprintln!("offscreen target failed");
         return ExitCode::from(1);
@@ -226,7 +226,7 @@ fn verify_offscreen(out: &str, width: u32, height: u32, rotations: u32, tenths: 
     }
     // Sample points: the red marker center (rotation-mapped) and a field
     // point, both in window coordinates (margin + image point * scale).
-    let rect = image_rect(&state);
+    let rect = image_rect(&state, std::time::Instant::now());
     let scale = state.scale();
     let marker_img = match rotations % 4 {
         0 => (104.0, 79.0),

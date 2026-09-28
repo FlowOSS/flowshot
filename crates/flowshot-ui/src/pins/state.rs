@@ -38,6 +38,8 @@ pub struct PinBehavior {
     pub anchor: ResizeAnchor,
     /// Design tokens (menu layout, shadow, typography).
     pub tokens: DesignTokens,
+    /// Reduced-motion switch (todo 41): zoom transitions snap.
+    pub reduced_motion: bool,
 }
 
 impl Default for PinBehavior {
@@ -46,6 +48,7 @@ impl Default for PinBehavior {
             min_size: MIN_SIZE,
             anchor: ResizeAnchor::default(),
             tokens: DesignTokens::default(),
+            reduced_motion: false,
         }
     }
 }
@@ -75,6 +78,7 @@ pub struct PinState {
     pub(super) modifiers: ModifiersState,
     pub(super) menu: Option<PinMenu>,
     pub(super) pinch: PinchTracker,
+    pub(super) zoom_anim: Option<super::anim::ZoomAnim>,
 }
 
 impl PinState {
@@ -119,6 +123,7 @@ impl PinState {
             modifiers: ModifiersState::default(),
             menu: None,
             pinch: PinchTracker::default(),
+            zoom_anim: None,
         }
     }
 

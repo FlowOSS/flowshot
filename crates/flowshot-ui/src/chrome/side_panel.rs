@@ -233,8 +233,15 @@ impl SidePanelLayout {
     /// keeps the untranslated layout - interaction leads the animation).
     #[must_use]
     pub(crate) fn translated(&self, dx: f32) -> Self {
-        let shift = |rect: Rect| Rect::from_parts(rect.origin.x + dx, rect.origin.y, rect.size.width, rect.size.height);
-        let shift_opt = |rect: &Option<Rect>| rect.map(|r| shift(r));
+        let shift = |rect: Rect| {
+            Rect::from_parts(
+                rect.origin.x + dx,
+                rect.origin.y,
+                rect.size.width,
+                rect.size.height,
+            )
+        };
+        let shift_opt = |rect: &Option<Rect>| rect.map(shift);
         Self {
             rect: shift(self.rect),
             size_slider: shift_opt(&self.size_slider),
@@ -264,7 +271,7 @@ pub(crate) fn slide_offset(
     width: f32,
     progress: f64,
 ) -> f32 {
-    let remaining = (1.0 - progress).clamp(0.0, 1.0) as f32;
+    let remaining = crate::render::f32_from_f64((1.0 - progress).clamp(0.0, 1.0));
     let anchors_right = panel.rect.origin.x >= selection_local_x;
     if anchors_right {
         -remaining * width

@@ -17,7 +17,7 @@ use std::time::Instant;
 
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
-use winit::event_loop::ActiveEventLoop;
+use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::keyboard::PhysicalKey;
 use winit::window::{Window, WindowId};
 
@@ -215,6 +215,34 @@ impl ApplicationHandler<PinUiEvent> for PinApp {
                 }
             }
             _ => {}
+        }
+    }
+
+    fn about_to_wait(&mut self, target: &ActiveEventLoop) {
+        // Zoom-transition frames (todo 41): paced redraws while any pin's
+        // zoom eases, capped at its settle deadline; idle pins keep the
+        // loop in ControlFlow::Wait (zero CPU).
+        let now = Instant::now();
+        let mut wake: Option<Instant> = None;
+        for entry in &self.entries {
+            if !entry.state.zoom_anim_active(now) {
+                continue;
+            }
+            entry.window.request_redraw();
+            let paced = now
+                .checked_add(crate::motion::FRAME_INTERVAL)
+                .unwrap_or(now);
+            let next = entry
+                .state
+                .zoom_anim_deadline()
+                .map_or(paced, |deadline| deadline.min(paced));
+            wake = Some(wake.map_or(next, |earliest| earliest.min(next)));
+        }
+        match wake {
+            Some(deadline) if deadline > now => {
+                target.set_control_flow(ControlFlow::WaitUntil(deadline));
+            }
+            _ => target.set_control_flow(ControlFlow::Wait),
         }
     }
 

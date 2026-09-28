@@ -201,10 +201,26 @@ impl ChromeState {
         let scale = f32_from_f64(output.scale);
         let rect = selection.rect();
         self.toolbar.draw(
-            list, editor, &self.tokens, scale, atlas, rect, output, &self.motion, now,
+            list,
+            editor,
+            &self.tokens,
+            scale,
+            atlas,
+            rect,
+            output,
+            &self.motion,
+            now,
         );
-        self.color_wheel
-            .draw(list, editor, &self.tokens, scale, atlas, output, &self.motion, now);
+        self.color_wheel.draw(
+            list,
+            editor,
+            &self.tokens,
+            scale,
+            atlas,
+            output,
+            &self.motion,
+            now,
+        );
         if self.panel_shown(editor)
             && let Some(selection) = rect
         {
@@ -231,9 +247,15 @@ impl ChromeState {
 
     /// Advances the visibility-driven transitions (called once per
     /// event-loop pass from [`crate::OverlayCore::tick`]).
-    pub(crate) fn motion_tick(&mut self, now: Instant, selection_present: bool, editor_panel: bool) {
+    pub(crate) fn motion_tick(
+        &mut self,
+        now: Instant,
+        selection_present: bool,
+        editor_panel: bool,
+    ) {
         let wheel = self.color_wheel.visible;
-        self.motion.tick(now, selection_present, editor_panel, wheel);
+        self.motion
+            .tick(now, selection_present, editor_panel, wheel);
     }
 
     /// The reduced-motion switch (todo 41 failure QA: transitions instant).

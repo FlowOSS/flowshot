@@ -1298,3 +1298,68 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - crates.io API spot-checks need a User-Agent header (bare curl HEAD gets 403); `screencapturekit-rs` DOES NOT EXIST as a crate name (API says so) - the published crate is `screencapturekit` (11.0.0 now; draft F19 recorded 10.0.3). windows-capture 2.0.1 confirmed = the exact draft pin.
 - cargo tree -d state: 121 duplicated-version entries, ALL transitive (wgpu/reqwest/proptest/resvg/image-avif/ashpd/notify-rust stacks). Only root-manifest-actionable group: zbus 4 (root pin 4.3.1, daemon direct) vs zbus 5 (ashpd 0.10.3 + notify-rust 4.18 both ride 5) - plan todo 1 pinned zbus 5; bumping collapses 6 duplicate pairs. deny.toml [bans] stays `warn` until then (deny would red the CI on transitive drift nobody can fix without lockfile surgery).
 - Unsafe audit result: the ENTIRE workspace has zero unsafe blocks - capture-wayland's exemption (memfd/dmabuf future) is unused; v1 wl_shm readback is plain file I/O through nix safe wrappers. `#![forbid(unsafe_code)]` verified in all 6 lib crates + both main.rs binary roots.
+
+## 2026-09-28 (todo 41): motion pass + visual polish + QA bundle learnings
+
+**Motion architecture that fit the codebase**
+- Tweens as PURE functions of (start, now) — zero background ticking, so the todo-13 idle
+  contract survives untouched: the scheduler asks `active_at(now)` / deadline and stays in
+  ControlFlow::Wait when settled. The ONE settled frame after the last transition needs an
+  explicit `motion_was_active` latch in tick() — without it the resting state never paints
+  (the wake at the deadline sees active==false and skips the redraw).
+- Retarget-continuity rule: `Tween::retarget` starts from `value_at(now)`, and a numerically
+  identical target under the same spec is a NO-OP — per-frame tick() calls would otherwise
+  restart the transition every frame (caught by `retarget_to_the_same_target_is_a_noop`).
+- Reduced motion = `MotionSpec::instant()` (Duration::ZERO) swap at the OWNER level: value_at
+  returns `to`, active_at false, deadline None — one mechanism, no per-surface branches.
+  The zero-duration guard must come FIRST in value_at (elapsed/duration = 0/0 NaN otherwise).
+- Hit-testing stays on the FINAL geometry while visuals animate (≤180ms): interaction leads
+  the visual, so a panel is never unclickable mid-slide AND the 778-line chrome behavior suite
+  stayed untouched-green. Recorded as a decision, not left implicit.
+- Stagger math: step = (total − element)/(n−1), element i delays i·step → first starts at 0,
+  last ends exactly at total (the plan's "120-180ms" = element/total pair).
+- Pin zoom easing with a compositor-driven resize: resize the WINDOW instantly (the min==max
+  mechanism can't animate), ease the painted CONTENT scale+offset. Because offset is AFFINE in
+  scale and both lerp with one shared eased parameter e, the anchor has the closed form
+  pos(e) = cursor − e·delta: monotonic convergence onto the cursor, |delta| (≈6px per 3% step)
+  worst-case deviation at e=0. Consecutive notches: capture `visual_scale_offset(now)` BEFORE
+  commit_scale writes the new committed values (from = what the user SEES, not the commit).
+- Image-quad alpha (icon fade): ImageVertex [f32;4]→[f32;5], wgpu 0.20's single-float vertex
+  format is `Float32` (NOT `Float32x1` — that name arrives in later wgpu). Premultiplied
+  content fades with `texel * alpha` componentwise (premultiplication preserved); the tiny-skia
+  parity reference multiplies coverage*alpha in the same pass — parity suite stayed green.
+
+**Offscreen QA at production fidelity**
+- The bundle renders through `build_overlay_frame` EXTRACTED from render_window (not a
+  reimplementation) — live shell and harness can't drift. Crosshair stays out (it rides the
+  surface vertex-overlay pipeline, not the display list) — recorded as an honest N/A.
+- Deterministic motion stills without a clock seam: triggers fire through the production
+  funnel (real Instant::now()), then `t0 = Instant::now()`; stills render at t0+offset.
+  Sub-ms real elapsed between trigger and t0 → pixel-deterministic (saturating_duration_since
+  makes pre-start samples evaluate to `from`).
+- Conformance sampling gotchas (all cost a debug cycle): (1) a 1px CENTERED stroke has NO
+  fully-covered pixel row — sample the AA band (blue-channel elevation), expect 2 rows;
+  (2) rounded-corner probes must count the NON-PLATE notch pixels in a 5x5 corner block
+  (r=4 → ~5), point-in-arc math on pixel centers lies because AA covers by area; (3) fixed
+  logical sample regions must scale with the fixture (font-scale shots at 1.25/1.5 silently
+  sampled empty wallpaper — 3 distinct colors was the tell); (4) the dim-layer expected value
+  is the LINEAR-light blend re-encoded (renderer blends linear, stores sRGB) — ±2 tolerance,
+  naive sRGB lerp is off by ~4; (5) derive expected plate width as 36n+4 and assert n is
+  near-integer — proves padding AND gap tokens in one number.
+- `required-features = ["test-drive"]` on an [[example]] keeps `clippy --all-targets`
+  (no-feature) from compiling injection-dependent examples — cleaner than cfg-branches when
+  the example is useless without the seam.
+
+**Polish-audit method**
+- grep `from_rgba8(|#hex|with_alpha8(|N.0 * scale` over src/, disposition EVERY hit
+  FIXED-or-JUSTIFIED in a table (visual-polish-audit.md): white-on-anything text is the
+  recurring light-theme bug class (HUD, magnifier readout, panel labels, toggle thumb — all
+  fixed via one `Color::readable_ink`); "neutral gray grid" and "black/white object outline"
+  are legitimate non-token colors (must be readable over arbitrary image content) — justify
+  with the reason, don't tokenize reflexively.
+- Token-deriving constants WITHOUT value drift: 24 = large+medium, 20 = large+small,
+  16 = large, 36 = 2·large+small on the 4px grid — same pixels at default tokens (all layout
+  tests untouched-green), but the panel now scales with the spacing token.
+- 250-ceiling discipline: state.rs hit 412 pure LOC with the new scheduling API — moved the
+  inline test module to state/tests.rs (the `mod tests;` sibling-file pattern resolves for
+  BOTH `foo.rs + foo/tests.rs` and directory modules; magnifier.rs precedent).

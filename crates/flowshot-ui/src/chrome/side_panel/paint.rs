@@ -9,7 +9,7 @@ use flowshot_core::geometry::{LogicalRect, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
 
 use crate::chrome::side_panel::{
-    PANEL_BG_ALPHA, PANEL_WIDTH, SidePanelLayout, layout, layer_icon_edge, row_height,
+    PANEL_BG_ALPHA, PANEL_WIDTH, SidePanelLayout, layer_icon_edge, layout, row_height,
     slide_offset, toggle_row_height, toggle_track_width, z_button_edge,
 };
 use crate::chrome::toolbar::icon_for_tool;

@@ -73,10 +73,10 @@ impl ChromeState {
             if left {
                 let pressed = buttons.iter().position(|rect| rect.contains(local_pt));
                 self.motion.set_press(pressed, now);
-                if let Some(index) = pressed {
-                    if let Some(action) = toolbar_action(&self.toolbar.buttons[index], editor) {
-                        self.pending_actions.push(action);
-                    }
+                if let Some(index) = pressed
+                    && let Some(action) = toolbar_action(&self.toolbar.buttons[index], editor)
+                {
+                    self.pending_actions.push(action);
                 }
             }
             self.grabbed = true;
@@ -237,8 +237,14 @@ impl OverlayCore {
             return false;
         };
         let selection = self.selection.rect();
-        self.chrome
-            .press(button, at, &mut self.editor, selection, output, Instant::now())
+        self.chrome.press(
+            button,
+            at,
+            &mut self.editor,
+            selection,
+            output,
+            Instant::now(),
+        )
     }
 
     /// The funnel's chrome release (a chrome-consumed press grabbed it).

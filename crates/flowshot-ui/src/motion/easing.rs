@@ -106,7 +106,7 @@ fn bisect(x1: f32, x2: f32, progress: f32) -> f32 {
         } else {
             high = t;
         }
-        t = (low + high) / 2.0;
+        t = f32::midpoint(low, high);
     }
     t
 }

@@ -4,6 +4,18 @@
 
 use super::EditorState;
 
+/// The grid line ink: neutral gray at 25% (todo-41 audit JUSTIFIED: the
+/// grid overlays arbitrary wallpaper AND arbitrary annotations, so it must
+/// not take the brand hue or the contrast token - a neutral ink is the only
+/// color readable over every backdrop; the magnifier's `GRID_COLOR` is the
+/// same convention at its own alpha).
+const GRID_LINE_COLOR: crate::render::Color = crate::render::Color {
+    r: 128.0 / 255.0,
+    g: 128.0 / 255.0,
+    b: 128.0 / 255.0,
+    a: 64.0 / 255.0,
+};
+
 impl EditorState {
     /// Paints the grid overlay (plan todo 27: spacing token, 1px lines,
     /// drawn UNDER annotations ABOVE backdrop).
@@ -12,7 +24,7 @@ impl EditorState {
         list: &mut crate::render::DisplayList,
         output: &flowshot_core::geometry::OutputInfo,
     ) {
-        use crate::render::{Color, Shape};
+        use crate::render::Shape;
 
         if !self.grid_visible {
             return;
@@ -23,7 +35,7 @@ impl EditorState {
             reason = "grid spacing is a small integer, precision loss is acceptable"
         )]
         let spacing = self.config.editor.draw_thickness.max(8) as f32 * 4.0;
-        let color = Color::from_rgba8(128, 128, 128, 64);
+        let color = GRID_LINE_COLOR;
 
         #[allow(
             clippy::cast_precision_loss,

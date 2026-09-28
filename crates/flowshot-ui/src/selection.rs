@@ -134,7 +134,7 @@ impl SelectionState {
         if let Some(accent) = Color::from_hex_token(&tokens.palette.accent) {
             self.colors = SelectionColors::from_accent(accent);
         }
-        self.font_family = tokens.typography.family.clone();
+        self.font_family.clone_from(&tokens.typography.family);
         self.hud_radius = f64::from(tokens.radii.small);
         self.grips.retheme(tokens);
     }
@@ -149,12 +149,12 @@ impl SelectionState {
     /// funnel calls this on every motion, editor-consumed or not - the
     /// handles stay hoverable while a tool is active).
     pub fn update_hover(&mut self, at: LogicalPoint, now: Instant) {
-        let hovered = self.rect.and_then(|rect| {
-            match hit::hit_zone(rect, at, &self.metrics) {
+        let hovered = self
+            .rect
+            .and_then(|rect| match hit::hit_zone(rect, at, &self.metrics) {
                 HitZone::Handle(handle) => Some(handle),
                 HitZone::Inside | HitZone::Outside => None,
-            }
-        });
+            });
         self.grips.update(hovered, now);
     }
 

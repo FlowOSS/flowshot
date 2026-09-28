@@ -14,9 +14,7 @@ use std::time::{Duration, Instant};
 
 use flowshot_core::tokens::{DesignTokens, Easing};
 
-use super::{
-    MotionSpec, StaggerSpec, Tween, cubic_bezier, curve_from_tokens, stagger_progress,
-};
+use super::{MotionSpec, StaggerSpec, Tween, cubic_bezier, curve_from_tokens, stagger_progress};
 
 fn tokens() -> DesignTokens {
     DesignTokens::default()
@@ -58,10 +56,7 @@ fn linear_curve_is_the_identity() {
     let linear = [0.0, 0.0, 1.0, 1.0];
     for step in 0..=20 {
         let x = step as f32 / 20.0;
-        assert!(
-            (cubic_bezier(linear, x) - x).abs() < 1e-4,
-            "linear at {x}"
-        );
+        assert!((cubic_bezier(linear, x) - x).abs() < 1e-4, "linear at {x}");
     }
 }
 
@@ -176,7 +171,8 @@ fn times_before_the_start_evaluate_to_the_from_value() {
     let mut tween = Tween::settled(0.25, spec("standard", 100), t0);
     tween.retarget(1.0, spec("standard", 100), t0);
     // Synthetic clocks (the offscreen QA harness) may sample before start.
-    assert_eq!(tween.value_at(t0 - Duration::from_millis(50)), 0.25);
+    let before = t0.checked_sub(Duration::from_millis(50)).unwrap_or(t0);
+    assert_eq!(tween.value_at(before), 0.25);
 }
 
 fn reveal_spec() -> StaggerSpec {
@@ -215,9 +211,11 @@ fn stagger_ordering_is_monotone_in_index_and_time() {
     }
     let mut previous = 0.0;
     for step in 0..=36 {
-        let progress =
-            stagger_progress(Duration::from_millis(step * 5), 2, count, &s);
-        assert!(progress >= previous - 1e-6, "time regression at step {step}");
+        let progress = stagger_progress(Duration::from_millis(step * 5), 2, count, &s);
+        assert!(
+            progress >= previous - 1e-6,
+            "time regression at step {step}"
+        );
         previous = progress;
     }
 }

@@ -3,6 +3,8 @@
 //! 250-LOC ceiling; both files extend the same [`PinState`] impl - the
 //! todo-16 child-module pattern).
 
+use std::time::Instant;
+
 use super::event::PinEffect;
 use super::pinch::PinchUpdate;
 use super::spec::MARGIN;
@@ -37,12 +39,12 @@ impl PinState {
 
     /// Commits `steps` wheel zoom steps anchored at the cursor (window
     /// center when the cursor is unknown).
-    pub(super) fn zoom_by(&mut self, steps: i32) -> Vec<PinEffect> {
+    pub(super) fn zoom_by(&mut self, steps: i32, now: Instant) -> Vec<PinEffect> {
         if steps == 0 {
             return Vec::new();
         }
         let zoomed = zoom_stepped(self.scale, steps);
-        self.commit_scale(zoomed, self.cursor_or_center())
+        self.commit_scale(zoomed, self.cursor_or_center(), now)
     }
 
     pub(super) fn cursor_or_center(&self) -> (f64, f64) {
@@ -65,11 +67,15 @@ impl PinState {
         &mut self,
         target_scale: f64,
         anchor_point: (f64, f64),
+        now: Instant,
     ) -> Vec<PinEffect> {
         let new_scale = clamp_scale(target_scale, self.bounds());
         if (new_scale - self.scale).abs() < f64::EPSILON {
             return Vec::new();
         }
+        // The transition starts from what the user currently SEES (mid-anim
+        // commits retarget from the shown value, never from the committed).
+        let (from_scale, from_offset) = self.visual_scale_offset(now);
         let old_window = (
             f64::from(self.target_window.0),
             f64::from(self.target_window.1),
@@ -99,6 +105,7 @@ impl PinState {
             cursor.1 -= delta.1;
         }
         self.target_window = new_window;
+        self.begin_zoom_anim(from_scale, from_offset, now);
         vec![
             PinEffect::SetWindowSize {
                 width: new_window.0,
@@ -159,6 +166,7 @@ impl PinState {
         id: u64,
         phase: winit::event::TouchPhase,
         position: (f64, f64),
+        now: Instant,
     ) -> Vec<PinEffect> {
         match self.pinch.update(id, phase, position, self.scale) {
             PinchUpdate::None => Vec::new(),
@@ -193,7 +201,7 @@ impl PinState {
                     // syncs the window extent to it.
                     self.request_window()
                 } else {
-                    self.commit_scale(scale, midpoint)
+                    self.commit_scale(scale, midpoint, now)
                 }
             }
         }
