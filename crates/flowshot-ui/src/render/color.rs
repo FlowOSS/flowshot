@@ -100,6 +100,25 @@ impl Color {
         }
     }
 
+    /// Weighted-luma darkness test on the sRGB-encoded channels (the
+    /// Flameshot `ColorUtils::colorIsDark` parity convention).
+    #[must_use]
+    pub fn is_dark(&self) -> bool {
+        0.299 * self.r + 0.587 * self.g + 0.114 * self.b < 0.5
+    }
+
+    /// Black-or-white text ink readable on THIS color as a background (the
+    /// single source of the HUD/menu/panel text convention; todo-41 polish:
+    /// light contrast tokens get dark ink instead of hardcoded white).
+    #[must_use]
+    pub fn readable_ink(&self) -> Self {
+        if self.is_dark() {
+            Self::from_rgba8(255, 255, 255, 255)
+        } else {
+            Self::from_rgba8(0, 0, 0, 255)
+        }
+    }
+
     /// Premultiplied **linear-light** RGBA, ready for vertex data rendered
     /// into sRGB attachments with premultiplied-alpha blending.
     #[must_use]

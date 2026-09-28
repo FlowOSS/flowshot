@@ -455,6 +455,7 @@ fn panel_config_gate_hides_everything() {
         core.selection(),
         ICON_ATLAS_ID,
         &fixture_output(),
+        std::time::Instant::now(),
     );
 
     let mut tools: EditorTools = core.editor().config().clone();
@@ -473,6 +474,7 @@ fn panel_config_gate_hides_everything() {
         core.selection(),
         ICON_ATLAS_ID,
         &fixture_output(),
+        std::time::Instant::now(),
     );
     assert!(hidden.len() < shown.len(), "the panel paints nothing");
     // A press where the panel row sat falls through to the F27 chain.

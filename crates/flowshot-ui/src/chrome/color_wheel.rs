@@ -10,10 +10,15 @@
 //! extreme-corner discipline).
 
 use std::f32::consts::{PI, TAU};
+use std::time::Instant;
 
+use super::motion::ChromeMotion;
 use crate::editor::EditorState;
 use crate::editor::paint::{local_x, local_y};
-use crate::render::{Color, DisplayList, Point, Rect, Shape, Size, TextureId};
+use crate::motion::WHEEL_SCALE_FROM;
+use crate::render::{
+    Color, DisplayList, Point, Rect, ShadowSpec, Shape, Size, TextureId, f32_from_f64,
+};
 use crate::widgets::{IconButton, icons::Icon};
 use flowshot_core::geometry::{LogicalPoint, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
@@ -104,7 +109,10 @@ impl ColorWheel {
     }
 
     /// Draws the wheel (circular popover, swatch ring, selected ring,
-    /// rainbow slot).
+    /// rainbow slot) with the todo-41 scale-in evaluated at `now`: the
+    /// popover grows from [`WHEEL_SCALE_FROM`] and fades in; hit-testing
+    /// stays on the FINAL layout (the motion checklist's interaction-leads-
+    /// visual rule).
     pub fn draw(
         &self,
         list: &mut DisplayList,
@@ -113,28 +121,41 @@ impl ColorWheel {
         scale: f32,
         atlas: TextureId,
         output: &OutputInfo,
+        motion: &ChromeMotion,
+        now: Instant,
     ) {
         if !self.visible {
+            return;
+        }
+        let progress = f32_from_f64(motion.wheel_progress(now));
+        if progress <= 0.0 {
             return;
         }
 
         let layout = self.layout(editor, tokens, scale, output);
         let center = layout.rect.center();
+        let factor = WHEEL_SCALE_FROM + (1.0 - WHEEL_SCALE_FROM) * progress;
+        let layout = layout.scaled(center, factor);
         let contrast = Color::from_hex_token(&tokens.palette.contrast)
             .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
         let accent = Color::from_hex_token(&tokens.palette.accent)
             .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
 
         let disc = Size::new(layout.rect.size.width / 2.0, layout.rect.size.height / 2.0);
+        // The square popover bounds at radius = half-side round into the
+        // disc's own silhouette, so the rect shadow primitive fits.
+        if let Some(spec) = ShadowSpec::from_token(&tokens.shadows.medium, scale) {
+            list.shadow(layout.rect, disc.width, spec);
+        }
         list.fill(
             Shape::Ellipse {
                 center,
                 radii: disc,
             },
-            contrast,
+            contrast.with_alpha(progress),
         );
 
-        let swatch_radius = SWATCH_SIZE * scale / 2.0;
+        let swatch_radius = SWATCH_SIZE * scale * factor / 2.0;
         for (hex, rect) in editor
             .config()
             .editor
@@ -151,23 +172,46 @@ impl ColorWheel {
                     center: swatch_center,
                     radii: Size::new(swatch_radius, swatch_radius),
                 },
-                crate::editor::render_color(color),
+                crate::editor::render_color(color).with_alpha(progress),
             );
             if editor.color() == color {
                 // The 6px ring hugs the swatch edge: a SELECTED_RING-wide
                 // stroke centered SELECTED_RING/2 outside the swatch.
-                let ring = swatch_radius + SELECTED_RING * scale / 2.0;
+                let ring = swatch_radius + SELECTED_RING * scale * factor / 2.0;
                 list.stroke(
                     Shape::Ellipse {
                         center: swatch_center,
                         radii: Size::new(ring, ring),
                     },
-                    SELECTED_RING * scale,
-                    accent,
+                    SELECTED_RING * scale * factor,
+                    accent.with_alpha(progress),
                 );
             }
         }
 
-        IconButton::new(layout.rainbow, Icon::Rainbow).draw(list, tokens, scale, atlas);
+        IconButton::new(layout.rainbow, Icon::Rainbow)
+            .alpha(progress)
+            .draw(list, tokens, scale, atlas);
+    }
+}
+
+impl WheelLayout {
+    /// Every rect scaled by `factor` around `center` (the popover scale-in;
+    /// the hit-test path keeps the unscaled layout).
+    #[must_use]
+    pub fn scaled(&self, center: Point, factor: f32) -> Self {
+        let around = |rect: Rect| {
+            Rect::from_parts(
+                center.x + (rect.origin.x - center.x) * factor,
+                center.y + (rect.origin.y - center.y) * factor,
+                rect.size.width * factor,
+                rect.size.height * factor,
+            )
+        };
+        Self {
+            rect: around(self.rect),
+            swatches: self.swatches.iter().map(|rect| around(*rect)).collect(),
+            rainbow: around(self.rainbow),
+        }
     }
 }

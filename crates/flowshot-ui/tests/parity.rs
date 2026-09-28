@@ -546,9 +546,10 @@ fn blit_image(canvas: &mut Canvas, command: &ImageCommand, textures: &TextureReg
     let Some((tex_w, tex_h, data)) = textures.get(&command.texture) else {
         // Missing-texture placeholder: magenta, matching the GPU path.
         let dst = command.dst;
+        let a = command.alpha;
         for y in dst.origin.y.round() as i32..dst.bottom().round() as i32 {
             for x in dst.origin.x.round() as i32..dst.right().round() as i32 {
-                canvas.composite(x, y, [1.0, 0.0, 1.0, 1.0]);
+                canvas.composite(x, y, [a, 0.0, a, a]);
             }
         }
         return;
@@ -581,14 +582,15 @@ fn blit_image(canvas: &mut Canvas, command: &ImageCommand, textures: &TextureReg
             } else {
                 0.0
             };
+            let fade = clip * command.alpha;
             canvas.composite(
                 px,
                 py,
                 [
-                    linear[0] * clip,
-                    linear[1] * clip,
-                    linear[2] * clip,
-                    linear[3] * clip,
+                    linear[0] * fade,
+                    linear[1] * fade,
+                    linear[2] * fade,
+                    linear[3] * fade,
                 ],
             );
         }

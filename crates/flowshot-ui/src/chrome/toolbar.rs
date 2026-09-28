@@ -1,11 +1,23 @@
-//! The editor toolbar (plan todo 26).
+//! The editor toolbar (plan todo 26; motion pass todo 41).
+//!
+//! The reveal animation (D8(d)): the plate fades in while each button runs
+//! a staggered fade+slide (per-button 120ms, the last landing at 180ms -
+//! the plan's band), evaluated from the [`ChromeMotion`] timeline at the
+//! frame's `now`. Hover/press feedback is the animated wash level (0 idle,
+//! 1 hover, 2 press) the funnel feeds through [`ChromeMotion::set_hover`] /
+//! [`ChromeMotion::set_press`].
 
+use std::time::Instant;
+
+use crate::chrome::motion::ChromeMotion;
 use crate::editor::paint::local_rect;
 use crate::editor::{EditorState, ToolKind};
-use crate::render::{Color, DisplayList, Rect, Shape, TextureId};
+use crate::render::{Color, DisplayList, Point, Rect, Shape, ShadowSpec, TextureId};
 use crate::widgets::{ButtonState, IconButton, icons::Icon};
-use flowshot_core::geometry::{LogicalRect, OutputInfo};
+use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
+
+use super::color_wheel::BUTTON_BASE_SIZE;
 
 /// A button on the toolbar.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,7 +78,7 @@ impl Toolbar {
     ) -> (Rect, Vec<Rect>) {
         let local_sel = local_rect(output, selection);
 
-        let button_size = 32.0 * scale;
+        let button_size = BUTTON_BASE_SIZE * scale;
         let padding = tokens.spacing.small as f32 * scale;
         let gap = tokens.spacing.small as f32 * scale;
 
@@ -104,7 +116,29 @@ impl Toolbar {
         (rect, button_rects)
     }
 
-    /// Draws the toolbar.
+    /// The toolbar button under a global logical point (`None` off every
+    /// cell): the hover/press wash seam and the press funnel share it with
+    /// the paint path's layout, so hit geometry can never disagree with the
+    /// drawn cells (the FINAL layout - the reveal animation is visual only).
+    #[must_use]
+    pub fn button_at(
+        &self,
+        at: LogicalPoint,
+        selection: Option<LogicalRect>,
+        tokens: &DesignTokens,
+        scale: f32,
+        output: &OutputInfo,
+    ) -> Option<usize> {
+        let selection = selection?;
+        let (_, buttons) = self.layout(selection, tokens, scale, output);
+        let local = Point::new(
+            crate::editor::paint::local_x(output, at.x.0),
+            crate::editor::paint::local_y(output, at.y.0),
+        );
+        buttons.iter().position(|rect| rect.contains(local))
+    }
+
+    /// Draws the toolbar with the reveal + wash motion evaluated at `now`.
     pub fn draw(
         &self,
         list: &mut DisplayList,
@@ -114,6 +148,8 @@ impl Toolbar {
         atlas: TextureId,
         selection: Option<LogicalRect>,
         output: &OutputInfo,
+        motion: &ChromeMotion,
+        now: Instant,
     ) {
         let Some(selection) = selection else {
             return;
@@ -127,23 +163,43 @@ impl Toolbar {
         let contrast = Color::from_hex_token(&tokens.palette.contrast)
             .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
 
-        list.fill(
-            Shape::Rect {
-                rect,
-                radius: tokens.radii.medium as f32 * scale,
-            },
-            contrast,
-        );
+        let plate = motion.reveal_background(now);
+        if plate > 0.0 {
+            if let Some(spec) = ShadowSpec::from_token(&tokens.shadows.medium, scale) {
+                list.shadow(rect, tokens.radii.medium as f32 * scale, spec);
+            }
+            list.fill(
+                Shape::Rect {
+                    rect,
+                    radius: tokens.radii.medium as f32 * scale,
+                },
+                contrast.with_alpha(plate),
+            );
+        }
 
-        for (button, brect) in self.buttons.iter().zip(button_rects) {
+        let count = self.buttons.len();
+        let slide = tokens.spacing.medium as f32 * scale;
+        for (index, (button, brect)) in self.buttons.iter().zip(button_rects).enumerate() {
+            let progress = motion.reveal_progress(now, index, count);
+            if progress <= 0.0 {
+                continue;
+            }
             let state = match button {
                 ToolbarButton::Tool(kind) if editor.active_tool() == Some(*kind) => {
                     ButtonState::Focus
                 }
                 _ => ButtonState::Idle,
             };
-
-            let icon_btn = IconButton::new(brect, button.icon()).state(state);
+            let washed = Rect::from_parts(
+                brect.origin.x,
+                brect.origin.y + (1.0 - progress) * slide,
+                brect.size.width,
+                brect.size.height,
+            );
+            let icon_btn = IconButton::new(washed, button.icon())
+                .state(state)
+                .wash(motion.wash(now, index))
+                .alpha(progress);
             icon_btn.draw(list, tokens, scale, atlas);
         }
     }

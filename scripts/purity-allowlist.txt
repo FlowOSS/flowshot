@@ -1,0 +1,19 @@
+# Platform-purity allowlist (plan todo 42a: "cfg(target_os) outside a
+# RECORDED allowlist"). Format: crate|location-substring|match-substring.
+# A gate finding is allowlisted only when its report line contains all three
+# fields. Every entry needs a `#` comment above it recording WHY it exists.
+#
+# Today the SOURCE allowlist is empty: zero platform imports and zero
+# cfg(target_*) in flowshot-core/flowshot-capture/flowshot-ui src/.
+# The only recorded exceptions are flowshot-ui's two dev-dependencies,
+# used for QA-harness composition in examples/ and tests/ ONLY (the lib
+# never imports them; see crates/flowshot-ui/Cargo.toml comments and
+# ADR-006). flowshot-actions is Wayland-native BY DESIGN (clipboard
+# daemon-ownership, plan todo 1 / Oracle r2 F-5); flowshot-capture-wayland
+# is THE platform crate.
+#
+# QA-harness dev-dependency: examples/pin_window.rs bridges PinActionSink.
+flowshot-ui|[dev-dependencies]|flowshot-actions
+# QA-harness dev-dependency: examples/launcher_dialog.rs drives the live
+# session for the todo-37 acceptance (probe + capture_region assert).
+flowshot-ui|[dev-dependencies]|flowshot-capture-wayland

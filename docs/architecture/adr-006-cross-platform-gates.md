@@ -1,8 +1,11 @@
 # ADR-006: Cross-platform gates and the porting roadmap
 
-Status: accepted (gates designed; the purity CI job lands with the packaging
-milestone). Platforms beyond Wayland are **roadmap only: no code exists**
-for them and none is planned for the first release.
+Status: accepted (gates SHIPPED: `scripts/purity-gate.sh` +
+`scripts/purity-allowlist.txt`, CI-enforced in `.github/workflows/ci.yml`,
+plan todo 42; the detailed per-phase entry points live in
+[docs/porting-roadmap.md](../porting-roadmap.md)). Platforms beyond Wayland
+are **roadmap only: no code exists** for them and none is planned for the
+first release.
 
 ## Context
 
@@ -32,10 +35,27 @@ A **purity contract**, enforced by CI audit (grep/AST over the crate graph):
   the Wayland `app_id` (a platform extension); the binary layer injects it
   through a customizer seam. Platform conveniences do not get smuggled in.
 
+## The unsafe allow-list (audit record, todo 42)
+
+`#![forbid(unsafe_code)]` is present in every lib crate and both binary
+entry points (`flowshot-cli/src/main.rs`, `flowshot-daemon/src/main.rs`)
+EXCEPT `flowshot-capture-wayland`, which is the single recorded
+unsafe-exempt crate (engineering standard #4). The exemption is reserved
+for the future zero-copy dmabuf FFI path. As of the todo-42 audit the crate
+contains **zero** `unsafe` blocks: v1 captures into `wl_shm` buffers read
+back with ordinary file I/O (`icc/shm.rs`), so no memory mapping and no
+`unsafe` are needed. The allow-list is therefore a single empty entry —
+`flowshot-capture-wayland` — and any future `unsafe` block added there must
+carry a per-block SAFETY comment.
+
 ## Porting roadmap (future, no code)
 
 Each phase is a new capture-crate implementation plus its packaging delta.
-Named entry points, from the research ledger:
+The full entry-point map — concrete crates with spot-checked versions, the
+platform APIs, the F24 red flags, the `CaptureBackend` conformance checklist
+against draft F20, and the init-systems packaging phase — lives in
+[docs/porting-roadmap.md](../porting-roadmap.md). Summary of the named
+entry points, from the research ledger:
 
 1. **X11**: xcap's xcb `GetImage` path, with the XShm optimization noted.
    (On Linux, Wayland remains the only supported session type; X11 support

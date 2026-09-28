@@ -4,6 +4,13 @@ use crate::editor::EditorState;
 use crate::render::{Color, DisplayList, Point, Rect, Shape, TextCommand, TextureId};
 use flowshot_core::tokens::DesignTokens;
 
+/// The HUD box opacity (0-255): the selection HUD's alpha (F27
+/// `capturewidget.cpp` paints the geometry box at 200).
+const HUD_BOX_ALPHA: u8 = 200;
+/// Text line height ratio (the render stack's standard, shared with the
+/// selection metrics' `LINE_SPACING_RATIO`).
+const LINE_HEIGHT_RATIO: f32 = 1.2;
+
 /// The size-notifier HUD UI.
 #[derive(Debug, Default)]
 pub struct SizeHud {
@@ -29,17 +36,18 @@ impl SizeHud {
 
         let contrast = Color::from_hex_token(&tokens.palette.contrast)
             .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
+        let background = contrast.with_alpha8(HUD_BOX_ALPHA);
 
         list.fill(
             Shape::Rect {
                 rect: self.rect,
                 radius: tokens.radii.medium as f32 * scale,
             },
-            contrast.with_alpha8(200),
+            background,
         );
 
         let font_size = tokens.typography.base_size as f32 * scale;
-        let line_height = font_size * 1.2;
+        let line_height = font_size * LINE_HEIGHT_RATIO;
 
         let text = format!("Size: {}", editor.tool_size());
 
@@ -51,7 +59,7 @@ impl SizeHud {
             text,
             font_size,
             line_height,
-            color: Color::from_rgba8(255, 255, 255, 255),
+            color: background.readable_ink(),
             family: Some(tokens.typography.family.clone()),
             max_width: None,
         });

@@ -33,19 +33,10 @@ pub struct ContextMenu {
     pub entries: Vec<ContextMenuEntry>,
 }
 
-/// Weighted-luma darkness test on sRGB-encoded channels (the selection
-/// HUD's `colorIsDark` parity convention).
-fn is_dark(color: Color) -> bool {
-    0.299 * color.r + 0.587 * color.g + 0.114 * color.b < 0.5
-}
-
-/// Black-or-white ink readable on `background` (the HUD text convention).
+/// Black-or-white ink readable on `background` (the shared HUD text
+/// convention, [`Color::readable_ink`]).
 fn readable_ink(background: Color) -> Color {
-    if is_dark(background) {
-        Color::from_rgba8(255, 255, 255, 255)
-    } else {
-        Color::from_rgba8(0, 0, 0, 255)
-    }
+    background.readable_ink()
 }
 
 fn rect_contains(rect: Rect, point: Point) -> bool {

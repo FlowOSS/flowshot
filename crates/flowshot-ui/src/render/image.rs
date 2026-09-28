@@ -274,17 +274,18 @@ pub(crate) fn uv_rect(src: Option<Rect>, tex_width: u32, tex_height: u32) -> [f3
 }
 
 /// The four corner vertices (top-left, bottom-left, top-right, bottom-right)
-/// of an image quad and its triangle indices.
-pub(crate) fn image_quad(dst: Rect, uv: [f32; 4]) -> ([ImageVertex; 4], [u32; 6]) {
+/// of an image quad and its triangle indices; `alpha` fades the whole quad
+/// (premultiplied-safe, the todo-41 motion seam).
+pub(crate) fn image_quad(dst: Rect, uv: [f32; 4], alpha: f32) -> ([ImageVertex; 4], [u32; 6]) {
     let (x0, y0) = (dst.origin.x, dst.origin.y);
     let (x1, y1) = (dst.right(), dst.bottom());
     let [u0, v0, u1, v1] = uv;
     (
         [
-            [x0, y0, u0, v0],
-            [x0, y1, u0, v1],
-            [x1, y0, u1, v0],
-            [x1, y1, u1, v1],
+            [x0, y0, u0, v0, alpha],
+            [x0, y1, u0, v1, alpha],
+            [x1, y0, u1, v0, alpha],
+            [x1, y1, u1, v1, alpha],
         ],
         [0, 1, 2, 2, 1, 3],
     )
@@ -355,9 +356,10 @@ mod tests {
         let (vertices, indices) = image_quad(
             Rect::from_parts(10.0, 20.0, 30.0, 40.0),
             [0.0, 0.0, 0.5, 1.0],
+            0.5,
         );
-        assert_eq!(vertices[0], [10.0, 20.0, 0.0, 0.0]);
-        assert_eq!(vertices[3], [40.0, 60.0, 0.5, 1.0]);
+        assert_eq!(vertices[0], [10.0, 20.0, 0.0, 0.0, 0.5]);
+        assert_eq!(vertices[3], [40.0, 60.0, 0.5, 1.0, 0.5]);
         assert_eq!(indices, [0, 1, 2, 2, 1, 3]);
     }
 }

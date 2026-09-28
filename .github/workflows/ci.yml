@@ -16,6 +16,8 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
+      - name: Platform purity gate (todo 42)
+        run: ./scripts/purity-gate.sh
       - name: Check formatting
         run: cargo fmt -- --check
       - name: Check clippy

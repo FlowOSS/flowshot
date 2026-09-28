@@ -146,7 +146,7 @@ impl FrameBuild<'_> {
     fn image(&mut self, command: &ImageCommand) {
         let dimensions = self.textures.dimensions(command.texture).unwrap_or((1, 1));
         let uv = uv_rect(command.src, dimensions.0, dimensions.1);
-        let (quad, indices) = image_quad(command.dst, uv);
+        let (quad, indices) = image_quad(command.dst, uv, command.alpha);
         append_quads(self.image_vertices, self.image_indices, &quad, &indices);
         self.steps.push(Step::Image {
             indices: index_range(self.image_indices, indices.len()),

@@ -34,6 +34,7 @@ mod cascade;
 mod drag;
 mod events;
 mod hit;
+mod hover;
 mod hud;
 mod keys;
 mod metrics;
@@ -68,7 +69,8 @@ pub(crate) use resize::fit_into_bounds;
 pub use types::{Effect, SelectionConfig, SelectionEnv, SelectionUpdate};
 
 /// The selection state machine: one selection rect in global logical space,
-/// the active drag, the Esc-cascade seams, and the HUD timer.
+/// the active drag, the Esc-cascade seams, the HUD timer, and the grip
+/// hover-grow motion (todo 41).
 #[derive(Debug, Clone, PartialEq)]
 pub struct SelectionState {
     config: SelectionConfig,
@@ -82,6 +84,7 @@ pub struct SelectionState {
     cascade: CascadeState,
     hud_timer: hud::HudTimer,
     last_press: Option<PressRecord>,
+    grips: hover::GripMotion,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -118,7 +121,55 @@ impl SelectionState {
             cascade: CascadeState::empty(),
             hud_timer: hud::HudTimer::default(),
             last_press: None,
+            grips: hover::GripMotion::new(tokens, Instant::now()),
         }
+    }
+
+    /// Re-derives every token-driven visual (metrics, colors, typography,
+    /// hover motion) from a new token set - the theme-pass seam the QA
+    /// bundle and the settings live-reload use.
+    pub fn retheme(&mut self, tokens: &DesignTokens) {
+        self.metrics = SelectionMetrics::from_tokens(tokens);
+        self.spacing = tokens.spacing;
+        if let Some(accent) = Color::from_hex_token(&tokens.palette.accent) {
+            self.colors = SelectionColors::from_accent(accent);
+        }
+        self.font_family = tokens.typography.family.clone();
+        self.hud_radius = f64::from(tokens.radii.small);
+        self.grips.retheme(tokens);
+    }
+
+    /// The reduced-motion switch (todo 41): `true` snaps the grip hover-grow
+    /// (and every later selection transition) to its target.
+    pub fn set_motion_reduced(&mut self, reduced: bool) {
+        self.grips.set_reduced(reduced);
+    }
+
+    /// Updates the grip hover-grow target from the pointer position (the
+    /// funnel calls this on every motion, editor-consumed or not - the
+    /// handles stay hoverable while a tool is active).
+    pub fn update_hover(&mut self, at: LogicalPoint, now: Instant) {
+        let hovered = self.rect.and_then(|rect| {
+            match hit::hit_zone(rect, at, &self.metrics) {
+                HitZone::Handle(handle) => Some(handle),
+                HitZone::Inside | HitZone::Outside => None,
+            }
+        });
+        self.grips.update(hovered, now);
+    }
+
+    /// Whether any grip hover transition is still moving (the shell's
+    /// per-frame redraw test).
+    #[must_use]
+    pub fn motion_active(&self, now: Instant) -> bool {
+        self.grips.active_at(now)
+    }
+
+    /// The earliest grip-motion settle instant after `now` (a
+    /// `ControlFlow::WaitUntil` input; `None` when every grip is at rest).
+    #[must_use]
+    pub fn motion_wake(&self, now: Instant) -> Option<Instant> {
+        self.grips.wake(now)
     }
 
     /// Replaces the config keys (harness/settings seam); the HUD timer is
@@ -205,6 +256,7 @@ impl SelectionState {
                 colors: &self.colors,
                 font_family: Some(self.font_family.as_str()),
                 hud_radius: self.hud_radius,
+                grip_scales: self.grips.scales_at(now),
             },
         );
     }

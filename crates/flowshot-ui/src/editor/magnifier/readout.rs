@@ -16,6 +16,10 @@ use crate::render::{
 /// metrics need the shaper which the list builder does not run).
 const TEXT_ADVANCE_ESTIMATE: f32 = 0.62;
 
+/// The readout box opacity (0-255): the size-HUD box alpha (F27
+/// `capturewidget.cpp` paints its geometry box at 200).
+const READOUT_BOX_ALPHA: u8 = 200;
+
 /// The readout bar under (or above, near the bottom edge) the widget:
 /// contrast-token box + white text (the size-HUD ink precedent), the
 /// `#RRGGBB R,G,B` string of the pixel under the crosshair.
@@ -46,20 +50,21 @@ pub(super) fn paint_readout(
     y = y.clamp(0.0, (sh - height).max(0.0));
     let contrast = Color::from_hex_token(&tokens.palette.contrast)
         .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
+    let background = contrast.with_alpha8(READOUT_BOX_ALPHA);
     let radius = f32_from_u32(tokens.radii.small) * f32_from_f64(scale);
     list.fill(
         Shape::Rect {
             rect: Rect::from_parts(x, y, width, height),
             radius,
         },
-        contrast.with_alpha8(200),
+        background,
     );
     list.text(TextCommand {
         position: Point::new(x + pad, y + (height - line) / 2.0),
         text,
         font_size,
         line_height: line,
-        color: Color::from_rgba8(255, 255, 255, 255),
+        color: background.readable_ink(),
         family: Some(tokens.typography.family.clone()),
         max_width: None,
     });
