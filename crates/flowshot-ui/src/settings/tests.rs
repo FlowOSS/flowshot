@@ -396,12 +396,24 @@ fn form_metrics_derive_the_grid_from_tokens() {
     assert_eq!(m.content_left(), 32.0);
     // The label column: em cap wins on wide layouts ...
     assert_eq!(m.label_width(1000.0), 14.0 * 22.0);
-    // ... the 45% ratio wins on medium ones ...
-    assert_eq!(m.label_width(600.0), 270.0);
+    // ... the 48% ratio wins on medium ones ...
+    assert_eq!(m.label_width(600.0), 288.0);
     // ... and the control-column floor wins on narrow ones
     assert_eq!(m.label_width(160.0), 160.0 - 14.0 * 6.0 - 8.0);
-    // The control column's x is content_left + label + gutter
-    assert_eq!(m.control_x(1000.0), 32.0 + 308.0 + 8.0);
+    // The content column caps at 52em and centers past it ...
+    assert_eq!(m.content_width(1000.0), 14.0 * 52.0);
+    assert_eq!(m.content_offset(1000.0), (1000.0 - 14.0 * 52.0) / 2.0);
+    assert_eq!(m.content_width(600.0), 600.0);
+    assert_eq!(m.content_offset(600.0), 0.0);
+    // ... and the control column's x adds the centering offset to
+    // content_left + label + gutter (label measured on the capped inner)
+    assert_eq!(m.control_x(1000.0), 136.0 + 32.0 + 308.0 + 8.0);
+    // The label is measured on the capped INNER width (scroll width minus
+    // the card padding): 632 scroll -> 600 inner -> the 48% ratio (288)
+    assert_eq!(m.control_x(632.0), 32.0 + 288.0 + 8.0);
+    // Field and combo caps keep short controls at an honest width
+    assert_eq!(m.field_max_width(), 14.0 * 24.0);
+    assert_eq!(m.combo_max_width(), 14.0 * 20.0);
 }
 
 #[test]
@@ -431,7 +443,8 @@ fn settings_style_projects_token_geometry() {
     // Then: the uniform control height floors every widget
     assert_eq!(style.spacing.interact_size.y, m.control_height());
     assert_eq!(style.spacing.icon_width, m.base_size());
-    // The scrollbar is solid + reserved (a floating bar has no affordance)
+    // The scrollbar is solid + reserved (a floating bar fades out at
+    // idle and has no affordance); it owns the right window-margin band
     assert!(!style.spacing.scroll.floating);
     assert_eq!(style.spacing.scroll.bar_width, 8.0);
     // Crisp clipping at the scroll viewport

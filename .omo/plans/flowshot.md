@@ -437,7 +437,7 @@ Your next move: start execution in a worker session, or request the dual high-ac
   QA scenarios: happy = validators; failure = inject dead link -> checker catches -> remove. Evidence <attemptDir>/task-40-flowshot.txt
   Commit: Y | docs: guides, config reference, architecture ADRs
   Recommended task executor category: writing - documentation deliverable.
-- [ ] 41. Motion pass + visual polish + QA bundle
+- [x] 41. Motion pass + visual polish + QA bundle
   What to do: implement D8 motion spec from token easings: toolbar reveal (staggered fade+slide 120-180ms), handle hover-grow, side-panel slide, color-wheel popover scale-in, pin zoom easing; icon consistency pass (single vendored set, optical alignment at toolbar sizes); font rendering check at 100/125/150/200% scale (headless fixtures); VISUAL QA BUNDLE: oracle shots of every surface (overlay idle, selection+HUD, toolbar, color wheel, side panel, magnifier square+circle, settings 4 tabs, launcher, pin, notification) vs D8(c) reference target (CleanShot-class chrome: consistent radii/shadows/spacing FROM tokens); token-conformance pixel sampling (radii/spacing/palette +/-1px/+/-1 sRGB, automated); dark + light theme passes. MOTION QA HONESTY (Metis #15): easing values verified via code-review checklist against token spec + deterministic before/mid/after stills (fixed-delay captures) where possible; continuous-motion quality = labeled human-review-later; NO frame-capture harness (scope-creep guard).
   Parallelization: Wave 7 | Blocked by: 14,19,26 | Blocks: F1-F4
   References: draft D8(c-f), Metis #15.

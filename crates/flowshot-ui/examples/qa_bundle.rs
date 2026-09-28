@@ -635,7 +635,7 @@ fn render_launcher_shot(
         Theme::Dark => ThemeMode::Dark,
         Theme::Light => ThemeMode::Light,
     };
-    let (width, height) = (400u32, 232u32);
+    let (width, height) = (400u32, 176u32);
     let options = LauncherWindowOptions {
         tokens: shot.theme.tokens(),
         ui_config: shot.theme.ui_config(),

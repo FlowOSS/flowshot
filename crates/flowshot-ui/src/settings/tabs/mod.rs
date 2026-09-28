@@ -1,19 +1,18 @@
 //! The four settings tabs (F12 parity: General / Interface / Filename
-//! Editor / Shortcuts) plus the shared form primitives every tab builds on.
+//! Editor / Shortcuts) over the shared form primitives
+//! ([`super::form`] / [`super::fields`]) every egui panel builds on.
 //!
 //! Tabs are pure immediate-mode projections of [`SettingsModel`]: they read
 //! and mutate the model in place and report change through the return
 //! value - no widget state lives here beyond egui's own id-keyed memory.
 //!
-//! The window layout: a pill tab bar, a scroll region carrying the active
-//! tab's section cards, and a bottom action bar that stays visible while
-//! the cards scroll (the bar is a docked in-panel strip, not a row after
-//! the scroll area - the pre-rework layout pushed it off-window whenever
-//! the content overflowed).
+//! The window layout: a pill tab bar over a header rule, a scroll region
+//! carrying the active tab's centered section cards, and a bottom action
+//! bar that stays visible while the cards scroll (the bar is a docked
+//! in-panel strip, not a row after the scroll area - the pre-rework layout
+//! pushed it off-window whenever the content overflowed).
 
-mod fields;
 mod filename;
-mod form;
 mod general;
 mod interface;
 mod shortcuts;
@@ -22,14 +21,12 @@ pub use filename::preview_filename;
 
 use egui::{Align, Frame, Layout, Margin, TopBottomPanel, Ui};
 
+use super::form::{pill_tab, primary_button};
 use super::layout::FormMetrics;
 use super::model::{Banner, SettingsModel, Tab};
 use super::strings;
 use super::window::PathPicker;
 use crate::egui_host::theme::ThemeMode;
-
-use form::pill_tab;
-use form::primary_button;
 
 /// The banner frame's background tint: the warning ink at this alpha.
 const BANNER_TINT_ALPHA: f32 = 0.12;
@@ -88,6 +85,8 @@ pub(super) fn show(
             }
         }
     });
+    ui.add_space(m.small());
+    ui.separator();
     ui.add_space(m.medium());
     let bar = TopBottomPanel::bottom("settings-action-bar")
         .resizable(false)
@@ -102,7 +101,7 @@ pub(super) fn show(
         action = show_action_bar(ui, m, model);
     });
     egui::ScrollArea::vertical()
-        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
         .show(ui, |ui| match model.active_tab() {
             Tab::General => general::show(ui, model, context),
             Tab::Interface => interface::show(ui, model, context),

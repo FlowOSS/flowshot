@@ -12,12 +12,12 @@ mod upload;
 use egui::Ui;
 use flowshot_core::config::Config;
 
+use super::super::fields::{number, toggle};
+use super::super::form::card;
 use super::super::layout::FormMetrics;
 use super::super::model::SettingsModel;
 use super::super::strings;
 use super::TabContext;
-use super::fields::{number, toggle};
-use super::form::card;
 
 pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<'_>) {
     let m = &context.metrics;

@@ -19,11 +19,11 @@ use winit::keyboard::KeyCode;
 
 use crate::editor::ToolKind;
 
+use super::super::form::{card, row, title_case};
 use super::super::layout::FormMetrics;
 use super::super::model::{RecorderTarget, SettingsModel};
 use super::super::strings;
 use super::TabContext;
-use super::form::{card, row};
 use crate::egui_host::keymap;
 
 /// The key-display cell width in em: sized for the recording hint (the
@@ -61,14 +61,17 @@ pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<
         }
     }
 
-    ui.label(RichText::new(strings::HINT_GLOBAL_SHORTCUTS).weak());
+    ui.horizontal(|ui| {
+        ui.add_space(m.content_offset(ui.available_width()));
+        ui.label(RichText::new(strings::HINT_GLOBAL_SHORTCUTS).weak());
+    });
     ui.add_space(m.medium());
 
     card(ui, m, strings::GROUP_EDITOR_SHORTCUTS, |ui| {
         for kind in ToolKind::ALL {
             let slot = Slot {
                 target: RecorderTarget::Tool(kind),
-                label: title(kind.id()),
+                label: title_case(kind.id()),
                 current: model.shortcuts().key_for_tool(kind),
             };
             slot_row(ui, model, m, &slot, |model| {
@@ -135,15 +138,6 @@ pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<
         );
         false
     });
-}
-
-/// Capitalizes a tool id for display.
-fn title(id: &str) -> String {
-    let mut chars = id.chars();
-    match chars.next() {
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        None => String::new(),
-    }
 }
 
 fn key_label(code: KeyCode) -> String {

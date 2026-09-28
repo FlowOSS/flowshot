@@ -8,7 +8,7 @@ use crate::egui_host::{EguiSurface, theme};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::render::read_texture_rgba;
-use crate::settings::OFFSCREEN_FORMAT;
+use crate::settings::{FormMetrics, OFFSCREEN_FORMAT};
 
 use super::model::LauncherModel;
 use super::options::LauncherWindowOptions;
@@ -67,12 +67,20 @@ pub fn render_offscreen(
         view_formats: &[],
     });
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let style = theme::style(&options.tokens, &options.ui_config, options.system_theme);
-    let mut paint = |surface: &mut EguiSurface, encoder_label: &str| {
-        let (output, _action) =
-            surface.frame_with(egui::CentralPanel::default(), style.clone(), |ui| {
-                ui::show(ui, model)
-            });
+    let style = theme::settings_style(&options.tokens, &options.ui_config, options.system_theme);
+    let metrics = FormMetrics::from_tokens(&options.tokens);
+    for encoder_label in [
+        "launcher-offscreen-warm-encoder",
+        "launcher-offscreen-encoder",
+    ] {
+        let panel = egui::CentralPanel::default().frame(
+            egui::Frame::none()
+                .fill(style.visuals.panel_fill)
+                .inner_margin(egui::Margin::same(metrics.window_margin())),
+        );
+        let (output, _action) = surface.frame_with(panel, style.clone(), |ui| {
+            ui::show(ui, &mut *model, &metrics)
+        });
         let mut encoder = gpu
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -80,8 +88,6 @@ pub fn render_offscreen(
             });
         surface.paint(gpu, &mut encoder, &view, [width, height], &output);
         gpu.queue.submit(Some(encoder.finish()));
-    };
-    paint(&mut surface, "launcher-offscreen-warm-encoder");
-    paint(&mut surface, "launcher-offscreen-encoder");
+    }
     read_texture_rgba(&gpu.device, &gpu.queue, &texture, width, height)
 }

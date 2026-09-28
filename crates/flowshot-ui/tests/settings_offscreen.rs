@@ -232,6 +232,19 @@ fn expected_card(model: &SettingsModel) -> [u8; 4] {
     [r, g, b, 0xFF]
 }
 
+/// The scroll viewport width of the QA window: the General tab overflows
+/// the 640px height, so the solid reserved bar takes its width from the
+/// content column (the bar itself owns the right window-margin band).
+fn scroll_width(model: &SettingsModel) -> f32 {
+    let style = flowshot_ui::settings::settings_style(
+        &DesignTokens::default(),
+        &model.config().ui,
+        ThemeMode::Dark,
+    );
+    let m = FormMetrics::from_tokens(&DesignTokens::default());
+    WIDTH as f32 - 2.0 * m.window_margin() - style.spacing.scroll.bar_width
+}
+
 #[test]
 fn section_cards_render_on_the_derived_token_surface() {
     let Some(gpu) = gpu_or_skip() else {
@@ -241,13 +254,22 @@ fn section_cards_render_on_the_derived_token_surface() {
     let pixels = render_tab(&gpu, Tab::General, &mut model);
     let card = expected_card(&model);
     let panel = [0x0F_u8, 0x17, 0x2A, 0xFF];
-    // The card's left padding band carries the exact derived card surface
-    // (window margin 16 + card padding 16 => x=20 is inside the padding).
-    assert_eq!(pixel(&pixels, 20, 70), card, "card fill (title band)");
-    assert_eq!(pixel(&pixels, 20, 300), card, "card fill (body band)");
-    // The window margin band stays the panel fill (card != panel proves the
-    // raised surface exists at all).
+    // The content column caps at 52em and CENTERS: the card's left edge is
+    // the window margin plus the centering offset, and its left padding
+    // band carries the exact derived card surface.
+    let m = FormMetrics::from_tokens(&DesignTokens::default());
+    let card_left = m.window_margin() + m.content_offset(scroll_width(&model));
+    let pad_x = card_left as u32 + 8;
+    assert_eq!(pixel(&pixels, pad_x, 70), card, "card fill (title band)");
+    assert_eq!(pixel(&pixels, pad_x, 300), card, "card fill (body band)");
+    // The window margin band AND the centering band stay the panel fill
+    // (card != panel proves the raised surface exists at all).
     assert_eq!(pixel(&pixels, 8, 300), panel, "window margin band");
+    assert_eq!(
+        pixel(&pixels, (card_left / 2.0) as u32, 300),
+        panel,
+        "centering band"
+    );
     assert_ne!(card, panel, "cards must lift off the window surface");
 }
 
@@ -260,10 +282,10 @@ fn controls_share_one_left_edge_and_the_gutter_stays_clean() {
     let pixels = render_tab(&gpu, Tab::General, &mut model);
     let card = expected_card(&model);
     let m = FormMetrics::from_tokens(&DesignTokens::default());
-    // At the QA width the label column is at its em cap, so the control x
-    // is exact: content_left(32) + label(308) + gutter(8) = 348.
-    let control_x = m.control_x(WIDTH as f32 - 100.0);
-    assert_eq!(control_x, 348.0);
+    // At the QA width the content column is at its 52em cap, so the control
+    // x is exact: offset(66) + content_left(32) + label(308) + gutter(8).
+    let control_x = m.control_x(scroll_width(&model));
+    assert_eq!(control_x, 414.0);
 
     // Controls (checkboxes, fields, rails, combos) all START at the control
     // column: scanning 2px inside it crosses several distinct widget bands.
@@ -290,6 +312,33 @@ fn controls_share_one_left_edge_and_the_gutter_stays_clean() {
     assert!(
         clean * 20 >= total * 19,
         "gutter column x={gx} must stay clean: {clean}/{total}"
+    );
+}
+
+#[test]
+fn short_content_shows_no_scrollbar_while_overflowing_content_does() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    // Given: the Filename tab (one short card) and General (overflows 640px)
+    let mut model = SettingsModel::default();
+    let filename = render_tab(&gpu, Tab::Filename, &mut model);
+    let general = render_tab(&gpu, Tab::General, &mut model);
+    let panel = [0x0F_u8, 0x17, 0x2A, 0xFF];
+    // When: sampled in the bar's band - the reserved bar owns the right
+    // window-margin band (flush with the window edge)
+    let x = WIDTH - 4;
+    let bar_runs = |pixels: &[u8]| (80..560).filter(|y| pixel(pixels, x, *y) != panel).count();
+    // Then: the short tab paints no bar (no dead scrollbar), the
+    // overflowing tab paints its solid reserved bar
+    assert_eq!(
+        bar_runs(&filename),
+        0,
+        "the Filename tab must not reserve a dead scrollbar"
+    );
+    assert!(
+        bar_runs(&general) > 100,
+        "the overflowing General tab must paint its solid bar"
     );
 }
 

@@ -14,7 +14,8 @@ use flowshot_core::tokens::DesignTokens;
 use super::model::{LauncherModel, Target};
 use super::request::{GeometryIssue, LauncherRequest, RegionGeometry};
 use super::ui::{self as widgets, LauncherAction};
-use crate::egui_host::theme::{ThemeMode, style};
+use crate::egui_host::theme::{ThemeMode, settings_style};
+use crate::settings::FormMetrics;
 
 fn output(connector: &str, name: &str) -> OutputInfo {
     OutputInfo::new(
@@ -214,7 +215,8 @@ fn delay_rides_both_request_variants_at_the_u32_boundary() {
 
 fn test_context() -> egui::Context {
     let ctx = egui::Context::default();
-    ctx.set_style(style(
+    ctx.set_fonts(crate::egui_host::theme::fonts());
+    ctx.set_style(settings_style(
         &DesignTokens::default(),
         &UiConfig::default(),
         ThemeMode::Dark,
@@ -231,15 +233,21 @@ fn run_frame(
     let input = egui::RawInput {
         screen_rect: Some(egui::Rect::from_min_size(
             egui::Pos2::ZERO,
-            egui::vec2(400.0, 232.0),
+            egui::vec2(400.0, 176.0),
         )),
         events,
         focused: true,
         ..Default::default()
     };
+    let metrics = FormMetrics::from_tokens(&DesignTokens::default());
+    let panel = egui::CentralPanel::default().frame(
+        egui::Frame::none()
+            .fill(ctx.style().visuals.panel_fill)
+            .inner_margin(egui::Margin::same(metrics.window_margin())),
+    );
     let _ = ctx.run(input, |ctx| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            action = widgets::show(ui, model);
+        panel.show(ctx, |ui| {
+            action = widgets::show(ui, model, &metrics);
         });
     });
     action

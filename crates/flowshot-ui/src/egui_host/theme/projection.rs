@@ -40,6 +40,9 @@ const ICON_INNER_RATIO: f32 = 0.6;
 const SCROLL_BAR_WIDTH: f32 = 2.0;
 /// Hover/focus outline tint: accent at this alpha over the surface.
 const ACCENT_EDGE_ALPHA: f32 = 0.6;
+/// The focus-ring stroke width (every focused widget: fields, buttons,
+/// combos, tabs, checkboxes - one consistent ring).
+const FOCUS_RING_WIDTH: f32 = 2.0;
 /// The text caret width.
 const CARET_WIDTH: f32 = 2.0;
 /// Hairline stroke width (the egui convention for outlines/separators).
@@ -106,10 +109,10 @@ pub fn style(tokens: &DesignTokens, ui: &UiConfig, mode: ThemeMode) -> Style {
     style
 }
 
-/// The settings-surface style: [`style`] plus the form-grid geometry
-/// (uniform control height, checkbox icon edge, slider/combo/field widths).
-/// The launcher dialog keeps plain [`style`] - its fixed 400x232 geometry
-/// was live-QA'd against the shared defaults (todo 37).
+/// The form-grid style: [`style`] plus the grid geometry (uniform control
+/// height, checkbox icon edge, slider/combo/field widths) that BOTH egui
+/// panels project - the settings window and the launcher dialog share one
+/// control vocabulary (the dialog's own window size is the only difference).
 #[must_use]
 pub fn settings_style(tokens: &DesignTokens, ui: &UiConfig, mode: ThemeMode) -> Style {
     let mut style = style(tokens, ui, mode);
@@ -132,10 +135,25 @@ pub fn settings_style(tokens: &DesignTokens, ui: &UiConfig, mode: ThemeMode) -> 
     // A solid, reserved, always-drawn scrollbar (egui's default floats
     // invisibly until hovered - no scroll affordance for a settings page).
     // The handle reads against the bar well through `Surfaces::control`.
+    // A solid, reserved, always-drawn scrollbar (egui's default floats
+    // invisibly until hovered - no scroll affordance for a settings page).
+    // The handle reads against the bar well through `Surfaces::control`.
+    // Placement is intentional: egui pins the reserved bar to the window's
+    // right edge, so the bar OWNS the right window-margin band (browser /
+    // GNOME scrollbar-at-window-edge pattern); the panel-colored strip
+    // between the content viewport and the bar is the window margin
+    // itself, uniform with the other three sides. Floating bars were
+    // rejected: they fade out at idle, and `bar_outer_margin` shifts of
+    // the reserved bar eat column width without moving the pin.
     spacing.scroll = egui::style::ScrollStyle {
         bar_width: small * SCROLL_BAR_WIDTH,
         ..egui::style::ScrollStyle::solid()
     };
+    // No animation: the bar's show/hide fade is `animate_bool` over frame
+    // time, so a zero-delta offscreen pair would capture it mid-fade at
+    // alpha 0 (and a settings page wants the bar present the frame the
+    // content overflows, not fading in).
+    style.animation_time = 0.0;
     style
 }
 
@@ -154,12 +172,14 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
     // Invariant: noninteractive fills stay OPAQUE - egui fades disabled
     // widgets toward `fade_out_to_color()` = `noninteractive.weak_bg_fill`,
     // so a transparent value renders every disabled control invisible.
+    // Disabled controls keep the resting button SHAPE (same surface, weaker
+    // outline and ink) so they read as inert-but-present, not as holes.
     visuals.widgets.noninteractive = WidgetVisuals {
-        bg_fill: s.card,
-        weak_bg_fill: s.card,
+        bg_fill: s.button,
+        weak_bg_fill: s.button,
         bg_stroke: hairline(s.separator),
         rounding,
-        fg_stroke: hairline(s.text),
+        fg_stroke: hairline(s.text_weak),
         expansion: 0.0,
     };
     visuals.widgets.inactive = WidgetVisuals {
@@ -197,13 +217,13 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
 
     visuals.panel_fill = s.window;
     visuals.window_fill = s.popup;
-    visuals.window_stroke = hairline(s.outline);
+    visuals.window_stroke = hairline(s.outline_strong);
     visuals.faint_bg_color = s.card;
     visuals.extreme_bg_color = s.field;
     visuals.code_bg_color = s.field;
     visuals.override_text_color = None;
     visuals.selection.bg_fill = accent.linear_multiply(0.35);
-    visuals.selection.stroke = hairline(accent);
+    visuals.selection.stroke = Stroke::new(FOCUS_RING_WIDTH, accent);
     visuals.hyperlink_color = accent;
     visuals.text_cursor.stroke = Stroke::new(CARET_WIDTH, accent);
     visuals.slider_trailing_fill = true;

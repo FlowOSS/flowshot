@@ -4,12 +4,12 @@
 use egui::Ui;
 use flowshot_core::config::{ClipboardFormat, Config, SaveAction};
 
+use crate::settings::fields::{combo, number, path_field, text_field, toggle};
+use crate::settings::form::sub_section;
 use crate::settings::layout::FormMetrics;
 use crate::settings::model::JPEG_QUALITY_RANGE;
 use crate::settings::strings;
 use crate::settings::tabs::TabContext;
-use crate::settings::tabs::fields::{combo, number, path_field, text_field, toggle};
-use crate::settings::tabs::form::sub_section;
 
 /// The post-capture action vocabulary, in canonical TOML order. Mirrors the
 /// core `SaveAction` enum; [`action_label`]'s exhaustive match fails the

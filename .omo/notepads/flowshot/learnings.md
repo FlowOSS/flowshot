@@ -1363,3 +1363,10 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - 250-ceiling discipline: state.rs hit 412 pure LOC with the new scheduling API — moved the
   inline test module to state/tests.rs (the `mod tests;` sibling-file pattern resolves for
   BOTH `foo.rs + foo/tests.rs` and directory modules; magnifier.rs precedent).
+
+## Settings iteration 2 (2026-09-28): one panel standard across both egui surfaces
+- Shared form vocabulary lives at `settings/form.rs` + `settings/fields.rs` (pub(crate)); the launcher dialog consumes the SAME rows/controls/metrics as the settings tabs - any new egui panel must too (purity gate confines egui to settings/ + egui_host/ + launcher/).
+- egui 0.28 `Frame::show` INHERITS the enclosing layout: wrapping a card frame in `horizontal_top` to center it flows the body rows left-to-right and stretches the card to the viewport. Centering must go through the frame's OUTER MARGIN.
+- egui 0.28 scrollbar empirics (pixel-measured, do not re-derive): the reserved solid bar is pinned to the CLIP rect's right edge (window edge), owning the right window-margin band; `bar_outer_margin` shifts the pin but ALSO eats that width from the content column; floating bars fade out at idle. `VisibleWhenNeeded` + `style.animation_time = 0` makes the two-frame offscreen harness deterministic (animate_bool snaps instead of fading over the zero-delta frame pair).
+- `f32: From<u32>` still does not exist (hit again in tests/settings_offscreen.rs) - use `as f32` under the file's cast_precision_loss allow.
+- Centered content column: 52em cap via FormMetrics::content_width/content_offset; label ratio raised 0.45->0.48 so the 22em cap wins inside the capped column; field/combo caps 24em/20em keep short controls honest while path+slider fill the column's right edge.

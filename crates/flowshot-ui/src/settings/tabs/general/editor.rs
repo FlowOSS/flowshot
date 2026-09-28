@@ -4,10 +4,10 @@
 use egui::Ui;
 use flowshot_core::config::{Config, MagnifierShape};
 
+use crate::settings::fields::{combo, hex_color, number, text_field, toggle};
 use crate::settings::layout::FormMetrics;
 use crate::settings::model::UNDO_LIMIT_MAX;
 use crate::settings::strings;
-use crate::settings::tabs::fields::{combo, hex_color, number, text_field, toggle};
 
 pub(super) fn show(ui: &mut Ui, m: &FormMetrics, config: &mut Config) -> bool {
     let mut changed = hex_color(
