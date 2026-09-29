@@ -32,7 +32,7 @@ use flowshot_ui::UiError;
 use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS, configure_overlay_surface};
 use flowshot_ui::render::{
     Color, DisplayList, Point, Rect, RenderTarget, Renderer, RgbaImage, ShadowSpec, Shape,
-    TextCommand, TextureId,
+    TextAnchor, TextCommand, TextureId,
 };
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, WindowEvent};
@@ -480,6 +480,8 @@ fn smoke_scene(tokens: &DesignTokens, size: (u32, u32), scale: f32) -> DisplayLi
         color: accent,
         family: Some(tokens.typography.family.clone()),
         max_width: None,
+        anchor: TextAnchor::TopLeft,
+        bold: false,
     });
     list
 }

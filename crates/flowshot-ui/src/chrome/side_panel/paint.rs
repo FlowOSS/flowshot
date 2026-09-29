@@ -14,7 +14,9 @@ use crate::chrome::side_panel::{
 };
 use crate::chrome::toolbar::icon_for_tool;
 use crate::editor::{EditorState, MAX_TOOL_SIZE, ToolKind};
-use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextCommand, TextureId};
+use crate::render::{
+    Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextAnchor, TextCommand, TextureId,
+};
 use crate::widgets::{IconButton, Slider, Toggle, icons::Icon};
 
 /// The panel's text style (one derivation, every label shares it).
@@ -35,6 +37,8 @@ impl Labels {
             color: self.color,
             family: Some(self.family.clone()),
             max_width: None,
+            anchor: TextAnchor::TopLeft,
+            bold: false,
         });
     }
 

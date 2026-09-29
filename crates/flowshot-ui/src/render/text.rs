@@ -21,9 +21,24 @@ use cosmic_text::{
 };
 
 use super::atlas::{AtlasSlot, ShelfAtlas};
+use super::geom::Point;
 use super::glyph::{GlyphPlacement, TextVertex, glyph_quad, glyph_rgba, tint_for};
-use super::list::TextCommand;
+use super::list::{TextAnchor, TextCommand};
 use super::text_pipeline::{atlas_resources, text_pipeline};
+
+/// The shaped block's extent (widest line x line-box height) - the
+/// [`TextAnchor::Center`] metrics, measured on the SAME buffer the glyphs
+/// rasterize from (the exact-centering contract of
+/// `PaintSink::draw_text_centered`).
+fn block_size(buffer: &Buffer) -> (f32, f32) {
+    let mut width = 0.0_f32;
+    let mut height = 0.0_f32;
+    for run in buffer.layout_runs() {
+        width = width.max(run.line_w);
+        height = height.max(run.line_top + run.line_height);
+    }
+    (width, height)
+}
 
 /// Atlas edge length in texels (well under the 4096 device floor).
 pub(crate) const ATLAS_DIM: u32 = 1024;
@@ -194,8 +209,21 @@ impl TextStack {
         if let Some(family) = &command.family {
             attrs = attrs.family(Family::Name(family.as_str()));
         }
+        if command.bold {
+            attrs = attrs.weight(cosmic_text::Weight::BOLD);
+        }
         buffer.set_text(&command.text, &attrs, Shaping::Advanced, None);
         buffer.shape_until_scroll(&mut self.font_system, false);
+        let origin = match command.anchor {
+            TextAnchor::TopLeft => command.position,
+            TextAnchor::Center => {
+                let (width, height) = block_size(&buffer);
+                Point::new(
+                    command.position.x - width / 2.0,
+                    command.position.y - height / 2.0,
+                )
+            }
+        };
 
         let Self {
             font_system,
@@ -216,8 +244,7 @@ impl TextStack {
         let tint = command.color.premultiplied_linear();
         for run in buffer.layout_runs() {
             for glyph in run.glyphs {
-                let physical =
-                    glyph.physical((command.position.x, command.position.y + run.line_y), 1.0);
+                let physical = glyph.physical((origin.x, origin.y + run.line_y), 1.0);
                 let Some(image) = swash_cache
                     .get_image(font_system, physical.cache_key)
                     .as_ref()

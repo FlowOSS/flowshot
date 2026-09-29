@@ -18,7 +18,8 @@
 use flowshot_core::geometry::{Logical, LogicalPoint, LogicalRect, OutputInfo, ToPhysical};
 
 use crate::render::{
-    Color, DisplayList, Point, Rect, Shape, Size, TextCommand, f32_from_f64, f32_from_i32,
+    Color, DisplayList, Point, Rect, Shape, Size, TextAnchor, TextCommand, f32_from_f64,
+    f32_from_i32,
 };
 
 use super::hit::Handle;
@@ -115,6 +116,8 @@ fn append_hud(list: &mut DisplayList, paint: &SelectionPaint<'_>, hud: &HudView)
         color: paint.colors.hud_text,
         family: paint.font_family.map(str::to_owned),
         max_width: None,
+        anchor: TextAnchor::TopLeft,
+        bold: false,
     });
 }
 

@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "completed",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-09-28T23:03:23.083Z",
+      "updated_at": "2026-09-29T10:48:40.377Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -87,7 +87,11 @@
         "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn",
         "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ",
         "opencode:ses_f15bde9e8ffekix66An22kjYT4",
-        "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0"
+        "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0",
+        "opencode:ses_f13716dd4ffeyIvay0NkCxZOUh",
+        "opencode:ses_f1371428affe8atH3zWAFSTvry",
+        "opencode:ses_f134a5311ffe8T1JR2d4DPT0Ii",
+        "opencode:ses_f13381534ffeVO8phmbsZTDyaM"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -151,22 +155,26 @@
         "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn": "appended",
         "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ": "appended",
         "opencode:ses_f15bde9e8ffekix66An22kjYT4": "appended",
-        "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0": "appended"
+        "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0": "appended",
+        "opencode:ses_f13716dd4ffeyIvay0NkCxZOUh": "appended",
+        "opencode:ses_f1371428affe8atH3zWAFSTvry": "appended",
+        "opencode:ses_f134a5311ffe8T1JR2d4DPT0Ii": "appended",
+        "opencode:ses_f13381534ffeVO8phmbsZTDyaM": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
         "todo:1": {
           "task_key": "todo:1",
           "task_label": "1",
-          "task_title": "**`.omo/evidence/task-14-flowshot.png` EXISTS and is REAL**: captured 2026-09-28 20:06 from the live render_smoke harness via grim post-map (the harness's hold phases are skipped under some backgrounding conditions — the capture was taken during render1; the scene is static so any presented frame carries the acceptance scene). Verify: file exists, PIL-check dims 4480x1440 + non-flat content, and read the image if you can (should show dim layer + selection outline + diagonal + rounded rect with shadow + \"FlowShot\" text).",
-          "session_id": "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN",
+          "task_title": "Read `crates/flowshot-core/src/scene/counter.rs` fully — understand the landed design (bubble + optional outline + drag-aim pointer triangle).",
+          "session_id": "opencode:ses_f134a5311ffe8T1JR2d4DPT0Ii",
           "agent": "Sisyphus-Junior",
-          "category": "unspecified-high",
+          "category": "deep-low",
           "started_at": "2026-09-25T01:39:47.072Z",
           "ended_at": "2026-09-25T01:50:14.031Z",
           "elapsed_ms": 626959,
           "status": "completed",
-          "updated_at": "2026-09-28T18:08:56.089Z"
+          "updated_at": "2026-09-29T10:28:44.878Z"
         },
         "todo:2": {
           "task_key": "todo:2",
@@ -307,7 +315,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "completed",
-  "updated_at": "2026-09-28T23:03:23.083Z",
+  "updated_at": "2026-09-29T10:48:40.377Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -370,7 +378,11 @@
     "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn",
     "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ",
     "opencode:ses_f15bde9e8ffekix66An22kjYT4",
-    "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0"
+    "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0",
+    "opencode:ses_f13716dd4ffeyIvay0NkCxZOUh",
+    "opencode:ses_f1371428affe8atH3zWAFSTvry",
+    "opencode:ses_f134a5311ffe8T1JR2d4DPT0Ii",
+    "opencode:ses_f13381534ffeVO8phmbsZTDyaM"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -434,22 +446,26 @@
     "opencode:ses_f15be123bffeN7Fh6PB5Zxf7Hn": "appended",
     "opencode:ses_f15bdfe36ffe857Z278i3aDIWJ": "appended",
     "opencode:ses_f15bde9e8ffekix66An22kjYT4": "appended",
-    "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0": "appended"
+    "opencode:ses_f15bdcad2ffeS16QUGme56Zqf0": "appended",
+    "opencode:ses_f13716dd4ffeyIvay0NkCxZOUh": "appended",
+    "opencode:ses_f1371428affe8atH3zWAFSTvry": "appended",
+    "opencode:ses_f134a5311ffe8T1JR2d4DPT0Ii": "appended",
+    "opencode:ses_f13381534ffeVO8phmbsZTDyaM": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "**`.omo/evidence/task-14-flowshot.png` EXISTS and is REAL**: captured 2026-09-28 20:06 from the live render_smoke harness via grim post-map (the harness's hold phases are skipped under some backgrounding conditions — the capture was taken during render1; the scene is static so any presented frame carries the acceptance scene). Verify: file exists, PIL-check dims 4480x1440 + non-flat content, and read the image if you can (should show dim layer + selection outline + diagonal + rounded rect with shadow + \"FlowShot\" text).",
-      "session_id": "opencode:ses_f16cb5e7bffeiOTONhOTkv47fN",
+      "task_title": "Read `crates/flowshot-core/src/scene/counter.rs` fully — understand the landed design (bubble + optional outline + drag-aim pointer triangle).",
+      "session_id": "opencode:ses_f134a5311ffe8T1JR2d4DPT0Ii",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
+      "category": "deep-low",
       "started_at": "2026-09-25T01:39:47.072Z",
       "ended_at": "2026-09-25T01:50:14.031Z",
       "elapsed_ms": 626959,
       "status": "completed",
-      "updated_at": "2026-09-28T18:08:56.089Z"
+      "updated_at": "2026-09-29T10:28:44.878Z"
     },
     "todo:2": {
       "task_key": "todo:2",

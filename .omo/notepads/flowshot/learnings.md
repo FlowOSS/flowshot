@@ -1433,3 +1433,44 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
   #2 = tray Capture-Launcher dispatch. Kept verbatim: F27/F12/F8/D7/D8, Oracle/Metis findings,
   #4871/#4894/#4920/#1659/#3582, upstream .cpp cites. Verified by count-diffing every KEEP token
   backup-vs-result: all identical (F27 239=239, capturewidget.cpp 10=10, etc.).
+
+## Counter drag-aim upgrade completion (2026-09-29): interrupted-worker recovery
+- REPAIR-THEN-EXTEND on a dead worker's tree: the landed core counter.rs (428 lines, Flameshot
+  circlecounttool.cpp @ 2d478061 geometry) + the unimplemented PaintSink::draw_text_centered were
+  the spec; read its module docs FIRST - the citation, the paint gate (line.length() > bubble_size),
+  and the serde defaults all told me the intended UI wiring without guessing.
+- draw_text_centered lands in the TEXT STACK, not the sink: TextCommand gained anchor: TextAnchor
+  (TopLeft|Center) + bold; TextStack::prepare centers by half the shaped block extent (max line_w x
+  line-box height) measured on the SAME buffer that rasterizes - the trait doc's "backends with font
+  metrics center the shaped block exactly" means the shaping owner does it, a sink-side measure via
+  the editor thread-local FontSystem would be a SECOND instance (fallback resolution can differ) and
+  double-shapes per frame.
+- tests/parity.rs is a MIRROR contract: the dev reference rasterizer re-implements TextCommand
+  semantics (its draw_text shadows render/text.rs). Any new text field must be mirrored there AND
+  exercised by the fixture (added a bold Center "7" = the counter-digit command shape) or the
+  harness silently certifies divergence.
+- The interrupted worker left TWO invisible breakages beyond the compile error: core counter.rs
+  unformatted (cargo fmt --check diff) and wiring_tests.rs pinning the OLD counter bounds
+  (center-radius; the new core grows bounds by COUNTER_PADDING per Flameshot boundingRect). A
+  trait-method compile error hides every downstream semantic drift - after repairing the build,
+  run the FULL suite before trusting "only broken by X".
+- Counter tool drag wiring: press fixes the center, draw_move stores the aim target, draw_end
+  commits pointer = release-point ONLY when a move occurred (drag.take().map(|_| at)) - click-
+  without-drag stays pointer: None by construction, the radius gate stays core-side paint logic.
+  Session paint anchors at the PRESS (not ctx.mouse) with ctx.circle_count previewed; hover preview
+  branch unchanged. bounding_rect delegates to the core object's bounds (ring padding + target
+  union) - the tool-side damage rect and the committed object can never disagree again.
+- Commit-time outline capture was DOCUMENTED but never wired (tool module docs claimed
+  "[tools.counter].outline read at commit"; draw_end ignored ctx) - closed while rewriting draw_end;
+  the weak test (object_count only) strengthened to assert the flag on the committed object.
+- QA harness pattern for editor objects WITHOUT test-drive/OverlayCore: EditorState is fully pub -
+  pointer_press/move/release + paint_into(mouse: None) over a slate fill_rect renders ONLY committed
+  objects (no hover-preview contamination, no chrome), then GpuContext::new_headless + Renderer +
+  read_texture_rgba. Smaller than the qa_bundle composition and exercises the same production seams.
+- Pixel-oracle tolerances that held: digit ink centroid +-1.5px horizontal / +-2.5px vertical
+  (line-box centering sits ~1.3px high for "1" via its top flag); triangle samples on-axis +
+  inside/outside the shrinking half-width (16px at base -> 0 at apex over the 90px drag); ring
+  samples avoid radius 16-18 (black ring + white hairlines live there).
+- Ceiling status after the change (lib-pure): paint.rs 221, render/text.rs 232, side_panel/paint.rs
+  233 - ALL in the 200-250 warning band; counter.rs (ui) 85, list.rs 184. Split before the next
+  line-adding edit to any band member.

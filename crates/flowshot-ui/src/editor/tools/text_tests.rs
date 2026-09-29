@@ -22,7 +22,7 @@ use flowshot_core::geometry::{
     LogicalPoint, LogicalRect, OutputInfo, OutputLayout, PhysicalSize, Transform,
 };
 use flowshot_core::scene::{
-    Color as SceneColor, PaintSink, Point as ScenePoint, Rect as SceneRect, TextObject,
+    Color as SceneColor, LabelStyle, PaintSink, Point as ScenePoint, Rect as SceneRect, TextObject,
     ToolObjectData,
 };
 use winit::event::{Ime, MouseButton};
@@ -393,6 +393,9 @@ impl PaintSink for Recorder {
     fn invert_region(&mut self, _r: SceneRect) {}
     fn draw_text(&mut self, position: ScenePoint, text: &str, font_size: f32, _c: SceneColor) {
         self.texts.push((position, text.to_owned(), font_size));
+    }
+    fn draw_text_centered(&mut self, center: ScenePoint, text: &str, style: LabelStyle) {
+        self.texts.push((center, text.to_owned(), style.font_size));
     }
 }
 

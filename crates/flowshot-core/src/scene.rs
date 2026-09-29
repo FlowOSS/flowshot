@@ -19,12 +19,17 @@
 //!   numbered with the max+1 rule.
 
 mod arrow;
+mod counter;
 mod objects;
 
 #[cfg(test)]
 pub(crate) mod test_support;
 
 pub use arrow::{ARROW_HEAD_HEIGHT, ARROW_HEAD_WIDTH, ArrowObject};
+pub use counter::{
+    COUNTER_PADDING, COUNTER_THICKNESS_OFFSET, CounterObject, anti_contrast_color, color_is_dark,
+    contrast_color, label_font_size,
+};
 pub use objects::{InvertObject, LineObject, MarkerObject, PencilPath};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -135,6 +140,17 @@ impl Color {
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
+
+    /// Returns this color with the alpha channel replaced.
+    #[must_use]
+    pub const fn with_alpha(self, a: u8) -> Self {
+        Self {
+            r: self.r,
+            g: self.g,
+            b: self.b,
+            a,
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +188,20 @@ pub trait PaintSink {
     fn invert_region(&mut self, rect: Rect);
     /// Draws `text` with its layout box anchored at `position` (top-left).
     fn draw_text(&mut self, position: Point, text: &str, font_size: f32, color: Color);
+    /// Draws `text` centered on `center` (backends with font metrics center
+    /// the shaped block exactly; the counter digit uses this).
+    fn draw_text_centered(&mut self, center: Point, text: &str, style: LabelStyle);
+}
+
+/// The style of a centered text label ([`PaintSink::draw_text_centered`]).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LabelStyle {
+    /// Font size in scene units (logical px).
+    pub font_size: f32,
+    /// Ink color.
+    pub color: Color,
+    /// Bold weight (Flameshot's counter digits are bold).
+    pub bold: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -424,73 +454,6 @@ impl ToolObject for TextObject {
 
     fn to_data(&self) -> ToolObjectData {
         ToolObjectData::Text(self.clone())
-    }
-}
-
-/// A numbered step-counter annotation (circle with a number inside).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CounterObject {
-    /// Circle center.
-    pub center: Point,
-    /// Circle radius.
-    pub radius: f32,
-    /// Circle and label color.
-    pub color: Color,
-    /// Displayed number. `0` means unassigned; [`Scene::add_object`] numbers
-    /// such counters with the max+1 rule.
-    pub count: u32,
-}
-
-impl CounterObject {
-    /// Creates a counter annotation. Pass `count = 0` to let the scene
-    /// auto-number it on add.
-    #[must_use]
-    pub fn new(center: Point, radius: f32, color: Color, count: u32) -> Self {
-        Self {
-            center,
-            radius,
-            color,
-            count,
-        }
-    }
-}
-
-impl ToolObject for CounterObject {
-    fn type_id(&self) -> &'static str {
-        "counter"
-    }
-
-    fn bounding_rect(&self) -> Rect {
-        Rect::new(
-            self.center.x - self.radius,
-            self.center.y - self.radius,
-            self.radius * 2.0,
-            self.radius * 2.0,
-        )
-    }
-
-    fn paint(&self, sink: &mut dyn PaintSink) {
-        let rect = self.bounding_rect();
-        sink.stroke_ellipse(rect, self.color, (self.radius * 0.15).max(1.5));
-        let label = self.count.to_string();
-        let font_size = self.radius;
-        let position = Point::new(
-            self.center.x - self.radius * 0.3,
-            self.center.y - self.radius * 0.35,
-        );
-        sink.draw_text(position, &label, font_size, self.color);
-    }
-
-    fn count(&self) -> Option<u32> {
-        Some(self.count)
-    }
-
-    fn set_count(&mut self, count: u32) {
-        self.count = count;
-    }
-
-    fn to_data(&self) -> ToolObjectData {
-        ToolObjectData::Counter(self.clone())
     }
 }
 
@@ -1025,6 +988,10 @@ mod tests {
                 "draw_text({position:?},{text},{font_size},{color:?})"
             ));
         }
+        fn draw_text_centered(&mut self, center: Point, text: &str, style: LabelStyle) {
+            self.calls
+                .push(format!("draw_text_centered({center:?},{text},{style:?})"));
+        }
     }
 
     const RED: Color = Color::new(255, 0, 0, 255);
@@ -1452,13 +1419,17 @@ mod tests {
     }
 
     #[test]
-    fn counter_paint_emits_circle_and_label() {
+    fn counter_paint_emits_filled_bubble_and_centered_label() {
         let mut scene = Scene::new();
         scene.add_object(counter(0));
         let mut sink = MockSink::default();
         scene.paint(&mut sink);
-        assert!(sink.calls.iter().any(|c| c.starts_with("stroke_ellipse")));
-        assert!(sink.calls.iter().any(|c| c.contains(",1,")));
+        assert!(sink.calls.iter().any(|c| c.starts_with("fill_ellipse")));
+        assert!(
+            sink.calls
+                .iter()
+                .any(|c| c.starts_with("draw_text_centered") && c.contains(",1,"))
+        );
     }
 
     #[test]
@@ -1481,7 +1452,7 @@ mod tests {
         );
 
         let c = CounterObject::new(Point::new(20.0, 20.0), 5.0, RED, 1);
-        assert_eq!(c.bounding_rect(), Rect::new(15.0, 15.0, 10.0, 10.0));
+        assert_eq!(c.bounding_rect(), Rect::new(13.0, 13.0, 14.0, 14.0));
         assert!(c.bounding_rect().contains(Point::new(20.0, 20.0)));
         assert!(!c.bounding_rect().contains(Point::new(0.0, 0.0)));
 

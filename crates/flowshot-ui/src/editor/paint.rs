@@ -13,11 +13,11 @@
 
 use flowshot_core::geometry::{Logical, LogicalRect, OutputInfo, ToPhysical};
 use flowshot_core::scene::{
-    Color as SceneColor, PaintSink, Point as ScenePoint, Rect as SceneRect,
+    Color as SceneColor, LabelStyle, PaintSink, Point as ScenePoint, Rect as SceneRect,
 };
 
 use crate::render::{
-    Color, DisplayList, Point, Rect, Shape, TextCommand, f32_from_f64, f32_from_i32,
+    Color, DisplayList, Point, Rect, Shape, TextAnchor, TextCommand, f32_from_f64, f32_from_i32,
 };
 
 /// The selection engine's text line-height ratio (cosmic-text needs an
@@ -224,6 +224,23 @@ impl PaintSink for ListSink<'_> {
             color: render_color(color),
             family: self.font_family.map(str::to_owned),
             max_width: None,
+            anchor: TextAnchor::TopLeft,
+            bold: false,
+        });
+    }
+
+    fn draw_text_centered(&mut self, center: ScenePoint, text: &str, style: LabelStyle) {
+        let size = self.local_len(style.font_size);
+        self.list.text(TextCommand {
+            position: self.local_point(center),
+            text: text.to_owned(),
+            font_size: size,
+            line_height: size * LINE_HEIGHT_RATIO,
+            color: render_color(style.color),
+            family: self.font_family.map(str::to_owned),
+            max_width: None,
+            anchor: TextAnchor::Center,
+            bold: style.bold,
         });
     }
 }
@@ -330,6 +347,40 @@ mod tests {
         };
         assert_eq!(text.font_size, 16.0);
         assert_eq!(text.line_height, 16.0 * LINE_HEIGHT_RATIO);
+        assert_eq!(text.family.as_deref(), Some("Inter"));
+    }
+
+    #[test]
+    fn centered_text_anchors_the_local_center_and_carries_the_style() {
+        let out = output(1920.0, 2.0);
+        let mut list = DisplayList::new();
+        {
+            let mut sink = ListSink::new(&mut list, &out, Some("Inter"));
+            sink.draw_text_centered(
+                ScenePoint::new(2020.0, 50.0),
+                "7",
+                LabelStyle {
+                    font_size: 16.0,
+                    color: SceneColor::new(255, 255, 255, 255),
+                    bold: true,
+                },
+            );
+        }
+        let commands: Vec<_> = list.iter().collect();
+        assert_eq!(commands.len(), 1);
+        let Command::Text(text) = commands[0] else {
+            panic!("centered text");
+        };
+        assert_eq!(
+            text.position,
+            Point::new(200.0, 100.0),
+            "the center converts like any scene point"
+        );
+        assert_eq!(text.font_size, 32.0, "16 logical px at scale 2");
+        assert_eq!(text.line_height, 32.0 * LINE_HEIGHT_RATIO);
+        assert_eq!(text.anchor, TextAnchor::Center);
+        assert!(text.bold, "the digit weight survives the bridge");
+        assert_eq!(text.color, Color::from_rgba8(255, 255, 255, 255));
         assert_eq!(text.family.as_deref(), Some("Inter"));
     }
 

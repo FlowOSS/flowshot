@@ -4,7 +4,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use super::{Color, PaintSink, Point, Rect};
+use super::{Color, LabelStyle, PaintSink, Point, Rect};
 
 /// One recorded [`PaintSink`] call, structured (not string-formatted) so
 /// geometry assertions stay exact.
@@ -30,6 +30,8 @@ pub enum Call {
     Invert(Rect),
     /// `draw_text(position, text, font_size, color)`
     Text(Point, String, f32, Color),
+    /// `draw_text_centered(center, text, style)`
+    CenteredText(Point, String, LabelStyle),
 }
 
 /// Records every paint call for exact assertions.
@@ -72,5 +74,9 @@ impl PaintSink for RecSink {
     fn draw_text(&mut self, position: Point, text: &str, font_size: f32, color: Color) {
         self.calls
             .push(Call::Text(position, text.to_owned(), font_size, color));
+    }
+    fn draw_text_centered(&mut self, center: Point, text: &str, style: LabelStyle) {
+        self.calls
+            .push(Call::CenteredText(center, text.to_owned(), style));
     }
 }

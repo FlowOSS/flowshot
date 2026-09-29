@@ -24,9 +24,9 @@ use std::time::Instant;
 
 use flowshot_core::geometry::{LogicalPoint, LogicalRect};
 use flowshot_core::scene::{
-    ArrowObject, Color as SceneColor, CounterObject, EllipseObject, InvertObject, LineObject,
-    MarkerObject, PencilPath, Point as ScenePoint, Rect as SceneRect, RectObject, SceneData,
-    TextObject, ToolObject, ToolObjectData,
+    ArrowObject, COUNTER_PADDING, Color as SceneColor, CounterObject, EllipseObject, InvertObject,
+    LineObject, MarkerObject, PencilPath, Point as ScenePoint, Rect as SceneRect, RectObject,
+    SceneData, TextObject, ToolObject, ToolObjectData,
 };
 use winit::event::MouseButton;
 use winit::keyboard::{KeyCode, ModifiersState};
@@ -179,9 +179,11 @@ fn move_preserves_z_order_ids_and_counter_numbers() {
     drag(&mut ed, (100.0, 100.0), &[(150.0, 120.0)]);
     assert_eq!(ed.scene().z_order(), z_before.as_slice());
     assert_eq!(ed.scene().counter_counts(), vec![1, 2]);
-    assert_eq!(bounds(&ed, 1).x, 100.0 - 12.0 + 50.0);
+    // The counter bounds are the bubble grown by the outline-ring padding
+    // (the core's Flameshot `boundingRect` parity).
+    assert_eq!(bounds(&ed, 1).x, 100.0 - 12.0 - COUNTER_PADDING + 50.0);
     assert_eq!(bounds(&ed, 0).x, 0.0, "untouched objects stay put");
-    assert_eq!(bounds(&ed, 2).x, 300.0 - 12.0);
+    assert_eq!(bounds(&ed, 2).x, 300.0 - 12.0 - COUNTER_PADDING);
 }
 
 #[test]
