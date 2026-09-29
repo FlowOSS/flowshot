@@ -44,6 +44,7 @@ mod readback;
 mod renderer;
 mod shadow;
 mod staging;
+mod stats;
 mod target;
 mod tess;
 mod text;
@@ -59,4 +60,5 @@ pub use list::{
     TextCommand, TextureId,
 };
 pub use readback::read_texture_rgba;
-pub use renderer::{FrameStats, RenderTarget, Renderer};
+pub use renderer::Renderer;
+pub use stats::{FrameStats, RenderTarget};

@@ -69,6 +69,8 @@ pub mod frame;
 pub mod gpu;
 mod handler;
 mod monitor;
+#[cfg(feature = "perf-trace")]
+mod perf;
 mod runtime;
 mod state;
 mod surface;

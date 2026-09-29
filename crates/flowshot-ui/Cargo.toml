@@ -13,6 +13,13 @@ crate-type = ["rlib"]
 # Public synthetic-input seam (`OverlayCore::inject_event`, `OverlayHandle::inject_event`)
 # so mouse paths are QA-able without ydotool (plan todo 13, Metis blocker #1 fallback).
 test-drive = []
+# Live frame-timing profiler (the interactive-freeze diagnosis): per-window
+# display-list build / tessellate+shape / encode+submit / present-overhead
+# breakdown with p50/p95/p99 aggregates emitted over tracing every N frames,
+# plus the redraw rate. Compiled OUT by default - production carries zero
+# instrumentation overhead (the profiler module and every record site are
+# `#[cfg(feature = "perf-trace")]`).
+perf-trace = []
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
@@ -81,4 +88,8 @@ resvg = { workspace = true }
 
 [[example]]
 name = "qa_bundle"
+required-features = ["test-drive"]
+
+[[example]]
+name = "perf_storm"
 required-features = ["test-drive"]

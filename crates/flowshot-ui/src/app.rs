@@ -210,6 +210,8 @@ impl OverlayApp {
             selection: self.core.selection().rect(),
             ..self.backdrop_options
         };
+        #[cfg(feature = "perf-trace")]
+        let build_started = Instant::now();
         let frame = crate::frame::build_overlay_frame(
             &self.core,
             slot,
@@ -217,10 +219,14 @@ impl OverlayApp {
             self.backdrop.as_ref().map(|backdrop| (backdrop, &options)),
             Instant::now(),
         );
+        #[cfg(feature = "perf-trace")]
+        let list_build = build_started.elapsed();
         let list = frame.list;
         // Magnifier: the zoom texture is CPU-built per frame and
         // must be uploaded before the list renders (a missing id draws the
         // magenta placeholder).
+        #[cfg(feature = "perf-trace")]
+        let surface_started = Instant::now();
         if let (Some(renderer), Some(texture)) = (entry.renderer.as_mut(), frame.magnifier.as_ref())
         {
             let image = RgbaImage {
@@ -240,8 +246,17 @@ impl OverlayApp {
             (Some(renderer), false) => Some((renderer, &list)),
             _ => None,
         };
-        if let Err(error) = surface.render(gpu, content, vertices) {
-            tracing::error!(%error, window = slot.index(), "frame presentation failed");
+        let presented = surface.render(gpu, content, vertices);
+        #[cfg(feature = "perf-trace")]
+        let surface_total = surface_started.elapsed();
+        match presented {
+            #[cfg(feature = "perf-trace")]
+            Ok(stats) => crate::perf::record(slot.index(), list_build, surface_total, stats),
+            #[cfg(not(feature = "perf-trace"))]
+            Ok(_) => {}
+            Err(error) => {
+                tracing::error!(%error, window = slot.index(), "frame presentation failed");
+            }
         }
     }
 }

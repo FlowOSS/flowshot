@@ -90,6 +90,7 @@ pub(super) fn spawn_all(app: &mut PinApp, target: &ActiveEventLoop) -> Result<()
             monitor,
             initial_size: (width.min(limit), height.min(limit)),
             crosshair_color: accent,
+            window: window.clone(),
         };
         let window_surface = WindowSurface::new(surface, &gpu, &surface_spec)?;
         let mut renderer = Renderer::new(&gpu.device, &gpu.queue, window_surface.format());

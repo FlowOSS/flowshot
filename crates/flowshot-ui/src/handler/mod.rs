@@ -113,6 +113,7 @@ impl OverlayApp {
                 monitor: entry.monitor_name.clone(),
                 initial_size: (size.width, size.height),
                 crosshair_color,
+                window: entry.window.clone(),
             };
             entry.surface = Some(WindowSurface::new(surface, &gpu, &spec)?);
         }

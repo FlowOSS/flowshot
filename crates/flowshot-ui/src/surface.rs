@@ -3,20 +3,27 @@
 //! policy itself lives in [`crate::gpu::configure_overlay_surface`] so the
 //! `render_smoke` example and the runtime share one implementation.
 
+use std::sync::Arc;
+use std::time::Instant;
+
+use winit::window::Window;
+
 use crate::adapter::surface_size_fits;
 use crate::crosshair::CrosshairPipeline;
 use crate::error::UiError;
 use crate::gpu::GpuContext;
-use crate::render::{DisplayList, RenderTarget, Renderer};
+use crate::render::{DisplayList, FrameStats, RenderTarget, Renderer};
 
 /// Everything one window's surface needs beyond the shared GPU objects:
-/// which monitor it covers (error context), its initial extent, and the
-/// token-derived crosshair color.
+/// which monitor it covers (error context), its initial extent, the
+/// token-derived crosshair color, and the window handle (the present-time
+/// `pre_present_notify` frame-callback seam).
 #[derive(Debug, Clone)]
 pub(crate) struct SurfaceSpec {
     pub monitor: String,
     pub initial_size: (u32, u32),
     pub crosshair_color: [f32; 4],
+    pub window: Arc<Window>,
 }
 
 /// One window's configured surface plus its crosshair pipeline.
@@ -26,6 +33,7 @@ pub(crate) struct WindowSurface {
     config: wgpu::SurfaceConfiguration,
     crosshair: CrosshairPipeline,
     monitor: String,
+    window: Arc<Window>,
 }
 
 impl WindowSurface {
@@ -58,6 +66,7 @@ impl WindowSurface {
             config,
             crosshair,
             monitor: spec.monitor.clone(),
+            window: spec.window.clone(),
         })
     }
 
@@ -108,7 +117,9 @@ impl WindowSurface {
     /// Renders one frame: the optional backdrop/content display list through
     /// the window's [`Renderer`], then the crosshair pass on top. Without
     /// content the frame is a transparent clear plus the crosshair (the
-    /// empty-overlay behavior).
+    /// empty-overlay behavior). Returns the content renderer's [`FrameStats`]
+    /// (zero stats for an empty frame or a skipped transient-invalid frame),
+    /// which the `perf-trace` profiler reads; production discards it.
     ///
     /// # Errors
     ///
@@ -121,30 +132,36 @@ impl WindowSurface {
         gpu: &GpuContext,
         content: Option<(&mut Renderer, &DisplayList)>,
         vertices: Option<[[f32; 2]; 4]>,
-    ) -> Result<(), UiError> {
+    ) -> Result<FrameStats, UiError> {
+        let acquire_started = Instant::now();
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
             // Both transient invalidations recover by reconfiguring; the frame
             // is skipped and the next RedrawRequested presents again.
             Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => {
                 self.surface.configure(&gpu.device, &self.config);
-                return Ok(());
+                return Ok(FrameStats::default());
             }
-            Err(wgpu::SurfaceError::Timeout) => return Ok(()),
+            Err(wgpu::SurfaceError::Timeout) => return Ok(FrameStats::default()),
             Err(wgpu::SurfaceError::OutOfMemory) => return Err(UiError::OutOfMemory),
         };
+        let acquire_time = acquire_started.elapsed();
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
         let has_content = content.is_some();
-        if let Some((renderer, list)) = content {
-            let target = RenderTarget {
-                view: &view,
-                width: self.config.width,
-                height: self.config.height,
-            };
-            renderer.render(&gpu.device, &gpu.queue, &target, list)?;
-        }
+        let mut stats = match content {
+            Some((renderer, list)) => {
+                let target = RenderTarget {
+                    view: &view,
+                    width: self.config.width,
+                    height: self.config.height,
+                };
+                renderer.render(&gpu.device, &gpu.queue, &target, list)?
+            }
+            None => FrameStats::default(),
+        };
+        stats.acquire_time = acquire_time;
         if let Some(vertices) = vertices {
             self.crosshair.write_vertices(&gpu.queue, vertices);
         }
@@ -179,7 +196,15 @@ impl WindowSurface {
             }
         }
         gpu.queue.submit(Some(encoder.finish()));
+        // Notify winit AFTER drawing, BEFORE the present (its documented
+        // contract): on Wayland this schedules the frame callback that
+        // throttles `RedrawRequested` to the output refresh. Without it the
+        // non-blocking `Mailbox` acquire would let motion-driven redraws spin
+        // ungated (measured 3500 renders/sec); with it, redraws pace to vsync
+        // while input still dispatches at full rate. A no-op on other
+        // platforms (the base `Window` API, not a platform extension).
+        self.window.pre_present_notify();
         frame.present();
-        Ok(())
+        Ok(stats)
     }
 }
