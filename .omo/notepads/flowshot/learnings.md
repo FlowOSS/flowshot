@@ -1474,3 +1474,55 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
 - Ceiling status after the change (lib-pure): paint.rs 221, render/text.rs 232, side_panel/paint.rs
   233 - ALL in the 200-250 warning band; counter.rs (ui) 85, list.rs 184. Split before the next
   line-adding edit to any band member.
+
+## Interactive-freeze fix (2026-09-29): FIFO acquire stall on the 60Hz output — MEASURED, not guessed
+- ROOT CAUSE (live perf-trace profiler, dual-monitor 4480x1440 drag storm): window 0 (HDMI-A-1
+  1920x1080@60Hz, PresentMode::Fifo) blocked in `get_current_texture()` for a FULL VBLANK every
+  frame — acquire p50=15.7ms p95=19ms p99=38.6ms max=48.8ms. The overlay renders BOTH windows
+  sequentially on the SINGLE-THREADED winit loop, so the stall ate ~96% of the loop budget,
+  starving input dispatch + window 1 -> the freeze. Window 1 (DP-3 2560x1440@180Hz) did NOT block
+  (acquire 12us): the NVIDIA driver negotiated FIFO_LATEST_READY_EXT there (the startup
+  `Unrecognized present mode 1000361000` warning) vs standard FIFO on the 60Hz output. The
+  asymmetry = why the user saw it "sometimes" (depends which output drives the drag).
+- OFFSCREEN harness (examples/perf_storm.rs) proved the CPU path was NEVER the bottleneck:
+  build+tessellate+text-shape+encode p95 ~0.5-0.95ms BOTH windows (14x under the 8ms budget).
+  Ruled out H2 (full-frame rebuild), H3 (per-frame uploads — backdrop uploads ONCE at init),
+  H4 (MSAA 8x fill). The freeze was purely the present-path acquire block. MEASURE FIRST paid off:
+  the hypothesis list's "redraw storm / full-frame rebuild" were wrong; the data pointed at acquire.
+- FIX #1 (gpu.rs configure_surface): `select_present_mode()` prefers the first advertised of
+  [Mailbox, FifoRelaxed, Fifo] (Fifo = WebGPU-guaranteed fallback). Mailbox acquire never blocks;
+  on Wayland the compositor composites the committed buffer ATOMICALLY (no client-side tear), and
+  winit frame callbacks still pace redraws -> no extra frames rendered. win0 acquire 15.7ms->16us.
+- FIX #2 (surface.rs render): the shell NEVER called winit's `pre_present_notify()` — its doc:
+  "Wayland: schedules a frame callback to throttle RedrawRequested"; request_redraw's doc says it's
+  "strongly encouraged" paired with it. Without it RedrawRequested is NOT frame-callback-aligned;
+  Fifo's blocking acquire had MASKED this. With Mailbox, motion redraws spun UNGATED at 3515/sec
+  (~88% CPU) because OverlayCore::tick() returns true every iteration while a tween is active and
+  request_redraw()'s awakener ping BYPASSES ControlFlow::WaitUntil. Calling pre_present_notify()
+  after draw / before present paced redraws to vsync (3515/s -> 240/s = 60Hz win0 + 180Hz win1).
+  Plumbed &Window through WindowSurface::render (overlay render_window + pins render_pin sites).
+- winit Wayland redraw gating (wayland/event_loop/mod.rs:486): `if frame_callback_state()==Requested
+  { return None }` — RedrawRequested is gated on the frame callback, which pre_present_notify arms.
+  This is THE pacing mechanism; Fifo acquire-blocking was accidentally substituting for it.
+- GOTCHA: `tracing_subscriber::fmt()` writes to STDOUT, not stderr. The live storm driver captured
+  stderr and saw NOTHING until redirected to stdout. Harness log capture: stdout.
+- Instrumentation (the task's deliverable): feature `perf-trace` (compiled OUT of production — the
+  module + every record site are cfg-gated, zero prod overhead). FrameStats gained build_time
+  (tessellate+shape) + acquire_time (get_current_texture) splits; a thread-local FrameProfiler
+  aggregates p50/p95/p99 every 120 frames + redraw rate over tracing target `flowshot_ui::perf`.
+- IDLE-CPU contract (todo-13) PRESERVED: 0.250% over a 4s idle window (loop parks in
+  ControlFlow::Wait; Mailbox/pre_present_notify only act on render, which doesn't run when idle).
+- Ceiling: renderer.rs was PRE-EXISTING over 250 (269 lib-pure at HEAD). Extracted FrameStats +
+  RenderTarget -> render/stats.rs and the generic ndc_transform -> render/geom.rs (all 4 vertex
+  types are `[f32; N]` with position at [0],[1]); renderer.rs now 246. The skill's awk strips
+  `#`-lines (attributes count as code in Rust but the multi-lang heuristic drops them) — measured
+  269/246 by that rule.
+- ACCEPTANCE: event-to-present p95 win0 0.62ms / win1 0.54ms (<=8ms), p99 0.68ms (<=16ms) PASS;
+  BEFORE win0 p95=19.5ms p99=39ms FAIL. Evidence: .omo/evidence/perf-drag-freeze/ (SUMMARY.md +
+  before/after live+offscreen logs + storm-driver.py).
+- PRE-EXISTING unrelated (noted, NOT fixed — out of scope): (a) flowshot-capture-wayland
+  kwin::tests::no_fd_leaks_on_success_or_failure is an intermittent FD-table race under full-
+  workspace parallel load (passes 200/200 isolated 3/3 + workspace re-run); (b) launcher/window.rs:28
+  doc links LauncherInput -> private InputState, fails `cargo doc --features test-drive` ONLY
+  (reproduces with test-drive alone, predates this work; the no-feature doc gate passes).
+

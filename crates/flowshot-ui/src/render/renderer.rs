@@ -18,42 +18,19 @@ use std::time::{Duration, Instant};
 use lyon::tessellation::VertexBuffers;
 
 use super::frame_build::{FrameBuild, Step};
+use super::geom::{f32_from_u32, ndc_transform};
 use super::glyph::TextVertex;
 use super::image::{ImageVertex, TextureStore};
 use super::list::DisplayList;
 use super::pass::{PipelineRefs, draw_step};
 use super::shadow::{ShadowPipeline, ShadowVertex};
 use super::staging::{StagingBuffers, StagingData};
+use super::stats::{FrameStats, RenderTarget};
 use super::target::{FrameTarget, msaa_sample_count, validate_extent};
 use super::tess::{FlatVertex, Tessellator};
 use super::text::TextStack;
 use super::vector::VectorPipelines;
 use crate::error::UiError;
-
-/// Where one frame is rendered: a color attachment view (surface texture or
-/// offscreen target) and its extent in physical pixels.
-#[derive(Debug)]
-pub struct RenderTarget<'a> {
-    /// The attachment the MSAA frame resolves into.
-    pub view: &'a wgpu::TextureView,
-    /// Extent in physical pixels.
-    pub width: u32,
-    /// Extent in physical pixels.
-    pub height: u32,
-}
-
-/// Per-frame measurements returned by [`Renderer::render`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct FrameStats {
-    /// Display-list commands consumed.
-    pub commands: usize,
-    /// Vertices staged across all families.
-    pub vertices: usize,
-    /// Draw calls encoded.
-    pub draws: usize,
-    /// CPU time for build + encode + submit (GPU work overlaps asynchronously).
-    pub cpu_time: Duration,
-}
 
 /// The batched 2D renderer.
 #[derive(Debug)]
@@ -176,6 +153,7 @@ impl Renderer {
             target.height,
         );
         self.build(queue, list, (target.width, target.height));
+        let build_time = started.elapsed();
         let draws = self.steps.len();
         self.encode(device, queue, target);
         Ok(FrameStats {
@@ -185,7 +163,9 @@ impl Renderer {
                 + self.shadow_vertices.len()
                 + self.text_vertices.len(),
             draws,
+            build_time,
             cpu_time: started.elapsed(),
+            acquire_time: Duration::ZERO,
         })
     }
 
@@ -241,30 +221,12 @@ impl Renderer {
     /// clip space is NDC (y up). Applied once per frame to every family -
     /// the shaders pass positions through unchanged.
     fn apply_ndc_transform(&mut self, size: (u32, u32)) {
-        #[allow(clippy::cast_precision_loss)]
-        let width = size.0.max(1) as f32;
-        #[allow(clippy::cast_precision_loss)]
-        let height = size.1.max(1) as f32;
-        let transform = |x: &mut f32, y: &mut f32| {
-            *x = 2.0 * *x / width - 1.0;
-            *y = 1.0 - 2.0 * *y / height;
-        };
-        for vertex in &mut self.flat.vertices {
-            let [x, y, ..] = vertex;
-            transform(x, y);
-        }
-        for vertex in &mut self.image_vertices {
-            let [x, y, ..] = vertex;
-            transform(x, y);
-        }
-        for vertex in &mut self.shadow_vertices {
-            let [x, y, ..] = vertex;
-            transform(x, y);
-        }
-        for vertex in &mut self.text_vertices {
-            let [x, y, ..] = vertex;
-            transform(x, y);
-        }
+        let width = f32_from_u32(size.0.max(1));
+        let height = f32_from_u32(size.1.max(1));
+        ndc_transform(&mut self.flat.vertices, width, height);
+        ndc_transform(&mut self.image_vertices, width, height);
+        ndc_transform(&mut self.shadow_vertices, width, height);
+        ndc_transform(&mut self.text_vertices, width, height);
     }
 
     fn encode(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, target: &RenderTarget<'_>) {

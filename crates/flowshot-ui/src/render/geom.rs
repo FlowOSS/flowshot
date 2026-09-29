@@ -156,6 +156,18 @@ pub(crate) fn f32_from_f64(value: f64) -> f32 {
     value as f32
 }
 
+/// The viewport transform applied to every staged vertex family once per
+/// frame: positions arrive in physical px (y down) and map to clip-space NDC
+/// (x,y in [-1,1], y up). Generic over the fixed-array vertex types, which all
+/// carry position at indices 0,1 (`FlatVertex`/`ImageVertex`/`ShadowVertex`/
+/// `TextVertex`); the shaders pass positions through unchanged.
+pub(crate) fn ndc_transform<const N: usize>(vertices: &mut [[f32; N]], width: f32, height: f32) {
+    for vertex in vertices {
+        vertex[0] = 2.0 * vertex[0] / width - 1.0;
+        vertex[1] = 1.0 - 2.0 * vertex[1] / height;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::float_cmp)]
