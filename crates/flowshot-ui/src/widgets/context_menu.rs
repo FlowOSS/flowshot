@@ -7,7 +7,7 @@
 //! entry geometry functions are the single source of truth for both drawing
 //! and hit-testing.
 
-use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextCommand};
+use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextAnchor, TextCommand};
 use flowshot_core::tokens::DesignTokens;
 
 /// One entry of a [`ContextMenu`].
@@ -191,6 +191,8 @@ impl ContextMenu {
                         color: ink,
                         family: Some(tokens.typography.family.clone()),
                         max_width: Some(rect.size.width),
+                        anchor: TextAnchor::TopLeft,
+                        bold: false,
                     });
                 }
                 ContextMenuEntry::Separator => {

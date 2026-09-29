@@ -1,7 +1,7 @@
 //! The size-notifier HUD.
 
 use crate::editor::EditorState;
-use crate::render::{Color, DisplayList, Point, Rect, Shape, TextCommand, TextureId};
+use crate::render::{Color, DisplayList, Point, Rect, Shape, TextAnchor, TextCommand, TextureId};
 use flowshot_core::tokens::DesignTokens;
 
 /// The HUD box opacity (0-255): the selection HUD's alpha (F27
@@ -62,6 +62,8 @@ impl SizeHud {
             color: background.readable_ink(),
             family: Some(tokens.typography.family.clone()),
             max_width: None,
+            anchor: TextAnchor::TopLeft,
+            bold: false,
         });
     }
 }

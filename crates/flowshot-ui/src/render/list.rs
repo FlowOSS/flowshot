@@ -89,10 +89,23 @@ pub enum PathSegment {
     Close,
 }
 
+/// Which point of the shaped text block [`TextCommand::position`] anchors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextAnchor {
+    /// The block's top-left (the layout-box origin; baselines derive from
+    /// the layout runs).
+    #[default]
+    TopLeft,
+    /// The block's exact center, computed from the shaping metrics at
+    /// raster time (`PaintSink::draw_text_centered` parity - the counter
+    /// digit).
+    Center,
+}
+
 /// A text run: shaped by cosmic-text, rasterized through the glyph atlas.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextCommand {
-    /// Top-left of the text box; baselines derive from layout runs.
+    /// The anchor point of the text box (see [`TextAnchor`]).
     pub position: Point,
     /// The text (may span lines; wrapping needs `max_width`).
     pub text: String,
@@ -108,6 +121,11 @@ pub struct TextCommand {
     pub family: Option<String>,
     /// Wrap width in physical px; `None` = no wrapping.
     pub max_width: Option<f32>,
+    /// Where `position` anchors the shaped block.
+    pub anchor: TextAnchor,
+    /// Bold weight for the whole run (the counter digit's
+    /// `LabelStyle::bold`).
+    pub bold: bool,
 }
 
 /// Drop-shadow parameters, physical px, token-derived via

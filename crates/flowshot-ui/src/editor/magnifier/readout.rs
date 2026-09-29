@@ -8,7 +8,7 @@ use flowshot_core::tokens::DesignTokens;
 use super::super::paint::{LINE_HEIGHT_RATIO, local_len};
 use super::MagnifierSample;
 use crate::render::{
-    Color, DisplayList, Point, Rect, Shape, TextCommand, f32_from_f64, f32_from_u32,
+    Color, DisplayList, Point, Rect, Shape, TextAnchor, TextCommand, f32_from_f64, f32_from_u32,
 };
 
 /// The readout box's text-width estimate: mean advance 0.62em (Inter
@@ -67,5 +67,7 @@ pub(super) fn paint_readout(
         color: background.readable_ink(),
         family: Some(tokens.typography.family.clone()),
         max_width: None,
+        anchor: TextAnchor::TopLeft,
+        bold: false,
     });
 }

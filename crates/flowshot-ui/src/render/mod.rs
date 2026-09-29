@@ -55,8 +55,8 @@ pub use geom::{Point, Rect, Size};
 pub(crate) use geom::{f32_from_f64, f32_from_i32, f32_from_u32};
 pub use image::{RgbaImage, TextureStore};
 pub use list::{
-    ClipCommand, Command, DisplayList, ImageCommand, PathSegment, ShadowSpec, Shape, TextCommand,
-    TextureId,
+    ClipCommand, Command, DisplayList, ImageCommand, PathSegment, ShadowSpec, Shape, TextAnchor,
+    TextCommand, TextureId,
 };
 pub use readback::read_texture_rgba;
 pub use renderer::{FrameStats, RenderTarget, Renderer};

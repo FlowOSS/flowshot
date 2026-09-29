@@ -43,7 +43,9 @@ use std::sync::Once;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, SwashContent};
+use cosmic_text::{
+    Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, SwashContent, Weight,
+};
 use flowshot_core::config::{ArrowStyle, ArrowToolConfig, Config, ToolsConfig};
 use flowshot_core::geometry::{
     LogicalPoint, LogicalRect, OutputInfo, PhysicalSize, Transform as GeoTransform,
@@ -55,7 +57,8 @@ use flowshot_ui::editor::{
 use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
 use flowshot_ui::render::{
     Color, Command, DisplayList, ImageCommand, Point, Rect, RenderTarget, Renderer, RgbaImage,
-    ShadowSpec, Shape, TextCommand, TextureId, linear_to_srgb, read_texture_rgba, srgb_to_linear,
+    ShadowSpec, Shape, TextAnchor, TextCommand, TextureId, linear_to_srgb, read_texture_rgba,
+    srgb_to_linear,
 };
 use flowshot_ui::{register_shape_tools, register_text_tool};
 use tiny_skia::{FillRule, LineCap, LineJoin, Paint, Path, PathBuilder, Pixmap, Stroke, Transform};
@@ -696,13 +699,32 @@ fn draw_text(canvas: &mut Canvas, command: &TextCommand, fonts: &mut (FontSystem
     if let Some(family) = &command.family {
         attrs = attrs.family(Family::Name(family.as_str()));
     }
+    if command.bold {
+        attrs = attrs.weight(Weight::BOLD);
+    }
     buffer.set_text(&command.text, &attrs, Shaping::Advanced, None);
     buffer.shape_until_scroll(font_system, false);
+    // The GPU path's anchor semantics, mirrored (render/text.rs): Center
+    // offsets the shaped block by half its laid-out extent.
+    let origin = match command.anchor {
+        TextAnchor::TopLeft => command.position,
+        TextAnchor::Center => {
+            let mut width = 0.0_f32;
+            let mut height = 0.0_f32;
+            for run in buffer.layout_runs() {
+                width = width.max(run.line_w);
+                height = height.max(run.line_top + run.line_height);
+            }
+            Point::new(
+                command.position.x - width / 2.0,
+                command.position.y - height / 2.0,
+            )
+        }
+    };
     let tint = command.color.premultiplied_linear();
     for run in buffer.layout_runs() {
         for glyph in run.glyphs {
-            let physical =
-                glyph.physical((command.position.x, command.position.y + run.line_y), 1.0);
+            let physical = glyph.physical((origin.x, origin.y + run.line_y), 1.0);
             let Some(image) = cache.get_image(font_system, physical.cache_key).as_ref() else {
                 continue;
             };
@@ -1071,6 +1093,21 @@ fn text_matches_within_edge_masked_criterion() {
         color: accent(),
         family: Some(tokens().typography.family),
         max_width: None,
+        anchor: TextAnchor::TopLeft,
+        bold: false,
+    });
+    // The counter-digit path: a BOLD run centered on its anchor (the
+    // draw_text_centered bridge emits exactly this command shape).
+    list.text(TextCommand {
+        position: Point::new(400.0, 225.0),
+        text: "7".to_owned(),
+        font_size: 42.0,
+        line_height: 50.0,
+        color: accent(),
+        family: Some(tokens().typography.family),
+        max_width: None,
+        anchor: TextAnchor::Center,
+        bold: true,
     });
     let textures = TextureRegistry::new();
     let rendered = render_gpu(&gpu, &list, &textures);

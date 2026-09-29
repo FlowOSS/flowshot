@@ -1,7 +1,7 @@
 //! Button widget.
 
 use super::Icon;
-use crate::render::{Color, DisplayList, Point, Rect, Shape, TextCommand, TextureId};
+use crate::render::{Color, DisplayList, Point, Rect, Shape, TextAnchor, TextCommand, TextureId};
 use flowshot_core::tokens::DesignTokens;
 
 /// State of a button.
@@ -157,6 +157,8 @@ impl<'a> Button<'a> {
                 color: fg_color,
                 family: Some(tokens.typography.family.clone()),
                 max_width: None,
+                anchor: TextAnchor::TopLeft,
+                bold: false,
             });
         }
     }
