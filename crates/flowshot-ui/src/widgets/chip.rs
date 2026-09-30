@@ -1,10 +1,13 @@
 //! The aid-indicator chip: a quiet pill showing a key glyph plus a tiny
 //! label, dimmed when its toggle is off and accent-tinted when on.
 //!
-//! Pointer-transparent by construction (the chip layer registers no
-//! hit-test), token-driven like every widget: one ink (contrast) at low
-//! alpha for the off state, the accent token for the on state.
+//! A clickable toggle (the chrome funnel owns its hit-test -
+//! `ChromeState::aids_press`): hover/press feedback is the design system's
+//! wash ramp (one contrast ink at the [`super::wash_alpha`] levels),
+//! token-driven like every widget - one ink (contrast) at low alpha for the
+//! off state, the accent token for the on state.
 
+use super::wash_alpha;
 use crate::render::{
     Color, DisplayList, Point, Rect, Shape, Size, TextAnchor, TextCommand, f32_from_f64,
 };
@@ -31,6 +34,9 @@ pub struct AidChip<'a> {
     pub label: &'a str,
     /// Whether the aid is toggled ON (accent-tinted) or off (dimmed).
     pub active: bool,
+    /// The discrete hover/press wash level (0 idle, 1 hover, 2 press - the
+    /// shared [`wash_alpha`] ramp).
+    pub wash: f64,
 }
 
 impl AidChip<'_> {
@@ -71,6 +77,16 @@ impl AidChip<'_> {
             },
             background,
         );
+        let wash = wash_alpha(self.wash);
+        if wash > 0 {
+            list.fill(
+                Shape::Rect {
+                    rect: self.rect,
+                    radius: tokens.radii.medium as f32 * scale,
+                },
+                contrast.with_alpha8(wash),
+            );
+        }
 
         let font_size = tokens.typography.base_size as f32 * scale;
         let line = font_size * LINE_HEIGHT_RATIO;
@@ -165,6 +181,7 @@ mod tests {
             key: "L",
             label: "Magnifier",
             active,
+            wash: 0.0,
         }
     }
 
@@ -206,5 +223,41 @@ mod tests {
                 .collect()
         };
         assert_eq!(texts(&on), vec!["L".to_owned(), "Magnifier".to_owned()]);
+    }
+
+    #[test]
+    fn wash_lays_the_hover_and_press_ramp_over_the_chip() {
+        // Given an idle, hovered, and pressed chip, when drawn, then the
+        // wash adds exactly one overlay fill per ramp step (level 1 =
+        // HOVER_WASH_ALPHA, level 2 = PRESS_WASH_ALPHA of the contrast ink).
+        let t = tokens();
+        let draw_with = |wash: f64| -> Vec<Color> {
+            let mut list = DisplayList::new();
+            AidChip {
+                wash,
+                ..chip(false)
+            }
+            .draw(&mut list, &t, 1.0);
+            list.iter()
+                .filter_map(|command| match command {
+                    Command::Fill { color, .. } => Some(*color),
+                    _ => None,
+                })
+                .collect()
+        };
+        let idle = draw_with(0.0);
+        let hovered = draw_with(1.0);
+        let pressed = draw_with(2.0);
+        assert_eq!(hovered.len(), idle.len() + 1);
+        assert_eq!(pressed.len(), idle.len() + 1);
+        let contrast = Color::from_hex_token(&t.palette.contrast).unwrap();
+        assert_eq!(
+            hovered[1],
+            contrast.with_alpha8(crate::widgets::HOVER_WASH_ALPHA)
+        );
+        assert_eq!(
+            pressed[1],
+            contrast.with_alpha8(crate::widgets::PRESS_WASH_ALPHA)
+        );
     }
 }

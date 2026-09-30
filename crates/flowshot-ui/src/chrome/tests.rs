@@ -184,6 +184,11 @@ fn open_panel(core: &mut OverlayCore) {
     );
 }
 
+fn aid_chips(core: &OverlayCore) -> [Rect; 2] {
+    core.chrome()
+        .aids_layout(core.editor(), core.selection().rect(), &fixture_output())
+}
+
 // ---------------------------------------------------------------------------
 // Toolbar
 // ---------------------------------------------------------------------------
@@ -808,6 +813,95 @@ fn esc_mid_drag_cancels_the_pending_reorder() {
         &[bottom, top],
         "no reorder after Esc"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Quick-aids chips (clickable, selection-adjacent)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn chip_click_toggles_the_aid_and_never_starts_a_drag() {
+    // Given the fixture selection with the cluster above its leading edge,
+    // when the pointer press-drags-release starting on the magnifier chip,
+    // then the aid toggles through the production funnel and the selection
+    // is untouched - the press never reaches the selection engine.
+    let mut core = fixture();
+    let (x, y) = center(aid_chips(&core)[0]);
+    assert!(!core.editor().magnifier_visible());
+    move_to(&mut core, x, y);
+    click(&mut core, MouseButton::Left, true);
+    move_to(&mut core, x - 100.0, y - 50.0);
+    click(&mut core, MouseButton::Left, false);
+    assert!(core.editor().magnifier_visible(), "click toggled the aid");
+    assert_eq!(core.selection().rect(), Some(SEL), "no drag started");
+    // The click is the SAME seam as the key: L toggles it back off.
+    tap(&mut core, KeyCode::KeyL);
+    assert!(!core.editor().magnifier_visible());
+}
+
+#[test]
+fn chip_click_without_a_selection_toggles_at_the_dock() {
+    // Given no selection yet (the cluster docks bottom-center of the
+    // output), when the pointer drag-clicks the grid chip, then the grid
+    // toggles and still no selection exists - the chips are clickable
+    // before any drag, and the click starts none.
+    let mut core = fixture();
+    core.selection_mut().set_rect(None);
+    core.sync_cascade();
+    let (x, y) = center(aid_chips(&core)[1]);
+    assert!(!core.editor().grid_visible());
+    move_to(&mut core, x, y);
+    click(&mut core, MouseButton::Left, true);
+    move_to(&mut core, 900.0, 900.0);
+    click(&mut core, MouseButton::Left, false);
+    assert!(core.editor().grid_visible(), "click toggled the grid");
+    assert_eq!(core.selection().rect(), None, "the click started no drag");
+}
+
+#[test]
+fn chip_hover_and_press_wash_follow_the_pointer() {
+    // Given the pointer over the first chip, then the hover wash slot
+    // tracks it on and off; a press adds the press slot and the release
+    // clears it (the widget-convention feedback, funnel-driven).
+    let mut core = fixture();
+    let (x, y) = center(aid_chips(&core)[0]);
+    move_to(&mut core, x, y);
+    assert_eq!(core.chrome().aids.hover, Some(0));
+    click(&mut core, MouseButton::Left, true);
+    assert_eq!(core.chrome().aids.press, Some(0));
+    click(&mut core, MouseButton::Left, false);
+    assert_eq!(core.chrome().aids.press, None, "release clears the wash");
+    assert_eq!(core.chrome().aids.hover, Some(0), "still hovered");
+    move_to(&mut core, 5.0, 5.0);
+    assert_eq!(core.chrome().aids.hover, None);
+}
+
+#[test]
+fn right_click_on_a_chip_is_consumed_without_toggling() {
+    // Given a right press on a chip, then it dies on the chrome (the
+    // toolbar-plate parity rule): no toggle, no color wheel, no drag.
+    let mut core = fixture();
+    let (x, y) = center(aid_chips(&core)[0]);
+    move_to(&mut core, x, y);
+    click(&mut core, MouseButton::Right, true);
+    click(&mut core, MouseButton::Right, false);
+    assert!(!core.editor().magnifier_visible());
+    assert!(!core.chrome().color_wheel.visible, "the chip ate the press");
+    assert_eq!(core.selection().rect(), Some(SEL));
+}
+
+#[test]
+fn esc_mid_press_clears_the_chip_wash_and_grab() {
+    // Given a held chip press, when Esc pops a cascade step, then the
+    // press wash is gone - it must not stick until the next release
+    // (the cancel_grab contract).
+    let mut core = fixture();
+    let (x, y) = center(aid_chips(&core)[0]);
+    move_to(&mut core, x, y);
+    click(&mut core, MouseButton::Left, true);
+    assert_eq!(core.chrome().aids.press, Some(0));
+    tap(&mut core, KeyCode::Escape);
+    assert_eq!(core.chrome().aids.press, None);
 }
 
 // ---------------------------------------------------------------------------

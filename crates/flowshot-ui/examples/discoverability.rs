@@ -9,9 +9,16 @@
 //! - `tooltip-rebound.png`: the same button after rebinding Arrow to W -
 //!   the tooltip follows the live key map (never hardcoded).
 //! - `aids-off.png`: the quick-aids chip cluster (magnifier/grid) dimmed,
-//!   bottom-left corner, clear of selection/toolbar/HUD.
+//!   docked ABOVE the selection's leading edge (the adjacent placement,
+//!   diagonally opposite the toolbar), clear of selection/toolbar/HUD.
 //! - `aids-on.png`: both aids toggled on (L+F pressed) - chips
 //!   accent-tinted, grid overlay + magnifier live in the same frame.
+//! - `aids-click.png`: the magnifier chip CLICKED through the production
+//!   funnel (injected motion + press + release) - the aid toggles with no
+//!   keyboard, the hovered chip carries the wash, and the click started no
+//!   selection drag.
+//! - `aids-no-selection.png`: no selection yet - the cluster docks at the
+//!   output's bottom-center edge (the documented fallback).
 //!
 //! Usage (from the workspace root):
 //!
@@ -36,6 +43,7 @@ use flowshot_ui::{
     register_counter_tool, register_pixelate_tools, register_selection_tools, register_shape_tools,
     register_text_tool,
 };
+use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
 
 const LOGICAL_W: f64 = 1920.0;
@@ -44,6 +52,12 @@ const SELECTION: LogicalRect = LogicalRect::from_raw(560.0, 300.0, 800.0, 450.0)
 /// The settled frame instant: reveal (<=180ms) and wash land, the 400ms
 /// tooltip delay has run for a hover injected at scene build.
 const SETTLED_MS: u64 = 500;
+/// The magnifier chip's center: the cluster docks above the selection's
+/// leading edge at (560, 300 - 24.8 - 8); the chip box is 104.4 x 24.8
+/// (base-14 font, 16.8 line, pad/gap 4, "Magnifier" = 9 chars * 14 * 0.6
+/// estimated advance).
+const CHIP_X: f64 = 612.2;
+const CHIP_Y: f64 = 279.6;
 
 fn main() -> ExitCode {
     match run() {
@@ -124,7 +138,40 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         &out.join("aids-on.png"),
     )?;
 
-    println!("wrote 4 evidence PNGs into {}", out.display());
+    let (mut scene, t0) = build_scene(&gpu)?;
+    scene
+        .core
+        .inject_event(SyntheticInput::pointer_moved(SLOT, CHIP_X, CHIP_Y));
+    scene.core.inject_event(SyntheticInput::pointer_button(
+        SLOT,
+        MouseButton::Left,
+        true,
+    ));
+    scene.core.inject_event(SyntheticInput::pointer_button(
+        SLOT,
+        MouseButton::Left,
+        false,
+    ));
+    render(
+        &gpu,
+        &mut scene,
+        t0 + Duration::from_millis(SETTLED_MS),
+        &out.join("aids-click.png"),
+    )?;
+
+    let (mut scene, t0) = build_scene(&gpu)?;
+    scene.core.selection_mut().set_rect(None);
+    scene
+        .core
+        .inject_event(SyntheticInput::pointer_moved(SLOT, 960.0, 540.0));
+    render(
+        &gpu,
+        &mut scene,
+        t0 + Duration::from_millis(SETTLED_MS),
+        &out.join("aids-no-selection.png"),
+    )?;
+
+    println!("wrote 6 evidence PNGs into {}", out.display());
     Ok(())
 }
 
