@@ -8,6 +8,7 @@
 #![allow(clippy::cast_precision_loss, clippy::match_same_arms)]
 
 pub mod button;
+pub mod chip;
 pub mod context_menu;
 pub mod focus;
 pub mod icon_button;
@@ -16,8 +17,10 @@ pub mod scroll_area;
 pub mod separator;
 pub mod slider;
 pub mod toggle;
+pub mod tooltip;
 
 pub use button::{Button, ButtonState};
+pub use chip::AidChip;
 pub use context_menu::{ContextMenu, ContextMenuEntry};
 pub use focus::{FocusRing, FocusTraversal};
 pub use icon_button::IconButton;
@@ -26,6 +29,7 @@ pub use scroll_area::ScrollArea;
 pub use separator::Separator;
 pub use slider::Slider;
 pub use toggle::Toggle;
+pub use tooltip::{TOOLTIP_DELAY, Tooltip, TooltipClock};
 
 /// Hover wash opacity (0-255): one ink (the contrast token) at a low alpha
 /// ramp - the design system's state language (hover < press < solid).

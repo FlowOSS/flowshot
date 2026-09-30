@@ -38,7 +38,8 @@ impl OverlayCore {
             self.selection.update_hover(clamped, now);
             if let Some(output) = self.router.output_for(slot) {
                 let selection = self.selection.rect();
-                self.chrome.hover(clamped, selection, output, now);
+                self.chrome
+                    .hover(clamped, &self.editor, selection, output, now);
             }
             // The deferred preselect (the AwaitFirstMotion contract)
             // applies on the FIRST motion, before the editor/selection see

@@ -18,6 +18,7 @@
 //! The draw-color sink is the F27 "drawColor persists to TOML on change"
 //! seam: the binary layer installs a writer; the lib stays pure.
 
+mod controls;
 mod input;
 
 use std::time::Instant;
@@ -30,6 +31,7 @@ use flowshot_core::config::UiConfig;
 use flowshot_core::geometry::OutputInfo;
 use flowshot_core::tokens::DesignTokens;
 
+use super::aids::AidsInput;
 use super::motion::ChromeMotion;
 use super::{ColorWheel, SizeHud, Toolbar, side_panel, toolbar::ToolbarButton};
 
@@ -50,9 +52,10 @@ pub struct ChromeState {
     pub(crate) color_wheel: ColorWheel,
     pub(crate) hud: SizeHud,
     pub(crate) motion: ChromeMotion,
+    pub(crate) aids: AidsInput,
     tokens: DesignTokens,
     panel_visible: bool,
-    grabbed: bool,
+    pub(crate) grabbed: bool,
     layer_drag: Option<LayerDrag>,
     draw_color_sink: Option<DrawColorSink>,
     pending_actions: Vec<Action>,
@@ -66,6 +69,7 @@ impl std::fmt::Debug for ChromeState {
             .field("color_wheel", &self.color_wheel)
             .field("hud", &self.hud)
             .field("motion", &self.motion)
+            .field("aids", &self.aids)
             .field("tokens", &self.tokens)
             .field("panel_visible", &self.panel_visible)
             .field("grabbed", &self.grabbed)
@@ -179,6 +183,7 @@ impl ChromeState {
     pub fn cancel_grab(&mut self) {
         self.grabbed = false;
         self.layer_drag = None;
+        self.aids.press = None;
     }
 
     /// Drains the toolbar's pending capture-completing actions (the
@@ -279,11 +284,13 @@ impl ChromeState {
         self.motion.settle_at(now)
     }
 
-    /// The funnel's motion seam: updates the toolbar hover wash from the
-    /// pointer position (every motion event, editor-consumed or not).
+    /// The funnel's motion seam: updates the toolbar and aid-chip hover
+    /// washes from the pointer position (every motion event,
+    /// editor-consumed or not).
     pub(crate) fn hover(
         &mut self,
         at: flowshot_core::geometry::LogicalPoint,
+        editor: &EditorState,
         selection: Option<flowshot_core::geometry::LogicalRect>,
         output: &OutputInfo,
         now: Instant,
@@ -293,6 +300,7 @@ impl ChromeState {
             .toolbar
             .button_at(at, selection, &self.tokens, scale, output);
         self.motion.set_hover(index, now);
+        self.aids_hover(at, editor, selection, output);
     }
 }
 
@@ -303,6 +311,7 @@ impl Default for ChromeState {
             color_wheel: ColorWheel::default(),
             hud: SizeHud::default(),
             motion: ChromeMotion::new(&DesignTokens::default(), Instant::now()),
+            aids: AidsInput::default(),
             tokens: DesignTokens::default(),
             panel_visible: false,
             grabbed: false,

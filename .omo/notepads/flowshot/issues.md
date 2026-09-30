@@ -257,3 +257,9 @@ orchestrator was concurrently re-capturing the real oracle at the same path — 
 deleted the real 7.3MB capture. LESSON: never hand a worker a destructive instruction on a
 path the orchestrator is actively writing; sequence destructive steps or namespace them.
 Caught by the F1 re-reviewer's filesystem check (the txt claimed the artifact existed).
+
+## 2026-09-29: portal_ladder_end_to_end joins the load-sensitive test class
+crates/flowshot-daemon/tests/portal_shortcuts.rs::portal_ladder_end_to_end failed once under
+full-workspace load (15s runtime = its internal timeout tripped); passes 3/3 isolated (0.37s).
+Same class as the kwin stub deadline tests. ACTION (CI/todo): the private-broker stub tests
+should use generous-but-bounded waits; if CI shows this flake, bump the stub timeouts.

@@ -81,7 +81,7 @@ use crate::selection::CascadeState;
 use paint::parse_draw_color;
 
 pub use effect::{EffectKind, PixelEffect, effect_texture_id};
-pub use keys::{ToolShortcuts, ZOrderAction, digit_for};
+pub use keys::{AidToggle, ToolShortcuts, ZOrderAction, digit_for};
 pub use kind::ToolKind;
 pub use magnifier::{
     ARM_ALPHA, CURSOR_OFFSET, GRID_MIN_ZOOM, MAG_PIXELS, MagnifierSample, MagnifierTexture,

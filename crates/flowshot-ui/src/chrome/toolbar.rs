@@ -13,11 +13,12 @@ use crate::chrome::motion::ChromeMotion;
 use crate::editor::paint::local_rect;
 use crate::editor::{EditorState, ToolKind};
 use crate::render::{Color, DisplayList, Point, Rect, ShadowSpec, Shape, TextureId};
-use crate::widgets::{ButtonState, IconButton, icons::Icon};
+use crate::widgets::{ButtonState, IconButton, Tooltip, icons::Icon};
 use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
 
 use super::color_wheel::BUTTON_BASE_SIZE;
+use super::tooltips::button_tooltip;
 
 /// A button on the toolbar.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -179,7 +180,7 @@ impl Toolbar {
 
         let count = self.buttons.len();
         let slide = tokens.spacing.medium as f32 * scale;
-        for (index, (button, brect)) in self.buttons.iter().zip(button_rects).enumerate() {
+        for (index, (button, brect)) in self.buttons.iter().zip(&button_rects).enumerate() {
             let progress = motion.reveal_progress(now, index, count);
             if progress <= 0.0 {
                 continue;
@@ -201,6 +202,23 @@ impl Toolbar {
                 .wash(motion.wash(now, index))
                 .alpha(progress);
             icon_btn.draw(list, tokens, scale, atlas);
+        }
+
+        // The 400ms tooltip (F27): anchored to the hovered button's FINAL
+        // cell (hit geometry == paint geometry), text from the ACTIVE
+        // bindings. Drawn last so it tops the plate and every cell.
+        if let Some(hovered) = motion.tooltip_button(now)
+            && let (Some(button), Some(cell)) =
+                (self.buttons.get(hovered), button_rects.get(hovered))
+        {
+            let bounds = Rect::from_parts(
+                0.0,
+                0.0,
+                output.physical_size.width.0 as f32,
+                output.physical_size.height.0 as f32,
+            );
+            let text = button_tooltip(button, editor.shortcuts());
+            Tooltip::anchored(*cell, &text, tokens, scale, bounds).draw(list, tokens, scale);
         }
     }
 }
