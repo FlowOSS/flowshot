@@ -595,6 +595,42 @@ fn key_l_toggles_the_magnifier() {
 }
 
 #[test]
+fn rebound_aid_keys_follow_the_keymap() {
+    let mut editor = EditorState::default();
+    editor
+        .shortcuts_mut()
+        .rebind_aids(KeyCode::KeyV, KeyCode::KeyH);
+    // The shipped keys go inert; the rebound keys toggle.
+    assert!(
+        !editor
+            .key_press(&env(), KeyCode::KeyL, false, None)
+            .consumed
+    );
+    assert!(!editor.magnifier_visible());
+    assert!(
+        !editor
+            .key_press(&env(), KeyCode::KeyF, false, None)
+            .consumed
+    );
+    assert!(!editor.grid_visible());
+    assert!(
+        editor
+            .key_press(&env(), KeyCode::KeyV, false, None)
+            .consumed
+    );
+    assert!(editor.magnifier_visible());
+    assert!(
+        editor
+            .key_press(&env(), KeyCode::KeyH, false, None)
+            .consumed
+    );
+    assert!(editor.grid_visible());
+    // Auto-repeat never re-toggles the rebound aids either.
+    assert!(!editor.key_press(&env(), KeyCode::KeyV, true, None).consumed);
+    assert!(editor.magnifier_visible());
+}
+
+#[test]
 fn config_seeds_and_configure_reprojects_the_magnifier() {
     let editor = editor_shaped(MagnifierShape::Circle);
     assert!(editor.magnifier_visible());

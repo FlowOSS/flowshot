@@ -7,6 +7,7 @@ use super::*;
 use crate::motion::{
     BUTTON_WASH_MS, HANDLE_GROW_MS, PANEL_ENTER_MS, REVEAL_TOTAL_MS, WHEEL_ENTER_MS,
 };
+use crate::widgets::TOOLTIP_DELAY;
 
 fn tokens() -> DesignTokens {
     DesignTokens::default()
@@ -100,6 +101,50 @@ fn hover_switch_crossfades_wash_between_buttons() {
     let mid = switch + Duration::from_millis(BUTTON_WASH_MS / 4);
     assert!(motion.wash(mid, 0) < 1.0 && motion.wash(mid, 0) > 0.0);
     assert!(motion.wash(mid, 1) > 0.0 && motion.wash(mid, 1) < 1.0);
+}
+
+#[test]
+fn tooltip_arms_after_the_delay_and_wakes_the_scheduler() {
+    let (mut motion, t0) = motion(3);
+    motion.set_hover(Some(2), t0);
+    assert_eq!(motion.tooltip_button(t0), None, "dark during the delay");
+    let after_wash = t0 + Duration::from_millis(BUTTON_WASH_MS);
+    assert!(
+        motion.active_at(after_wash),
+        "the pending show keeps the frame scheduler awake after the wash settles"
+    );
+    assert_eq!(motion.settle_at(after_wash), Some(t0 + TOOLTIP_DELAY));
+    let shown = t0 + TOOLTIP_DELAY;
+    assert_eq!(motion.tooltip_button(shown), Some(2));
+    assert!(!motion.active_at(shown), "shown: nothing left to schedule");
+    assert!(motion.settle_at(shown).is_none());
+}
+
+#[test]
+fn tooltip_delay_restarts_on_switch_and_press_consumes_it() {
+    let (mut motion, t0) = motion(2);
+    motion.set_hover(Some(0), t0);
+    let switch = t0 + TOOLTIP_DELAY;
+    motion.set_hover(Some(1), switch);
+    assert_eq!(motion.tooltip_button(switch), None, "switch restarts");
+    assert_eq!(motion.tooltip_button(switch + TOOLTIP_DELAY), Some(1));
+    // A press consumes the tooltip; it stays away until re-entry.
+    motion.set_press(Some(1), switch);
+    motion.set_press(None, switch + Duration::from_millis(50));
+    assert_eq!(motion.tooltip_button(switch + TOOLTIP_DELAY * 2), None);
+    motion.set_hover(None, switch);
+    motion.set_hover(Some(1), switch);
+    assert_eq!(motion.tooltip_button(switch + TOOLTIP_DELAY), Some(1));
+}
+
+#[test]
+fn reduced_motion_shows_the_tooltip_immediately() {
+    let (mut motion, t0) = motion(2);
+    motion.set_reduced(true);
+    motion.set_hover(Some(1), t0);
+    assert_eq!(motion.tooltip_button(t0), Some(1));
+    assert!(!motion.active_at(t0));
+    assert!(motion.settle_at(t0).is_none());
 }
 
 #[test]

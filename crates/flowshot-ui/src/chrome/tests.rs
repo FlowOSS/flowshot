@@ -281,6 +281,50 @@ fn toolbar_anchors_below_flips_above_and_stays_on_screen() {
 }
 
 #[test]
+fn toolbar_tooltip_waits_the_delay_then_shows_the_active_binding() {
+    let mut core = fixture();
+    let (x, y) = center(toolbar_buttons(&core, 0)); // default order: arrow
+    move_to(&mut core, x, y);
+    let hovered = std::time::Instant::now();
+
+    let painted_texts = |core: &OverlayCore, now: std::time::Instant| -> Vec<String> {
+        let mut list = DisplayList::new();
+        core.chrome().paint_into(
+            &mut list,
+            core.editor(),
+            core.selection(),
+            ICON_ATLAS_ID,
+            &fixture_output(),
+            now,
+        );
+        list.iter()
+            .filter_map(|command| match command {
+                crate::render::Command::Text(text) => Some(text.text.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+
+    // During the 400ms delay the toolbar paints no text at all.
+    assert!(painted_texts(&core, hovered).is_empty());
+    let shown = hovered + crate::widgets::TOOLTIP_DELAY;
+    assert!(
+        painted_texts(&core, shown).contains(&"Arrow — pointed arrow [A]".to_owned()),
+        "the tooltip shows the description plus the bound key"
+    );
+
+    // A rebind moves the tooltip key (it reads the ACTIVE binding).
+    core.editor_mut()
+        .shortcuts_mut()
+        .rebind(ToolKind::Arrow, Some(KeyCode::KeyW));
+    assert!(painted_texts(&core, shown).contains(&"Arrow — pointed arrow [W]".to_owned()));
+
+    // Leaving the button hides the tooltip.
+    move_to(&mut core, x, y + 200.0);
+    assert!(painted_texts(&core, shown + crate::widgets::TOOLTIP_DELAY).is_empty());
+}
+
+#[test]
 fn toolbar_tool_button_activates_and_blocks_the_draw_underneath() {
     // Widget parity: a press on the toolbar never reaches the F27 chain -
     // the pencil (active!) starts no stroke and the button's tool activates.

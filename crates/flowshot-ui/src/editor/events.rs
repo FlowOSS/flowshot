@@ -15,7 +15,7 @@ mod pointer;
 use flowshot_core::geometry::LogicalPoint;
 use winit::keyboard::KeyCode;
 
-use super::keys::{ZOrderAction, digit_for};
+use super::keys::{AidToggle, ZOrderAction, digit_for};
 use super::size::stepped;
 use super::tool::{EditorContext, Tool};
 use super::types::{EditorEnv, EditorUpdate};
@@ -71,17 +71,14 @@ impl EditorState {
                 self.toggle_tool(kind);
                 return EditorUpdate::eaten(true);
             }
-            // Grid toggle key: unbound by default, rebindable.
-            if !repeat && code == KeyCode::KeyF {
-                self.toggle_grid();
-                return EditorUpdate::eaten(true);
-            }
-            // Magnifier toggle key: F12/Flameshot binds no
-            // magnifier key (recognizedShortcuts has no TYPE_MAGNIFIER
-            // row), so L (lens) ships as the unbound-key choice - the
-            // grid-F precedent, documented in the magnifier module.
-            if !repeat && code == KeyCode::KeyL {
-                self.toggle_magnifier();
+            // Aid toggles (magnifier/grid): rebindable slots in the key
+            // map - the aid-indicator chips read the same bindings, so a
+            // rebind is reflected in both the dispatch and the display.
+            if !repeat && let Some(aid) = self.shortcuts.aid_for_key(code) {
+                match aid {
+                    AidToggle::Magnifier => self.toggle_magnifier(),
+                    AidToggle::Grid => self.toggle_grid(),
+                }
                 return EditorUpdate::eaten(true);
             }
             // Z-order keys ship UNBOUND (panel-driven); when

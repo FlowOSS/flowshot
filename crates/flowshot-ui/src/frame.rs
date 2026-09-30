@@ -67,6 +67,12 @@ pub fn build_overlay_frame(
             output,
             now,
         );
+        // The quick-aids cluster rides the cursor-owning slot only (the
+        // crosshair/magnifier rule: one cluster, where the user looks).
+        if core.cursor().is_some_and(|cursor| cursor.slot == slot) {
+            core.chrome()
+                .paint_aids(&mut list, core.editor(), core.selection().rect(), output);
+        }
     }
     let magnifier = magnifier_pass(core, slot, &mut list, surface);
     OverlayFrame { list, magnifier }

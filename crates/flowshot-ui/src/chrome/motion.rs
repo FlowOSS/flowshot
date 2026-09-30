@@ -20,6 +20,7 @@ use std::time::{Duration, Instant};
 use flowshot_core::tokens::DesignTokens;
 
 use crate::motion::{MotionSpec, StaggerSpec, Tween, stagger_progress};
+use crate::widgets::TooltipClock;
 
 /// The resolved transition specs (curves from the token set).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -58,6 +59,7 @@ pub struct ChromeMotion {
     wash: Vec<Tween>,
     hover: Option<usize>,
     press: Option<usize>,
+    tooltip: TooltipClock,
 }
 
 impl ChromeMotion {
@@ -76,6 +78,7 @@ impl ChromeMotion {
             wash: Vec::new(),
             hover: None,
             press: None,
+            tooltip: TooltipClock::default(),
         }
     }
 
@@ -89,6 +92,7 @@ impl ChromeMotion {
             .resize(buttons, Tween::settled(0.0, self.wash_spec(), now));
         self.hover = None;
         self.press = None;
+        self.tooltip.reset();
     }
 
     /// The reduced-motion switch: every spec degrades to
@@ -128,6 +132,7 @@ impl ChromeMotion {
         }
         let previous = self.hover;
         self.hover = index;
+        self.tooltip.retarget(index, now);
         if let Some(old) = previous.filter(|old| self.press != Some(*old)) {
             self.retarget_wash(old, 0.0, now);
         }
@@ -144,6 +149,11 @@ impl ChromeMotion {
         }
         let previous = self.press;
         self.press = index;
+        if index.is_some() {
+            // A press consumes the tooltip (Qt parity: it stays away until
+            // the pointer leaves and re-enters the button).
+            self.tooltip.reset();
+        }
         if let Some(old) = previous {
             let rest = f64::from(self.hover == Some(old));
             self.retarget_wash(old, rest, now);
@@ -207,6 +217,30 @@ impl ChromeMotion {
             .map_or(0.0, |tween| tween.value_at(now))
     }
 
+    /// The button whose tooltip shows at `now` (the 400ms hover delay has
+    /// run and no press consumed it; `None` = no tooltip this frame).
+    /// Reduced motion snaps the tooltip to immediate (its contract: every
+    /// transition at target, nothing scheduled).
+    #[must_use]
+    pub fn tooltip_button(&self, now: Instant) -> Option<usize> {
+        if self.press.is_some() {
+            return None;
+        }
+        if self.reduced {
+            return self.hover;
+        }
+        self.tooltip.ready(now)
+    }
+
+    /// The pending tooltip-show wake (the frame scheduler's seam); `None`
+    /// under reduced motion (immediate show) and while a press holds.
+    fn tooltip_wake(&self, now: Instant) -> Option<Instant> {
+        if self.reduced || self.press.is_some() {
+            return None;
+        }
+        self.tooltip.deadline(now)
+    }
+
     /// Whether any chrome transition is still moving at `now` (the shell's
     /// per-frame redraw test).
     #[must_use]
@@ -215,6 +249,7 @@ impl ChromeMotion {
             || self.panel.active_at(now)
             || self.wheel.active_at(now)
             || self.wash.iter().any(|tween| tween.active_at(now))
+            || self.tooltip_wake(now).is_some()
     }
 
     /// The earliest FUTURE settle deadline while anything moves (`None`
@@ -231,6 +266,7 @@ impl ChromeMotion {
             .into_iter()
             .chain(self.wheel.deadline())
             .chain(self.wash.iter().filter_map(Tween::deadline))
+            .chain(self.tooltip_wake(now))
             .chain(self.reveal_start.and_then(|start| {
                 let total = if self.reduced {
                     Duration::ZERO

@@ -24,6 +24,17 @@ pub enum ZOrderAction {
     Lower,
 }
 
+/// An in-session view aid the key map toggles (the aid-indicator chips
+/// read the SAME slots, so a rebind is reflected everywhere).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AidToggle {
+    /// The pixel magnifier (ships on `L`, lens - F12 binds no magnifier
+    /// key, so `L` is the documented unbound-key choice).
+    Magnifier,
+    /// The snapping grid overlay (ships on `F`, the grid-F precedent).
+    Grid,
+}
+
 /// The rebindable editor key map.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolShortcuts {
@@ -32,6 +43,8 @@ pub struct ToolShortcuts {
     redo: KeyCode,
     raise: Option<KeyCode>,
     lower: Option<KeyCode>,
+    magnifier: KeyCode,
+    grid: KeyCode,
 }
 
 impl Default for ToolShortcuts {
@@ -45,6 +58,8 @@ impl Default for ToolShortcuts {
             redo: KeyCode::KeyZ,
             raise: None,
             lower: None,
+            magnifier: KeyCode::KeyL,
+            grid: KeyCode::KeyF,
         }
     }
 }
@@ -133,6 +148,39 @@ impl ToolShortcuts {
     pub fn rebind_z_order(&mut self, raise: Option<KeyCode>, lower: Option<KeyCode>) {
         self.raise = raise;
         self.lower = lower;
+    }
+
+    /// The aid a plain (unmodified) key press toggles. Tool keys are
+    /// dispatched FIRST by the event surface, so a tool binding shadows an
+    /// aid on the same key; between the aids, a duplicate binding resolves
+    /// to the magnifier (the first slot - the z-order duplicate rule).
+    #[must_use]
+    pub fn aid_for_key(&self, code: KeyCode) -> Option<AidToggle> {
+        if code == self.magnifier {
+            return Some(AidToggle::Magnifier);
+        }
+        if code == self.grid {
+            return Some(AidToggle::Grid);
+        }
+        None
+    }
+
+    /// The current magnifier toggle key (the aid-chip read seam).
+    #[must_use]
+    pub const fn magnifier_key(&self) -> KeyCode {
+        self.magnifier
+    }
+
+    /// The current grid toggle key (the aid-chip read seam).
+    #[must_use]
+    pub const fn grid_key(&self) -> KeyCode {
+        self.grid
+    }
+
+    /// Rebinds the aid toggle keys (the settings-surface seam).
+    pub fn rebind_aids(&mut self, magnifier: KeyCode, grid: KeyCode) {
+        self.magnifier = magnifier;
+        self.grid = grid;
     }
 }
 
@@ -228,6 +276,40 @@ mod tests {
         assert!(shortcuts.is_undo(KeyCode::KeyU));
         assert!(shortcuts.is_redo(KeyCode::KeyY));
         assert!(!shortcuts.is_undo(KeyCode::KeyZ));
+    }
+
+    #[test]
+    fn aid_keys_default_to_l_and_f_and_rebind() {
+        let mut shortcuts = ToolShortcuts::default();
+        assert_eq!(
+            shortcuts.aid_for_key(KeyCode::KeyL),
+            Some(AidToggle::Magnifier)
+        );
+        assert_eq!(shortcuts.aid_for_key(KeyCode::KeyF), Some(AidToggle::Grid));
+        assert_eq!(shortcuts.aid_for_key(KeyCode::KeyP), None);
+        assert_eq!(shortcuts.magnifier_key(), KeyCode::KeyL);
+        assert_eq!(shortcuts.grid_key(), KeyCode::KeyF);
+
+        shortcuts.rebind_aids(KeyCode::KeyV, KeyCode::KeyH);
+        assert_eq!(shortcuts.aid_for_key(KeyCode::KeyL), None);
+        assert_eq!(shortcuts.aid_for_key(KeyCode::KeyF), None);
+        assert_eq!(
+            shortcuts.aid_for_key(KeyCode::KeyV),
+            Some(AidToggle::Magnifier)
+        );
+        assert_eq!(shortcuts.aid_for_key(KeyCode::KeyH), Some(AidToggle::Grid));
+        assert_eq!(shortcuts.magnifier_key(), KeyCode::KeyV);
+        assert_eq!(shortcuts.grid_key(), KeyCode::KeyH);
+    }
+
+    #[test]
+    fn duplicate_aid_binding_resolves_to_the_magnifier() {
+        let mut shortcuts = ToolShortcuts::default();
+        shortcuts.rebind_aids(KeyCode::KeyK, KeyCode::KeyK);
+        assert_eq!(
+            shortcuts.aid_for_key(KeyCode::KeyK),
+            Some(AidToggle::Magnifier)
+        );
     }
 
     #[test]

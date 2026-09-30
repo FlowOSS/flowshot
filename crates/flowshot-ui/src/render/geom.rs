@@ -102,6 +102,17 @@ impl Rect {
         )
     }
 
+    /// Whether two rects overlap (edge-touching rects do NOT intersect -
+    /// the chrome layout's abutment rule: a widget flush against another
+    /// is not covering it).
+    #[must_use]
+    pub fn intersects(&self, other: &Self) -> bool {
+        self.origin.x < other.right()
+            && other.origin.x < self.right()
+            && self.origin.y < other.bottom()
+            && other.origin.y < self.bottom()
+    }
+
     /// The rect grown by `amount` on every side (negative shrinks).
     #[must_use]
     pub fn expand(self, amount: f32) -> Self {
@@ -186,6 +197,17 @@ mod tests {
     fn rect_expand_grows_on_every_side() {
         let rect = Rect::from_parts(10.0, 10.0, 10.0, 10.0).expand(2.0);
         assert_eq!(rect, Rect::from_parts(8.0, 8.0, 14.0, 14.0));
+    }
+
+    #[test]
+    fn rect_intersects_overlaps_only() {
+        let a = Rect::from_parts(10.0, 10.0, 20.0, 20.0);
+        assert!(a.intersects(&Rect::from_parts(20.0, 20.0, 20.0, 20.0)));
+        assert!(a.intersects(&Rect::from_parts(0.0, 0.0, 100.0, 100.0)));
+        // Edge-touching and disjoint rects do not intersect.
+        assert!(!a.intersects(&Rect::from_parts(30.0, 10.0, 20.0, 20.0)));
+        assert!(!a.intersects(&Rect::from_parts(10.0, 30.0, 20.0, 20.0)));
+        assert!(!a.intersects(&Rect::from_parts(100.0, 100.0, 5.0, 5.0)));
     }
 
     #[test]
