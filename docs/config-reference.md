@@ -3,7 +3,7 @@
 FlowShot reads one TOML file: `~/.config/flowshot/flowshot.toml` (XDG config
 home respected). The same content ships as the `flowshot-config(5)` man page.
 
-This document mirrors `crates/flowshot-core/src/config.rs` (schema version 2).
+This document mirrors `crates/flowshot-core/src/config.rs` (schema version 3).
 It is hand-synced to the source; field names below are the exact TOML keys.
 
 ## Loading semantics
@@ -22,11 +22,12 @@ It is hand-synced to the source; field names below are the exact TOML keys.
 
 | Key | Type | Default | Notes |
 |---|---|---|---|
-| `config_version` | integer | `2` | Schema version. Managed by FlowShot; do not edit. |
+| `config_version` | integer | `3` | Schema version. Managed by FlowShot; do not edit. |
 
 Migration history: v0 (unversioned legacy) gains the version stamp; v1 to v2
 renames `[save] filename_template` to `filename_pattern` (an explicit
-`filename_pattern` always wins over the stale key).
+`filename_pattern` always wins over the stale key); v2 to v3 adds the
+`[telemetry]` group with every consent flag false.
 
 ## `[capture]`
 
@@ -172,6 +173,23 @@ toolbar_buttons = [
 | `notifications` | boolean | `true` | Desktop notifications for capture events. Gates every toast, including the one-time shortcut-registration nudge. |
 | `startup_launch` | boolean | `false` | Install an autostart entry that launches the daemon at login. |
 
+## `[telemetry]`
+
+Opt-in error telemetry to FlowShot's self-hosted Sentry instance. Nothing is
+collected while `enabled` is false — the client is never even initialized (no
+network, no threads). The endpoint DSN is a build-time constant, never a
+config key. The first-launch consent dialog asks once and writes the answers
+back to this group.
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | boolean | `false` | Master switch (the dialog recommends ON). When false, telemetry is fully inert. |
+| `include_technical_details` | boolean | `false` | Tier-2 technical payload: full GPU adapter string, exact kernel release, monitor layout (connector + size + scale), and a per-install random UUID. Privacy/GDPR-relevant (the dialog recommends OFF). Without it, events carry only the coarse tier-1 taxonomy (distro, arch, package manager, session type, desktop family, GPU family) and path-scrubbed error reports. |
+| `asked_on_first_launch` | boolean | `false` | Managed by FlowShot: records that the consent dialog was answered so it is never shown again. Not meant to be hand-edited. |
+
+The per-install UUID lives at `~/.local/share/flowshot/telemetry-id` (XDG
+data home respected); deleting the file regenerates it.
+
 ## Deliberate omissions (Amendment #3)
 
 FlowShot is capability-compatible with Flameshot, not configuration-compatible.
@@ -217,7 +235,7 @@ What a fresh `flowshot.toml` contains after FlowShot first writes it
 (`last_region` appears only after a capture):
 
 ```toml
-config_version = 2
+config_version = 3
 
 [capture]
 hide_cursor = false
@@ -284,4 +302,9 @@ toolbar_buttons = ["arrow", "rectangle", "circle", "marker", "text", "pixelate",
 tray = false
 notifications = true
 startup_launch = false
+
+[telemetry]
+enabled = false
+include_technical_details = false
+asked_on_first_launch = false
 ```

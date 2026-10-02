@@ -17,6 +17,10 @@ pub const CONFIG_FILE_NAME: &str = "flowshot.toml";
 /// restore-data in config dir"; contents per [`crate::shortcut::persist`]).
 pub const SHORTCUTS_RESTORE_FILE_NAME: &str = "shortcuts-restore.json";
 
+/// The per-install telemetry identifier file name under the XDG data home
+/// ([`crate::telemetry`] tier-2 payload; deleting the file regenerates it).
+pub const TELEMETRY_ID_FILE_NAME: &str = "telemetry-id";
+
 /// Resolves `$XDG_CONFIG_HOME`, falling back to `$HOME/.config` (the XDG
 /// Base Directory spec default).
 ///
@@ -69,6 +73,42 @@ pub fn shortcuts_restore_path_in(config_home: &Path) -> PathBuf {
     config_home
         .join(CONFIG_DIR_NAME)
         .join(SHORTCUTS_RESTORE_FILE_NAME)
+}
+
+/// Resolves `$XDG_DATA_HOME`, falling back to `$HOME/.local/share` (the XDG
+/// Base Directory spec default).
+///
+/// # Errors
+///
+/// [`DaemonError::Env`] when neither variable yields a usable path.
+pub fn xdg_data_home() -> Result<PathBuf, DaemonError> {
+    if let Some(dir) = std::env::var_os("XDG_DATA_HOME")
+        && !dir.is_empty()
+    {
+        return Ok(PathBuf::from(dir));
+    }
+    let home = std::env::var_os("HOME").ok_or(DaemonError::Env("HOME"))?;
+    if home.is_empty() {
+        return Err(DaemonError::Env("HOME"));
+    }
+    Ok(PathBuf::from(home).join(".local").join("share"))
+}
+
+/// The default telemetry install-id path:
+/// `<xdg_data_home>/flowshot/telemetry-id`.
+///
+/// # Errors
+///
+/// [`DaemonError::Env`] when the data home cannot be resolved.
+pub fn default_telemetry_id_path() -> Result<PathBuf, DaemonError> {
+    Ok(telemetry_id_path_in(&xdg_data_home()?))
+}
+
+/// Pure path composition (the injected-base twin of
+/// [`default_telemetry_id_path`]).
+#[must_use]
+pub fn telemetry_id_path_in(data_home: &Path) -> PathBuf {
+    data_home.join(CONFIG_DIR_NAME).join(TELEMETRY_ID_FILE_NAME)
 }
 
 #[cfg(test)]

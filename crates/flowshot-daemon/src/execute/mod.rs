@@ -194,9 +194,49 @@ pub async fn execute(command: DaemonCommand, ctx: &ExecCtx) -> Result<ExecOutcom
             elapsed_us = elapsed(started),
             "perf.done"
         ),
-        Err(error) => tracing::error!(%error, "execution failed"),
+        Err(error) => {
+            tracing::error!(%error, "execution failed");
+            capture_failure(error);
+        }
     }
     outcome
+}
+
+/// The executor's telemetry seam: captures one typed failure with the
+/// derived `backend` tag (the `surface` tag rides every event from init).
+/// No-op while telemetry is disabled. Both funnels call this: the daemon
+/// side ([`execute`]) and the CLI one-shot side (`flowshot-cli`'s
+/// exit-code mapping).
+pub fn capture_failure(error: &ExecuteError) {
+    match backend_tag(error) {
+        Some(backend) => crate::telemetry::capture_error_tagged(error, &[("backend", &backend)]),
+        None => crate::telemetry::capture_error(error),
+    }
+}
+
+/// The capture-`backend` tag for one executor failure: the failing ladder
+/// rung's protocol name, `none` for the exhausted-ladder class, `layout`
+/// for the region miss, `probe` for the session probe/connect failures,
+/// `session-child` for the child-process failures.
+fn backend_tag(error: &ExecuteError) -> Option<String> {
+    match error {
+        ExecuteError::Capture(capture) => Some(match capture {
+            CaptureError::NoBackendAvailable { .. } => "none".to_owned(),
+            CaptureError::Timeout { backend }
+            | CaptureError::Decode { backend, .. }
+            | CaptureError::Backend { backend, .. } => backend.to_string(),
+            CaptureError::RegionOutsideLayout { .. } => "layout".to_owned(),
+        }),
+        ExecuteError::Probe(_) | ExecuteError::Connect(_) => Some("probe".to_owned()),
+        ExecuteError::Child { .. } => Some("session-child".to_owned()),
+        ExecuteError::Usage(_)
+        | ExecuteError::Ui(_)
+        | ExecuteError::Export(_)
+        | ExecuteError::Clipboard(_)
+        | ExecuteError::Io(_)
+        | ExecuteError::Task(_)
+        | ExecuteError::Daemon(_) => None,
+    }
 }
 
 async fn route(

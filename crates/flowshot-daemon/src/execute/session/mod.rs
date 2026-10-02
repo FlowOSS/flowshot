@@ -270,6 +270,14 @@ pub fn run_child(spec_path: &Path) -> u8 {
             return 1;
         }
     };
+    // Per-child telemetry (the spec's config + the surface its kind
+    // names): the guard lives for the whole child, and the sentry panic
+    // hook covers the child's process-global panics from here on. Typed
+    // child failures are NOT captured here - they cross the process
+    // boundary as `SessionResult::Failed` and the PARENT captures them
+    // once (`ExecuteError::Child`), so one failure is one event.
+    let config = load_config(spec.config_path.as_deref());
+    let _telemetry = crate::telemetry::init(&config.telemetry, spec.kind.clone().into());
     let result = dispatch_child(&spec);
     let code = match &result {
         SessionResult::Failed { exit_code, .. } => *exit_code,

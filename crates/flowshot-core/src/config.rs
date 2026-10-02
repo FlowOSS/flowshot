@@ -1,10 +1,10 @@
 //! Grouped TOML configuration schema for `FlowShot`.
 //!
 //! The config is organized into semantic groups (`[capture]`, `[save]`,
-//! `[editor]`, `[tools.*]`, `[pin]`, `[upload]`, `[ui]`, `[daemon]`) rather
-//! than a flat key dump. A top-level `config_version` field drives forward
-//! migration: older on-disk configs are upgraded step-by-step to
-//! [`CONFIG_VERSION`] before deserialization.
+//! `[editor]`, `[tools.*]`, `[pin]`, `[upload]`, `[ui]`, `[daemon]`,
+//! `[telemetry]`) rather than a flat key dump. A top-level `config_version`
+//! field drives forward migration: older on-disk configs are upgraded
+//! step-by-step to [`CONFIG_VERSION`] before deserialization.
 //!
 //! # Examples
 //!
@@ -27,7 +27,7 @@ use thiserror::Error;
 use crate::tokens::{Palette, Typography};
 
 /// Current config schema version written by this build.
-pub const CONFIG_VERSION: u32 = 2;
+pub const CONFIG_VERSION: u32 = 3;
 
 /// TOML key holding the schema version.
 const VERSION_KEY: &str = "config_version";
@@ -462,6 +462,29 @@ impl Default for DaemonConfig {
     }
 }
 
+/// `[telemetry]` — opt-in error telemetry (self-hosted Sentry).
+///
+/// Two-tier consent: [`TelemetryConfig::enabled`] is the master switch
+/// (the first-launch dialog recommends ON); `include_technical_details`
+/// additionally unlocks the GDPR-relevant technical payload (tier 2,
+/// recommended OFF). Both default to false — nothing is collected until
+/// the user opts in — and `asked_on_first_launch` records that the consent
+/// dialog was answered so it is asked exactly once. The endpoint DSN is a
+/// build-time constant in the daemon's telemetry module, NEVER a config
+/// field.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TelemetryConfig {
+    /// Master switch. When false the telemetry client is never
+    /// initialized: zero network, zero threads.
+    pub enabled: bool,
+    /// Include the tier-2 technical payload (full GPU adapter string,
+    /// exact kernel release, monitor layout, per-install UUID).
+    pub include_technical_details: bool,
+    /// Whether the first-launch consent dialog has been answered.
+    pub asked_on_first_launch: bool,
+}
+
 /// Root configuration document.
 ///
 /// Field order matters for TOML serialization: the scalar `config_version`
@@ -488,6 +511,8 @@ pub struct Config {
     pub ui: UiConfig,
     /// Daemon behavior.
     pub daemon: DaemonConfig,
+    /// Opt-in error telemetry consent.
+    pub telemetry: TelemetryConfig,
 }
 
 impl Default for Config {
@@ -502,6 +527,7 @@ impl Default for Config {
             upload: UploadConfig::default(),
             ui: UiConfig::default(),
             daemon: DaemonConfig::default(),
+            telemetry: TelemetryConfig::default(),
         }
     }
 }
@@ -515,7 +541,11 @@ type MigrationFn = fn(&mut toml::Table) -> Result<(), String>;
 /// Adding a new schema version means appending `(old_version, step_fn)` and
 /// bumping [`CONFIG_VERSION`]; existing on-disk configs are upgraded
 /// automatically on load.
-const MIGRATIONS: &[(u32, MigrationFn)] = &[(0, migrate_v0_to_v1), (1, migrate_v1_to_v2)];
+const MIGRATIONS: &[(u32, MigrationFn)] = &[
+    (0, migrate_v0_to_v1),
+    (1, migrate_v1_to_v2),
+    (2, migrate_v2_to_v3),
+];
 
 /// v0 (unversioned legacy files) -> v1: introduce `config_version`.
 ///
@@ -537,6 +567,26 @@ fn migrate_v1_to_v2(table: &mut toml::Table) -> Result<(), String> {
         && !save.contains_key("filename_pattern")
     {
         save.insert("filename_pattern".to_owned(), pattern);
+    }
+    Ok(())
+}
+
+/// v2 -> v3: add the `[telemetry]` group with both consent flags false.
+///
+/// Old files gain the group explicitly (opt-in telemetry must never be
+/// implied by absence); an existing group is left untouched.
+#[allow(clippy::unnecessary_wraps)] // Uniform fallible signature for the registry.
+fn migrate_v2_to_v3(table: &mut toml::Table) -> Result<(), String> {
+    if !table.contains_key("telemetry") {
+        let mut telemetry = toml::Table::new();
+        for key in [
+            "enabled",
+            "include_technical_details",
+            "asked_on_first_launch",
+        ] {
+            telemetry.insert(key.to_owned(), toml::Value::Boolean(false));
+        }
+        table.insert("telemetry".to_owned(), toml::Value::Table(telemetry));
     }
     Ok(())
 }
@@ -726,6 +776,11 @@ mod tests {
 
         // [daemon]
         assert!(!config.daemon.tray);
+
+        // [telemetry] — opt-in: every consent flag defaults to false.
+        assert!(!config.telemetry.enabled);
+        assert!(!config.telemetry.include_technical_details);
+        assert!(!config.telemetry.asked_on_first_launch);
     }
 
     #[test]
@@ -905,5 +960,56 @@ mod tests {
         assert!(!config.daemon.tray);
         assert!(config.daemon.notifications);
         assert!(!config.daemon.startup_launch);
+    }
+
+    #[test]
+    fn v2_config_gains_the_telemetry_group_on_migration() -> Result<(), ConfigError> {
+        // Given: a version-2 file with no [telemetry] group.
+        let v2 = r"
+            config_version = 2
+
+            [daemon]
+            tray = true
+        ";
+        // When: it is loaded through the migration chain.
+        let config = Config::from_toml_str(v2)?;
+        // Then: the version stamp advanced and the group exists with both
+        // consent flags false, while the v2 content survived.
+        assert_eq!(config.config_version, CONFIG_VERSION);
+        assert_eq!(config.telemetry, TelemetryConfig::default());
+        assert!(config.daemon.tray);
+        Ok(())
+    }
+
+    #[test]
+    fn v2_migration_does_not_clobber_an_existing_telemetry_group() -> Result<(), ConfigError> {
+        let v2 = r"
+            config_version = 2
+
+            [telemetry]
+            enabled = true
+        ";
+        let config = Config::from_toml_str(v2)?;
+        assert!(config.telemetry.enabled);
+        assert!(!config.telemetry.include_technical_details);
+        assert!(!config.telemetry.asked_on_first_launch);
+        Ok(())
+    }
+
+    #[test]
+    fn telemetry_consent_roundtrips_byte_stable() -> Result<(), ConfigError> {
+        let config = Config {
+            telemetry: TelemetryConfig {
+                enabled: true,
+                include_technical_details: false,
+                asked_on_first_launch: true,
+            },
+            ..Config::default()
+        };
+        let text = config.to_toml_string()?;
+        let reloaded = Config::from_toml_str(&text)?;
+        assert_eq!(reloaded.telemetry, config.telemetry);
+        assert_eq!(reloaded.to_toml_string()?, text);
+        Ok(())
     }
 }

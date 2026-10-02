@@ -2,7 +2,7 @@
 //! pages via `clap_mangen` for `flowshot.1` + this file-format page for the
 //! TOML config). `examples/man_pages.rs` writes it next to the generated
 //! `flowshot.1`; the schema documented here mirrors `flowshot_core::config`
-//! (`config_version` 2).
+//! (`config_version` 3).
 
 /// The complete `flowshot-config.5` page.
 pub const FLOWSHOT_CONFIG_ROFF: &str = r#".TH FLOWSHOT-CONFIG 5 "2026-09-26" "FlowShot 0.1.0" "File Formats Manual"
@@ -19,7 +19,7 @@ below apply and a warning is logged. Unknown keys are ignored; missing keys
 fall back to their defaults. The top\-level
 .B config_version
 integer (currently
-.BR 2 )
+.BR 3 )
 drives forward migration of the grouped schema.
 .PP
 Configuration is owned by this file and the settings UI
@@ -188,6 +188,24 @@ Enable desktop notifications for capture events.
 .BR startup_launch " = " false
 Launch the daemon automatically at session startup (writes the XDG
 autostart entry).
+.SH "TELEMETRY GROUP \- [telemetry]"
+Opt\-in error telemetry (self\-hosted Sentry). Nothing is collected while
+.B enabled
+is false, and the endpoint is a build\-time constant, never a config key.
+The first\-launch dialog asks for consent exactly once.
+.TP
+.BR enabled " = " false
+Master switch. When false the telemetry client is never initialized (zero
+network, zero threads). The dialog recommends enabling crash reporting.
+.TP
+.BR include_technical_details " = " false
+Additionally send the technical payload (full GPU adapter string, exact
+kernel release, monitor layout, per\-install UUID). Privacy\-relevant; the
+dialog recommends leaving this off.
+.TP
+.BR asked_on_first_launch " = " false
+Managed by FlowShot: records that the consent dialog was answered so it is
+never shown again.
 .SH FILES
 .TP
 .I ~/.config/flowshot/flowshot.toml
@@ -196,6 +214,11 @@ The configuration file.
 .I ~/.config/flowshot/shortcuts\-restore.json
 Global\-shortcut re\-registration state (managed by the daemon, not
 hand\-edited).
+.TP
+.I ~/.local/share/flowshot/telemetry\-id
+Random per\-install identifier, sent only with
+.BR include_technical_details ;
+delete the file to regenerate it.
 .SH "SEE ALSO"
 .BR flowshot (1)
 "#;
