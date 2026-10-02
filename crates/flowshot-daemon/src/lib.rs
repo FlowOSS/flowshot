@@ -37,6 +37,10 @@
 //!   crash), and the `tray` lifecycle persistence reason;
 //! - [`autostart`] - `[daemon].startup_launch` -> XDG `.desktop` autostart
 //!   entry;
+//! - [`telemetry`] - the opt-in error-telemetry engine (`[telemetry]`
+//!   consent gates EVERYTHING: disabled = no client, no transport, no
+//!   thread, no probes; enabled = the sanitized two-tier payload to the
+//!   self-hosted Sentry, DSN a build-time constant);
 //! - [`daemon`] - the composition root ([`Daemon::start`] /
 //!   [`Daemon::run`]).
 //!
@@ -72,6 +76,7 @@ pub mod request;
 pub mod shortcut;
 pub mod state;
 pub mod strings;
+pub mod telemetry;
 pub mod tray;
 
 #[cfg(feature = "systemd")]

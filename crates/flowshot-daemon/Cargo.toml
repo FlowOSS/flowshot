@@ -81,6 +81,11 @@ url = "2.5"
 tokio = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+# Opt-in error telemetry (root-table pin; the daemon is the shell/platform
+# boundary, so the gated crates stay pure). Initialized ONLY when
+# [telemetry].enabled - a disabled config never constructs a client,
+# transport, or thread. DSN is a build-time constant in src/telemetry.
+sentry = { workspace = true }
 # Binary-layer only: logging init + top-level error reporting (Amendment #4).
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 anyhow = { workspace = true }

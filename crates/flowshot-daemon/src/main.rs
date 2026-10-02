@@ -68,6 +68,14 @@ fn main() -> anyhow::Result<()> {
         std::process::exit(i32::from(code));
     }
     let config = load_config(args.config.as_deref())?;
+    // Telemetry: the absolute first thing after the config load, before
+    // the runtime build (the session child above inits its own inside
+    // run_child). The guard must live until the process exits - dropping
+    // it flushes the transport; disabled config = None = zero activity.
+    let _telemetry = flowshot_daemon::telemetry::init(
+        &config.telemetry,
+        flowshot_daemon::telemetry::Surface::Daemon,
+    );
 
     let mut options = if args.auto_spawned {
         DaemonOptions::auto_spawned(config)

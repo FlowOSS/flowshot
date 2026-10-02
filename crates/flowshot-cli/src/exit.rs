@@ -80,13 +80,20 @@ pub fn exec_exit_code(result: &Result<ExecOutcome, ExecuteError>) -> ExitCode {
 }
 
 /// The [`exec_exit_code`] mapping as the raw table value (tests assert on
-/// this - `ExitCode` is deliberately opaque).
+/// this - `ExitCode` is deliberately opaque). The error leg is also the
+/// one-shot CLI's telemetry seam: the executor's typed failure is
+/// captured here (the daemon-forwarded path captures daemon-side in
+/// `flowshot_daemon::execute` instead; this mapping only runs for the
+/// in-process one-shot results).
 #[must_use]
 pub fn exec_exit_u8(result: &Result<ExecOutcome, ExecuteError>) -> u8 {
     match result {
         Ok(ExecOutcome::Done(_) | ExecOutcome::ColorPicked(_)) => OK,
         Ok(ExecOutcome::Cancelled) => CANCELLED,
-        Err(error) => exec_error_code(error),
+        Err(error) => {
+            flowshot_daemon::execute::capture_failure(error);
+            exec_error_code(error)
+        }
     }
 }
 

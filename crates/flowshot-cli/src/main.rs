@@ -13,6 +13,7 @@ use clap::Parser;
 use flowshot_cli::args::Cli;
 use flowshot_cli::exit::{self, CliError};
 use flowshot_cli::invocation::{self, Invocation, Resolved};
+use flowshot_daemon::telemetry::Surface;
 
 fn main() -> ExitCode {
     init_tracing();
@@ -21,15 +22,66 @@ fn main() -> ExitCode {
         Ok(cli) => cli,
         Err(error) => return exit::clap_exit(&error),
     };
-    match execute(cli, &argv) {
+    let bus_address = cli.bus_address.clone();
+    let resolved = match invocation::resolve(cli) {
+        Ok(resolved) => resolved,
+        Err(error) => return report(&error.into()),
+    };
+    // Telemetry: the absolute first thing after the config load, BEFORE
+    // any runtime build or session dispatch (the session child inits its
+    // own inside run_child from the spec). The guard must live until the
+    // process exits - dropping it flushes the transport, so report()'s
+    // capture still reaches a live client.
+    let _telemetry = match &resolved {
+        Resolved::Session(_) => None,
+        Resolved::Command(invocation) => {
+            let config = flowshot_cli::config::load(daemon_config_path(invocation));
+            flowshot_daemon::telemetry::init(&config.telemetry, surface_of(invocation))
+        }
+    };
+    match execute(resolved, bus_address.as_deref(), &argv) {
         Ok(code) => code,
         Err(error) => report(&error),
     }
 }
 
-fn execute(cli: Cli, argv: &[OsString]) -> anyhow::Result<ExitCode> {
-    let bus_address = cli.bus_address.clone();
-    match invocation::resolve(cli)? {
+/// The telemetry surface of one invocation (the daemon subcommand runs
+/// the resident daemon in-process; everything else is the CLI surface -
+/// the window sessions are child processes with their own surfaces).
+fn surface_of(invocation: &Invocation) -> Surface {
+    match invocation {
+        Invocation::Daemon(_) => Surface::Daemon,
+        Invocation::Capture(_)
+        | Invocation::Launcher { .. }
+        | Invocation::Pin(_)
+        | Invocation::Color
+        | Invocation::Settings
+        | Invocation::Completions(_)
+        | Invocation::PrintBindHelp => Surface::Cli,
+    }
+}
+
+/// The explicit config path of the invocations that carry one (only the
+/// daemon subcommand has `--config`; the rest read the default location).
+fn daemon_config_path(invocation: &Invocation) -> Option<&std::path::Path> {
+    match invocation {
+        Invocation::Daemon(run) => run.config.as_deref(),
+        Invocation::Capture(_)
+        | Invocation::Launcher { .. }
+        | Invocation::Pin(_)
+        | Invocation::Color
+        | Invocation::Settings
+        | Invocation::Completions(_)
+        | Invocation::PrintBindHelp => None,
+    }
+}
+
+fn execute(
+    resolved: Resolved,
+    bus_address: Option<&str>,
+    argv: &[OsString],
+) -> anyhow::Result<ExitCode> {
+    match resolved {
         // The session child runs on the MAIN thread OUTSIDE any tokio
         // runtime (the winit one-event-loop contract; its child legs build
         // their own runtimes - a nested block_on panics). Mirrors the
@@ -37,7 +89,7 @@ fn execute(cli: Cli, argv: &[OsString]) -> anyhow::Result<ExitCode> {
         Resolved::Session(spec) => Ok(ExitCode::from(
             flowshot_daemon::execute::session::run_child(&spec),
         )),
-        Resolved::Command(invocation) => run_command(&invocation, bus_address.as_deref(), argv),
+        Resolved::Command(invocation) => run_command(&invocation, bus_address, argv),
     }
 }
 
@@ -66,12 +118,14 @@ fn run_command(
 }
 
 /// The single error boundary: typed errors map onto the exit-code table,
-/// anything else is the generic infrastructure code.
+/// anything else is the generic infrastructure code. Every non-zero exit
+/// reports the typed chain to telemetry first (no-op while disabled).
 #[expect(
     clippy::print_stderr,
     reason = "the binary's error boundary reports to stderr by contract"
 )]
 fn report(error: &anyhow::Error) -> ExitCode {
+    flowshot_daemon::telemetry::capture_error(&**error);
     let code = error
         .downcast_ref::<CliError>()
         .map_or(exit::GENERIC, exit::exit_code);
