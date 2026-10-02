@@ -79,11 +79,10 @@ impl ToolSizes {
     pub const fn get(&self, kind: Option<ToolKind>) -> u32 {
         match kind {
             Some(ToolKind::Text) => self.font,
-            Some(ToolKind::Rectangle) => self.rect_radius,
             Some(ToolKind::Marker) => self.marker,
             Some(ToolKind::Pixelate | ToolKind::Blur) => self.pixelate,
             Some(ToolKind::Counter) => self.counter,
-            Some(_) | None => self.thickness,
+            Some(ToolKind::Rectangle | _) | None => self.thickness,
         }
     }
 
@@ -92,11 +91,10 @@ impl ToolSizes {
     pub fn set(&mut self, kind: Option<ToolKind>, value: u32) {
         let slot = match kind {
             Some(ToolKind::Text) => &mut self.font,
-            Some(ToolKind::Rectangle) => &mut self.rect_radius,
             Some(ToolKind::Marker) => &mut self.marker,
             Some(ToolKind::Pixelate | ToolKind::Blur) => &mut self.pixelate,
             Some(ToolKind::Counter) => &mut self.counter,
-            Some(_) | None => &mut self.thickness,
+            Some(ToolKind::Rectangle | _) | None => &mut self.thickness,
         };
         *slot = value.clamp(MIN_TOOL_SIZE, MAX_TOOL_SIZE);
     }
@@ -195,7 +193,11 @@ mod tests {
         // F27: text = fontSize, rect/marker/pixelate/counter independent,
         // others shared drawThickness (default 3).
         assert_eq!(s.get(Some(ToolKind::Text)), 8);
-        assert_eq!(s.get(Some(ToolKind::Rectangle)), 1);
+        assert_eq!(
+            s.get(Some(ToolKind::Rectangle)),
+            3,
+            "rectangle uses stroke thickness"
+        );
         assert_eq!(s.get(Some(ToolKind::Marker)), 5);
         assert_eq!(s.get(Some(ToolKind::Pixelate)), 2);
         assert_eq!(s.get(Some(ToolKind::Counter)), 1);

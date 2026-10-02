@@ -49,6 +49,7 @@ impl EditorState {
                     effects: Vec::new(),
                     changed,
                     restore_selection: selection,
+                    resized: false,
                 };
             }
             if !shift && self.shortcuts.is_undo(code) {
@@ -58,6 +59,7 @@ impl EditorState {
                     effects: Vec::new(),
                     changed,
                     restore_selection: selection,
+                    resized: false,
                 };
             }
         }
@@ -65,7 +67,7 @@ impl EditorState {
             if let Some(digit) = digit_for(code) {
                 let size = self.digits.digit(digit, env.now);
                 self.apply_size(size);
-                return EditorUpdate::eaten(true);
+                return EditorUpdate::eaten_resized();
             }
             if !repeat && let Some(kind) = self.shortcuts.tool_for_key(code) {
                 self.toggle_tool(kind);
@@ -117,7 +119,7 @@ impl EditorState {
         }
         let next = stepped(self.sizes.get(self.active_kind), step);
         self.apply_size(next);
-        EditorUpdate::eaten(true)
+        EditorUpdate::eaten_resized()
     }
 
     /// Runs `run` with the per-event context and the active tool (split

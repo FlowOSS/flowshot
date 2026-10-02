@@ -1526,3 +1526,13 @@ Device limits floor MIN_TEXTURE_DIMENSION_2D=4096 in flowshot-ui (adapter.rs sel
   doc links LauncherInput -> private InputState, fails `cargo doc --features test-drive` ONLY
   (reproduces with test-drive alone, predates this work; the no-feature doc gate passes).
 
+
+## Wheel-sizing notifier fix (2026-10-02)
+- **Dead-seam detection**: a `pub` chrome API called ONLY from tests (show_size_hud) + a never-assigned draw field (SizeHud.rect) = feature invisible in production while every unit test passes. Grep for callers-outside-tests of every "feedback" seam when a feature "works but users can't tell".
+- **EditorUpdate.resized pattern**: the editor cannot touch chrome (funnel is the only chrome writer), so size writes are surfaced as a bool on the per-event record; the funnel reacts (`if outcome.resized { chrome.show_size_hud(env.now) }`). Same layering as EditorEffect::ColorWheel but chrome-internal (no Action needed).
+- **Type-encoded HUD state**: `SizeHud { until: Option<Instant> }` - visibility IS the deadline (`visible() = until.is_some()`); the earlier (visible, until) pair could desync. Timer trio: `show(now)` arms, `tick(now) -> bool` flips+signals redraw, `wake() -> Option<Instant>` feeds `OverlayCore::wake` (merged with the selection HUD via array-flatten-min).
+- **QA-harness clock gotcha**: HUD deadlines arm from the injected event's `Instant::now()` (editor_env), NOT the harness fixture t0 - wall time passes during GPU renders/PNG saves, so expiry checks must anchor at `Instant::now() + timeout + 1ms`, never `t0 + ...` (first run FAILed all 8 rows on exactly this).
+- **clippy::unchecked_time_subtraction fires on Duration - Duration too** (not just Instant arithmetic): use `checked_sub(...).expect(...)` in tests or restructure to additions.
+- **IMv7 `compare -metric AE` prints fractional values** for RGBA diffs (normalized); treat 0 vs >0 as the signal, not the magnitude. `convert` is deprecated -> `magick`.
+- **Examples using the inject_event seam need `[[example]] required-features = ["test-drive"]`** in the crate manifest (cargo test builds examples; ungated = compile error in default builds). qa_bundle/perf_storm/discoverability are the precedents.
+- Flameshot notifier facts (fetched): NotifierBox = circle near primary's top-left (offset = width/4), message = bare size number, uiColor @ alpha 180, single-shot 600ms -> hide, `hidden()` signal zeroes the digit accumulator; shown from `setToolSize` on EVERY source (wheel/digits/inc-dec buttons). FlowShot keeps todo-26's rounded-box "Size: N" design at every window's top-left (per-window paint; BORROW-MODIFIED, documented in hud.rs).

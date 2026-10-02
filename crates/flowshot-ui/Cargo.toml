@@ -97,3 +97,7 @@ required-features = ["test-drive"]
 [[example]]
 name = "discoverability"
 required-features = ["test-drive"]
+
+[[example]]
+name = "wheel_sizing"
+required-features = ["test-drive"]

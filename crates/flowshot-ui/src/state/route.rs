@@ -65,6 +65,9 @@ impl OverlayCore {
             let env = self.editor_env();
             let outcome = self.editor.key_press(&env, code, repeat, text);
             let consumed = outcome.consumed;
+            if outcome.resized {
+                self.chrome.show_size_hud(env.now);
+            }
             // Restore the selection rect if undo/redo returned one (move-selection).
             if let Some(rect) = outcome.restore_selection {
                 self.selection.set_rect(Some(rect));
@@ -111,6 +114,9 @@ impl OverlayCore {
     fn route_wheel(&mut self, delta_y: i32) -> RouteReport {
         let env = self.editor_env();
         let outcome = self.editor.wheel(&env, delta_y);
+        if outcome.resized {
+            self.chrome.show_size_hud(env.now);
+        }
         let actions = editor_actions(outcome, self.router.window_count());
         RouteReport {
             actions,

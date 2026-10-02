@@ -9,8 +9,14 @@
 //! shared `draw_thickness` slot (its `tool_size`); the rectangle's
 //! `tool_size` IS the corner radius (`[tools.rectangle].corner_radius`,
 //! digits/wheel-adjustable), so its stroke width comes from the persisted
-//! `[editor].draw_thickness` config value - the same split Flameshot has
-//! (its rectangle wheel adjusts `drawRectangleSize`, never the pen width).
+//! `[editor].draw_thickness` config value. F27 wheel-on-rect decision:
+//! Flameshot's `drawRectangleSize` is documented as the "size for Rectangle
+//! rounded corners" (`flameshot.example.ini`) and its FILLED rect reads
+//! that one value for the path radius (the pen it also sets is vestigial
+//! under `fillPath`), so the radius IS the rectangle's size semantic -
+//! kept here, with the wheel made visible by the size-notifier HUD and the
+//! cursor dot, which follows the dispatched size (Flameshot's rect
+//! `paintMousePreview` sizes from the same `onSizeChanged` value).
 
 use flowshot_core::geometry::{LogicalPoint, LogicalRect};
 use flowshot_core::scene::{
@@ -28,22 +34,22 @@ use crate::render::f32_from_u32;
 pub struct RectTool {
     stroke: TwoPoint,
     color: SceneColor,
-    radius: f32,
+    thickness: f32,
 }
 
 impl RectTool {
-    fn stroke_width(ctx: &EditorContext<'_>) -> f32 {
-        f32_from_u32(ctx.config.editor.draw_thickness)
+    fn corner_radius(ctx: &EditorContext<'_>) -> f32 {
+        f32_from_u32(ctx.config.tools.rectangle.corner_radius)
     }
 
     fn shape(&self, ctx: &EditorContext<'_>, from: ScenePoint, to: ScenePoint) -> RectObject {
         RectObject::new(
             SceneRect::from_points(from, to),
             self.color,
-            Self::stroke_width(ctx),
+            self.thickness,
             false,
         )
-        .with_corner_radius(self.radius)
+        .with_corner_radius(Self::corner_radius(ctx))
     }
 }
 
@@ -83,7 +89,9 @@ impl Tool for RectTool {
         if let Some((from, to)) = self.stroke.endpoints(ctx, Constrain::DiagonalOnly) {
             self.shape(ctx, from, to).paint(sink);
         } else {
-            paint_preview_dot(sink, ctx, ctx.color, Self::stroke_width(ctx));
+            // The hover dot follows the dispatched size (stroke thickness)
+            // so wheel/digit adjustments are visible before a drag.
+            paint_preview_dot(sink, ctx, ctx.color, f32_from_u32(ctx.tool_size));
         }
     }
 
@@ -99,9 +107,9 @@ impl Tool for RectTool {
         self.color = color;
     }
 
-    /// The rectangle's dispatched size IS the corner radius (its size slot).
+    /// The rectangle's dispatched size is the stroke thickness (shared slot).
     fn on_size_changed(&mut self, size: u32) {
-        self.radius = f32_from_u32(size);
+        self.thickness = f32_from_u32(size);
     }
 }
 
