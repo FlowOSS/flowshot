@@ -263,3 +263,9 @@ crates/flowshot-daemon/tests/portal_shortcuts.rs::portal_ladder_end_to_end faile
 full-workspace load (15s runtime = its internal timeout tripped); passes 3/3 isolated (0.37s).
 Same class as the kwin stub deadline tests. ACTION (CI/todo): the private-broker stub tests
 should use generous-but-bounded waits; if CI shows this flake, bump the stub timeouts.
+
+## Wheel sizing "broken" on shape tools (fixed 2026-10-02)
+- **Report**: wheel tool-size works for counter/text, not for shapes (line/arrow/rect/ellipse/pencil/marker).
+- **Measured (injection-seam probe, per-tool table)**: the wheel MECHANISM was never broken - accumulator -> apply_size -> on_size_changed -> committed object -> Redraw all fire for every tool. What was broken was FEEDBACK: (1) `ChromeState::show_size_hud` was dead code in production (only chrome/tests.rs called it) and `SizeHud.rect` was never assigned (zero rect = invisible even when visible=true; no hide timer either); (2) RectTool's hover dot painted from the persisted config `draw_thickness`, so wheel-on-rect (corner-radius slot) changed NOTHING visibly until a drag. Counter/text only "worked" because their previews change dramatically (bubble 16->24px, edit-widget font); shape dots move ±0.5px - imperceptible.
+- **Fix**: `EditorUpdate.resized` flag (digits + wheel fallback set it) -> funnel flashes the chrome SizeHud; SizeHud reworked to a single `Option<Instant>` deadline (visibility IS the deadline), 600ms auto-hide via `OverlayCore::tick`/`wake` (Flameshot notifierbox parity); rect hover dot now follows the dispatched size (Flameshot `paintMousePreview` parity).
+- **Evidence**: `.omo/evidence/wheel-sizing/` (assertion table 8/8 PASS, before/notifier/expired frames per tool, HUD crops, region diffs). Harness: `cargo run -p flowshot-ui --example wheel_sizing --features test-drive -- OUT_DIR`.

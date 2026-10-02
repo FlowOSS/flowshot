@@ -12,7 +12,7 @@
     clippy::cast_precision_loss
 )]
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use flowshot_core::config::{ArrowStyle, ArrowToolConfig, Config, ToolsConfig};
 use flowshot_core::geometry::{
@@ -25,7 +25,7 @@ use winit::event::MouseButton;
 use winit::keyboard::{KeyCode, ModifiersState};
 
 use crate::editor::*;
-use crate::input::SyntheticInput;
+use crate::input::{Action, SyntheticInput};
 use crate::render::{Command, DisplayList, Shape};
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
@@ -605,6 +605,8 @@ fn funnel_core() -> OverlayCore {
     let layout = OutputLayout::new(vec![output]);
     let mut core = OverlayCore::new(InputRouter::new(layout, vec![0]));
     register_shape_tools(core.editor_mut().registry_mut());
+    register_text_tool(core.editor_mut().registry_mut());
+    register_counter_tool(core.editor_mut().registry_mut());
     core
 }
 
@@ -682,4 +684,234 @@ fn funnel_ctrl_drag_commits_the_constrained_line() {
         ScenePoint::new(300.0, 100.0),
         "H snap through the funnel"
     );
+}
+
+// ---------------------------------------------------------------------------
+// G. Per-tool wheel sizing (the defect table: shapes lost the wheel)
+// ---------------------------------------------------------------------------
+
+/// One row of the wheel-behavior table.
+struct WheelCase {
+    kind: ToolKind,
+    /// The activation key (`None` = no default binding; activated through
+    /// the API like the toolbar-only counter).
+    key: Option<KeyCode>,
+    /// The dispatched size slot before the wheel notch.
+    slot: u32,
+    /// The hover-preview dot radii (before, after) - `None` for tools
+    /// without a cursor dot.
+    dot: Option<(f32, f32)>,
+    /// The size field of the next committed object (`None` = a drag
+    /// commits nothing; the text tool needs an edit session).
+    committed: Option<f32>,
+}
+
+fn dot_radius(core: &OverlayCore) -> Option<f32> {
+    paint_commands(core.editor(), Some(at(400.0, 300.0)))
+        .iter()
+        .rev()
+        .find_map(|command| match command {
+            Command::Fill {
+                shape: Shape::Ellipse { radii, .. },
+                ..
+            } => Some(radii.width),
+            _ => None,
+        })
+}
+
+fn committed_size(data: Option<ToolObjectData>) -> Option<f32> {
+    match data {
+        Some(ToolObjectData::Pencil(object)) => Some(object.thickness),
+        Some(ToolObjectData::Line(object)) => Some(object.thickness),
+        Some(ToolObjectData::Arrow(object)) => Some(object.thickness),
+        Some(ToolObjectData::Rectangle(object)) => Some(object.corner_radius),
+        Some(ToolObjectData::Ellipse(object)) => Some(object.stroke_width),
+        Some(ToolObjectData::Marker(object)) => Some(object.width),
+        Some(ToolObjectData::Counter(object)) => Some(object.radius),
+        _ => None,
+    }
+}
+
+#[test]
+fn funnel_wheel_resizes_every_size_carrying_tool_visibly() {
+    let cases = [
+        WheelCase {
+            kind: ToolKind::Pencil,
+            key: Some(KeyCode::KeyP),
+            slot: 3,
+            dot: Some((2.5, 3.0)),
+            committed: Some(4.0),
+        },
+        WheelCase {
+            kind: ToolKind::Line,
+            key: Some(KeyCode::KeyD),
+            slot: 3,
+            dot: Some((2.5, 3.0)),
+            committed: Some(4.0),
+        },
+        WheelCase {
+            kind: ToolKind::Arrow,
+            key: Some(KeyCode::KeyA),
+            slot: 3,
+            dot: Some((2.5, 3.0)),
+            committed: Some(4.0),
+        },
+        // The rectangle's slot IS the corner radius (F27
+        // `drawRectangleSize`); its cursor dot follows the dispatched size.
+        WheelCase {
+            kind: ToolKind::Rectangle,
+            key: Some(KeyCode::KeyR),
+            slot: 1,
+            dot: Some((1.5, 2.0)),
+            committed: Some(2.0),
+        },
+        WheelCase {
+            kind: ToolKind::Circle,
+            key: Some(KeyCode::KeyC),
+            slot: 3,
+            dot: Some((2.5, 3.0)),
+            committed: Some(4.0),
+        },
+        WheelCase {
+            kind: ToolKind::Marker,
+            key: Some(KeyCode::KeyM),
+            slot: 5,
+            dot: Some((3.5, 4.0)),
+            committed: Some(6.0),
+        },
+        WheelCase {
+            kind: ToolKind::Counter,
+            key: None,
+            slot: 1,
+            dot: Some((16.0, 24.0)),
+            committed: Some(24.0),
+        },
+        WheelCase {
+            kind: ToolKind::Text,
+            key: Some(KeyCode::KeyT),
+            slot: 8,
+            dot: None,
+            committed: None,
+        },
+    ];
+    for case in cases {
+        let kind = case.kind;
+        // Given the tool checked through the production funnel with the
+        // cursor hovering,
+        let mut core = funnel_core();
+        core.inject_event(SyntheticInput::pointer_moved(SLOT, 400.0, 300.0));
+        match case.key {
+            Some(key) => {
+                core.inject_event(SyntheticInput::key_press(SLOT, key));
+            }
+            None => core.editor_mut().activate_tool(kind),
+        }
+        assert_eq!(core.editor().active_tool(), Some(kind));
+        assert_eq!(core.editor().tool_size(), case.slot, "{kind:?} slot");
+        if let Some((before, _)) = case.dot {
+            assert_eq!(dot_radius(&core), Some(before), "{kind:?} dot before");
+        }
+        // When one standard wheel notch arrives,
+        let report = core.inject_event(SyntheticInput::wheel(SLOT, 120));
+        // Then the dispatched slot steps by one, ...
+        assert_eq!(
+            core.editor().tool_size(),
+            case.slot + 1,
+            "{kind:?} slot step"
+        );
+        // ... every window redraws, ...
+        assert!(
+            report
+                .actions
+                .iter()
+                .any(|action| matches!(action, Action::Redraw(_))),
+            "{kind:?} redraw"
+        );
+        // ... the size notifier flashes, ...
+        assert!(core.chrome().size_hud_visible(), "{kind:?} size notifier");
+        // ... the hover preview reflects the new size immediately, ...
+        if let Some((_, after)) = case.dot {
+            assert_eq!(dot_radius(&core), Some(after), "{kind:?} dot after");
+        }
+        // ... and the next committed object carries it.
+        if case.committed.is_some() {
+            core.inject_event(SyntheticInput::pointer_moved(SLOT, 100.0, 100.0));
+            core.inject_event(SyntheticInput::pointer_button(
+                SLOT,
+                MouseButton::Left,
+                true,
+            ));
+            core.inject_event(SyntheticInput::pointer_moved(SLOT, 300.0, 250.0));
+            core.inject_event(SyntheticInput::pointer_button(
+                SLOT,
+                MouseButton::Left,
+                false,
+            ));
+            let data = core.editor().scene().get_object(0).map(ToolObject::to_data);
+            assert_eq!(committed_size(data), case.committed, "{kind:?} committed");
+        }
+    }
+}
+
+#[test]
+fn funnel_size_notifier_hides_after_the_flameshot_timeout() {
+    // Given a wheel notch flashed the notifier,
+    let mut core = funnel_core();
+    core.inject_event(SyntheticInput::key_press(SLOT, KeyCode::KeyP));
+    core.inject_event(SyntheticInput::wheel(SLOT, 120));
+    assert!(core.chrome().size_hud_visible());
+    // then the event-loop wake carries the auto-hide deadline.
+    let now = Instant::now();
+    assert!(
+        core.wake(now)
+            .is_some_and(|deadline| deadline <= now + DIGIT_RESET_DELAY)
+    );
+    // When the 600ms notifier timeout expires, then the tick flips the box
+    // hidden (the redraw signal) and the wake is gone.
+    let later = now + DIGIT_RESET_DELAY + Duration::from_millis(1);
+    assert!(core.tick(later), "the hide flip redraws");
+    assert!(!core.chrome().size_hud_visible());
+    assert_eq!(core.wake(later), None);
+}
+
+#[test]
+fn funnel_digits_flash_the_size_notifier() {
+    let mut core = funnel_core();
+    core.inject_event(SyntheticInput::key_press(SLOT, KeyCode::KeyP));
+    core.inject_event(SyntheticInput::key_press(SLOT, KeyCode::Digit5));
+    assert_eq!(core.editor().tool_size(), 5);
+    assert!(core.chrome().size_hud_visible());
+}
+
+#[test]
+fn funnel_sub_threshold_wheel_does_not_flash_the_notifier() {
+    let mut core = funnel_core();
+    core.inject_event(SyntheticInput::key_press(SLOT, KeyCode::KeyP));
+    core.inject_event(SyntheticInput::wheel(SLOT, 15));
+    assert_eq!(core.editor().tool_size(), 3, "accumulating, no step");
+    assert!(!core.chrome().size_hud_visible());
+}
+
+#[test]
+fn funnel_picker_gate_swallows_the_wheel_resize() {
+    // Given the color wheel open with a tool checked,
+    let mut core = funnel_core();
+    core.inject_event(SyntheticInput::key_press(SLOT, KeyCode::KeyP));
+    core.inject_event(SyntheticInput::pointer_moved(SLOT, 100.0, 100.0));
+    core.inject_event(SyntheticInput::pointer_button(
+        SLOT,
+        MouseButton::Right,
+        true,
+    ));
+    core.inject_event(SyntheticInput::pointer_button(
+        SLOT,
+        MouseButton::Right,
+        false,
+    ));
+    assert!(core.chrome().color_wheel.visible);
+    // When a wheel notch arrives, then the picker gate eats it: no slot
+    // change and no notifier.
+    core.inject_event(SyntheticInput::wheel(SLOT, 120));
+    assert_eq!(core.editor().tool_size(), 3);
+    assert!(!core.chrome().size_hud_visible());
 }

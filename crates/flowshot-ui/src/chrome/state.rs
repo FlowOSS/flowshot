@@ -168,14 +168,38 @@ impl ChromeState {
         self.panel_visible = false;
     }
 
-    /// Shows the size HUD.
-    pub fn show_size_hud(&mut self) {
-        self.hud.visible = true;
+    /// Flashes the size HUD (the funnel's digits/wheel reaction; the
+    /// Flameshot `setToolSize` -> `NotifierBox::showMessage` parity).
+    pub fn show_size_hud(&mut self, now: Instant) {
+        self.hud.show(now);
+        tracing::debug!(
+            target: "flowshot_ui::chrome",
+            visible = true,
+            "size notifier"
+        );
     }
 
     /// Hides the size HUD.
     pub fn hide_size_hud(&mut self) {
-        self.hud.visible = false;
+        self.hud.hide();
+    }
+
+    /// Whether the size notifier is currently flashing.
+    #[must_use]
+    pub const fn size_hud_visible(&self) -> bool {
+        self.hud.visible()
+    }
+
+    /// The size-HUD deadline flip (the core tick): `true` when the box
+    /// hid and every window must redraw.
+    pub(crate) fn hud_tick(&mut self, now: Instant) -> bool {
+        self.hud.tick(now)
+    }
+
+    /// The size-HUD auto-hide deadline (the event-loop wake).
+    #[must_use]
+    pub(crate) fn hud_wake(&self) -> Option<Instant> {
+        self.hud.wake()
     }
 
     /// Drops any chrome implicit grab (Esc mid-drag: a pending layer

@@ -9,8 +9,14 @@
 //! shared `draw_thickness` slot (its `tool_size`); the rectangle's
 //! `tool_size` IS the corner radius (`[tools.rectangle].corner_radius`,
 //! digits/wheel-adjustable), so its stroke width comes from the persisted
-//! `[editor].draw_thickness` config value - the same split Flameshot has
-//! (its rectangle wheel adjusts `drawRectangleSize`, never the pen width).
+//! `[editor].draw_thickness` config value. F27 wheel-on-rect decision:
+//! Flameshot's `drawRectangleSize` is documented as the "size for Rectangle
+//! rounded corners" (`flameshot.example.ini`) and its FILLED rect reads
+//! that one value for the path radius (the pen it also sets is vestigial
+//! under `fillPath`), so the radius IS the rectangle's size semantic -
+//! kept here, with the wheel made visible by the size-notifier HUD and the
+//! cursor dot, which follows the dispatched size (Flameshot's rect
+//! `paintMousePreview` sizes from the same `onSizeChanged` value).
 
 use flowshot_core::geometry::{LogicalPoint, LogicalRect};
 use flowshot_core::scene::{
@@ -83,7 +89,10 @@ impl Tool for RectTool {
         if let Some((from, to)) = self.stroke.endpoints(ctx, Constrain::DiagonalOnly) {
             self.shape(ctx, from, to).paint(sink);
         } else {
-            paint_preview_dot(sink, ctx, ctx.color, Self::stroke_width(ctx));
+            // The hover dot follows the dispatched size (the corner-radius
+            // slot) so wheel/digit adjustments are visible before a drag -
+            // the Flameshot rect `paintMousePreview` parity.
+            paint_preview_dot(sink, ctx, ctx.color, f32_from_u32(ctx.tool_size));
         }
     }
 

@@ -244,12 +244,13 @@ impl OverlayCore {
     /// returns to `ControlFlow::Wait`).
     pub fn tick(&mut self, now: Instant) -> bool {
         let hud = self.selection.tick(now);
+        let size_hud = self.chrome.hud_tick(now);
         let panel = self.chrome.panel_shown(&self.editor);
         self.chrome
             .motion_tick(now, self.selection.rect().is_some(), panel);
         let active = self.motion_active(now);
         let was_active = std::mem::replace(&mut self.motion_was_active, active);
-        hud || active || was_active
+        hud || size_hud || active || was_active
     }
 
     /// Whether any motion timeline is still moving at `now` (chrome reveal /
@@ -266,7 +267,10 @@ impl OverlayCore {
     /// CPU, the shell contract the motion pass must not break).
     #[must_use]
     pub fn wake(&self, now: Instant) -> Option<Instant> {
-        let hud = self.selection.hud_wake();
+        let hud = [self.selection.hud_wake(), self.chrome.hud_wake()]
+            .into_iter()
+            .flatten()
+            .min();
         if !self.motion_active(now) {
             return hud;
         }

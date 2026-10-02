@@ -910,9 +910,36 @@ fn esc_mid_press_clears_the_chip_wash_and_grab() {
 
 #[test]
 fn digit_notifier_timing() {
+    use std::time::{Duration, Instant};
+
+    use crate::editor::DIGIT_RESET_DELAY;
+
     let mut chrome = ChromeState::new();
-    chrome.show_size_hud();
-    assert!(chrome.hud.visible);
+    let t0 = Instant::now();
+    // Given a flashed notifier, when inside the 600ms window, then it
+    // stays visible and the wake carries the deadline.
+    chrome.show_size_hud(t0);
+    assert!(chrome.hud.visible());
+    assert_eq!(chrome.hud_wake(), Some(t0 + DIGIT_RESET_DELAY));
+    let just_inside = t0
+        + DIGIT_RESET_DELAY
+            .checked_sub(Duration::from_millis(1))
+            .expect("non-zero notifier delay");
+    assert!(!chrome.hud_tick(just_inside));
+    assert!(chrome.hud.visible());
+    // When the Flameshot notifier timeout expires, then the tick flips it
+    // hidden (the redraw signal) and the wake is gone.
+    assert!(chrome.hud_tick(t0 + DIGIT_RESET_DELAY));
+    assert!(!chrome.hud.visible());
+    assert_eq!(chrome.hud_wake(), None);
+    // A re-flash re-arms the deadline; hide clears immediately.
+    chrome.show_size_hud(t0);
+    chrome.show_size_hud(t0 + Duration::from_millis(300));
+    assert_eq!(
+        chrome.hud_wake(),
+        Some(t0 + Duration::from_millis(300) + DIGIT_RESET_DELAY)
+    );
     chrome.hide_size_hud();
-    assert!(!chrome.hud.visible);
+    assert!(!chrome.hud.visible());
+    assert_eq!(chrome.hud_wake(), None);
 }

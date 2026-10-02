@@ -69,6 +69,10 @@ pub struct EditorUpdate {
     pub changed: bool,
     /// Selection rect to restore (undo/redo of move-selection).
     pub restore_selection: Option<LogicalRect>,
+    /// Whether the dispatched tool size was written (digits/wheel - the
+    /// funnel flashes the chrome size notifier, the Flameshot
+    /// `setToolSize` -> `NotifierBox::showMessage` parity).
+    pub resized: bool,
 }
 
 impl EditorUpdate {
@@ -84,6 +88,7 @@ impl EditorUpdate {
             effects: Vec::new(),
             changed,
             restore_selection: None,
+            resized: false,
         }
     }
 
@@ -94,6 +99,19 @@ impl EditorUpdate {
             effects: Vec::new(),
             changed,
             restore_selection: None,
+            resized: false,
+        }
+    }
+
+    /// Consumed, visuals changed, and the dispatched tool size was written
+    /// (the digits/wheel adjusters - the funnel flashes the size notifier).
+    pub(super) fn eaten_resized() -> Self {
+        Self {
+            consumed: true,
+            effects: Vec::new(),
+            changed: true,
+            restore_selection: None,
+            resized: true,
         }
     }
 
@@ -111,6 +129,7 @@ impl EditorUpdate {
             effects,
             changed,
             restore_selection: None,
+            resized: false,
         }
     }
 }

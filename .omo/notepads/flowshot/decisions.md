@@ -204,3 +204,6 @@ Every todo's work exists in history and is traceable via `Refs:` bodies.
 The one-commit-per-todo + exact-message rule was not honored from wave 3
 onward, classified as a process deviation, not an acceptance-criteria
 failure.
+
+## Wheel-on-rectangle = corner radius (F27, re-confirmed 2026-10-02)
+Task asked whether wheel-on-rect should adjust stroke thickness instead of the corner-radius slot. DECISION: keep the todo-20 dispatch (rect slot = `[tools.rectangle].corner_radius`). Grounds (fetched Flameshot sources, not memory): `flameshot.example.ini` documents `drawRectangleSize` as "Last used size for Rectangle rounded corners"; `confighandler.cpp setToolSize` routes TYPE_RECTANGLE to `setDrawRectangleSize`; `rectangletool.cpp process()` reads that one value for the rounded-path radius (its QPen is vestigial under `fillPath` - Flameshot's rect is FILLED). So the radius IS the rectangle's size semantic upstream. FlowShot's rect is a stroked outline whose pen stays the persisted `[editor].draw_thickness` (todo-20 split, unchanged). The defect was invisibility, fixed via the size-notifier HUD + the hover dot now following the dispatched size (Flameshot's rect mouse-preview sizes from the same `onSizeChanged` value). The shape.rs module doc previously misstated Flameshot ("never the pen width") - corrected with the citations.
