@@ -239,17 +239,27 @@ fn rect_commits_radius_from_its_slot_and_stroke_from_config() {
     let mut ed = editor();
     let env = env_at(Instant::now());
     ed.activate_tool(ToolKind::Rectangle);
-    assert_eq!(ed.tool_size(), 1, "[tools.rectangle].corner_radius default");
+    assert_eq!(
+        ed.tool_size(),
+        3,
+        "[editor].draw_thickness default (rect uses thickness slot)"
+    );
     stroke(&mut ed, &env, (100.0, 100.0), (300.0, 220.0));
     let ToolObjectData::Rectangle(rect) = committed(&ed) else {
         panic!("rect object");
     };
     assert_eq!(rect.rect, SceneRect::new(100.0, 100.0, 200.0, 120.0));
-    assert_eq!(rect.corner_radius, 1.0);
-    assert_eq!(rect.stroke_width, 3.0, "[editor].draw_thickness");
+    assert_eq!(
+        rect.corner_radius, 1.0,
+        "[tools.rectangle].corner_radius from config"
+    );
+    assert_eq!(
+        rect.stroke_width, 3.0,
+        "stroke from dispatched thickness slot"
+    );
     assert!(!rect.filled);
 
-    // Digits write the rect slot = the corner radius (the size dispatch).
+    // Digits write the rect slot = the stroke thickness (the size dispatch).
     let mut ed = editor();
     ed.activate_tool(ToolKind::Rectangle);
     ed.set_tool_size(7);
@@ -257,7 +267,11 @@ fn rect_commits_radius_from_its_slot_and_stroke_from_config() {
     let ToolObjectData::Rectangle(rect) = committed(&ed) else {
         panic!("rect object");
     };
-    assert_eq!(rect.corner_radius, 7.0);
+    assert_eq!(rect.stroke_width, 7.0, "stroke from set tool size");
+    assert_eq!(
+        rect.corner_radius, 1.0,
+        "corner radius unchanged from config"
+    );
 }
 
 #[test]
@@ -468,12 +482,16 @@ fn wheel_reach_the_committed_rect_radius() {
     ed.activate_tool(ToolKind::Rectangle);
     ed.wheel(&env, 120);
     ed.wheel(&env, 120);
-    assert_eq!(ed.tool_size(), 3, "1 + 2 notches");
+    assert_eq!(ed.tool_size(), 5, "3 + 2 notches (thickness slot)");
     stroke(&mut ed, &env, (0.0, 0.0), (40.0, 40.0));
     let ToolObjectData::Rectangle(rect) = committed(&ed) else {
         panic!("rect object");
     };
-    assert_eq!(rect.corner_radius, 3.0);
+    assert_eq!(rect.stroke_width, 5.0, "stroke from thickness slot");
+    assert_eq!(
+        rect.corner_radius, 1.0,
+        "corner radius from config, unchanged by wheel"
+    );
 }
 
 #[test]
@@ -724,7 +742,7 @@ fn committed_size(data: Option<ToolObjectData>) -> Option<f32> {
         Some(ToolObjectData::Pencil(object)) => Some(object.thickness),
         Some(ToolObjectData::Line(object)) => Some(object.thickness),
         Some(ToolObjectData::Arrow(object)) => Some(object.thickness),
-        Some(ToolObjectData::Rectangle(object)) => Some(object.corner_radius),
+        Some(ToolObjectData::Rectangle(object)) => Some(object.stroke_width),
         Some(ToolObjectData::Ellipse(object)) => Some(object.stroke_width),
         Some(ToolObjectData::Marker(object)) => Some(object.width),
         Some(ToolObjectData::Counter(object)) => Some(object.radius),
@@ -756,14 +774,14 @@ fn funnel_wheel_resizes_every_size_carrying_tool_visibly() {
             dot: Some((2.5, 3.0)),
             committed: Some(4.0),
         },
-        // The rectangle's slot IS the corner radius (F27
-        // `drawRectangleSize`); its cursor dot follows the dispatched size.
+        // Rectangle uses the shared stroke thickness slot (like pencil/line/arrow/circle);
+        // corner radius is configured separately via the side panel.
         WheelCase {
             kind: ToolKind::Rectangle,
             key: Some(KeyCode::KeyR),
-            slot: 1,
-            dot: Some((1.5, 2.0)),
-            committed: Some(2.0),
+            slot: 3,
+            dot: Some((2.5, 3.0)),
+            committed: Some(4.0),
         },
         WheelCase {
             kind: ToolKind::Circle,
