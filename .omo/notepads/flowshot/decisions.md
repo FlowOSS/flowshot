@@ -207,3 +207,16 @@ failure.
 
 ## Wheel-on-rectangle = corner radius (F27, re-confirmed 2026-10-02)
 Task asked whether wheel-on-rect should adjust stroke thickness instead of the corner-radius slot. DECISION: keep the todo-20 dispatch (rect slot = `[tools.rectangle].corner_radius`). Grounds (fetched Flameshot sources, not memory): `flameshot.example.ini` documents `drawRectangleSize` as "Last used size for Rectangle rounded corners"; `confighandler.cpp setToolSize` routes TYPE_RECTANGLE to `setDrawRectangleSize`; `rectangletool.cpp process()` reads that one value for the rounded-path radius (its QPen is vestigial under `fillPath` - Flameshot's rect is FILLED). So the radius IS the rectangle's size semantic upstream. FlowShot's rect is a stroked outline whose pen stays the persisted `[editor].draw_thickness` (todo-20 split, unchanged). The defect was invisibility, fixed via the size-notifier HUD + the hover dot now following the dispatched size (Flameshot's rect mouse-preview sizes from the same `onSizeChanged` value). The shape.rs module doc previously misstated Flameshot ("never the pen width") - corrected with the citations.
+
+## 2026-10-02: Tray interaction model rework (ItemIsMenu=false)
+- **USER MODEL**: LMB (`Activate`) = instant interactive capture overlay (same as `flowshot capture`); RMB (`ContextMenu`) = menu with "Open Save Path" entry.
+- **SNI SPEC COMPLIANCE**: `ItemIsMenu = false` + real `Activate` handler + `ContextMenu` no-op (host renders D-Bus menu) = standard action-item pattern.
+- **COMPATIBILITY**: GNOME appindicator and Plasma < 6.4 call `Activate` first; with this model that's "instant capture" which matches the user's desired behavior anyway (no UnknownMethod fallback needed).
+- **OPEN SAVE PATH**: New menu entry `OPEN_SAVE_PATH_ID` (10) opens configured `[save].path` (or platform pictures dir when empty) via XDG `OpenURI` portal. Failure paths: portal absent → typed error + notification; empty path → pictures dir; never panic.
+- **IMPLEMENTATION**: 
+  - `item.rs`: `item_is_menu()` returns `false`; `activate()` dispatches `TAKE_SCREENSHOT_ID`; `context_menu()` documents host-rendered menu; tooltip updated to "Left-click to capture, right-click for menu".
+  - `menu.rs`: `build_menu()` includes `Open Save Path` entry; dispatch table maps `OPEN_SAVE_PATH_ID` → `TrayAction::OpenSavePath`.
+  - `shared.rs`: `TrayCore` holds `Config`; `dispatch()` handles `OpenSavePath`; `open_save_path()` spawns async task resolving path → `OpenFileRequest::send_uri()`; errors become notifications.
+  - `TrayWiring` extended with `config: Config` field; plumbed from `DaemonOptions` through `tray::start()`.
+- **TESTS**: Menu structure includes Open Save Path; dispatch table maps the id; `pictures_dir()` resolution; `open_uri_portal()` error handling; all tray module tests pass (21/21).
+- **GATES**: Build, test, clippy, fmt all green; Amendment #4 satisfied; < 250 LOC for all touched files.

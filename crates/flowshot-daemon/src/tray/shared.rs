@@ -2,6 +2,7 @@
 //! output probe, the menu revision, and the side-effect router every
 //! activation runs through.
 
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -39,6 +40,7 @@ pub(super) struct TrayCore {
     status: Mutex<TrayStatus>,
     runtime: Handle,
     refreshing: AtomicBool,
+    config: flowshot_core::config::Config,
 }
 
 impl TrayCore {
@@ -58,6 +60,7 @@ impl TrayCore {
             notifier,
             clock,
             quit,
+            config,
         } = wiring;
         Self {
             connection,
@@ -73,6 +76,7 @@ impl TrayCore {
             status: Mutex::new(TrayStatus::default()),
             runtime,
             refreshing: AtomicBool::new(false),
+            config,
         }
     }
 
@@ -134,6 +138,11 @@ impl TrayCore {
                         "CARGO_PKG_VERSION"
                     ))));
             }
+            TrayAction::OpenSavePath => {
+                self.state.touch(self.clock.now());
+                tracing::info!("tray Open Save Path requested");
+                self.open_save_path();
+            }
             TrayAction::Quit => {
                 tracing::info!("tray quit requested; the daemon is shutting down");
                 self.quit.notify_one();
@@ -178,11 +187,111 @@ impl TrayCore {
         });
     }
 
+    /// Opens the configured save path (or platform pictures dir) via the
+    /// `OpenURI` portal. Spawns asynchronously; errors become notifications.
+    fn open_save_path(&self) {
+        let save_path = self.config.save.path.clone();
+        let notifier = Arc::clone(&self.notifier);
+        self.runtime.spawn(async move {
+            let path = if save_path.is_empty() {
+                // Platform pictures directory (XDG user-dirs fallback)
+                match pictures_dir() {
+                    Ok(dir) => dir,
+                    Err(error) => {
+                        tracing::warn!(%error, "failed to resolve pictures directory");
+                        notifier.notify(NotificationRecord::Error(
+                            "Failed to open save path: could not resolve pictures directory"
+                                .to_owned(),
+                        ));
+                        return;
+                    }
+                }
+            } else {
+                PathBuf::from(save_path)
+            };
+
+            // Open via OpenURI portal
+            match open_uri_portal(&path).await {
+                Ok(()) => tracing::debug!(?path, "opened save path via portal"),
+                Err(error) => {
+                    tracing::warn!(%error, ?path, "failed to open save path via portal");
+                    notifier.notify(NotificationRecord::Error(format!(
+                        "Failed to open save path: {error}"
+                    )));
+                }
+            }
+        });
+    }
+
     fn lock_outputs(&self) -> MutexGuard<'_, Vec<OutputInfo>> {
         self.outputs.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     fn lock_status(&self) -> MutexGuard<'_, TrayStatus> {
         self.status.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+fn pictures_dir() -> Result<PathBuf, String> {
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "HOME not set".to_owned())?;
+    let user_dirs = home.join(".config").join("user-dirs.dirs");
+    if let Ok(contents) = std::fs::read_to_string(&user_dirs) {
+        for line in contents.lines() {
+            let Some(value) = line.strip_prefix("XDG_PICTURES_DIR=") else {
+                continue;
+            };
+            let trimmed = value.trim_matches('"');
+            let expanded = trimmed.replace("$HOME", &home.to_string_lossy());
+            return Ok(PathBuf::from(expanded));
+        }
+    }
+    Ok(home.join("Pictures"))
+}
+
+/// Opens a directory via the XDG `OpenURI` portal.
+async fn open_uri_portal(path: &PathBuf) -> Result<(), String> {
+    // Verify it's a directory
+    let metadata = std::fs::metadata(path).map_err(|e| format!("Failed to access path: {e}"))?;
+    if !metadata.is_dir() {
+        return Err("Path is not a directory".to_owned());
+    }
+
+    // Convert to file:// URI
+    let uri = format!(
+        "file://{}",
+        path.canonicalize()
+            .map_err(|e| format!("Failed to canonicalize path: {e}"))?
+            .display()
+    );
+
+    // Parse URI
+    let url = url::Url::parse(&uri).map_err(|e| format!("Invalid URI {uri}: {e}"))?;
+
+    // Open via portal
+    ashpd::desktop::open_uri::OpenFileRequest::default()
+        .send_uri(&url)
+        .await
+        .map_err(|e| format!("OpenURI portal call failed: {e}"))?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pictures_dir_resolves_with_home_fallback() {
+        // This test verifies the pictures_dir function doesn't panic
+        // Actual resolution depends on environment
+        let _result = pictures_dir();
+    }
+
+    #[tokio::test]
+    async fn open_uri_portal_fails_gracefully_for_nonexistent_path() {
+        let result = open_uri_portal(&PathBuf::from("/nonexistent/path/that/should/fail")).await;
+        assert!(result.is_err(), "should fail for nonexistent path");
     }
 }

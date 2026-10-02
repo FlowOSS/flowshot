@@ -202,6 +202,7 @@ impl Daemon {
                 notifier: Arc::clone(&notifier),
                 clock: Arc::clone(&clock),
                 quit: Arc::clone(&quit),
+                config: options.config.clone(),
             },
         )
         .await;
