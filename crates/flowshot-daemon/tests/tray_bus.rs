@@ -28,8 +28,8 @@ use flowshot_daemon::daemon::{Daemon, DaemonOptions, ShutdownReason, Startup};
 use flowshot_daemon::notify::{NotificationRecord, RecordingNotifier};
 use flowshot_daemon::request::CaptureRequest;
 use flowshot_daemon::tray::menu::{
-    ABOUT_ID, CAPTURE_FULL_ID, CONFIGURE_ID, LAUNCHER_ID, QUIT_ID, SCREEN_BASE, SCREEN_SUBMENU_ID,
-    TAKE_SCREENSHOT_ID,
+    ABOUT_ID, CAPTURE_FULL_ID, CONFIGURE_ID, LAUNCHER_ID, OPEN_SAVE_PATH_ID, QUIT_ID, SCREEN_BASE,
+    SCREEN_SUBMENU_ID, TAKE_SCREENSHOT_ID,
 };
 use flowshot_daemon::tray::outputs::OutputProbe;
 use flowshot_daemon::tray::spec::{MENU_INTERFACE, MENU_PATH, WATCHER_PATH, WATCHER_SERVICE};
@@ -346,6 +346,7 @@ async fn registered_tray_serves_the_menu_and_dispatches_every_action() {
             3, // the per-monitor submenu root
             LAUNCHER_ID,
             5, // separator
+            OPEN_SAVE_PATH_ID,
             CONFIGURE_ID,
             ABOUT_ID,
             8, // separator
@@ -383,6 +384,8 @@ async fn registered_tray_serves_the_menu_and_dispatches_every_action() {
     wait_for_command(&sink, &DaemonCommand::CaptureFull).await;
     click(&client, &service, LAUNCHER_ID).await.unwrap();
     wait_for_command(&sink, &DaemonCommand::Launcher).await;
+    click(&client, &service, OPEN_SAVE_PATH_ID).await.unwrap();
+    // OpenSavePath is async and doesn't dispatch a command; we just verify no error
     click(&client, &service, CONFIGURE_ID).await.unwrap();
     wait_for_command(&sink, &DaemonCommand::Settings).await;
     click(&client, &service, SCREEN_BASE).await.unwrap();

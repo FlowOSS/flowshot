@@ -109,6 +109,8 @@ pub struct TrayWiring {
     pub clock: Arc<dyn Clock>,
     /// Fired by the menu's `Quit` entry (the daemon's run loop exits).
     pub quit: Arc<Notify>,
+    /// Configuration for save path resolution.
+    pub config: flowshot_core::config::Config,
 }
 
 /// A started (or deliberately inert) tray host. [`TrayHandle::shutdown`]

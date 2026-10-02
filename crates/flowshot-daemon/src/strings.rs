@@ -72,6 +72,11 @@ pub const MENU_NO_OUTPUTS: &str = "No outputs detected";
 /// Tray menu: manual-coordinate launcher dialog.
 pub const MENU_CAPTURE_LAUNCHER: &str = "Capture Launcher";
 
+/// Tray menu: opens the configured `[save].path` (the platform pictures
+/// directory when empty) in the user's file manager via the `OpenURI`
+/// portal (F12 parity label).
+pub const MENU_OPEN_SAVE_PATH: &str = "Open Save Path";
+
 /// Tray menu: settings surface.
 pub const MENU_CONFIGURE: &str = "Configure";
 

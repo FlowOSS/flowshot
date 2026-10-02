@@ -1,10 +1,10 @@
 //! The `org.kde.StatusNotifierItem` object (host-facing tray surface).
 //!
 //! Host-compatibility decisions (ksni-verified behaviors):
-//! - `ItemIsMenu = true` and `Activate` answers `UnknownMethod`: the GNOME
-//!   appindicator extension and Plasma < 6.4 call `Activate` first and only
-//!   fall back to the `D-Bus` menu on that error; waybar renders the menu
-//!   itself and never calls `Activate`.
+//! - `ItemIsMenu = false`: LMB (`Activate`) opens the interactive capture
+//!   overlay; RMB (`ContextMenu`) opens the `D-Bus` menu. GNOME appindicator
+//!   and Plasma < 6.4 call `Activate` first - with this model, that's
+//!   "instant capture" which matches the user's desired behavior.
 //! - `Status` idles at `Active` (hosts may HIDE `Passive` items).
 //! - `IconName` stays empty and the pixmaps carry the icon: no `FlowShot`
 //!   themed icon is installed until packaging lands, and an
@@ -34,37 +34,29 @@ impl StatusNotifierItem {
 
 #[zbus::interface(name = "org.kde.StatusNotifierItem")]
 impl StatusNotifierItem {
-    /// The host asks the item to draw its own menu; hosts that reach this
-    /// despite `ItemIsMenu` render the `D-Bus` menu instead, so this is a
-    /// successful no-op.
+    /// RMB: the host renders the D-Bus menu (the item itself draws nothing).
     #[expect(
         clippy::unused_self,
-        reason = "the no-op is protocol policy, independent of item state"
+        reason = "the no-op is protocol policy; the D-Bus menu is served separately"
     )]
     #[expect(
         clippy::unnecessary_wraps,
         reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
     )]
     fn context_menu(&self, x: i32, y: i32) -> fdo::Result<()> {
-        tracing::trace!(
-            x,
-            y,
-            "tray ContextMenu call (the host renders the D-Bus menu)"
-        );
+        tracing::trace!(x, y, "tray ContextMenu call (host renders D-Bus menu)");
         Ok(())
     }
 
-    /// Deliberate `UnknownMethod` while `ItemIsMenu` is true (see the
-    /// module docs - GNOME/Plasma menu fallback).
+    /// LMB: open the interactive capture overlay (same as `flowshot capture`).
     #[expect(
-        clippy::unused_self,
-        reason = "the rejection is protocol policy, independent of item state"
+        clippy::unnecessary_wraps,
+        reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
     )]
     fn activate(&self, x: i32, y: i32) -> fdo::Result<()> {
-        tracing::trace!(x, y, "tray Activate rejected: the item is menu-driven");
-        Err(fdo::Error::UnknownMethod(
-            "the item is menu-driven (ItemIsMenu)".to_owned(),
-        ))
+        tracing::trace!(x, y, "tray Activate: opening capture overlay");
+        self.core.dispatch(super::menu::TAKE_SCREENSHOT_ID);
+        Ok(())
     }
 
     /// Middle-click: the quick region capture.
@@ -267,7 +259,7 @@ impl StatusNotifierItem {
             icon_name: String::new(),
             icon_pixmap: Vec::new(),
             title: strings::TRAY_TITLE.to_owned(),
-            description: String::new(),
+            description: "Left-click to capture, right-click for menu".to_owned(),
         })
     }
 
@@ -290,6 +282,6 @@ impl StatusNotifierItem {
     )]
     #[zbus(property)]
     fn item_is_menu(&self) -> fdo::Result<bool> {
-        Ok(true)
+        Ok(false)
     }
 }

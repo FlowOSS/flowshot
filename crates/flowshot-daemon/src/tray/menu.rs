@@ -34,6 +34,8 @@ pub const ABOUT_ID: i32 = 7;
 pub const SEPARATOR_B_ID: i32 = 8;
 /// `Quit` (clean daemon shutdown).
 pub const QUIT_ID: i32 = 9;
+/// `Open Save Path` (the configured `[save].path` in the file manager).
+pub const OPEN_SAVE_PATH_ID: i32 = 10;
 /// Disabled placeholder shown while the output probe knows no monitor.
 pub const NO_OUTPUTS_ID: i32 = 99;
 /// Base of the per-output entry ids (`SCREEN_BASE + probe index`).
@@ -49,6 +51,9 @@ pub enum TrayAction {
     Command(DaemonCommand),
     /// The About toast (version body).
     About,
+    /// Open the configured save directory (the tray's `SavePathOpener`
+    /// side effect; not a [`DaemonCommand`]).
+    OpenSavePath,
     /// Clean daemon shutdown (the lifecycle quit seam).
     Quit,
     /// Separators, submenu roots and placeholders: nothing to dispatch.
@@ -65,6 +70,7 @@ pub fn action_for(id: i32) -> TrayAction {
         CAPTURE_FULL_ID => TrayAction::Command(DaemonCommand::CaptureFull),
         LAUNCHER_ID => TrayAction::Command(DaemonCommand::Launcher),
         CONFIGURE_ID => TrayAction::Command(DaemonCommand::Settings),
+        OPEN_SAVE_PATH_ID => TrayAction::OpenSavePath,
         ABOUT_ID => TrayAction::About,
         QUIT_ID => TrayAction::Quit,
         SCREEN_BASE..=i32::MAX => match u32::try_from(id - SCREEN_BASE) {
@@ -155,6 +161,7 @@ pub fn build_menu(outputs: &[OutputInfo]) -> Vec<MenuNode> {
         },
         MenuNode::entry(LAUNCHER_ID, strings::MENU_CAPTURE_LAUNCHER),
         MenuNode::separator(SEPARATOR_A_ID),
+        MenuNode::entry(OPEN_SAVE_PATH_ID, strings::MENU_OPEN_SAVE_PATH),
         MenuNode::entry(CONFIGURE_ID, strings::MENU_CONFIGURE),
         MenuNode::entry(ABOUT_ID, strings::MENU_ABOUT),
         MenuNode::separator(SEPARATOR_B_ID),
@@ -222,6 +229,7 @@ mod tests {
             action_for(CONFIGURE_ID),
             TrayAction::Command(DaemonCommand::Settings)
         );
+        assert_eq!(action_for(OPEN_SAVE_PATH_ID), TrayAction::OpenSavePath);
         assert_eq!(action_for(ABOUT_ID), TrayAction::About);
         assert_eq!(action_for(QUIT_ID), TrayAction::Quit);
     }
@@ -269,6 +277,7 @@ mod tests {
                 SCREEN_SUBMENU_ID,
                 LAUNCHER_ID,
                 SEPARATOR_A_ID,
+                OPEN_SAVE_PATH_ID,
                 CONFIGURE_ID,
                 ABOUT_ID,
                 SEPARATOR_B_ID,
@@ -277,8 +286,9 @@ mod tests {
         );
         assert_eq!(menu[0].label.as_deref(), Some("Take Screenshot"));
         assert_eq!(menu[3].label.as_deref(), Some("Capture Launcher"));
-        assert_eq!(menu[5].label.as_deref(), Some("Configure"));
-        assert_eq!(menu[8].label.as_deref(), Some("Quit"));
+        assert_eq!(menu[5].label.as_deref(), Some("Open Save Path"));
+        assert_eq!(menu[6].label.as_deref(), Some("Configure"));
+        assert_eq!(menu[9].label.as_deref(), Some("Quit"));
         assert!(menu[4].label.is_none(), "separators carry no label");
     }
 
