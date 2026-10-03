@@ -275,6 +275,7 @@ impl Renderer {
                 label: Some("render-frame"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &frame.msaa_view,
+                    depth_slice: None,
                     resolve_target: Some(target.view),
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
@@ -291,6 +292,7 @@ impl Renderer {
                 }),
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
             for step in steps.iter() {
                 draw_step(&mut pass, step, &uploaded, &pipelines);

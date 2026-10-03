@@ -139,7 +139,7 @@ fn toolbar_list(ui: &mut Ui, m: &FormMetrics, buttons: &mut Vec<String>) -> bool
         candidate = unused.first().map_or(String::new(), |id| (*id).to_owned());
     }
     row(ui, m, "", |ui| {
-        egui::ComboBox::from_id_source(combo_id)
+        egui::ComboBox::new(combo_id, "")
             .selected_text(title_case(&candidate))
             .show_ui(ui, |ui| {
                 for id in &unused {

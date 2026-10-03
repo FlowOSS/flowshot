@@ -13,9 +13,9 @@ use super::instance::OVERLAY_BACKENDS;
 
 /// The process-wide GPU objects shared by every window surface.
 ///
-/// The [`wgpu::Instance`] is not retained: adapter, device, and surfaces each
-/// hold their own `Arc` to the shared wgpu context (wgpu 0.20), so dropping
-/// the instance after initialization is a no-op for the live objects.
+/// The [`wgpu::Instance`] is not retained: adapter, device, and surfaces are
+/// internally `Arc`-backed and `Clone` (wgpu 30), so dropping the instance
+/// after initialization is a no-op for the live objects.
 #[derive(Debug)]
 pub struct GpuContext {
     /// The selected adapter (kept for surface capability queries).
@@ -79,7 +79,7 @@ async fn request_adapter_device(
     instance: &wgpu::Instance,
     probe_surface: Option<&wgpu::Surface<'static>>,
 ) -> Result<(wgpu::Adapter, wgpu::Device, wgpu::Queue), UiError> {
-    let mut adapters = instance.enumerate_adapters(OVERLAY_BACKENDS);
+    let mut adapters = instance.enumerate_adapters(OVERLAY_BACKENDS).await;
     if adapters.is_empty() {
         return Err(UiError::NoGpuAdapter);
     }
@@ -113,23 +113,21 @@ async fn request_adapter_device(
         "overlay GPU adapter selected"
     );
     let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: Some("flowshot-overlay-device"),
-                // Opt-in to adapter-specific format capabilities when the
-                // adapter offers them: enables 8x MSAA on formats where the
-                // WebGPU core guarantee is only [1, 4] samples (the renderer
-                // falls back to 4x without the feature).
-                required_features: adapter
-                    .features()
-                    .intersection(wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES),
-                // The adapter's own limits: guaranteed to satisfy the 4K
-                // texture floor (selection rejected weaker adapters) and
-                // never the 2048-capped downlevel defaults.
-                required_limits: adapter.limits(),
-            },
-            None,
-        )
+        .request_device(&wgpu::DeviceDescriptor {
+            label: Some("flowshot-overlay-device"),
+            // Opt-in to adapter-specific format capabilities when the
+            // adapter offers them: enables 8x MSAA on formats where the
+            // WebGPU core guarantee is only [1, 4] samples (the renderer
+            // falls back to 4x without the feature).
+            required_features: adapter
+                .features()
+                .intersection(wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES),
+            // The adapter's own limits: guaranteed to satisfy the 4K
+            // texture floor (selection rejected weaker adapters) and
+            // never the 2048-capped downlevel defaults.
+            required_limits: adapter.limits(),
+            ..wgpu::DeviceDescriptor::default()
+        })
         .await?;
     Ok((adapter, device, queue))
 }

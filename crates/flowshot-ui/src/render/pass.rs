@@ -78,7 +78,7 @@ pub(super) fn draw_step<'pass>(
     pass.set_pipeline(pipeline);
     pass.set_stencil_reference(clip);
     if let Some(bind_group) = bind_group {
-        pass.set_bind_group(0, bind_group, &[]);
+        pass.set_bind_group(0, Some(bind_group), &[]);
     }
     pass.set_vertex_buffer(0, vertex.slice(..));
     pass.set_index_buffer(index.slice(..), wgpu::IndexFormat::Uint32);

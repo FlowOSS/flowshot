@@ -219,17 +219,15 @@ impl SmokeApp {
             return;
         };
         let frame = match surface.get_current_texture() {
-            Ok(frame) => frame,
-            Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => {
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
                 surface.configure(&gpu.device, config);
                 return;
             }
-            Err(wgpu::SurfaceError::Timeout) => return,
-            Err(wgpu::SurfaceError::OutOfMemory) => {
-                let error = UiError::OutOfMemory;
-                self.fatal_error = Some(error);
-                return;
-            }
+            wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Validation => return,
         };
         let view = frame
             .texture
@@ -250,7 +248,7 @@ impl SmokeApp {
                 self.fatal_error = Some(error);
             }
         }
-        frame.present();
+        gpu.queue.present(frame);
     }
 
     fn finish_timing(&mut self, scale_index: usize) {

@@ -43,7 +43,20 @@ impl EguiSurface {
     ) -> Self {
         let ctx = Context::default();
         ctx.set_fonts(super::theme::fonts());
-        let renderer = egui_wgpu::Renderer::new(&gpu.device, color_format, None, 1);
+        let renderer = egui_wgpu::Renderer::new(
+            &gpu.device,
+            color_format,
+            egui_wgpu::RendererOptions {
+                // The pre-0.33 constructor's fixed behavior: no MSAA (egui
+                // feathering is the antialiasing), no depth/stencil, and no
+                // dithering - the offscreen QA contract pins exact token
+                // colors on flat fills (dithering adds +/-1 LSB noise).
+                msaa_samples: 1,
+                depth_stencil_format: None,
+                dithering: false,
+                ..egui_wgpu::RendererOptions::default()
+            },
+        );
         let input = InputState::new(
             pixels_per_point,
             screen_size_points,
@@ -77,34 +90,52 @@ impl EguiSurface {
         style: Style,
         show: impl FnOnce(&mut Ui) -> A,
     ) -> (egui::FullOutput, A) {
-        self.ctx.set_style(style);
+        // egui 0.36 stores one style per theme; this host resolves dark/light
+        // itself (design tokens + system theme), so both themes receive the
+        // same resolved style - the pre-0.36 single-`set_style` semantics.
+        self.ctx.set_style_of(egui::Theme::Dark, style.clone());
+        self.ctx.set_style_of(egui::Theme::Light, style);
         let input = self.input.take_raw_input();
         let mut action = A::default();
-        let output = self.ctx.run(input, |ctx| {
-            action = panel.show(ctx, show).inner;
+        // `run_ui` is `FnMut` (multi-pass on `request_discard`, which this
+        // host's widgets never call); `take()` keeps the `FnOnce` inputs
+        // consumed exactly once and any extra pass a no-op.
+        let (mut panel, mut show) = (Some(panel), Some(show));
+        let output = self.ctx.run_ui(input, |ui| {
+            let (Some(panel), Some(show)) = (panel.take(), show.take()) else {
+                return;
+            };
+            action = panel.show(ui, show).inner;
         });
-        self.input
-            .push_copied_text(&output.platform_output.copied_text);
+        for command in &output.platform_output.commands {
+            if let egui::OutputCommand::CopyText(text) = command {
+                self.input.push_copied_text(text);
+            }
+        }
         (output, action)
     }
 
     /// Tessellates + uploads + renders `output` into `target` (clearing to
-    /// the theme's panel fill). The caller submits the encoder.
+    /// the theme's panel fill) and consumes `output`'s texture deltas (egui
+    /// 0.36 panics when a `TexturesDelta` drops unapplied). The caller
+    /// submits the encoder.
     pub(crate) fn paint(
         &mut self,
         gpu: &GpuContext,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         size_in_pixels: [u32; 2],
-        output: &egui::FullOutput,
+        output: &mut egui::FullOutput,
     ) {
         let screen = egui_wgpu::ScreenDescriptor {
             size_in_pixels,
             pixels_per_point: output.pixels_per_point,
         };
-        for (id, delta) in &output.textures_delta.set {
-            self.renderer
-                .update_texture(&gpu.device, &gpu.queue, *id, delta);
+        for (id, deltas) in &output.textures_delta.set {
+            for delta in deltas {
+                self.renderer
+                    .update_texture(&gpu.device, &gpu.queue, *id, delta);
+            }
         }
         let paint_jobs = self
             .ctx
@@ -112,7 +143,7 @@ impl EguiSurface {
         let callback_buffers =
             self.renderer
                 .update_buffers(&gpu.device, &gpu.queue, encoder, &paint_jobs, &screen);
-        let fill = self.ctx.style().visuals.panel_fill;
+        let fill = self.ctx.style_of(self.ctx.theme()).visuals.panel_fill;
         // sRGB targets (the debug-logged sRGB-only fallback) encode the clear
         // value from linear components (the eframe convention); gamma-space
         // targets - the live egui host surfaces and the offscreen QA path -
@@ -134,10 +165,11 @@ impl EguiSurface {
                 a: 1.0,
             }
         };
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("egui-host-frame"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: target,
+                depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(clear),
@@ -147,12 +179,17 @@ impl EguiSurface {
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,
+            multiview_mask: None,
         });
+        // egui-wgpu's `render` takes a lifetime-erased pass; the encoder is
+        // untouched until the pass drops (same ordering as before the erase).
+        let mut pass = pass.forget_lifetime();
         self.renderer.render(&mut pass, &paint_jobs, &screen);
         drop(pass);
         gpu.queue.submit(callback_buffers);
         for id in &output.textures_delta.free {
             self.renderer.free_texture(id);
         }
+        output.textures_delta.clear();
     }
 }

@@ -1,10 +1,9 @@
-//! Bidirectional `winit` 0.30 <-> `egui` 0.28 key mapping.
+//! Bidirectional `winit` 0.30 <-> `egui` 0.36 key mapping.
 //!
-//! egui-winit is deliberately NOT a dependency (its 0.28 release requires
-//! winit ^0.29 while the workspace pins winit 0.30, and no egui release
-//! pairs wgpu 0.20 with winit 0.30 - the plan's recorded fallback: feed
-//! egui manually). This module mirrors the egui-winit 0.28 conversion
-//! semantics: logical key first (correct on non-Latin layouts, egui#3653),
+//! egui-winit is deliberately NOT a dependency (the hand-feed bridge is the
+//! tested surface - see the crate manifest note). This module mirrors the
+//! egui-winit conversion semantics (transcribed from its 0.28 tables,
+//! unchanged through 0.36): logical key first (correct on non-Latin layouts, egui#3653),
 //! physical code as fallback, numpad merged into its main-cluster
 //! counterpart. The reverse direction (egui key -> winit code) serves the
 //! shortcuts recorder, which stores bindings as `KeyCode` (the
@@ -14,7 +13,7 @@
 use egui::Key;
 use winit::keyboard::{Key as WinitKey, KeyCode, NamedKey, PhysicalKey};
 
-/// Physical code -> egui key, in egui-winit 0.28 order; the reverse lookup
+/// Physical code -> egui key, in egui-winit order; the reverse lookup
 /// is first-match-wins, so main-cluster codes precede numpad aliases.
 const PHYSICAL_TABLE: &[(KeyCode, Key)] = &[
     (KeyCode::ArrowDown, Key::ArrowDown),

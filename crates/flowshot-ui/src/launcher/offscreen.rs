@@ -74,11 +74,11 @@ pub fn render_offscreen(
         "launcher-offscreen-encoder",
     ] {
         let panel = egui::CentralPanel::default().frame(
-            egui::Frame::none()
+            egui::Frame::NONE
                 .fill(style.visuals.panel_fill)
-                .inner_margin(egui::Margin::same(metrics.window_margin())),
+                .inner_margin(metrics.window_margin()),
         );
-        let (output, _action) = surface.frame_with(panel, style.clone(), |ui| {
+        let (mut output, _action) = surface.frame_with(panel, style.clone(), |ui| {
             ui::show(ui, &mut *model, &metrics)
         });
         let mut encoder = gpu
@@ -86,7 +86,7 @@ pub fn render_offscreen(
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some(encoder_label),
             });
-        surface.paint(gpu, &mut encoder, &view, [width, height], &output);
+        surface.paint(gpu, &mut encoder, &view, [width, height], &mut output);
         gpu.queue.submit(Some(encoder.finish()));
     }
     read_texture_rgba(&gpu.device, &gpu.queue, &texture, width, height)

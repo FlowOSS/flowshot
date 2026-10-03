@@ -11,7 +11,7 @@
 //! per-mode amber/red).
 
 use egui::{
-    Color32, Margin, Rounding, Stroke, Style, TextStyle, Visuals,
+    Color32, CornerRadius, Margin, Stroke, Style, TextStyle, Visuals,
     style::{Spacing, WidgetVisuals},
 };
 use flowshot_core::config::UiConfig;
@@ -54,6 +54,18 @@ fn px(value: u32, fallback: u8) -> f32 {
     f32::from(u8::try_from(value).unwrap_or(fallback))
 }
 
+/// A `u32` spacing token as an integer margin (egui 0.31+ margins are `i8`;
+/// same corrupt-token fallback as [`px`]).
+fn margin(value: u32, fallback: i8) -> Margin {
+    Margin::same(i8::try_from(value).unwrap_or(fallback))
+}
+
+/// A `u32` radius token as an integer corner radius (egui 0.31+ radii are
+/// `u8`; same corrupt-token fallback as [`px`]).
+fn radius(value: u32, fallback: u8) -> CornerRadius {
+    CornerRadius::same(u8::try_from(value).unwrap_or(fallback))
+}
+
 /// The uniform control height every settings widget shares: the glyph line
 /// box plus the vertical button padding (egui floors buttons, text fields,
 /// combos, and sliders at `interact_size.y`, so one value unifies them).
@@ -78,8 +90,8 @@ pub fn style(tokens: &DesignTokens, ui: &UiConfig, mode: ThemeMode) -> Style {
     let spacing = Spacing {
         item_spacing: egui::vec2(medium, small),
         button_padding: egui::vec2(medium, small),
-        window_margin: Margin::same(medium),
-        menu_margin: Margin::same(medium),
+        window_margin: margin(tokens.spacing.medium, 8),
+        menu_margin: margin(tokens.spacing.medium, 8),
         ..Spacing::default()
     };
 
@@ -135,9 +147,6 @@ pub fn settings_style(tokens: &DesignTokens, ui: &UiConfig, mode: ThemeMode) -> 
     // A solid, reserved, always-drawn scrollbar (egui's default floats
     // invisibly until hovered - no scroll affordance for a settings page).
     // The handle reads against the bar well through `Surfaces::control`.
-    // A solid, reserved, always-drawn scrollbar (egui's default floats
-    // invisibly until hovered - no scroll affordance for a settings page).
-    // The handle reads against the bar well through `Surfaces::control`.
     // Placement: egui pins the reserved bar to the right edge of the
     // scroll area's outer rect, which FOLLOWS the content width - with
     // wrapped content that is the viewport's right edge, inset from the
@@ -168,8 +177,7 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
         ThemeMode::Dark => Visuals::dark(),
         ThemeMode::Light => Visuals::light(),
     };
-    let medium = px(tokens.radii.medium, 4);
-    let rounding = Rounding::same(medium);
+    let corner_radius = radius(tokens.radii.medium, 4);
     let accent_edge = Stroke::new(HAIRLINE, accent.gamma_multiply(ACCENT_EDGE_ALPHA));
     let hairline = |color: Color32| Stroke::new(HAIRLINE, color);
 
@@ -182,7 +190,7 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
         bg_fill: s.button,
         weak_bg_fill: s.button,
         bg_stroke: hairline(s.separator),
-        rounding,
+        corner_radius,
         fg_stroke: hairline(s.text_weak),
         expansion: 0.0,
     };
@@ -190,7 +198,7 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
         bg_fill: s.control,
         weak_bg_fill: s.button,
         bg_stroke: hairline(s.outline),
-        rounding,
+        corner_radius,
         fg_stroke: hairline(s.text),
         expansion: 0.0,
     };
@@ -198,7 +206,7 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
         bg_fill: s.control_hover,
         weak_bg_fill: s.button_hover,
         bg_stroke: accent_edge,
-        rounding,
+        corner_radius,
         fg_stroke: hairline(s.text),
         expansion: 0.0,
     };
@@ -206,7 +214,7 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
         bg_fill: accent,
         weak_bg_fill: accent,
         bg_stroke: hairline(accent),
-        rounding,
+        corner_radius,
         fg_stroke: hairline(ink_on(accent)),
         expansion: 0.0,
     };
@@ -214,7 +222,7 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
         bg_fill: s.control,
         weak_bg_fill: s.button_hover,
         bg_stroke: accent_edge,
-        rounding,
+        corner_radius,
         fg_stroke: hairline(s.text),
         expansion: 0.0,
     };
@@ -232,13 +240,21 @@ fn visuals(tokens: &DesignTokens, accent: Color32, s: super::Surfaces, mode: The
     visuals.text_cursor.stroke = Stroke::new(CARET_WIDTH, accent);
     visuals.slider_trailing_fill = true;
     visuals.indent_has_left_vline = false;
-    visuals.window_rounding = Rounding::same(px(tokens.radii.large, 8));
-    visuals.menu_rounding = rounding;
+    visuals.window_corner_radius = radius(tokens.radii.large, 8);
+    visuals.menu_corner_radius = corner_radius;
     visuals.popup_shadow = popup_shadow(tokens);
-    // Crisp clipping at the scroll viewport edge (the egui default lets
-    // scrolled content bleed 6px past the clip for shadow softness).
-    visuals.clip_rect_margin = 0.0;
     visuals
+}
+
+/// Token shadow offset (f32 logical pixels) -> egui 0.31+'s integer `i8`
+/// shadow geometry; the `as` cast saturates (Rust float->int semantics), so
+/// an oversized token clamps instead of wrapping.
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "f32->i8 saturates by Rust cast semantics; shadow offsets are small whole pixels"
+)]
+fn shadow_offset(value: f32) -> i8 {
+    value.round() as i8
 }
 
 /// Projects `tokens.shadows.medium` into the egui popup shadow.
@@ -249,9 +265,12 @@ fn popup_shadow(tokens: &DesignTokens) -> egui::Shadow {
         |[r, g, b, a]| Color32::from_rgba_unmultiplied(r, g, b, a),
     );
     egui::Shadow {
-        offset: egui::vec2(token.offset[0], token.offset[1]),
-        blur: f32::from(u16::try_from(token.blur).unwrap_or(8)),
-        spread: 0.0,
+        offset: [
+            shadow_offset(token.offset[0]),
+            shadow_offset(token.offset[1]),
+        ],
+        blur: u8::try_from(token.blur).unwrap_or(8),
+        spread: 0,
         color,
     }
 }

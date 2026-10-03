@@ -7,7 +7,7 @@
 
 use std::ops::RangeInclusive;
 
-use egui::{ComboBox, Rounding, TextEdit, Ui};
+use egui::{ComboBox, StrokeKind, TextEdit, Ui};
 
 use crate::egui_host::theme::parse_hex_rgb;
 use crate::settings::layout::FormMetrics;
@@ -88,8 +88,9 @@ pub(crate) fn swatch(ui: &mut Ui, m: &FormMetrics, value: &mut String) -> bool {
     }
     ui.painter().rect_stroke(
         response.rect,
-        Rounding::same(m.control_radius()),
+        m.control_radius(),
         ui.visuals().window_stroke,
+        StrokeKind::Middle,
     );
     changed
 }
@@ -124,7 +125,7 @@ pub(crate) fn combo<T: PartialEq + Copy>(
         .find(|(option, _)| option == value)
         .map_or(label, |(_, text)| *text);
     row(ui, m, label, |ui| {
-        ComboBox::from_id_source(label)
+        ComboBox::new(label, "")
             .width(ui.available_width().min(m.combo_max_width()))
             .selected_text(selected)
             .show_ui(ui, |ui| {

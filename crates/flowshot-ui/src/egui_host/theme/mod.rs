@@ -135,16 +135,17 @@ pub(crate) fn ink_on(background: Color32) -> Color32 {
 #[must_use]
 pub fn fonts() -> FontDefinitions {
     let mut definitions = FontDefinitions::default();
-    definitions
-        .font_data
-        .insert("Inter".to_owned(), FontData::from_static(INTER_REGULAR));
+    definitions.font_data.insert(
+        "Inter".to_owned(),
+        std::sync::Arc::new(FontData::from_static(INTER_REGULAR)),
+    );
     definitions.font_data.insert(
         MEDIUM_FAMILY.to_owned(),
-        FontData::from_static(INTER_MEDIUM),
+        std::sync::Arc::new(FontData::from_static(INTER_MEDIUM)),
     );
     definitions.font_data.insert(
         SEMIBOLD_FAMILY.to_owned(),
-        FontData::from_static(INTER_SEMIBOLD),
+        std::sync::Arc::new(FontData::from_static(INTER_SEMIBOLD)),
     );
     definitions
         .families

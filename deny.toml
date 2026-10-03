@@ -16,7 +16,11 @@
 #   system-deps <- the gtk-sys/pipewire build chains).
 # - CDLA-Permissive-2.0: webpki-roots (via reqwest) - permissive DATA license
 #   for Mozilla's root-certificate set.
-# - epaint's LicenseRef-UFL-1.0 (non-SPDX, per-crate exception below).
+# - epaint_default_fonts' Ubuntu-font-1.0 (per-crate exception below; the
+#   phase-3 graphics migration moved egui's embedded default fonts out of
+#   epaint - whose license is now plain MIT OR Apache-2.0 - into the
+#   epaint_default_fonts crate, and the old non-SPDX LicenseRef-UFL-1.0
+#   identifier became the SPDX Ubuntu-font-1.0).
 
 [licenses]
 allow = [
@@ -27,7 +31,6 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-3.0",
-    "MPL-2.0",
     "Zlib",
     "CC0-1.0",
     "NCSA",
@@ -36,14 +39,16 @@ allow = [
     "OFL-1.1",
 ]
 
-# epaint (egui's paint layer, the todo-36 settings surface) declares
-# "(MIT OR Apache-2.0) AND OFL-1.1 AND LicenseRef-UFL-1.0": the non-SPDX
-# UFL-1.0 covers egui's EMBEDDED default fonts, which FlowShot never renders
-# with (the vendored OFL Inter replaces them at runtime). UFL is a free font
-# license in the OFL family; upstream discussion: emilk/egui#2321.
+# epaint_default_fonts (egui's embedded default fonts, split out of epaint in
+# the 0.36 stack) declares "(MIT OR Apache-2.0) AND OFL-1.1 AND
+# Ubuntu-font-1.0": OFL-1.1 covers the bundled Hack face (the monospace
+# family FlowShot DOES render with - allowed globally above), and
+# Ubuntu-font-1.0 covers the Ubuntu Light faces, which FlowShot never
+# renders with (the vendored OFL Inter replaces them at runtime). UFL is a
+# free font license in the OFL family; upstream discussion: emilk/egui#2321.
 [[licenses.exceptions]]
-name = "epaint"
-allow = ["LicenseRef-UFL-1.0"]
+name = "epaint_default_fonts"
+allow = ["Ubuntu-font-1.0"]
 
 [licenses.private]
 ignore = false

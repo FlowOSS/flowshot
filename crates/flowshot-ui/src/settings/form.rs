@@ -11,12 +11,12 @@
 //! edits re-theme these primitives on the next frame with no plumbing.
 
 use egui::{
-    Align, Button, Color32, Frame, Label, Layout, Margin, Response, RichText, Rounding, Sense,
-    Shape, Stroke, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
+    Align, Button, Color32, Frame, Label, Layout, Margin, Response, RichText, Sense, Shape, Stroke,
+    StrokeKind, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
 };
 
 use crate::egui_host::theme::{self, ink_on};
-use crate::settings::layout::FormMetrics;
+use crate::settings::layout::{FormMetrics, margin_points};
 
 /// The focus-ring offset around a focused checkbox.
 const FOCUS_RING_OFFSET: f32 = 2.0;
@@ -50,33 +50,41 @@ pub(crate) fn card(
     let available = ui.available_width();
     let width = m.content_width(available);
     let inner = width - 2.0 * m.card_padding();
-    let offset = m.content_offset(available);
     let card_fill = ui.visuals().faint_bg_color;
     let title_color = ui.visuals().strong_text_color();
     let title_font = theme::semibold(m.title_size());
-    // The centering lives in the outer margin: Frame::show inherits the
-    // enclosing layout, so a wrapping horizontal would flow the body rows
-    // left-to-right instead of stacking them.
-    Frame::none()
-        .fill(card_fill)
-        .rounding(Rounding::same(m.card_radius()))
-        .inner_margin(Margin::same(m.card_padding()))
-        .outer_margin(Margin {
-            left: offset,
-            right: offset,
-            top: 0.0,
-            bottom: m.medium(),
-        })
-        .show(ui, |ui| {
-            ui.set_min_width(inner);
-            ui.set_max_width(inner);
-            ui.label(RichText::new(title).font(title_font).color(title_color));
-            ui.add_space(m.small());
-            ui.separator();
-            ui.add_space(m.medium());
-            body(ui)
-        })
-        .inner
+    // The centering lives in the layout, not the outer margin: egui 0.31+
+    // margins are i8, so a margin offset would saturate at 127px on wide
+    // windows; `top_down(Center)` places the fixed-width frame at exactly
+    // the old `content_offset`. Frame::show inherits the enclosing layout,
+    // so the body re-establishes top-down-LEFT: rows stack and the title
+    // stays left-aligned inside the centered card.
+    ui.with_layout(Layout::top_down(Align::Center), |ui| {
+        Frame::NONE
+            .fill(card_fill)
+            .corner_radius(m.card_radius())
+            .inner_margin(m.card_padding())
+            .outer_margin(Margin {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: margin_points(m.medium()),
+            })
+            .show(ui, |ui| {
+                ui.set_min_width(inner);
+                ui.set_max_width(inner);
+                ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
+                    ui.label(RichText::new(title).font(title_font).color(title_color));
+                    ui.add_space(m.small());
+                    ui.separator();
+                    ui.add_space(m.medium());
+                    body(ui)
+                })
+                .inner
+            })
+            .inner
+    })
+    .inner
 }
 
 /// One grid row: the label right-aligned in the fixed-width label column,
@@ -153,7 +161,7 @@ pub(crate) fn pill_tab(ui: &mut Ui, m: &FormMetrics, selected: bool, label: &str
         (theme::medium(m.base_size()), ui.visuals().text_color())
     };
     let mut button = Button::new(RichText::new(label).font(font).color(text_color))
-        .rounding(Rounding::same(m.control_height() * 0.5))
+        .corner_radius(m.control_height() * 0.5)
         .min_size(vec2(0.0, m.control_height()));
     if selected {
         button = button.fill(accent);
@@ -182,7 +190,7 @@ pub(crate) fn primary_button(ui: &mut Ui, m: &FormMetrics, label: &str, enabled:
                 .color(text_color),
         )
         .fill(fill)
-        .rounding(Rounding::same(m.control_radius()))
+        .corner_radius(m.control_radius())
         .min_size(vec2(0.0, m.control_height())),
     )
 }
@@ -217,7 +225,7 @@ fn note(ui: &mut Ui, m: &FormMetrics, text: &str, color: Color32) {
 pub(crate) fn readout(ui: &mut Ui, m: &FormMetrics, text: &str) {
     let font = egui::FontId::monospace(m.base_size() - 1.0);
     let color = ui.visuals().text_color();
-    let text_width = ui.fonts(|fonts| {
+    let text_width = ui.fonts_mut(|fonts| {
         fonts
             .layout_no_wrap(text.into(), font.clone(), color)
             .size()
@@ -228,9 +236,10 @@ pub(crate) fn readout(ui: &mut Ui, m: &FormMetrics, text: &str) {
     let painter = ui.painter();
     painter.rect(
         rect,
-        Rounding::same(m.control_radius()),
+        m.control_radius(),
         ui.visuals().extreme_bg_color,
         ui.visuals().widgets.inactive.bg_stroke,
+        StrokeKind::Middle,
     );
     painter.text(
         rect.left_center() + vec2(m.medium(), 0.0),
@@ -284,9 +293,10 @@ impl Widget for TokenCheckbox<'_> {
                 };
                 painter.rect(
                     big.expand(visuals.expansion),
-                    visuals.rounding,
+                    visuals.corner_radius,
                     on.bg_fill,
                     on.bg_stroke,
+                    StrokeKind::Middle,
                 );
                 painter.add(Shape::line(
                     vec![
@@ -299,17 +309,19 @@ impl Widget for TokenCheckbox<'_> {
             } else {
                 painter.rect(
                     big.expand(visuals.expansion),
-                    visuals.rounding,
+                    visuals.corner_radius,
                     visuals.bg_fill,
                     visuals.bg_stroke,
+                    StrokeKind::Middle,
                 );
             }
             if response.has_focus() {
                 painter.rect(
                     big.expand(FOCUS_RING_OFFSET),
-                    visuals.rounding,
+                    visuals.corner_radius,
                     Color32::TRANSPARENT,
                     ui.visuals().selection.stroke,
+                    StrokeKind::Middle,
                 );
             }
         }

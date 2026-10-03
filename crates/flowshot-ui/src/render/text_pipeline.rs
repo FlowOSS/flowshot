@@ -66,7 +66,7 @@ pub(crate) fn atlas_resources(
         label: Some("render-glyph-sampler"),
         mag_filter: wgpu::FilterMode::Linear,
         min_filter: wgpu::FilterMode::Linear,
-        mipmap_filter: wgpu::FilterMode::Nearest,
+        mipmap_filter: wgpu::MipmapFilterMode::Nearest,
         address_mode_u: wgpu::AddressMode::ClampToEdge,
         address_mode_v: wgpu::AddressMode::ClampToEdge,
         ..wgpu::SamplerDescriptor::default()
@@ -97,8 +97,8 @@ pub(crate) fn text_pipeline(
 ) -> wgpu::RenderPipeline {
     let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("render-text-layout"),
-        bind_group_layouts: &[bind_group_layout],
-        push_constant_ranges: &[],
+        bind_group_layouts: &[Some(bind_group_layout)],
+        immediate_size: 0,
     });
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("render-text.wgsl"),
@@ -109,13 +109,13 @@ pub(crate) fn text_pipeline(
         layout: Some(&layout),
         vertex: wgpu::VertexState {
             module: &module,
-            entry_point: "vs_main",
+            entry_point: Some("vs_main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
-            buffers: &[wgpu::VertexBufferLayout {
+            buffers: &[Some(wgpu::VertexBufferLayout {
                 array_stride: TEXT_VERTEX_STRIDE,
                 step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: TEXT_VERTEX_ATTRIBUTES,
-            }],
+            })],
         },
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleList,
@@ -129,7 +129,7 @@ pub(crate) fn text_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: &module,
-            entry_point: "fs_main",
+            entry_point: Some("fs_main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format,
@@ -137,6 +137,7 @@ pub(crate) fn text_pipeline(
                 write_mask: wgpu::ColorWrites::ALL,
             })],
         }),
-        multiview: None,
+        multiview_mask: None,
+        cache: None,
     })
 }

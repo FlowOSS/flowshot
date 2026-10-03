@@ -216,11 +216,13 @@ fn delay_rides_both_request_variants_at_the_u32_boundary() {
 fn test_context() -> egui::Context {
     let ctx = egui::Context::default();
     ctx.set_fonts(crate::egui_host::theme::fonts());
-    ctx.set_style(settings_style(
+    let style = settings_style(
         &DesignTokens::default(),
         &UiConfig::default(),
         ThemeMode::Dark,
-    ));
+    );
+    ctx.set_style_of(egui::Theme::Dark, style.clone());
+    ctx.set_style_of(egui::Theme::Light, style);
     ctx
 }
 
@@ -240,16 +242,16 @@ fn run_frame(
         ..Default::default()
     };
     let metrics = FormMetrics::from_tokens(&DesignTokens::default());
-    let panel = egui::CentralPanel::default().frame(
-        egui::Frame::none()
-            .fill(ctx.style().visuals.panel_fill)
-            .inner_margin(egui::Margin::same(metrics.window_margin())),
-    );
-    let _ = ctx.run(input, |ctx| {
-        panel.show(ctx, |ui| {
+    let fill = ctx.style_of(ctx.theme()).visuals.panel_fill;
+    let window_margin = metrics.window_margin();
+    ctx.run_ui(input, |ui| {
+        let panel = egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(fill).inner_margin(window_margin));
+        panel.show(ui, |ui| {
             action = widgets::show(ui, model, &metrics);
         });
-    });
+    })
+    .drop_without_applying_deltas();
     action
 }
 

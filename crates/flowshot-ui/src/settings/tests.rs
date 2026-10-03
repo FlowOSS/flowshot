@@ -265,8 +265,8 @@ fn theme_projects_tokens_and_config_into_visuals() {
     assert_eq!(style.visuals.hyperlink_color, egui::Color32::RED);
     // Radii come from the tokens
     assert_eq!(
-        style.visuals.widgets.inactive.rounding,
-        egui::Rounding::same(4.0)
+        style.visuals.widgets.inactive.corner_radius,
+        egui::CornerRadius::same(4)
     );
 
     // Light mode differs and keeps the accent
@@ -467,8 +467,6 @@ fn settings_style_projects_token_geometry() {
     // right edge
     assert!(!style.spacing.scroll.floating);
     assert_eq!(style.spacing.scroll.bar_width, 8.0);
-    // Crisp clipping at the scroll viewport
-    assert_eq!(style.visuals.clip_rect_margin, 0.0);
 
     // Given: bigger typography + spacing tokens
     let mut big = DesignTokens::default();
@@ -592,7 +590,8 @@ fn label_column_fits_every_row_label_on_one_line() {
     let ctx = egui::Context::default();
     ctx.set_fonts(theme::fonts());
     // ctx.fonts() needs one begun frame (pixels_per_point is unknown before)
-    let _ = ctx.run(egui::RawInput::default(), |_| {});
+    ctx.run_ui(egui::RawInput::default(), |_| {})
+        .drop_without_applying_deltas();
     let tokens = DesignTokens::default();
     let m = FormMetrics::from_tokens(&tokens);
     // The offscreen QA window (900px) leaves >= 800px of card content
@@ -601,7 +600,9 @@ fn label_column_fits_every_row_label_on_one_line() {
     for label in ROW_LABELS {
         // When: the label is shaped with the real font
         let width = ctx
-            .fonts(|fonts| fonts.layout_no_wrap(label.into(), font.clone(), egui::Color32::WHITE))
+            .fonts_mut(|fonts| {
+                fonts.layout_no_wrap(label.into(), font.clone(), egui::Color32::WHITE)
+            })
             .size()
             .x;
         // Then: it fits the column without wrapping (uniform row height)
