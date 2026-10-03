@@ -55,11 +55,14 @@ enum Sub {
 }
 
 fn main() -> anyhow::Result<()> {
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+        .add_directive("zbus::proxy=error".parse().unwrap())
+        .add_directive("wgpu_hal::vulkan::conv=error".parse().unwrap())
+        .add_directive("wgpu_hal::vulkan::instance=error".parse().unwrap());
+
     tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
+        .with_env_filter(filter)
         .init();
 
     let args = Args::parse();

@@ -134,11 +134,14 @@ fn report(error: &anyhow::Error) -> ExitCode {
 }
 
 fn init_tracing() {
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn"))
+        .add_directive("zbus::proxy=error".parse().unwrap())
+        .add_directive("wgpu_hal::vulkan::conv=error".parse().unwrap())
+        .add_directive("wgpu_hal::vulkan::instance=error".parse().unwrap());
+
     tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
-        )
+        .with_env_filter(filter)
         .with_writer(std::io::stderr)
         .init();
 }

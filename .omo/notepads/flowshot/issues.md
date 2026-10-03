@@ -296,3 +296,13 @@ FIXED: Increased wait_until timeout from 200ms to 500ms in kwin/tests.rs to prev
 - flowshot-daemon/src/execute/headless.rs still creates its wgpu instance with the IMPLICIT `..InstanceDescriptor::default()` (task rule limited this pass to flowshot-ui). Behavior is identical to the new explicit policy (debug=VALIDATION|DEBUG, release=empty), so the debug-log validation warning can still originate from the daemon's headless-capture instance; a daemon-side switch to `flowshot_ui::gpu::new_instance()` (or a daemon-local explicit form) is a one-line follow-up.
 - gpu/surface.rs is at 217 pure LOC (warning band 200-250): split before the next line-adding edit (250-LOC ceiling).
 - The user-log noise classes deliberately left untouched (task out-of-scope): zbus property-cache warnings (ashpd teardown race, benign), NVIDIA "Unrecognized present mode 1000361000" spam (driver-side, wgpu-hal conv).
+
+## 2026-10-03: wgpu 0.20 swapchain semaphore reuse trips VUID-vkQueueSubmit-pSignalSemaphores-00067
+With vulkan-validation-layers installed + a debug build (validation on by design), wgpu 0.20's
+Vulkan backend emits ERROR-level validation complaints about present-semaphore reuse
+("Swapchain image N was presented but was not re-acquired..."). UPSTREAM, not FlowShot: the
+pattern is wgpu 0.20's swapchain semaphore pool; fixed in later wgpu (per-image semaphores /
+swapchain_maintenance1 fences). Benign on NVIDIA in practice (renders correct, no corruption).
+UPGRADE BLOCKER: egui-wgpu 0.28.1 pairs with wgpu ^0.20 — the wgpu bump waits for an egui
+release that pairs with a fixed wgpu (revisit when egui ships a wgpu-22+ release and our
+winit 0.30 constraint allows). Do NOT log-filter these: they are what validation is for.
