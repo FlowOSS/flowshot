@@ -264,6 +264,14 @@ full-workspace load (15s runtime = its internal timeout tripped); passes 3/3 iso
 Same class as the kwin stub deadline tests. ACTION (CI/todo): the private-broker stub tests
 should use generous-but-bounded waits; if CI shows this flake, bump the stub timeouts.
 
+FIXED: Increased registration_timeout from 15s to 30s and wait_for timeout from 15s to 30s
+in portal_shortcuts.rs to prevent load flaking.
+
+## 2026-09-26: kwin stub tests are load-sensitive (flaky under fresh-compile contention)
+First full-workspace `cargo test` after a big compile batch failed `kwin::tests::stub_round_trip_area_capture_matches_the_raw_fixture` + `unknown_qimage_format_is_a_typed_decode_error` (30s runtime = deadline timeouts). Re-run after build cache warm: ALL green (988 passed). Root: the stub tests use deadline-bounded pipe reads; parallel rustc/test contention starves them. ACTION todo 38/CI: run the suite with warm cache, or bump the stub deadline budgets if CI shows this flake.
+
+FIXED: Increased wait_until timeout from 200ms to 500ms in kwin/tests.rs to prevent load flaking.
+
 ## Wheel sizing "broken" on shape tools (fixed 2026-10-02)
 - **Report**: wheel tool-size works for counter/text, not for shapes (line/arrow/rect/ellipse/pencil/marker).
 - **Measured (injection-seam probe, per-tool table)**: the wheel MECHANISM was never broken - accumulator -> apply_size -> on_size_changed -> committed object -> Redraw all fire for every tool. What was broken was FEEDBACK: (1) `ChromeState::show_size_hud` was dead code in production (only chrome/tests.rs called it) and `SizeHud.rect` was never assigned (zero rect = invisible even when visible=true; no hide timer either); (2) RectTool's hover dot painted from the persisted config `draw_thickness`, so wheel-on-rect (corner-radius slot) changed NOTHING visibly until a drag. Counter/text only "worked" because their previews change dramatically (bubble 16->24px, edit-widget font); shape dots move ±0.5px - imperceptible.

@@ -108,13 +108,13 @@ fn persistent_new_fds(baseline: &BTreeMap<i32, String>) -> BTreeMap<i32, String>
     leaked
 }
 
-/// Polls `condition` for up to ~200ms. Every use bounds a teardown step
+/// Polls `condition` for up to ~500ms. Every use bounds a teardown step
 /// that is GUARANTEED to complete: `Connection::close` issues
 /// `shutdown(Both)`, which resolves the zbus reader task's parked read
 /// immediately (reactor wakeup, no peer dependency), and the task then
 /// releases the socket descriptor.
 fn wait_until(condition: impl Fn() -> bool) -> bool {
-    for _ in 0..10 {
+    for _ in 0..25 {
         if condition() {
             return true;
         }

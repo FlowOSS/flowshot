@@ -421,13 +421,13 @@ fn options(config_dir: &Path) -> ShortcutOptions {
         enabled: true,
         desktop: Some(DesktopEnv::Hyprland),
         config_dir: Some(config_dir.to_path_buf()),
-        registration_timeout: Duration::from_secs(15),
+        registration_timeout: Duration::from_secs(30),
         ..ShortcutOptions::default()
     }
 }
 
 async fn wait_for(condition: impl Fn() -> bool, what: &str) {
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         if condition() {
             return;
