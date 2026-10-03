@@ -54,11 +54,19 @@ enum Sub {
     },
 }
 
+/// Default tracing filter when `RUST_LOG` is unset (an explicit `RUST_LOG`
+/// overrides it completely via `try_from_default_env`): an `info` base plus
+/// ERROR-only for three known-benign upstream spam targets - the ashpd
+/// portal session/request teardown race (`zbus::proxy` `GetAll` warnings) and
+/// wgpu's NVIDIA present-mode/layer warnings (`wgpu_hal::vulkan`).
+const DEFAULT_LOG_FILTER: &str =
+    "info,zbus::proxy=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
+
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
         )
         .init();
 
@@ -132,5 +140,23 @@ fn load_config(explicit: Option<&std::path::Path>) -> anyhow::Result<Config> {
             tracing::warn!(path = %path.display(), %error, "config load failed; using defaults");
             Ok(Config::default())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DEFAULT_LOG_FILTER;
+
+    #[test]
+    fn default_filter_suppresses_the_three_upstream_spam_targets() {
+        assert!(DEFAULT_LOG_FILTER.contains("zbus::proxy=error"));
+        assert!(DEFAULT_LOG_FILTER.contains("wgpu_hal::vulkan::conv=error"));
+        assert!(DEFAULT_LOG_FILTER.contains("wgpu_hal::vulkan::instance=error"));
+    }
+
+    #[test]
+    fn default_filter_keeps_the_info_base_and_touches_no_flowshot_crate() {
+        assert!(DEFAULT_LOG_FILTER.starts_with("info,"));
+        assert!(!DEFAULT_LOG_FILTER.contains("flowshot"));
     }
 }
