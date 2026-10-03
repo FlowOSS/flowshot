@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "completed",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-10-03T12:53:59.293Z",
+      "updated_at": "2026-10-03T14:31:16.418Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -101,7 +101,8 @@
         "opencode:ses_f014a6478ffebT5svPz9PHVq0j",
         "opencode:ses_f00feaf0fffe849IgBYlR6BeGz",
         "opencode:ses_efe4dc9cfffeCbrc98xCcIi9ls",
-        "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1"
+        "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1",
+        "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -179,22 +180,23 @@
         "opencode:ses_f014a6478ffebT5svPz9PHVq0j": "appended",
         "opencode:ses_f00feaf0fffe849IgBYlR6BeGz": "appended",
         "opencode:ses_efe4dc9cfffeCbrc98xCcIi9ls": "appended",
-        "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1": "appended"
+        "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1": "appended",
+        "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
         "todo:1": {
           "task_key": "todo:1",
           "task_label": "1",
-          "task_title": "**Asset home**: move both into `assets/` (new dir; `assets/logo.svg` + `assets/logo.png`; note in assets/README or the main README what they are + that logo.svg is the source of truth). Update any references.",
-          "session_id": "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1",
+          "task_title": "`crates/flowshot-daemon/tests/portal_shortcuts.rs::portal_ladder_end_to_end` (flaked twice: 15s internal timeout tripped; passes isolated in 0.37s)",
+          "session_id": "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7",
           "agent": "Sisyphus-Junior",
-          "category": "deep-low",
+          "category": "quick",
           "started_at": "2026-09-25T01:39:47.072Z",
           "ended_at": "2026-09-25T01:50:14.031Z",
           "elapsed_ms": 626959,
           "status": "completed",
-          "updated_at": "2026-10-03T12:53:59.293Z"
+          "updated_at": "2026-10-03T14:31:16.418Z"
         },
         "todo:2": {
           "task_key": "todo:2",
@@ -335,7 +337,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "completed",
-  "updated_at": "2026-10-03T12:53:59.293Z",
+  "updated_at": "2026-10-03T14:31:16.418Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -412,7 +414,8 @@
     "opencode:ses_f014a6478ffebT5svPz9PHVq0j",
     "opencode:ses_f00feaf0fffe849IgBYlR6BeGz",
     "opencode:ses_efe4dc9cfffeCbrc98xCcIi9ls",
-    "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1"
+    "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1",
+    "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -490,22 +493,23 @@
     "opencode:ses_f014a6478ffebT5svPz9PHVq0j": "appended",
     "opencode:ses_f00feaf0fffe849IgBYlR6BeGz": "appended",
     "opencode:ses_efe4dc9cfffeCbrc98xCcIi9ls": "appended",
-    "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1": "appended"
+    "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1": "appended",
+    "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "**Asset home**: move both into `assets/` (new dir; `assets/logo.svg` + `assets/logo.png`; note in assets/README or the main README what they are + that logo.svg is the source of truth). Update any references.",
-      "session_id": "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1",
+      "task_title": "`crates/flowshot-daemon/tests/portal_shortcuts.rs::portal_ladder_end_to_end` (flaked twice: 15s internal timeout tripped; passes isolated in 0.37s)",
+      "session_id": "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7",
       "agent": "Sisyphus-Junior",
-      "category": "deep-low",
+      "category": "quick",
       "started_at": "2026-09-25T01:39:47.072Z",
       "ended_at": "2026-09-25T01:50:14.031Z",
       "elapsed_ms": 626959,
       "status": "completed",
-      "updated_at": "2026-10-03T12:53:59.293Z"
+      "updated_at": "2026-10-03T14:31:16.418Z"
     },
     "todo:2": {
       "task_key": "todo:2",
