@@ -60,8 +60,8 @@ pub struct ConsentWindow {
 impl ConsentWindow {
     /// Creates the runtime: verifies a display-server session and builds
     /// the event loop. Window and GPU objects are created on `Resumed`
-    /// inside [`Self::run`]. The model starts from the GDPR-honest
-    /// defaults (both checkboxes unchecked).
+    /// inside [`Self::run`]. The model starts from the recorded defaults
+    /// (telemetry checked, technical details unchecked).
     ///
     /// # Errors
     ///

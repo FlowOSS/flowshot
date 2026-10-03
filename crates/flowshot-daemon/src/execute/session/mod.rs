@@ -47,6 +47,9 @@ pub enum SessionKind {
     Settings,
     /// A pin window session.
     Pin,
+    /// The first-launch telemetry consent dialog (the daemon-startup
+    /// prompt; spawned DETACHED - see [`super::consent`]).
+    Consent,
 }
 
 /// Pin-session parameters (the image travels as a temp PNG).
@@ -304,6 +307,7 @@ fn dispatch_child(spec: &SessionSpec) -> SessionResult {
         SessionKind::Launcher => super::launcher::launcher_child(spec),
         SessionKind::Settings => super::settings::settings_child(spec),
         SessionKind::Pin => super::pin::pin_child(spec),
+        SessionKind::Consent => super::consent::consent_child(spec),
     }
 }
 

@@ -9,10 +9,11 @@
 //! cargo run -p flowshot-ui --example telemetry_ui -- .omo/evidence/telemetry-ui
 //! ```
 //!
-//! Writes `consent-{default,send,both}.png` (the dialog at its fixed
-//! 480x290 logical size) and `settings-general-telemetry{,-on}.png` (the
-//! full General tab at 1280x2800 so the bottom Telemetry card is visible
-//! without scrolling). Exits non-zero without a GPU adapter.
+//! Writes `consent-{default,off,both}.png` (the dialog at its fixed
+//! 500x370 logical size; "default" = the shipped pre-check: telemetry
+//! checked, details unchecked) and `settings-general-telemetry{,-on}.png`
+//! (the full General tab at 1280x2800 so the bottom Telemetry card is
+//! visible without scrolling). Exits non-zero without a GPU adapter.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -24,8 +25,8 @@ use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::settings::render_offscreen as settings_offscreen;
 use flowshot_ui::settings::{SettingsModel, Tab, ThemeMode};
 
-const DIALOG_WIDTH: u32 = 480;
-const DIALOG_HEIGHT: u32 = 290;
+const DIALOG_WIDTH: u32 = 500;
+const DIALOG_HEIGHT: u32 = 370;
 const SETTINGS_WIDTH: u32 = 1280;
 const SETTINGS_HEIGHT: u32 = 2800;
 
@@ -57,8 +58,8 @@ fn run() -> Result<(), String> {
 
     let options = ConsentWindowOptions::default();
     for (name, send, details) in [
-        ("default", false, false),
-        ("send", true, false),
+        ("default", true, false),
+        ("off", false, false),
         ("both", true, true),
     ] {
         let mut model = ConsentModel::default();

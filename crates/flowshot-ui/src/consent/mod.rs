@@ -28,11 +28,16 @@
 //! (nothing is written; the prompt re-arms), and a killed process records
 //! nothing either - honest, because nothing was chosen.
 //!
-//! # GDPR-honest defaults
+//! # Checkbox defaults (user directive)
 //!
-//! Both checkboxes start UNCHECKED even though telemetry is "recommended":
-//! the recommendation lives in the label text, never in a pre-ticked box -
-//! opt-in means the user's own click. The two checkboxes are independent
+//! "Send telemetry" starts CHECKED (USER DIRECTIVE 2026-10-04, overriding
+//! the earlier both-unchecked GDPR-conservative default): it is the
+//! recommended tier-1 opt-in, and the user can uncheck it before saving.
+//! "Include detailed technical information" (potentially identifying under
+//! GDPR) starts UNCHECKED - recommended off. Consent remains an
+//! affirmative act either way: nothing is sent until the user clicks a
+//! button, and every dismissal path records the deferred choice (both
+//! false) regardless of the pre-check. The two checkboxes are independent
 //! config fields; the daemon gates the tier-2 payload on both anyway.
 //!
 //! # Persistence seam (read-only config consumption)
@@ -48,6 +53,7 @@
 //! state at init (first init wins).
 
 mod app;
+mod brand;
 mod frame;
 mod model;
 mod offscreen;
@@ -62,5 +68,6 @@ mod tests;
 pub use model::{ConsentModel, PromptSurface, should_prompt};
 pub use offscreen::render_offscreen;
 pub use options::{ConsentCallback, ConsentWindowOptions};
+pub use strings::WINDOW_TITLE;
 pub use ui::ConsentAction;
 pub use window::{ConsentEvent, ConsentHandle, ConsentWindow};

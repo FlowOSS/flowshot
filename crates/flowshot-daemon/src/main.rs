@@ -94,6 +94,10 @@ fn main() -> anyhow::Result<()> {
     options.bus_address = args.bus_address;
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
     options.shortcuts = flowshot_daemon::shortcut::ShortcutOptions::production();
+    // The first-launch consent prompt (the daemon is the single prompt
+    // owner; the child loads/writes the same config this binary loaded).
+    options.consent =
+        flowshot_daemon::execute::consent::ConsentPrompt::daemon_startup(args.config.clone());
     // The executing sink (bus/tray/shortcut commands run the real
     // capture pipeline; the CLI's `flowshot daemon` installs the same).
     options.command_sink = Some(std::sync::Arc::new(

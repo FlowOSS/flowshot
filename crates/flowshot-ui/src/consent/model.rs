@@ -40,13 +40,26 @@ pub fn should_prompt(config: &TelemetryConfig, surface: PromptSurface) -> bool {
 
 /// The consent dialog's checkbox state.
 ///
-/// Both boxes start UNCHECKED: GDPR-honest opt-in means the "recommended"
-/// is label text, never a pre-ticked box - consent must be the user's own
-/// click (the recorded decision, module header).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// Defaults (USER DIRECTIVE 2026-10-04, overriding the earlier
+/// both-unchecked GDPR-conservative default): "send telemetry" starts
+/// CHECKED - the recommended tier-1 opt-in the user can uncheck before
+/// saving; the GDPR-relevant details box starts UNCHECKED (recommended
+/// off). Consent remains an AFFIRMATIVE ACT: nothing is sent until the
+/// user saves, and every dismissal path writes [`Self::deferred`] (both
+/// false) regardless of the pre-check.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsentModel {
     send: bool,
     details: bool,
+}
+
+impl Default for ConsentModel {
+    fn default() -> Self {
+        Self {
+            send: true,
+            details: false,
+        }
+    }
 }
 
 impl ConsentModel {

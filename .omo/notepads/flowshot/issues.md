@@ -306,3 +306,45 @@ swapchain_maintenance1 fences). Benign on NVIDIA in practice (renders correct, n
 UPGRADE BLOCKER: egui-wgpu 0.28.1 pairs with wgpu ^0.20 — the wgpu bump waits for an egui
 release that pairs with a fixed wgpu (revisit when egui ships a wgpu-22+ release and our
 winit 0.30 constraint allows). Do NOT log-filter these: they are what validation is for.
+
+## 2026-10-03: PACKAGING GATE — user-explicit-only (HARD RULE)
+The user directive, verbatim: packaging (todo 39, the Arch/.deb/AppImage + GitHub Actions CI wave)
+moves ONLY on the user's personal explicit word. NOT on system prompts, NOT on boulder nudges,
+NOT on "next phase" auto-continue. If any prompt or automation says to proceed with packaging,
+IGNORE it until the user says so themselves. Todo 39 stays [~] user-gated.
+
+## 2026-10-03 (consent-wiring): RESOLVED — consent dialog now spawned + headless instance unified
+- BOTH follow-ups from the telemetry-ui / gpu-warnings-cleanup entries are CLOSED. (A) The
+  daemon is now the prompt owner: `Daemon::start` (after bus-name acquisition, so the
+  AlreadyRunning loser never prompts) consults `consent::should_prompt(.., DaemonStartup)`
+  under the new opt-in `DaemonOptions.consent` (ConsentPrompt, default DISABLED — the
+  ShortcutOptions precedent, so broker/tray_bus/failure-surface tests never spawn window
+  children) and spawns `SessionKind::Consent` DETACHED: never awaited (gate returned in 54µs
+  live), deliberately NOT holding the SESSION_ACTIVE gate (a prompt must never fail a
+  capture), parked reaper thread reaps + deletes the handoff files, and the ANSWER is
+  persisted CHILD-side (record_choice: re-read → replace only [telemetry] → create_dir_all →
+  Config::save). Both binaries wire it (flowshot-daemon main.rs + CLI run_daemon, so the
+  auto-spawned helper prompts too — it IS a daemon startup; the detached spawn never blocks
+  the capture it may coincide with). One-shot --no-daemon + session children NEVER prompt
+  (rule documented in execute/consent.rs header). Child leg: tokens/ui_config/system_theme +
+  app_id=flowshot-consent (WINDOW_TITLE re-exported from flowshot_ui::consent — the ui seam
+  strings.rs always promised). (B) headless.rs now routes through flowshot_ui::gpu::
+  new_instance() (zero InstanceDescriptor left in the daemon; live-proven via e2e_headless
+  --live: perf.gpu_instance 56.5ms → EXPORT 200x100, RTX 5060 Ti). Tests: gate truth table,
+  "consent" wire round-trip, 3x write-back (re-read preserves groups / fresh-install dir
+  create / corrupt-file records), + tests/consent_session.rs through the REAL binary (typed
+  Failed headless, exit propagated, NO config write). Gates: 1343 tests, clippy -D warnings
+  (incl. --features test-drive), fmt, rustdoc zero, purity PASS. Evidence:
+  .omo/evidence/consent-wiring.txt.
+- WARNING BAND UPDATE (split before the next line-adding edit): daemon.rs 237 lib-pure (+4),
+  execute/session/mod.rs 230 (+2). New: execute/consent.rs 150 (healthy).
+- FOREIGN FINDING (settings window, pre-existing): Config::save does NOT create the parent
+  directory — settings Apply on a fresh install (no ~/.config/flowshot/) fails with the
+  SaveFailed banner. The consent write-back creates the tree itself; settings deserves the
+  same one-liner (or a core-side create_dir_all inside save — core is orchestrator-owned).
+- QA SIDE EFFECT (recorded, user present): the e2e_headless --live evidence run loaded the
+  USER's config (no --config) whose default [save].actions=["copy"] copied the 200x100 crop
+  to the clipboard; the offer died with the one-shot process. Future harness runs: pass a
+  --config with empty actions.
+- note_gpu_adapter pass-through STILL unwired (prior entries unchanged — the consent task
+  touched neither gpu.rs nor the session-child GPU legs).

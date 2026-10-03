@@ -19,7 +19,7 @@
 use flowshot_core::Config;
 use flowshot_core::geometry::{LogicalPoint, OutputLayout};
 use flowshot_core::tokens::DesignTokens;
-use flowshot_ui::gpu::GpuContext;
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::{
     Action, Backdrop, CompletionKind, FramePixels, FrozenCapture, InputRouter, OverlayCore,
     SyntheticInput, render_export,
@@ -85,10 +85,7 @@ pub fn run_headless(session: HeadlessSession) -> Result<SessionOutcome, ExecuteE
     for (kind, key) in &session.rebinds {
         core.editor_mut().shortcuts_mut().rebind(*kind, Some(*key));
     }
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: flowshot_ui::gpu::OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     tracing::info!(
         target: "flowshot_perf",
         elapsed_us = elapsed(started),

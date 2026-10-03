@@ -12,10 +12,13 @@ use std::path::Path;
 
 fn main() {
     println!("cargo:rerun-if-changed=icons");
+    println!("cargo:rerun-if-changed=../../assets/logo.svg");
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("icons.rs");
     let atlas_path = Path::new(&out_dir).join("icon_atlas.rgba");
+
+    raster_logo(Path::new(&out_dir));
 
     let icon_dir = Path::new("icons");
     let mut icons = Vec::new();
@@ -124,4 +127,20 @@ fn main() {
 
     fs::write(&atlas_path, pixmap.data()).unwrap();
     fs::write(&dest_path, rs_code).unwrap();
+}
+
+/// Rasterizes the `FlowShot` brand mark (`assets/logo.svg`, the logo-wiring
+/// pattern: resvg at build time, never a runtime SVG stack) at 128x128 into
+/// `logo_128.rgba` - tiny-skia's native RGBA premultiplied bytes, exactly
+/// what egui's `ColorImage::from_rgba_premultiplied` consumes (the consent
+/// dialog's header mark embeds the file).
+fn raster_logo(out_dir: &Path) {
+    const LOGO_SIZE: u32 = 128;
+    let svg = fs::read("../../assets/logo.svg").unwrap();
+    let tree = resvg::usvg::Tree::from_data(&svg, &resvg::usvg::Options::default()).unwrap();
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(LOGO_SIZE, LOGO_SIZE).unwrap();
+    let scale = LOGO_SIZE as f32 / tree.size().width();
+    let transform = resvg::tiny_skia::Transform::from_scale(scale, scale);
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+    fs::write(out_dir.join("logo_128.rgba"), pixmap.data()).unwrap();
 }

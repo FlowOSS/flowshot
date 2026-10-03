@@ -29,6 +29,7 @@
 pub use sink::{ExecutingSink, Heartbeat};
 
 pub mod backend;
+pub mod consent;
 pub mod direct;
 #[cfg(feature = "test-drive")]
 pub mod headless;

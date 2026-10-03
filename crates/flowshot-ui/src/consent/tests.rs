@@ -60,17 +60,18 @@ fn no_surface_prompts_again_after_any_recorded_answer() {
 // --- the answer state machine ----------------------------------------------
 
 #[test]
-fn checkboxes_start_unchecked_gdpr_honest() {
+fn defaults_precheck_telemetry_and_leave_details_off() {
     // Given: a fresh dialog model
     let model = ConsentModel::default();
-    // Then: nothing is pre-ticked (the recommendation is text only) ...
-    assert!(!model.send());
+    // Then: the user directive's defaults - telemetry pre-checked (the
+    // recommended opt-in, uncheckable before saving), details off ...
+    assert!(model.send());
     assert!(!model.details());
-    // ... so an unedited "Save choice" is a recorded OPT-OUT
+    // ... so an unedited "Save choice" is a recorded tier-1 OPT-IN
     assert_eq!(
         model.saved_choice(),
         TelemetryConfig {
-            enabled: false,
+            enabled: true,
             include_technical_details: false,
             asked_on_first_launch: true,
         }
@@ -96,7 +97,8 @@ fn save_choice_maps_both_checkboxes_independently() {
 
 #[test]
 fn not_now_records_both_false_and_never_nags_again() {
-    // Given/When: the deferred answer ("Not now", Esc, window close)
+    // Given/When: the deferred answer ("Not now", Esc, window close) -
+    // written regardless of the pre-checked send box
     let deferred = ConsentModel::deferred();
     // Then: both flags false, the question recorded ...
     assert_eq!(
@@ -117,9 +119,7 @@ fn an_answered_config_round_trips_to_a_silent_trigger() {
     // config (what Config::save persists) never prompts again.
     let fresh = TelemetryConfig::default();
     assert!(should_prompt(&fresh, PromptSurface::DaemonStartup));
-    let mut model = ConsentModel::default();
-    *model.send_mut() = true;
-    let written = model.saved_choice();
+    let written = ConsentModel::default().saved_choice();
     assert!(!should_prompt(&written, PromptSurface::DaemonStartup));
 }
 
@@ -147,7 +147,7 @@ fn run_frame(
     let input = egui::RawInput {
         screen_rect: Some(egui::Rect::from_min_size(
             egui::Pos2::ZERO,
-            egui::vec2(480.0, 290.0),
+            egui::vec2(500.0, 370.0),
         )),
         events,
         focused: true,
@@ -189,7 +189,10 @@ fn escape_defers_without_touching_the_checkboxes() {
     let ctx = test_context();
     let mut model = ConsentModel::default();
     run_frame(&ctx, &mut model, Vec::new());
-    *model.send_mut() = true;
+    // Drive BOTH boxes away from the defaults (send off, details on): Esc
+    // must still defer, never save the current answers.
+    *model.send_mut() = false;
+    *model.details_mut() = true;
     assert_eq!(
         run_frame(&ctx, &mut model, vec![key_event(egui::Key::Escape)]),
         ConsentAction::NotNow,
@@ -202,12 +205,13 @@ fn enter_saves_the_current_answers() {
     let ctx = test_context();
     let mut model = ConsentModel::default();
     run_frame(&ctx, &mut model, Vec::new());
-    *model.send_mut() = true;
+    // Drive both boxes away from the defaults (send off, details on).
+    *model.send_mut() = false;
     *model.details_mut() = true;
     assert_eq!(
         run_frame(&ctx, &mut model, vec![key_event(egui::Key::Enter)]),
         ConsentAction::Save(TelemetryConfig {
-            enabled: true,
+            enabled: false,
             include_technical_details: true,
             asked_on_first_launch: true,
         })
@@ -215,12 +219,17 @@ fn enter_saves_the_current_answers() {
 }
 
 #[test]
-fn enter_on_the_untouched_dialog_saves_the_opt_out() {
+fn enter_on_the_untouched_dialog_saves_the_prechecked_choice() {
     let ctx = test_context();
     let mut model = ConsentModel::default();
     run_frame(&ctx, &mut model, Vec::new());
     assert_eq!(
         run_frame(&ctx, &mut model, vec![key_event(egui::Key::Enter)]),
-        ConsentAction::Save(ConsentModel::default().saved_choice())
+        ConsentAction::Save(TelemetryConfig {
+            enabled: true,
+            include_technical_details: false,
+            asked_on_first_launch: true,
+        }),
+        "the untouched dialog saves exactly what its checkboxes show"
     );
 }
