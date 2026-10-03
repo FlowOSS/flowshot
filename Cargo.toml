@@ -72,7 +72,7 @@ wl-clipboard-rs = "0.9.3"
 
 # Portal / D-Bus
 ashpd = "0.10.0"
-zbus = "4.3.1"
+zbus = "5.19.0"
 pipewire = "0.10.0"
 resvg = "0.47.0"
 
@@ -91,7 +91,7 @@ clap_complete_nushell = "4.5.16"
 clap_mangen = "0.3.3"
 
 # HTTP
-reqwest = { version = "0.12.5", features = ["json"] }
+reqwest = { version = "0.13.5", features = ["json"] }
 
 # File dialogs
 rfd = "0.12.1"

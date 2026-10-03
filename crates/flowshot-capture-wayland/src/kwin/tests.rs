@@ -142,27 +142,66 @@ fn open_pairs(pairs: &[(i32, String)]) -> usize {
         .count()
 }
 
-/// Pre-initializes tokio's process-global signal socketpair.
+/// Pre-initializes the process-global runtime infrastructure fds.
 ///
-/// The FIRST `enable_all` runtime in a process creates this pair and tokio
-/// deliberately keeps it in process-global signal state - it survives every
-/// runtime drop and is reused by all later runtimes. Without this step, a
-/// run whose runtime happens to be the process's first would place that
-/// infrastructure pair inside the measurement window (this is why the test
-/// passed in full-suite runs - another test's runtime won the race - and
-/// failed in isolation). It is not a leak of the code under test.
-fn preinit_tokio_global_signal_pair() {
+/// The FIRST `enable_all` runtime in a process creates tokio's global
+/// signal socketpair; it survives every runtime drop and is reused by all
+/// later runtimes. zbus 5 adds more globals: its driver threads'
+/// `utils::block_on` lazily builds a process-global multi-threaded tokio
+/// runtime (epoll + wake eventfd), and the async-io reactor / blocking-pool
+/// globals come up with the first connection. Without this step, a run
+/// whose connections happen to be the process's first places that
+/// infrastructure inside the measurement window (this is why the test
+/// passed in full-suite runs - another test won the race - and failed in
+/// isolation). None of it is a leak of the code under test: a throwaway
+/// p2p pair forces every global before the baseline snapshot, then closes
+/// deterministically (both ends, explicit `close()`).
+fn preinit_process_global_runtime_fds() {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
     drop(runtime);
+    let pre_warm = fd_targets();
+    let (server_socket, client_socket) = std::os::unix::net::UnixStream::pair().unwrap();
+    let warmed = futures::executor::block_on(async {
+        let guid = zbus::Guid::generate();
+        futures::future::try_join(
+            async {
+                zbus::connection::Builder::async_io_unix_stream(server_socket)
+                    .server(guid)?
+                    .p2p()
+                    .build()
+                    .await
+            },
+            zbus::connection::Builder::async_io_unix_stream(client_socket)
+                .p2p()
+                .build(),
+        )
+        .await
+    });
+    let Ok((server, client)) = warmed else {
+        return;
+    };
+    let warm_sockets = stub_pair_sockets(&pre_warm);
+    futures::executor::block_on(async {
+        let _closed = client.close().await;
+        let _closed = server.close().await;
+    });
+    // close() returns once the socket is shut down; the descriptors are
+    // released when the reader tasks end - bound that lag so the warmup
+    // pair cannot bleed into the measurement window.
+    assert!(
+        wait_until(|| open_pairs(&warm_sockets) == 0),
+        "the warmup connections must release their sockets; {} still open",
+        open_pairs(&warm_sockets)
+    );
 }
 
 #[test]
 fn no_fd_leaks_on_success_or_failure() {
     let _guard = stub_guard();
-    preinit_tokio_global_signal_pair();
+    preinit_process_global_runtime_fds();
 
     // Success leg: every descriptor that survives the run already existed
     // before it, AND the run's deterministic `Session` teardown closed the

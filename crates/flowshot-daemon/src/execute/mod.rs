@@ -4,8 +4,8 @@
 //! One executor, three drivers:
 //!
 //! - the DAEMON ([`ExecutingSink`]): every bus/tray/shortcut command runs
-//!   on a dedicated thread with its own current-thread runtime (the zbus-4
-//!   async-io reactor must never host blocking window loops - the
+//!   on a dedicated thread with its own current-thread runtime (zbus's
+//!   dispatch tasks must never host blocking window loops - the
 //!   recorded executor decision);
 //! - the CLI ONE-SHOT path (`--no-daemon`, `--raw`, `--print-geometry`):
 //!   `flowshot-cli` awaits [`execute`] directly inside its tokio runtime

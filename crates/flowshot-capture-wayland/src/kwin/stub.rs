@@ -307,8 +307,11 @@ impl StubBus {
 /// registers both well-known names (p2p name registration is local
 /// self-identification) and serves the `ScreenShot2` object unless
 /// `register_screenshot` is false (introspection-failure injection). The
-/// server's dispatch tasks live on the `zbus` executor pool, so merely
-/// holding the connection keeps the stub alive.
+/// server's dispatch tasks live on the connection's private async-io
+/// executor (pinned via `async_io_unix_stream`: the harness drives with
+/// `futures::executor`, and zbus 5 would pick its tokio reactor - and
+/// panic without a runtime - if the tokio feature is unified in), so
+/// merely holding the connection keeps the stub alive.
 pub(crate) fn spawn_stub(
     fixture: StubFixture,
     serving_name: bool,
@@ -319,7 +322,7 @@ pub(crate) fn spawn_stub(
     let (server, client) = futures::executor::block_on(async {
         futures::future::try_join(
             build_server(server_socket, &state, register_screenshot),
-            zbus::ConnectionBuilder::unix_stream(client_socket)
+            zbus::connection::Builder::async_io_unix_stream(client_socket)
                 .p2p()
                 .build(),
         )
@@ -339,27 +342,25 @@ async fn build_server(
     register_screenshot: bool,
 ) -> zbus::Result<zbus::Connection> {
     let guid = zbus::Guid::generate();
-    let connection = zbus::ConnectionBuilder::unix_stream(socket)
+    // serve_at (NOT post-build object_server().at()): zbus 5 dispatches
+    // method calls through a task whose stream subscription registers
+    // lazily; the builder awaits that registration before the socket
+    // reader spawns, so no early call can be missed (a post-build
+    // registration races the peer's first call and silently drops it).
+    let mut builder = zbus::connection::Builder::async_io_unix_stream(socket)
         .server(guid)?
         .p2p()
-        .build()
-        .await?;
-    connection.request_name(SERVICE).await?;
-    connection.request_name("org.freedesktop.DBus").await?;
-    connection
-        .object_server()
-        .at(
+        .serve_at(
             "/org/freedesktop/DBus",
             StubBusDriver {
                 state: Arc::clone(state),
             },
-        )
-        .await?;
+        )?;
     if register_screenshot {
-        connection
-            .object_server()
-            .at(PATH, StubScreenShot2::new(Arc::clone(state)))
-            .await?;
+        builder = builder.serve_at(PATH, StubScreenShot2::new(Arc::clone(state)))?;
     }
+    let connection = builder.build().await?;
+    connection.request_name(SERVICE).await?;
+    connection.request_name("org.freedesktop.DBus").await?;
     Ok(connection)
 }

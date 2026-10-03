@@ -1,5 +1,5 @@
 //! SNI tray host: the `org.kde.StatusNotifierItem` surface
-//! on the daemon's existing zbus-4 connection.
+//! on the daemon's existing zbus connection.
 //!
 //! # Pieces
 //!
@@ -27,7 +27,7 @@
 //!
 //! - `ksni` was the proposed crate; no SNI crate exists in the workspace
 //!   table or the lock and the root manifest is orchestrator-owned, so the
-//!   protocol is hand-rolled on zbus 4 (ksni wire shapes as the reference).
+//!   protocol is hand-rolled on zbus (ksni wire shapes as the reference).
 //! - `About` stays a version toast. The logo-wiring pass evaluated a
 //!   minimal egui about dialog (logo + version + license + repo link) and
 //!   recorded the seam instead: a dialog is a new session-child window

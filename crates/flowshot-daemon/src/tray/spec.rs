@@ -1,7 +1,7 @@
 //! `org.kde.StatusNotifierItem` wire vocabulary (the freedesktop SNI spec
 //! plus the `com.canonical.dbusmenu` menu protocol).
 //!
-//! Hand-rolled on the daemon's existing zbus-4 connection: `ksni` was
+//! Hand-rolled on the daemon's existing zbus connection: `ksni` was
 //! cited, but no SNI crate is in the workspace table or the lock and the
 //! root manifest is orchestrator-owned - so the protocol surface lives
 //! here (ksni's own wire shapes are the reference).
@@ -65,7 +65,8 @@ pub struct ToolTipWire {
     pub description: String,
 }
 
-// zbus-4's property macro answers `Get` with `Value::from(returned)`, so
+// zbus's property macro answers `Get` with `Value::from(returned)` (5.19
+// zbus_macros iface.rs), so
 // the spec structs teach `Value` their `(iiay)` / `(sa(iiay)ss)` shapes
 // (the Type derives already pin the same signatures).
 impl From<IconWire> for Value<'_> {
@@ -120,7 +121,7 @@ mod tests {
 
     #[test]
     fn wire_signatures_match_the_spec() {
-        assert_eq!(IconWire::signature().as_str(), "(iiay)");
-        assert_eq!(ToolTipWire::signature().as_str(), "(sa(iiay)ss)");
+        assert_eq!(IconWire::SIGNATURE.to_string(), "(iiay)");
+        assert_eq!(ToolTipWire::SIGNATURE.to_string(), "(sa(iiay)ss)");
     }
 }

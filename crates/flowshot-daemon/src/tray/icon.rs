@@ -108,7 +108,7 @@ mod tests {
         for (entry, &size) in set.idle.iter().zip(SIZES.iter()) {
             assert_eq!(entry.width, i32::try_from(size).unwrap_or(-1));
             assert_eq!(entry.height, entry.width);
-            assert_eq!(IconWire::signature().as_str(), "(iiay)");
+            assert_eq!(IconWire::SIGNATURE.to_string(), "(iiay)");
             assert_eq!(
                 entry.data.len(),
                 (size * size * 4) as usize,

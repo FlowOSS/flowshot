@@ -253,7 +253,8 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
     Ok(ExitCode::SUCCESS)
 }
 
-/// Explicit connection close (zbus-4 async-io has NO drop-time close);
+/// Explicit connection close (zbus's async-io reactor has NO drop-time
+/// close; `close()` is the deterministic release on both reactors);
 /// close errors are teardown noise.
 async fn close(connection: Connection) {
     if let Err(error) = connection.close().await {

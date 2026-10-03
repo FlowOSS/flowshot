@@ -1,7 +1,8 @@
 //! Private-bus stub harnesses: both p2p sides are built
 //! CONCURRENTLY - a server built alone blocks forever waiting for the
 //! client's SASL handshake. Teardown closes both connections explicitly:
-//! zbus-4-async-io has NO drop-time close.
+//! the stubs pin the async-io reactor (`Builder::async_io_unix_stream`),
+//! which has NO drop-time close in zbus 5 either.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -74,22 +75,23 @@ async fn build_server(
     state: Arc<DaemonState>,
 ) -> zbus::Result<Connection> {
     let guid = zbus::Guid::generate();
-    let connection = zbus::ConnectionBuilder::unix_stream(socket)
+    let interface = FlowShotInterface::new(sink, state, Arc::new(TokioClock));
+    // serve_at (NOT post-build object_server().at()): zbus 5 dispatches
+    // method calls through a lazily-subscribed task; the builder awaits its
+    // registration before the socket reader spawns, so the peer's first
+    // call cannot race the subscription and be silently dropped.
+    let connection = zbus::connection::Builder::async_io_unix_stream(socket)
         .server(guid)?
         .p2p()
+        .serve_at(OBJECT_PATH, interface)?
         .build()
         .await?;
     connection.request_name(SERVICE).await?;
-    let interface = FlowShotInterface::new(sink, state, Arc::new(TokioClock));
-    connection
-        .object_server()
-        .at(OBJECT_PATH, interface)
-        .await?;
     Ok(connection)
 }
 
 async fn build_client(socket: UnixStream) -> zbus::Result<Connection> {
-    zbus::ConnectionBuilder::unix_stream(socket)
+    zbus::connection::Builder::async_io_unix_stream(socket)
         .p2p()
         .build()
         .await
@@ -106,9 +108,9 @@ impl ServiceStub {
         &self.state
     }
 
-    /// Deterministic teardown: explicit close on BOTH ends (dropping a
-    /// zbus-4-async-io connection leaks the socket fd with the
-    /// reader task parked on the global pool).
+    /// Deterministic teardown: explicit close on BOTH ends (dropping an
+    /// async-io-reactor connection leaks the socket fd with the reader
+    /// task parked on the connection's private executor).
     pub(crate) async fn shutdown(self) {
         self.client.close().await.unwrap();
         self.server.close().await.unwrap();
@@ -128,7 +130,7 @@ pub(crate) async fn spawn_foreign_stub() -> ForeignStub {
     let (server, client) = tokio::try_join!(
         async {
             let guid = zbus::Guid::generate();
-            let connection = zbus::ConnectionBuilder::unix_stream(server_socket)
+            let connection = zbus::connection::Builder::async_io_unix_stream(server_socket)
                 .server(guid)?
                 .p2p()
                 .build()

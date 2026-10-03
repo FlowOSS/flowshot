@@ -10,8 +10,9 @@
 
 use std::time::Duration;
 
+use zbus::Connection;
+use zbus::connection::Builder;
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
-use zbus::{Connection, ConnectionBuilder};
 
 use crate::bus::{IFACE, OBJECT_PATH};
 use crate::error::DaemonError;
@@ -60,7 +61,7 @@ pub enum Acquisition {
 /// fails.
 pub async fn connect(bus_address: Option<&str>) -> Result<Connection, DaemonError> {
     let connection = match bus_address {
-        Some(address) => ConnectionBuilder::address(address)?.build().await?,
+        Some(address) => Builder::address(address)?.build().await?,
         None => Connection::session().await?,
     };
     Ok(connection)
@@ -163,8 +164,9 @@ pub async fn acquire_or_forward(
         Ownership::Acquired => Ok(Acquisition::Owner(connection)),
         Ownership::HeldByOther => {
             let forwarded = forward_argv(&connection, service, argv).await;
-            // zbus-4-async-io has NO drop-time close: the loser
-            // connection is closed explicitly on EVERY path.
+            // zbus's async-io reactor has NO drop-time close (and
+            // close() is the deterministic release on the tokio reactor
+            // too): the loser connection is closed explicitly on EVERY path.
             close_quietly(connection).await;
             forwarded?;
             Ok(Acquisition::Forwarded)
