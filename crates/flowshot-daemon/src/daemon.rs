@@ -56,9 +56,9 @@ pub struct DaemonOptions {
     /// so callers that do not opt in keep their exact startup behavior; the
     /// binary enables it via [`ShortcutOptions::production`].
     pub shortcuts: ShortcutOptions,
-    /// Tray host configuration. Seeded from `[daemon].tray` +
-    /// `[ui].accent_color` by the constructors; the tray module owns the
-    /// `tray` persistence reason from registration onward.
+    /// Tray host configuration. Seeded from `[daemon].tray` by the
+    /// constructors; the tray module owns the `tray` persistence reason
+    /// from registration onward.
     pub tray: TrayOptions,
 }
 

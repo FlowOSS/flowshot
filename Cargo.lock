@@ -1620,6 +1620,7 @@ dependencies = [
  "futures",
  "image",
  "notify-rust",
+ "resvg",
  "sentry",
  "serde",
  "serde_json",

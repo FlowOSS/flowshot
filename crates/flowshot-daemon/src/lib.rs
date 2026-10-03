@@ -83,6 +83,8 @@ pub mod tray;
 pub mod systemd;
 
 #[cfg(test)]
+mod logo_raster;
+#[cfg(test)]
 mod testsupport;
 
 pub use bus::{IFACE, OBJECT_PATH, SERVICE};

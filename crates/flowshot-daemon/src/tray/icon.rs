@@ -1,25 +1,26 @@
-//! Procedural tray icon: the `FlowShot` selection-frame glyph rendered
+//! Real-logo tray icon: the `FlowShot` mark (`assets/logo.svg`) rendered
 //! straight into the SNI `IconPixmap` ARGB32 wire format.
 //!
-//! Asset decision (recorded): the vendored icon set is editor-tool SVGs
-//! rasterized into a `flowshot-ui` build-time atlas - it carries no app
-//! logo, and consuming the atlas would drag the GPU stack plus a PNG
-//! decoder into the daemon. The glyph below is drawn from the brand
-//! accent token instead: zero deps, deterministic, unit-testable. When
-//! packaging lands an installed themed icon can take over
-//! via the `IconName` property (hosts prefer it over the pixmap).
+//! Asset pipeline (recorded): `build.rs` rasterizes the SVG with the
+//! workspace resvg pin at exactly the [`SIZES`] the tray serves and embeds
+//! the raw wire bytes (~18 KB total) - the binary carries neither the
+//! 2048px PNG export nor a runtime SVG stack. The previous procedural
+//! bracket glyph predates the brand mark and is gone.
+//!
+//! The attention state keeps the recorded convention (the procedural glyph
+//! recolored to red 600): the multicolor logo takes it as a red-600 ring
+//! over the badge's outer band, so the mark stays recognizable and the two
+//! states are never confused at 16px. When packaging lands an installed
+//! themed icon can take over via the `IconName` property (hosts prefer it
+//! over the pixmap).
 
 use super::spec::IconWire;
 
-/// Pixmap sizes offered to the host (it picks the closest and scales).
-pub const SIZES: [u32; 5] = [16, 22, 24, 32, 48];
+include!(concat!(env!("OUT_DIR"), "/logo_icons.rs"));
 
-/// Attention-state glyph color (red 600): the core palette has no danger
+/// Attention-state ring color (red 600): the core palette has no danger
 /// token yet (the settings pass may add one - recorded).
 const ATTENTION_RGB: (u8, u8, u8) = (220, 38, 38);
-
-/// Fallback when the configured accent does not parse.
-const DEFAULT_ACCENT_RGB: (u8, u8, u8) = (0x63, 0x66, 0xF1);
 
 /// The idle and attention pixmap sets.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,146 +31,192 @@ pub struct IconSet {
     pub attention: Vec<IconWire>,
 }
 
-/// Builds both pixmap sets from a `#RRGGBB` accent (the `[ui].accent_color`
-/// config value; unparseable input falls back to the brand token).
+/// Builds both pixmap sets from the embedded logo rasters: idle = the mark
+/// as authored, attention = the mark with the red-600 ring.
 #[must_use]
-pub fn icon_set(accent_hex: &str) -> IconSet {
-    let accent = parse_hex_color(accent_hex).unwrap_or(DEFAULT_ACCENT_RGB);
+pub fn icon_set() -> IconSet {
     IconSet {
-        idle: pixmap_set(accent),
-        attention: pixmap_set(ATTENTION_RGB),
+        idle: pixmap_set(|_, logo| logo.to_vec()),
+        attention: pixmap_set(attention_ring),
     }
 }
 
-/// Parses `#RRGGBB` (case-insensitive); anything else is `None`.
-#[must_use]
-pub fn parse_hex_color(hex: &str) -> Option<(u8, u8, u8)> {
-    let digits = hex.strip_prefix('#')?;
-    if digits.len() != 6 {
-        return None;
-    }
-    let channel = |offset: usize| u8::from_str_radix(digits.get(offset..offset + 2)?, 16).ok();
-    Some((channel(0)?, channel(2)?, channel(4)?))
-}
-
-fn pixmap_set(rgb: (u8, u8, u8)) -> Vec<IconWire> {
+fn pixmap_set(derive: impl Fn(u32, &[u8]) -> Vec<u8>) -> Vec<IconWire> {
     SIZES
-        .iter()
-        .map(|&size| IconWire {
-            width: i32::try_from(size).unwrap_or(i32::MAX),
-            height: i32::try_from(size).unwrap_or(i32::MAX),
-            data: glyph(size, rgb),
+        .into_iter()
+        .zip(LOGO_ARGB)
+        .map(|(size, logo)| {
+            let side = i32::try_from(size).unwrap_or(i32::MAX);
+            IconWire {
+                width: side,
+                height: side,
+                data: derive(size, logo),
+            }
         })
         .collect()
 }
 
-/// Renders the selection-frame glyph: four L-shaped corner brackets (the
-/// universal capture-region symbol) in `rgb` on a transparent ground, as
-/// ARGB32 big-endian bytes (A first - the SNI spec's pixel order).
-///
-/// Brackets are fold-symmetric: a pixel is painted when its distance-fold
-/// `(min(x, size-1-x), min(y, size-1-y))` lands in the top-left bracket's
-/// bars. `size` is bounded by [`SIZES`] in practice (the ratios below keep
-/// the four brackets disjoint for any `size >= 8`).
-#[must_use]
-pub fn glyph(size: u32, rgb: (u8, u8, u8)) -> Vec<u8> {
-    let margin = (size / 8).max(1);
-    let arm = margin + (size / 4).max(2);
-    let thickness = margin + (size / 16).max(2);
-    let mut data = Vec::with_capacity((size * size * 4) as usize);
+/// Derives the attention pixmap: the red-600 ring over the badge's outer
+/// band (thickness `size / 16`, floor 2px), painted only where the logo is
+/// already solid (alpha >= 128) so the silhouette is unchanged. Pure
+/// doubled-integer distance math against the badge circle (the mark fills
+/// its viewBox, so the doubled radius is `size`) - deterministic and
+/// unit-testable.
+fn attention_ring(size: u32, logo: &[u8]) -> Vec<u8> {
+    let mut out = logo.to_vec();
+    let thickness = i64::from((size / 16).max(2));
+    let center2 = i64::from(size) - 1;
+    let inner2 = i64::from(size) - 2 * thickness;
+    let inner_sq = inner2 * inner2;
     for y in 0..size {
-        let fold_y = y.min(size.saturating_sub(1) - y);
+        let dy = 2 * i64::from(y) - center2;
         for x in 0..size {
-            let fold_x = x.min(size.saturating_sub(1) - x);
-            let in_thick_x = (margin..thickness).contains(&fold_x);
-            let in_thick_y = (margin..thickness).contains(&fold_y);
-            let in_arm_x = (margin..arm).contains(&fold_x);
-            let in_arm_y = (margin..arm).contains(&fold_y);
-            let painted = (in_thick_y && in_arm_x) || (in_thick_x && in_arm_y);
-            let pixel = if painted {
-                [255, rgb.0, rgb.1, rgb.2]
-            } else {
-                [0, 0, 0, 0]
-            };
-            data.extend_from_slice(&pixel);
+            let dx = 2 * i64::from(x) - center2;
+            let offset = ((y * size + x) * 4) as usize;
+            let solid = out[offset] >= 128;
+            let in_band = dx * dx + dy * dy >= inner_sq;
+            if solid && in_band {
+                out[offset..offset + 4].copy_from_slice(&[
+                    255,
+                    ATTENTION_RGB.0,
+                    ATTENTION_RGB.1,
+                    ATTENTION_RGB.2,
+                ]);
+            }
         }
     }
-    data
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::logo_raster;
+    use std::collections::HashSet;
     use zbus::zvariant::Type;
 
-    #[test]
-    fn hex_parsing_accepts_token_form_and_rejects_junk() {
-        assert_eq!(parse_hex_color("#6366F1"), Some((0x63, 0x66, 0xF1)));
-        assert_eq!(parse_hex_color("#0f172a"), Some((0x0F, 0x17, 0x2A)));
-        assert_eq!(parse_hex_color("6366F1"), None);
-        assert_eq!(parse_hex_color("#6366F"), None);
-        assert_eq!(parse_hex_color("#GGGGGG"), None);
-        assert_eq!(parse_hex_color(""), None);
+    fn svg_source() -> Vec<u8> {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/logo.svg");
+        std::fs::read(path).unwrap_or_else(|error| panic!("{path} must be readable: {error}"))
     }
 
     #[test]
-    fn glyph_has_exact_argb_wire_geometry() {
-        for size in SIZES {
-            let data = glyph(size, (1, 2, 3));
-            assert_eq!(
-                data.len(),
-                (size * size * 4) as usize,
-                "size {size} must fill the ARGB32 plane"
-            );
-        }
-    }
-
-    #[test]
-    fn glyph_paints_brackets_opaque_and_ground_transparent() {
-        let size = 32;
-        let data = glyph(size, (0x63, 0x66, 0xF1));
-        let pixel = |x: u32, y: u32| {
-            let offset = ((y * size + x) * 4) as usize;
-            (
-                data[offset],
-                data[offset + 1],
-                data[offset + 2],
-                data[offset + 3],
-            )
-        };
-        let margin = size / 8;
-        assert_eq!(pixel(0, 0), (0, 0, 0, 0), "ground stays transparent");
-        assert_eq!(pixel(size / 2, size / 2), (0, 0, 0, 0));
-        assert_eq!(
-            pixel(margin, margin),
-            (255, 0x63, 0x66, 0xF1),
-            "the top-left bracket corner is opaque accent, A-first byte order"
-        );
-        assert_eq!(pixel(size - 1 - margin, margin), (255, 0x63, 0x66, 0xF1));
-        assert_eq!(pixel(margin, size - 1 - margin), (255, 0x63, 0x66, 0xF1));
-        assert_eq!(
-            pixel(size - 1 - margin, size - 1 - margin),
-            (255, 0x63, 0x66, 0xF1)
-        );
-    }
-
-    #[test]
-    fn icon_set_offers_every_size_and_a_distinct_attention_state() {
-        let set = icon_set("#6366F1");
+    fn icon_set_serves_every_size_with_nonempty_nonflat_pixmaps() {
+        let set = icon_set();
         assert_eq!(set.idle.len(), SIZES.len());
         assert_eq!(set.attention.len(), SIZES.len());
         for (entry, &size) in set.idle.iter().zip(SIZES.iter()) {
             assert_eq!(entry.width, i32::try_from(size).unwrap_or(-1));
             assert_eq!(entry.height, entry.width);
             assert_eq!(IconWire::signature().as_str(), "(iiay)");
+            assert_eq!(
+                entry.data.len(),
+                (size * size * 4) as usize,
+                "size {size} must fill the ARGB32 plane"
+            );
+            let plane = (size * size) as usize;
+            let painted = entry
+                .data
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .filter(|pixel| pixel[0] > 0)
+                .count();
+            assert!(
+                painted * 2 > plane,
+                "size {size}: the badge must paint most of the plane ({painted}/{plane})"
+            );
+            let distinct = entry
+                .data
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .collect::<HashSet<_>>()
+                .len();
+            assert!(
+                distinct > 8,
+                "size {size}: the gradient mark must not be flat ({distinct} distinct pixels)"
+            );
+            assert_eq!(
+                &entry.data[..4],
+                &[0, 0, 0, 0],
+                "the ground outside the circular badge stays transparent"
+            );
         }
-        assert_ne!(set.idle, set.attention);
     }
 
     #[test]
-    fn unparseable_accent_falls_back_to_the_brand_token() {
-        let broken = icon_set("not-a-color");
-        let branded = icon_set("#6366F1");
-        assert_eq!(broken.idle, branded.idle);
+    fn embedded_pixmaps_reproduce_from_the_svg_source() {
+        // Determinism AND freshness: the shared build-time raster function
+        // over the current source SVG reproduces every embedded byte (a
+        // stale artifact or a nondeterministic rasterizer fails here).
+        let svg = svg_source();
+        assert_eq!(
+            SIZES,
+            logo_raster::SIZES,
+            "the generated size list must come from the shared raster module"
+        );
+        for (&size, embedded) in SIZES.iter().zip(LOGO_ARGB) {
+            assert_eq!(
+                logo_raster::raster_argb(&svg, size),
+                embedded,
+                "size {size}: the embedded pixmap must equal a fresh raster of assets/logo.svg"
+            );
+        }
+    }
+
+    #[test]
+    fn attention_rings_the_badge_without_touching_its_shape() {
+        let set = icon_set();
+        assert_ne!(set.idle, set.attention);
+        for (idle, attention) in set.idle.iter().zip(&set.attention) {
+            let size = u32::try_from(idle.width).unwrap_or(0);
+            assert_eq!(idle.data.len(), attention.data.len());
+            assert_eq!(&attention.data[..4], &[0, 0, 0, 0], "corner ground");
+            let last = attention.data.len() - 4;
+            assert_eq!(&attention.data[last..], &[0, 0, 0, 0]);
+            let center = (size / 2) as usize;
+            let center_offset = (center * size as usize + center) * 4;
+            assert_eq!(
+                &attention.data[center_offset..center_offset + 4],
+                &idle.data[center_offset..center_offset + 4],
+                "the center dot keeps the idle logo"
+            );
+            let center2 = i64::from(size) - 1;
+            let peripheral = (i64::from(size) / 4).pow(2);
+            let mut ring_pixels = 0usize;
+            for y in 0..size {
+                for x in 0..size {
+                    let offset = ((y * size + x) * 4) as usize;
+                    let (before, after) = (
+                        &idle.data[offset..offset + 4],
+                        &attention.data[offset..offset + 4],
+                    );
+                    if before == after {
+                        continue;
+                    }
+                    ring_pixels += 1;
+                    assert_eq!(
+                        after,
+                        &[255, ATTENTION_RGB.0, ATTENTION_RGB.1, ATTENTION_RGB.2],
+                        "changed pixels are opaque red-600, A-first"
+                    );
+                    assert!(
+                        before[0] >= 128,
+                        "the ring only paints over solid logo pixels"
+                    );
+                    let dx = 2 * i64::from(x) - center2;
+                    let dy = 2 * i64::from(y) - center2;
+                    assert!(
+                        dx * dx + dy * dy >= peripheral,
+                        "the ring stays in the badge's outer band"
+                    );
+                }
+            }
+            assert!(
+                ring_pixels > 0,
+                "size {size}: the attention state must be visible"
+            );
+        }
     }
 }

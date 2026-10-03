@@ -91,12 +91,23 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 anyhow = { workspace = true }
 clap = { workspace = true }
 
+[build-dependencies]
+# Build-time tray-logo rasterization (assets/logo.svg -> the SNI pixmap
+# sizes; the flowshot-ui icon-atlas build.rs precedent). Workspace pin,
+# already in the lock - zero new external crates, and build-only: the
+# binary embeds the ~18 KB of pixmaps, never the rasterizer.
+resvg = { workspace = true }
+
 [dev-dependencies]
 # The e2e_headless harness builds synthetic capture frames (already locked
 # via flowshot-capture).
 bytes = { workspace = true }
 # Todo 38 flow 9: the upload wiremock e2e (the todo-31 test pattern).
 wiremock = { workspace = true }
+# The tray-icon determinism test re-rasterizes assets/logo.svg through the
+# shared build-time function (logo_raster.rs) and compares it against the
+# embedded bytes (same workspace pin the build script uses).
+resvg = { workspace = true }
 
 [[example]]
 name = "e2e_headless"
