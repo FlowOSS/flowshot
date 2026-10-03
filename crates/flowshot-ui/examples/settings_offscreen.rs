@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use flowshot_core::tokens::DesignTokens;
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::settings::{SettingsModel, Tab, ThemeMode, render_offscreen};
 
 const WIDTH: u32 = 1280;
@@ -43,10 +43,7 @@ fn run() -> Result<(), String> {
         .map_or_else(|| PathBuf::from("/tmp/flowshot-settings"), PathBuf::from);
     std::fs::create_dir_all(&dir).map_err(|error| format!("create {}: {error}", dir.display()))?;
 
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance).map_err(|error| error.to_string())?;
 
     for tab in Tab::ALL {

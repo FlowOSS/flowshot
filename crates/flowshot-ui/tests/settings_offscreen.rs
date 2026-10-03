@@ -21,7 +21,7 @@ use std::collections::HashSet;
 use std::sync::Once;
 
 use flowshot_core::tokens::DesignTokens;
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::settings::{SettingsModel, Tab, ThemeMode, render_offscreen};
 
 struct Gpu {
@@ -44,10 +44,7 @@ fn init_tracing() {
 
 fn gpu_or_skip() -> Option<Gpu> {
     init_tracing();
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     match GpuContext::new_headless(&instance) {
         Ok(ctx) => Some(Gpu {
             _instance: instance,

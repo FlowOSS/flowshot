@@ -36,7 +36,7 @@ use flowshot_core::geometry::{
 };
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::backdrop::{Backdrop, BackdropOptions, FrozenCapture};
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::render::{RenderTarget, Renderer, RgbaImage, read_texture_rgba};
 use flowshot_ui::{
     FramePixels, InputRouter, OverlayCore, SyntheticInput, WindowSlot, build_overlay_frame,
@@ -73,10 +73,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let out = PathBuf::from(std::env::args().nth(1).ok_or("OUT_DIR is required")?);
     std::fs::create_dir_all(&out)?;
 
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance)?;
 
     // The default toolbar's first cell (arrow): plate x = 560+800-444,

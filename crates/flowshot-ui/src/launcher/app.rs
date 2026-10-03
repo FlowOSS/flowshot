@@ -15,7 +15,7 @@ use winit::window::{Window, WindowId};
 use crate::egui_host::input::WindowSignal;
 use crate::egui_host::{EguiSurface, points, scale_to_ppp};
 use crate::error::UiError;
-use crate::gpu::{self, GpuContext, OVERLAY_BACKENDS};
+use crate::gpu::{self, GpuContext};
 
 use super::frame;
 use super::model::LauncherModel;
@@ -77,10 +77,7 @@ impl LauncherApp {
                 source,
             }
         })?);
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: OVERLAY_BACKENDS,
-            ..wgpu::InstanceDescriptor::default()
-        });
+        let instance = gpu::new_instance();
         let surface =
             instance
                 .create_surface(window.clone())

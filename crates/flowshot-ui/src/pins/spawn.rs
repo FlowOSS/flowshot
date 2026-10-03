@@ -31,10 +31,7 @@ use crate::surface::{SurfaceSpec, WindowSurface};
 
 pub(super) fn spawn_all(app: &mut PinApp, target: &ActiveEventLoop) -> Result<(), UiError> {
     let (screen, scale_factor) = spawn_screen(target);
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: crate::gpu::OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = crate::gpu::new_instance();
     let mut windows = Vec::with_capacity(app.specs.len());
     for spec in app.specs.drain(..) {
         let state = PinState::new(

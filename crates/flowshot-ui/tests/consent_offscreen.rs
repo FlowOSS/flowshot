@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 
 use flowshot_ui::consent::{ConsentModel, ConsentWindowOptions, render_offscreen};
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 
 const WIDTH: u32 = 480;
 const HEIGHT: u32 = 290;
@@ -22,10 +22,7 @@ struct Gpu {
 }
 
 fn gpu_or_skip() -> Option<Gpu> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     match GpuContext::new_headless(&instance) {
         Ok(ctx) => Some(Gpu {
             _instance: instance,

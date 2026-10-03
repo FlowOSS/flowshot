@@ -20,7 +20,7 @@ use std::process::ExitCode;
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::consent::render_offscreen as consent_offscreen;
 use flowshot_ui::consent::{ConsentModel, ConsentWindowOptions};
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::settings::render_offscreen as settings_offscreen;
 use flowshot_ui::settings::{SettingsModel, Tab, ThemeMode};
 
@@ -52,10 +52,7 @@ fn run() -> Result<(), String> {
     );
     std::fs::create_dir_all(&dir).map_err(|error| format!("create {}: {error}", dir.display()))?;
 
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance).map_err(|error| error.to_string())?;
 
     let options = ConsentWindowOptions::default();

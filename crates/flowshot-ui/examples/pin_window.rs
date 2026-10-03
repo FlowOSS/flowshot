@@ -166,7 +166,7 @@ fn verify_state(
 }
 
 fn verify_offscreen(out: &str, width: u32, height: u32, rotations: u32, tenths: u8) -> ExitCode {
-    use flowshot_ui::gpu::GpuContext;
+    use flowshot_ui::gpu::{GpuContext, new_instance};
     use flowshot_ui::pins::{TEXTURE_ID, frame_list, image_rect};
     use flowshot_ui::render::{RenderTarget, Renderer, RgbaImage, read_texture_rgba};
 
@@ -178,10 +178,7 @@ fn verify_offscreen(out: &str, width: u32, height: u32, rotations: u32, tenths: 
         }
     };
     let (tw, th) = state.target_window();
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::PRIMARY,
-        ..Default::default()
-    });
+    let instance = new_instance();
     let Ok(gpu) = GpuContext::new_headless(&instance) else {
         eprintln!("headless GPU init failed");
         return ExitCode::from(1);

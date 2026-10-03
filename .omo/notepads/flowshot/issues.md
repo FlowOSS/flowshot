@@ -291,3 +291,8 @@ FIXED: Increased wait_until timeout from 200ms to 500ms in kwin/tests.rs to prev
 - `note_gpu_adapter` pass-through is STILL unwired (prior entry unchanged) - the consent task did not touch gpu.rs; the adapter-name accessor + the session-child call remain open.
 - README staleness (prior entry) now also covers the consent dialog + settings Telemetry card ("no telemetry" claim, settings-UI feature list).
 - The consent window has NO test-drive injector (unlike launcher/pins): offscreen renders (both checkbox states), headless egui::Context widget tests, and a live visible run (evidence consent-live.png, grim-verified) cover the surface. Add a LauncherInput-style seam only if synthetic click QA becomes necessary.
+
+## 2026-10-03 (gpu-warnings-cleanup): follow-ups for the orchestrator
+- flowshot-daemon/src/execute/headless.rs still creates its wgpu instance with the IMPLICIT `..InstanceDescriptor::default()` (task rule limited this pass to flowshot-ui). Behavior is identical to the new explicit policy (debug=VALIDATION|DEBUG, release=empty), so the debug-log validation warning can still originate from the daemon's headless-capture instance; a daemon-side switch to `flowshot_ui::gpu::new_instance()` (or a daemon-local explicit form) is a one-line follow-up.
+- gpu/surface.rs is at 217 pure LOC (warning band 200-250): split before the next line-adding edit (250-LOC ceiling).
+- The user-log noise classes deliberately left untouched (task out-of-scope): zbus property-cache warnings (ashpd teardown race, benign), NVIDIA "Unrecognized present mode 1000361000" spam (driver-side, wgpu-hal conv).

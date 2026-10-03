@@ -33,7 +33,7 @@ use flowshot_core::geometry::{
 };
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::backdrop::{Backdrop, BackdropOptions, FrozenCapture};
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::render::{RenderTarget, Renderer, RgbaImage, read_texture_rgba};
 use flowshot_ui::{
     EditorTools, FramePixels, InputRouter, OverlayCore, SyntheticInput, WindowSlot,
@@ -147,10 +147,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     std::fs::create_dir_all(&out)?;
 
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance)?;
 
     let shots = shot_list(theme, reduced_motion_pair);

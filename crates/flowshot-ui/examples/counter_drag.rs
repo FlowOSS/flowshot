@@ -36,7 +36,7 @@ use std::time::Instant;
 use flowshot_core::config::Config;
 use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputInfo, PhysicalSize, Transform};
 use flowshot_core::scene::ToolObjectData;
-use flowshot_ui::gpu::GpuContext;
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::render::{
     Color, DisplayList, Rect, RenderTarget, Renderer, Shape, read_texture_rgba,
 };
@@ -182,10 +182,7 @@ fn render(editor: &EditorState) -> Result<Vec<u8>, String> {
             modifiers: ModifiersState::empty(),
         },
     );
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::PRIMARY,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance).map_err(|_| "headless GPU init failed")?;
     let mut renderer = Renderer::new(&gpu.device, &gpu.queue, wgpu::TextureFormat::Rgba8UnormSrgb);
     let (w32, h32) = (W as u32, H as u32);

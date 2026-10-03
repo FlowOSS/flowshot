@@ -24,7 +24,7 @@ use flowshot_core::geometry::{
 };
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::backdrop::{Backdrop, BackdropOptions, CursorSprite, FrozenCapture, PlacedCursor};
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::render::{DisplayList, RenderTarget, Renderer, read_texture_rgba};
 
 struct Gpu {
@@ -33,10 +33,7 @@ struct Gpu {
 }
 
 fn gpu_or_skip() -> Option<Gpu> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     match GpuContext::new_headless(&instance) {
         Ok(ctx) => Some(Gpu {
             _instance: instance,
