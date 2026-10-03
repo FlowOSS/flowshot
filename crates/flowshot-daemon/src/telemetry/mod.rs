@@ -86,6 +86,8 @@ pub enum Surface {
     Launcher,
     /// The settings-window session child.
     Settings,
+    /// The first-launch consent-dialog session child.
+    Consent,
 }
 
 impl Surface {
@@ -99,6 +101,7 @@ impl Surface {
             Surface::Pin => "pin",
             Surface::Launcher => "launcher",
             Surface::Settings => "settings",
+            Surface::Consent => "consent",
         }
     }
 }
@@ -111,6 +114,7 @@ impl From<crate::execute::session::SessionKind> for Surface {
             SessionKind::Launcher => Surface::Launcher,
             SessionKind::Settings => Surface::Settings,
             SessionKind::Pin => Surface::Pin,
+            SessionKind::Consent => Surface::Consent,
         }
     }
 }
@@ -295,6 +299,7 @@ mod tests {
             Surface::Pin.tag(),
             Surface::Launcher.tag(),
             Surface::Settings.tag(),
+            Surface::Consent.tag(),
         ];
         for (index, tag) in tags.iter().enumerate() {
             assert!(!tags[..index].contains(tag), "duplicate tag {tag}");

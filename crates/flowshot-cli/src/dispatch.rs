@@ -233,6 +233,9 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
     options.bus_address = bus_address.map(ToOwned::to_owned);
     options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
     options.shortcuts = ShortcutOptions::production();
+    // The first-launch consent prompt (the daemon is the single prompt
+    // owner; the child loads/writes the same config this daemon loaded).
+    options.consent = execute::consent::ConsentPrompt::daemon_startup(run.config.clone());
     // The executing sink replaces the LoggingSink default
     // (bus/tray/shortcut commands run the real capture pipeline).
     options.command_sink = Some(Arc::new(ExecutingSink::new(ExecCtx {

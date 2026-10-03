@@ -24,11 +24,12 @@ use super::strings;
 use super::ui::ConsentAction;
 use super::window::ConsentEvent;
 
-/// The dialog's fixed logical size (the pitch paragraph, the two
-/// full-copy option rows, and the button bar at the default tokens).
+/// The dialog's fixed logical size (the brand header, the pitch paragraph,
+/// the two label + hint option rows in the card, and the action row at the
+/// default tokens - verified clip-free by the offscreen QA renders).
 const DIALOG_SIZE: LogicalSize<f64> = LogicalSize {
-    width: 480.0,
-    height: 290.0,
+    width: 500.0,
+    height: 370.0,
 };
 
 /// The error label for surface operations (the overlay passes a monitor

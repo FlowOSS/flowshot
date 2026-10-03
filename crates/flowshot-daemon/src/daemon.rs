@@ -19,6 +19,7 @@ use crate::autostart::Autostart;
 use crate::bus::{FlowShotInterface, OBJECT_PATH, SERVICE};
 use crate::command::{CommandSink, LoggingSink};
 use crate::error::DaemonError;
+use crate::execute::consent::ConsentPrompt;
 use crate::instance::{self, close_quietly};
 use crate::lifecycle::{Clock, DaemonMode, LifecycleMonitor, LifecyclePolicy, TokioClock};
 use crate::notify::{DesktopNotifier, GatedNotifier, Notifier};
@@ -61,6 +62,14 @@ pub struct DaemonOptions {
     /// constructors; the tray module owns the `tray` persistence reason
     /// from registration onward.
     pub tray: TrayOptions,
+    /// First-launch telemetry consent prompt wiring. Defaults to
+    /// DISABLED (the [`ShortcutOptions`] precedent) so callers that do
+    /// not opt in keep their exact startup behavior and never spawn a
+    /// window child; both daemon binaries enable it via
+    /// [`ConsentPrompt::daemon_startup`].
+    ///
+    /// [`ShortcutOptions`]: crate::shortcut::ShortcutOptions
+    pub consent: ConsentPrompt,
 }
 
 impl DaemonOptions {
@@ -97,6 +106,7 @@ impl DaemonOptions {
             clock: None,
             shortcuts: ShortcutOptions::default(),
             tray,
+            consent: ConsentPrompt::default(),
         }
     }
 }
@@ -178,6 +188,13 @@ impl Daemon {
             sync_autostart(options.config.daemon.startup_launch, exec);
         }
         report_ready_to_supervisor();
+
+        // The first-launch telemetry consent prompt: the resident daemon
+        // is the single prompt owner (the flowshot_ui::consent trigger
+        // rule) - a DETACHED session child, never awaited, so no command
+        // flow can ever block on consent. Runs only for the name winner
+        // (the AlreadyRunning loser returned above).
+        crate::execute::consent::prompt_first_launch(&options.consent, &options.config.telemetry);
 
         // The shortcut ladder runs AFTER readiness reporting - a
         // portal confirmation dialog may hold registration for up to its

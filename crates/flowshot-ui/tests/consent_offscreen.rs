@@ -13,8 +13,8 @@ use std::collections::HashSet;
 use flowshot_ui::consent::{ConsentModel, ConsentWindowOptions, render_offscreen};
 use flowshot_ui::gpu::{GpuContext, new_instance};
 
-const WIDTH: u32 = 480;
-const HEIGHT: u32 = 290;
+const WIDTH: u32 = 500;
+const HEIGHT: u32 = 370;
 
 struct Gpu {
     _instance: wgpu::Instance,
@@ -94,12 +94,23 @@ fn checked_checkboxes_change_the_rendered_frame() {
     let Some(gpu) = gpu_or_skip() else {
         return;
     };
+    // Given: the three checkbox states the QA renders pin - the default
+    // (send pre-checked), both off, and both on
+    let mut default = ConsentModel::default();
+    let default_pixels = render(&gpu, &mut default);
     let mut off = ConsentModel::default();
+    *off.send_mut() = false;
     let off_pixels = render(&gpu, &mut off);
     let mut on = ConsentModel::default();
-    *on.send_mut() = true;
     *on.details_mut() = true;
     let on_pixels = render(&gpu, &mut on);
+    // Then: every state is pixel-distinct - the pre-checked default is
+    // VISIBLY different from the opt-out, and checking details changes the
+    // frame again
+    assert_ne!(
+        default_pixels, off_pixels,
+        "the pre-checked send box must be visible in the default render"
+    );
     assert_ne!(
         off_pixels, on_pixels,
         "the two checkbox states must be pixel-distinct"
