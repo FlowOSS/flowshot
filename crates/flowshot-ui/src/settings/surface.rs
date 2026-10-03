@@ -77,9 +77,9 @@ pub fn render_offscreen(
     let panel_fill = style.visuals.panel_fill;
     let panel = move || {
         egui::CentralPanel::default().frame(
-            egui::Frame::none()
+            egui::Frame::NONE
                 .fill(panel_fill)
-                .inner_margin(egui::Margin::same(metrics.window_margin())),
+                .inner_margin(metrics.window_margin()),
         )
     };
     let context = TabContext {
@@ -92,23 +92,23 @@ pub fn render_offscreen(
     // context paints unclipped. The warm frame primes that state (the live
     // window gets the same second frame from egui's own repaint request);
     // the painted + read-back frame is the deterministic second one.
-    let (warm, _warm_action) =
+    let (mut warm, _warm_action) =
         surface.frame_with(panel(), style.clone(), |ui| tabs::show(ui, model, &context));
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("settings-offscreen-warm-encoder"),
         });
-    surface.paint(gpu, &mut encoder, &view, [width, height], &warm);
+    surface.paint(gpu, &mut encoder, &view, [width, height], &mut warm);
     gpu.queue.submit(Some(encoder.finish()));
-    let (output, _action) =
+    let (mut output, _action) =
         surface.frame_with(panel(), style, |ui| tabs::show(ui, model, &context));
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("settings-offscreen-encoder"),
         });
-    surface.paint(gpu, &mut encoder, &view, [width, height], &output);
+    surface.paint(gpu, &mut encoder, &view, [width, height], &mut output);
     gpu.queue.submit(Some(encoder.finish()));
     read_texture_rgba(&gpu.device, &gpu.queue, &texture, width, height)
 }

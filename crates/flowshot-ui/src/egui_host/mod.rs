@@ -8,19 +8,19 @@
 //! ([`crate::launcher`]), and the first-launch telemetry consent dialog
 //! ([`crate::consent`]). The overlay and editor never touch egui.
 //!
-//! egui-winit is deliberately absent (version dead end - see the crate
-//! manifest note): [`input::InputState`] feeds the context from raw winit
-//! 0.30 events instead ([`keymap`] mirrors egui-winit 0.28's conversion
-//! tables). The same split keeps [`EguiSurface`] renderable WITHOUT any
-//! window (the offscreen QA paths).
+//! egui-winit is deliberately absent (see the crate manifest note):
+//! [`input::InputState`] feeds the context from raw winit 0.30 events
+//! instead ([`keymap`] mirrors egui-winit's conversion tables). The same
+//! split keeps [`EguiSurface`] renderable WITHOUT any window (the offscreen
+//! QA paths).
 //!
 //! # Version constraint (recorded decision, plan D8(b) fallback)
 //!
-//! egui 0.28.1 + egui-wgpu 0.28.1 pair with the workspace wgpu 0.20 pin
-//! (egui-wgpu 0.28 requires wgpu ^0.20.0 - cached-registry-verified).
-//! egui-winit is NOT used: its 0.28 release requires winit ^0.29 while the
-//! workspace pins winit 0.30, and every newer egui requires wgpu 22+ (the
-//! plan forbids bumping wgpu).
+//! egui 0.36 + egui-wgpu 0.36 pair with the workspace wgpu 30 pin and with
+//! winit 0.30.13 (crates.io-verified; winit 0.31 is still beta and stays
+//! deferred). egui-winit is still NOT a dependency even though its 0.36
+//! release now pairs with winit 0.30: the hand-feed bridge is the tested
+//! surface (recorded migration decision).
 
 pub(crate) mod input;
 pub(crate) mod keymap;

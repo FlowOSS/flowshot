@@ -6,7 +6,6 @@ use std::time::{Duration, Instant};
 use winit::event_loop::ActiveEventLoop;
 
 use crate::egui_host::{cursor_icon, points, scale_to_ppp, theme};
-use crate::error::UiError;
 
 use super::super::layout::FormMetrics;
 use super::super::model::{Banner, SettingsModel};
@@ -16,20 +15,22 @@ use super::options::SettingsWindowOptions;
 
 pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
     let frame = match app.surface.as_ref().map(wgpu::Surface::get_current_texture) {
-        Some(Ok(frame)) => frame,
-        Some(Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated)) => {
+        Some(
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame),
+        ) => frame,
+        Some(wgpu::CurrentSurfaceTexture::Lost | wgpu::CurrentSurfaceTexture::Outdated) => {
             app.resize();
             return;
         }
-        Some(Err(wgpu::SurfaceError::Timeout)) => {
+        Some(
+            wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Validation,
+        ) => {
             if let Some(window) = &app.window {
                 window.request_redraw();
             }
-            return;
-        }
-        Some(Err(wgpu::SurfaceError::OutOfMemory)) => {
-            app.fatal = Some(UiError::OutOfMemory);
-            event_loop.exit();
             return;
         }
         None => return,
@@ -63,16 +64,16 @@ pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
     let style = theme::settings_style(&options.tokens, &model.config().ui, mode);
     let metrics = FormMetrics::from_tokens(&options.tokens);
     let panel = egui::CentralPanel::default().frame(
-        egui::Frame::none()
+        egui::Frame::NONE
             .fill(style.visuals.panel_fill)
-            .inner_margin(egui::Margin::same(metrics.window_margin())),
+            .inner_margin(metrics.window_margin()),
     );
     let context = TabContext {
         system_theme: options.system_theme,
         path_picker: options.path_picker.as_ref(),
         metrics,
     };
-    let (output, action) = egui.frame_with(panel, style, |ui| tabs::show(ui, model, &context));
+    let (mut output, action) = egui.frame_with(panel, style, |ui| tabs::show(ui, model, &context));
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -83,10 +84,10 @@ pub(super) fn render(app: &mut SettingsApp, event_loop: &ActiveEventLoop) {
         &mut encoder,
         &view,
         [surface_config.width, surface_config.height],
-        &output,
+        &mut output,
     );
     gpu.queue.submit(Some(encoder.finish()));
-    frame.present();
+    gpu.queue.present(frame);
     window.set_cursor(cursor_icon(output.platform_output.cursor_icon));
     let repaint_delay = output
         .viewport_output

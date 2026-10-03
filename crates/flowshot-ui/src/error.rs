@@ -127,10 +127,6 @@ pub enum UiError {
         monitor: String,
     },
 
-    /// Presentation ran out of memory.
-    #[error("GPU out of memory while presenting a frame")]
-    OutOfMemory,
-
     /// A render target extent is zero or exceeds the device texture limit.
     #[error(
         "render target {width}x{height} px is invalid for this device \
@@ -177,6 +173,14 @@ pub enum UiError {
     /// A GPU buffer could not be mapped for readback.
     #[error("GPU buffer mapping failed during readback: {0}")]
     BufferMap(#[from] wgpu::BufferAsyncError),
+
+    /// The synchronous device poll driving a readback failed.
+    #[error("GPU device poll failed during readback: {0}")]
+    DevicePoll(#[from] wgpu::PollError),
+
+    /// The readback buffer's mapped range could not be acquired.
+    #[error("GPU mapped-range acquisition failed during readback: {0}")]
+    MapRange(#[from] wgpu::MapRangeError),
 
     /// A geometry operation inside the input router failed validation.
     #[error("geometry error: {0}")]

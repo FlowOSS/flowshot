@@ -19,10 +19,10 @@ mod shortcuts;
 
 pub use filename::preview_filename;
 
-use egui::{Align, Frame, Layout, Margin, TopBottomPanel, Ui};
+use egui::{Align, Frame, Layout, Margin, Panel, Ui};
 
 use super::form::{pill_tab, primary_button};
-use super::layout::FormMetrics;
+use super::layout::{FormMetrics, margin_points};
 use super::model::{Banner, SettingsModel, Tab};
 use super::strings;
 use super::window::PathPicker;
@@ -88,16 +88,14 @@ pub(super) fn show(
     ui.add_space(m.small());
     ui.separator();
     ui.add_space(m.medium());
-    let bar = TopBottomPanel::bottom("settings-action-bar")
-        .resizable(false)
-        .frame(Frame::none().inner_margin(Margin {
-            left: 0.0,
-            right: 0.0,
-            top: m.medium(),
-            bottom: 0.0,
-        }));
+    let bar = Panel::bottom("settings-action-bar").frame(Frame::NONE.inner_margin(Margin {
+        left: 0,
+        right: 0,
+        top: margin_points(m.medium()),
+        bottom: 0,
+    }));
     let mut action = FrameAction::None;
-    bar.show_inside(ui, |ui| {
+    bar.show(ui, |ui| {
         action = show_action_bar(ui, m, model);
     });
     egui::ScrollArea::vertical()
@@ -120,10 +118,10 @@ fn show_action_bar(ui: &mut Ui, m: &FormMetrics, model: &mut SettingsModel) -> F
             Banner::Validation => strings::BANNER_VALIDATION.to_owned(),
         };
         let tint = ui.visuals().warn_fg_color.gamma_multiply(BANNER_TINT_ALPHA);
-        Frame::none()
+        Frame::NONE
             .fill(tint)
-            .rounding(egui::Rounding::same(m.control_radius()))
-            .inner_margin(Margin::same(m.small()))
+            .corner_radius(m.control_radius())
+            .inner_margin(m.small())
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.colored_label(ui.visuals().warn_fg_color, message);

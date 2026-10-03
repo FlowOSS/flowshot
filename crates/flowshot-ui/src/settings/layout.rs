@@ -43,6 +43,19 @@ fn px(value: u32, fallback: u8) -> f32 {
     f32::from(u8::try_from(value).unwrap_or(fallback))
 }
 
+/// f32 points -> one component of egui 0.31+'s integer `Margin` (rounds;
+/// the `as` cast saturates at the `i8` edge, so an oversized value clamps
+/// instead of wrapping).
+#[must_use]
+pub(crate) fn margin_points(points: f32) -> i8 {
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "f32->i8 saturates by Rust cast semantics; margin steps are small whole pixels"
+    )]
+    let truncated = points.round() as i8;
+    truncated
+}
+
 /// The token-derived two-column form metrics.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FormMetrics {

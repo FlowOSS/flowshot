@@ -231,8 +231,8 @@ fn expected_card(model: &SettingsModel) -> [u8; 4] {
 
 /// The scroll viewport width of the QA window: the General tab overflows
 /// the 640px height, so the solid reserved bar takes its width from the
-/// content column (the bar itself sits at the viewport's right edge, inset
-/// from the window edge by the window margin).
+/// content column (the bar sits at the scroll area outer rect's right edge,
+/// which follows the capped+centered content column).
 fn scroll_width(model: &SettingsModel) -> f32 {
     let style = flowshot_ui::settings::settings_style(
         &DesignTokens::default(),
@@ -323,21 +323,31 @@ fn short_content_shows_no_scrollbar_while_overflowing_content_does() {
     let filename = render_tab(&gpu, Tab::Filename, &mut model);
     let general = render_tab(&gpu, Tab::General, &mut model);
     let panel = [0x0F_u8, 0x17, 0x2A, 0xFF];
-    // When: sampled in the bar's band - the reserved solid bar sits at the
-    // scroll viewport's right edge (egui pins it to the content width's
-    // right edge; wrapped content ends at the viewport, inset from the
-    // window edge by the window margin)
-    let x = WIDTH - 20;
-    let bar_runs = |pixels: &[u8]| (80..560).filter(|y| pixel(pixels, x, *y) != panel).count();
+    // When: sampled in the band right of the content column - the reserved
+    // solid bar sits at the scroll area outer rect's right edge, which
+    // follows the capped+centered content column (egui 0.36 lays wrapped
+    // notes inside the column instead of overflowing to the viewport)
+    let m = FormMetrics::from_tokens(&DesignTokens::default());
+    let scroll = scroll_width(&model);
+    let column_right = m.window_margin() + m.content_offset(scroll) + m.content_width(scroll);
+    let band = (column_right as u32)..(WIDTH - m.window_margin() as u32);
+    // A reserved SOLID bar spans the full scroll viewport height; require a
+    // tall run so partial-height ink near the column edge (a card frame
+    // widened by an overflowing row) never counts as a bar.
+    let bar_columns = |pixels: &[u8]| {
+        band.clone()
+            .filter(|x| (80..560).filter(|y| pixel(pixels, *x, *y) != panel).count() > 360)
+            .count()
+    };
     // Then: the short tab paints no bar (no dead scrollbar), the
     // overflowing tab paints its solid reserved bar
     assert_eq!(
-        bar_runs(&filename),
+        bar_columns(&filename),
         0,
         "the Filename tab must not reserve a dead scrollbar"
     );
     assert!(
-        bar_runs(&general) > 100,
+        bar_columns(&general) > 0,
         "the overflowing General tab must paint its solid bar"
     );
 }

@@ -123,10 +123,9 @@ impl WindowSurface {
     ///
     /// # Errors
     ///
-    /// Returns [`UiError::OutOfMemory`] when presentation exhausts memory and
-    /// the renderer's [`UiError::RenderTargetTooLarge`] for invalid extents;
-    /// transient `Lost`/`Outdated`/`Timeout` states recover in-place and are
-    /// reported as `Ok`.
+    /// Returns the renderer's [`UiError::RenderTargetTooLarge`] for invalid
+    /// extents; transient `Lost`/`Outdated`/`Timeout`/`Occluded` states
+    /// recover in-place and are reported as `Ok`.
     pub(crate) fn render(
         &self,
         gpu: &GpuContext,
@@ -135,15 +134,19 @@ impl WindowSurface {
     ) -> Result<FrameStats, UiError> {
         let acquire_started = Instant::now();
         let frame = match self.surface.get_current_texture() {
-            Ok(frame) => frame,
+            // A suboptimal texture still presents; the next acquire reports
+            // `Outdated` when a reconfigure is actually due.
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
             // Both transient invalidations recover by reconfiguring; the frame
             // is skipped and the next RedrawRequested presents again.
-            Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => {
+            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
                 self.surface.configure(&gpu.device, &self.config);
                 return Ok(FrameStats::default());
             }
-            Err(wgpu::SurfaceError::Timeout) => return Ok(FrameStats::default()),
-            Err(wgpu::SurfaceError::OutOfMemory) => return Err(UiError::OutOfMemory),
+            wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Validation => return Ok(FrameStats::default()),
         };
         let acquire_time = acquire_started.elapsed();
         let view = frame
@@ -175,6 +178,7 @@ impl WindowSurface {
                 label: Some("overlay-frame"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         // The content pass already cleared and resolved into
@@ -190,6 +194,7 @@ impl WindowSurface {
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
             if vertices.is_some() {
                 self.crosshair.draw(&mut pass);
@@ -204,7 +209,7 @@ impl WindowSurface {
         // while input still dispatches at full rate. A no-op on other
         // platforms (the base `Window` API, not a platform extension).
         self.window.pre_present_notify();
-        frame.present();
+        gpu.queue.present(frame);
         Ok(stats)
     }
 }

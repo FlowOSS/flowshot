@@ -119,6 +119,9 @@ fn configure_surface(
     let config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format,
+        // `Auto` reproduces wgpu's historical color-space behavior (sRGB for
+        // 8-bit targets): the pre-30 API had no color-space choice.
+        color_space: wgpu::SurfaceColorSpace::Auto,
         width,
         height,
         present_mode: select_present_mode(&capabilities.present_modes),

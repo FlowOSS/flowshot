@@ -42,7 +42,7 @@ fast_image_resize = "2.0.0"
 
 # Graphics and UI
 winit = "0.30.10"
-wgpu = "0.20.1"
+wgpu = "30.0.1"
 # Single text stack: cosmic-text shaping + its SwashCache rasterizer, rendered
 # through flowshot-ui's own texture atlas. glyphon was REMOVED (todo 14 dep
 # reality check, crates.io-verified): no glyphon release pairs with wgpu 0.20
@@ -54,9 +54,9 @@ lyon = "1.0.19"
 # Safe f32-slice -> byte views for GPU staging (already in the lock via wgpu;
 # built-in Pod impls only, no derive needed under forbid(unsafe_code)).
 bytemuck = "1.25.2"
-egui = "0.28.1"
-egui-winit = "0.28.1"
-egui-wgpu = "0.28.1"
+egui = "0.36.2"
+egui-winit = "0.36.2"
+egui-wgpu = "0.36.2"
 
 # Wayland
 wayland-client = "0.31.1"

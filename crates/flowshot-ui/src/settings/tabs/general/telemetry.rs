@@ -99,12 +99,13 @@ mod tests {
         let metrics = FormMetrics::from_tokens(&DesignTokens::default());
         let mut changed = true;
         // When: one frame renders with no input
-        let _ = ctx.run(egui::RawInput::default(), |ctx| {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        ctx.run_ui(egui::RawInput::default(), |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 let config = model.config_mut();
                 changed = super::show(ui, &metrics, config);
             });
-        });
+        })
+        .drop_without_applying_deltas();
         // Then: rendering alone never marks the config dirty
         assert!(!changed);
     }

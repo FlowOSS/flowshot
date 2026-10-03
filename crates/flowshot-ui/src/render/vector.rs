@@ -23,8 +23,8 @@ pub(crate) const STENCIL_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Sten
 pub(crate) fn content_stencil() -> wgpu::DepthStencilState {
     wgpu::DepthStencilState {
         format: STENCIL_FORMAT,
-        depth_write_enabled: false,
-        depth_compare: wgpu::CompareFunction::Always,
+        depth_write_enabled: Some(false),
+        depth_compare: Some(wgpu::CompareFunction::Always),
         stencil: wgpu::StencilState {
             front: stencil_face(wgpu::StencilOperation::Keep),
             back: stencil_face(wgpu::StencilOperation::Keep),
@@ -47,8 +47,8 @@ fn stencil_face(pass_op: wgpu::StencilOperation) -> wgpu::StencilFaceState {
 fn clip_stencil(pass_op: wgpu::StencilOperation) -> wgpu::DepthStencilState {
     wgpu::DepthStencilState {
         format: STENCIL_FORMAT,
-        depth_write_enabled: false,
-        depth_compare: wgpu::CompareFunction::Always,
+        depth_write_enabled: Some(false),
+        depth_compare: Some(wgpu::CompareFunction::Always),
         stencil: wgpu::StencilState {
             front: stencil_face(pass_op),
             back: stencil_face(pass_op),
@@ -138,7 +138,7 @@ impl VectorPipelines {
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("render-flat-layout"),
             bind_group_layouts: &[],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
         let spec = |write_mask, blend, depth_stencil, label| PipelineSpec {
             format,
@@ -208,13 +208,13 @@ pub(crate) fn build_flat_pipeline(
         layout: Some(layout),
         vertex: wgpu::VertexState {
             module,
-            entry_point: "vs_main",
+            entry_point: Some("vs_main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
-            buffers: &[wgpu::VertexBufferLayout {
+            buffers: &[Some(wgpu::VertexBufferLayout {
                 array_stride: FLAT_VERTEX_STRIDE,
                 step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: FLAT_VERTEX_ATTRIBUTES,
-            }],
+            })],
         },
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleList,
@@ -233,7 +233,7 @@ pub(crate) fn build_flat_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module,
-            entry_point: "fs_main",
+            entry_point: Some("fs_main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format: spec.format,
@@ -241,6 +241,7 @@ pub(crate) fn build_flat_pipeline(
                 write_mask: spec.write_mask,
             })],
         }),
-        multiview: None,
+        multiview_mask: None,
+        cache: None,
     })
 }

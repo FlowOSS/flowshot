@@ -1,7 +1,7 @@
 //! The `winit` 0.30 -> `egui` input bridge (the egui-winit replacement).
 //!
 //! Accumulates window events between frames and drains them into an
-//! [`egui::RawInput`], mirroring egui-winit 0.28 semantics: logical-key-first
+//! [`egui::RawInput`], mirroring egui-winit 0.36 semantics: logical-key-first
 //! keyboard mapping ([`super::keymap`]), line/pixel wheel units, printable
 //! text filtering, Ctrl/Cmd clipboard command translation through the
 //! optional [`ClipboardBridge`], and always-on IME forwarding (draft D7).
@@ -10,7 +10,7 @@
 //! once, here - the single logical<->physical conversion point of this
 //! surface (the #4871-family rule the whole crate follows).
 
-use egui::{Event, ImeEvent, Modifiers, MouseWheelUnit, Pos2, Rect, Vec2};
+use egui::{Event, ImeEvent, Modifiers, MouseWheelUnit, Pos2, Rect, TouchPhase, Vec2};
 use winit::event::{ElementState, Ime, MouseButton, MouseScrollDelta, WindowEvent};
 
 use super::keymap;
@@ -163,7 +163,7 @@ impl InputState {
                 }
                 WindowSignal::None
             }
-            WindowEvent::MouseWheel { delta, .. } => {
+            WindowEvent::MouseWheel { delta, phase, .. } => {
                 let (unit, delta) = match delta {
                     MouseScrollDelta::LineDelta(x, y) => (MouseWheelUnit::Line, Vec2::new(*x, *y)),
                     MouseScrollDelta::PixelDelta(position) => (
@@ -177,6 +177,7 @@ impl InputState {
                 self.events.push(Event::MouseWheel {
                     unit,
                     delta,
+                    phase: touch_phase(*phase),
                     modifiers: self.modifiers,
                 });
                 WindowSignal::None
@@ -190,6 +191,9 @@ impl InputState {
                     mac_cmd: false,
                     command: state.control_key(),
                 };
+                // egui 0.36 removed `RawInput::modifiers`; the held-modifier
+                // set now travels as an event (the egui-winit 0.36 pattern).
+                self.events.push(Event::ModifiersChanged(self.modifiers));
                 WindowSignal::None
             }
             WindowEvent::KeyboardInput { event, .. } => {
@@ -197,12 +201,20 @@ impl InputState {
                 WindowSignal::None
             }
             WindowEvent::Ime(ime) => {
-                self.events.push(Event::Ime(match ime {
-                    Ime::Enabled => ImeEvent::Enabled,
-                    Ime::Preedit(text, _) => ImeEvent::Preedit(text.clone()),
-                    Ime::Commit(text) => ImeEvent::Commit(text.clone()),
-                    Ime::Disabled => ImeEvent::Disabled,
-                }));
+                match ime {
+                    // egui 0.36 deprecated the Enabled/Disabled notifications
+                    // ("no longer used by egui"); egui-winit drops them too.
+                    Ime::Enabled | Ime::Disabled => {}
+                    Ime::Preedit(text, active_range_bytes) => {
+                        self.events.push(Event::Ime(ImeEvent::Preedit {
+                            text: text.clone(),
+                            active_range_chars: preedit_range_chars(text, *active_range_bytes),
+                        }));
+                    }
+                    Ime::Commit(text) => {
+                        self.events.push(Event::Ime(ImeEvent::Commit(text.clone())));
+                    }
+                }
                 WindowSignal::None
             }
             _ => WindowSignal::None,
@@ -280,12 +292,32 @@ impl InputState {
             screen_rect: Some(Rect::from_min_size(Pos2::ZERO, self.screen_size_points)),
             max_texture_side: Some(usize::try_from(self.max_texture_side).unwrap_or(2048)),
             time: Some(self.start.elapsed().as_secs_f64()),
-            modifiers: self.modifiers,
             events: std::mem::take(&mut self.events),
             focused: self.focused,
             ..Default::default()
         }
     }
+}
+
+fn touch_phase(phase: winit::event::TouchPhase) -> TouchPhase {
+    match phase {
+        winit::event::TouchPhase::Started => TouchPhase::Start,
+        winit::event::TouchPhase::Moved => TouchPhase::Move,
+        winit::event::TouchPhase::Ended => TouchPhase::End,
+        winit::event::TouchPhase::Cancelled => TouchPhase::Cancel,
+    }
+}
+
+/// winit reports the preedit cursor span in BYTES; egui wants CHAR ranges.
+/// An out-of-bounds span (compositor bug) drops the range, never the text.
+fn preedit_range_chars(
+    text: &str,
+    range_bytes: Option<(usize, usize)>,
+) -> Option<std::ops::Range<usize>> {
+    let (start_bytes, end_bytes) = range_bytes?;
+    let start_chars = text.get(..start_bytes)?.chars().count();
+    let middle_chars = text.get(start_bytes..end_bytes)?.chars().count();
+    Some(start_chars..start_chars + middle_chars)
 }
 
 fn pointer_button(button: MouseButton) -> egui::PointerButton {

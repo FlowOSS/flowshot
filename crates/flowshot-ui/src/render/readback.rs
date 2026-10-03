@@ -9,7 +9,8 @@ use crate::error::UiError;
 /// # Errors
 ///
 /// [`UiError::BufferMap`] when the staging buffer mapping fails (device
-/// lost).
+/// lost), [`UiError::DevicePoll`] when the synchronous poll fails, and
+/// [`UiError::MapRange`] when the mapped range cannot be acquired.
 pub fn read_texture_rgba(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -30,15 +31,15 @@ pub fn read_texture_rgba(
         label: Some("render-readback-encoder"),
     });
     encoder.copy_texture_to_buffer(
-        wgpu::ImageCopyTexture {
+        wgpu::TexelCopyTextureInfo {
             texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
             aspect: wgpu::TextureAspect::All,
         },
-        wgpu::ImageCopyBuffer {
+        wgpu::TexelCopyBufferInfo {
             buffer: &buffer,
-            layout: wgpu::ImageDataLayout {
+            layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(padded_row),
                 rows_per_image: Some(height),
@@ -58,7 +59,7 @@ pub fn read_texture_rgba(
         .map_async(wgpu::MapMode::Read, move |result| {
             let _sent = sender.send(result);
         });
-    device.poll(wgpu::Maintain::wait());
+    device.poll(wgpu::PollType::wait_indefinitely())?;
     receiver
         .recv()
         .map_err(|_| UiError::BufferMap(wgpu::BufferAsyncError))?
@@ -67,7 +68,7 @@ pub fn read_texture_rgba(
     let mut pixels =
         Vec::with_capacity(usize::try_from(u64::from(width) * u64::from(height) * 4).unwrap_or(0));
     {
-        let mapped = buffer.slice(..).get_mapped_range();
+        let mapped = buffer.slice(..).get_mapped_range()?;
         let row = usize::try_from(row).unwrap_or(0);
         let padded = usize::try_from(padded_row).unwrap_or(0);
         for line in 0..usize::try_from(height).unwrap_or(0) {
