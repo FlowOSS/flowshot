@@ -4,8 +4,8 @@
 //! # Pieces
 //!
 //! - [`spec`] - the SNI + `com.canonical.dbusmenu` wire vocabulary;
-//! - [`icon`] - the procedural ARGB32 tray glyph (idle/attention sets from
-//!   the brand accent token);
+//! - [`icon`] - the real `FlowShot` logo rasterized at build time
+//!   (idle/attention ARGB32 sets);
 //! - [`menu`] - the F12-parity menu model and the pure id -> action
 //!   dispatch table;
 //! - [`outputs`] - the live output probe behind the per-monitor submenu
@@ -28,8 +28,12 @@
 //! - `ksni` was the proposed crate; no SNI crate exists in the workspace
 //!   table or the lock and the root manifest is orchestrator-owned, so the
 //!   protocol is hand-rolled on zbus 4 (ksni wire shapes as the reference).
-//! - `About` is a version toast until the settings stack provides
-//!   a real surface.
+//! - `About` stays a version toast. The logo-wiring pass evaluated a
+//!   minimal egui about dialog (logo + version + license + repo link) and
+//!   recorded the seam instead: a dialog is a new session-child window
+//!   kind across the ui/executor stack - bigger scope than an icon swap.
+//!   The dispatch point is `TrayAction::About` in `tray::shared`, and a
+//!   real surface lands with the settings stack.
 
 pub mod icon;
 pub mod menu;
@@ -61,34 +65,21 @@ use spec::{ITEM_PATH, MENU_PATH, TrayStatus};
 
 /// Tray-host configuration (`DaemonOptions::tray`; seeded from config via
 /// [`TrayOptions::from_config`], tests inject the probe).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TrayOptions {
     /// Master switch - the `[daemon].tray` gate (default false = lean
     /// on-demand daemon).
     pub enabled: bool,
-    /// `#RRGGBB` accent for the procedural glyph (`[ui].accent_color`).
-    pub accent_color: String,
     /// Output-probe override (`None` = [`WaylandOutputProbe`]).
     pub probe: Option<Arc<dyn OutputProbe>>,
 }
 
-impl Default for TrayOptions {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            accent_color: flowshot_core::tokens::Palette::default().accent,
-            probe: None,
-        }
-    }
-}
-
 impl TrayOptions {
-    /// The production gate: `[daemon].tray` plus the `[ui]` accent token.
+    /// The production gate: `[daemon].tray`.
     #[must_use]
     pub fn from_config(config: &Config) -> Self {
         Self {
             enabled: config.daemon.tray,
-            accent_color: config.ui.accent_color.clone(),
             probe: None,
         }
     }
@@ -197,7 +188,7 @@ pub async fn start(options: &TrayOptions, wiring: TrayWiring) -> TrayHandle {
     };
     let core = Arc::new(TrayCore::new(
         wiring,
-        icon::icon_set(&options.accent_color),
+        icon::icon_set(),
         options
             .probe
             .clone()

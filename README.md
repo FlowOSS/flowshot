@@ -1,3 +1,5 @@
+<img src="assets/logo.png" width="128" height="128" alt="FlowShot logo: a violet-to-azure gradient circle with white lens arcs">
+
 # FlowShot
 
 FlowShot is a screenshot tool for Linux/Wayland, built by FlowOSS. It covers the
