@@ -144,6 +144,11 @@ impl DecodedScreenshot {
 }
 
 /// Requests the screenshot from the portal and resolves its `file:` URI.
+///
+/// ashpd 0.13 returns its own minimal [`Uri`](ashpd::Uri) (no `url`
+/// dependency), so the `file:` decode runs through `url::Url`: parse, then
+/// `to_file_path` (percent-decoding + scheme check). A URI that fails
+/// either step is the typed [`PortalErrorKind::FileUri`].
 async fn screenshot_path(interactive: bool) -> Result<std::path::PathBuf, PortalScreenshotError> {
     let request = classify(
         ashpd::desktop::screenshot::Screenshot::request()
@@ -154,12 +159,13 @@ async fn screenshot_path(interactive: bool) -> Result<std::path::PathBuf, Portal
     )?;
     let response = classify(request.response())?;
     let uri = response.uri();
-    uri.to_file_path().map_err(|()| {
-        PortalErrorKind::FileUri {
-            uri: uri.to_string(),
-        }
-        .into()
-    })
+    let file_uri_error = || PortalErrorKind::FileUri {
+        uri: uri.to_string(),
+    };
+    url::Url::parse(uri.as_str())
+        .ok()
+        .and_then(|url| url.to_file_path().ok())
+        .ok_or_else(|| file_uri_error().into())
 }
 
 /// Decodes the portal's temp file to RGBA and deletes it (the portal writes

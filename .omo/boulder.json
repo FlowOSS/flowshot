@@ -24,7 +24,7 @@
       "plan_name": "flowshot",
       "status": "completed",
       "started_at": "2026-09-25T00:40:14.077Z",
-      "updated_at": "2026-10-03T17:19:03.765Z",
+      "updated_at": "2026-10-03T20:26:44.339Z",
       "session_ids": [
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
         "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -104,7 +104,12 @@
         "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1",
         "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7",
         "opencode:ses_efda0c58dffevmp6Hb7ckipFIA",
-        "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45"
+        "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45",
+        "opencode:ses_efd0e5696ffee6DWov6rn3uOhe",
+        "opencode:ses_efd00cdc5ffeUDGeHYHM7vhlU8",
+        "opencode:ses_efd00a235ffe1y7jaxTb5cArVA",
+        "opencode:ses_efcb37832ffeILGRN6gAhiuy9b",
+        "opencode:ses_efc8d68a9ffe98FIQkHNfkHrv0"
       ],
       "session_origins": {
         "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -185,22 +190,26 @@
         "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1": "appended",
         "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7": "appended",
         "opencode:ses_efda0c58dffevmp6Hb7ckipFIA": "appended",
-        "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45": "appended"
+        "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45": "appended",
+        "opencode:ses_efd0e5696ffee6DWov6rn3uOhe": "appended",
+        "opencode:ses_efd00cdc5ffeUDGeHYHM7vhlU8": "appended",
+        "opencode:ses_efd00a235ffe1y7jaxTb5cArVA": "appended",
+        "opencode:ses_efcb37832ffeILGRN6gAhiuy9b": "appended",
+        "opencode:ses_efc8d68a9ffe98FIQkHNfkHrv0": "appended"
       },
       "agent": "atlas",
       "task_sessions": {
         "todo:1": {
           "task_key": "todo:1",
           "task_label": "1",
-          "task_title": "`zbus::proxy` WARN: \"Failed to populate properties cache via GetAll: ... Object does not exist at path /org/freedesktop/portal/desktop/...\" — ashpd's proxies racing portal session/request teardown after captures. Benign teardown race (ashpd 0.10 internal).",
-          "session_id": "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45",
-          "agent": "Sisyphus-Junior",
-          "category": "quick",
+          "task_title": "**wgpu 0.20.1 → latest (30.x)** — the big one. We use: instance/adapter/device creation, surface config (custom present-mode selection incl. Mailbox), custom WGSL render pipelines (vector/text/image/invert/shadow), MSAA (sample-count negotiation), texture atlas + sub-region sampling, offscreen render-to-texture + readback, multi-surface (per-monitor windows). Audit our actual usage in `crates/flowshot-ui/src/render/` + `gpu/` + `egui_host/` and map each API to what changed across wgpu 0.21..30 (fetch the wgpu CHANGELOGs/migration notes — the repo has per-version BREAKING sections).",
+          "session_id": "opencode:ses_efd0e5696ffee6DWov6rn3uOhe",
+          "agent": "librarian",
           "started_at": "2026-09-25T01:39:47.072Z",
           "ended_at": "2026-09-25T01:50:14.031Z",
           "elapsed_ms": 626959,
           "status": "completed",
-          "updated_at": "2026-10-03T17:19:03.765Z"
+          "updated_at": "2026-10-03T18:05:54.783Z"
         },
         "todo:2": {
           "task_key": "todo:2",
@@ -341,7 +350,7 @@
   "active_plan": "/storage/raid_vault/Work/FlowOSS/flowshot/.omo/plans/flowshot.md",
   "started_at": "2026-09-25T00:40:14.077Z",
   "status": "completed",
-  "updated_at": "2026-10-03T17:19:03.765Z",
+  "updated_at": "2026-10-03T20:26:44.339Z",
   "session_ids": [
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm",
     "opencode:ses_f2682611bffehALBv70o1olHyF",
@@ -421,7 +430,12 @@
     "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1",
     "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7",
     "opencode:ses_efda0c58dffevmp6Hb7ckipFIA",
-    "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45"
+    "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45",
+    "opencode:ses_efd0e5696ffee6DWov6rn3uOhe",
+    "opencode:ses_efd00cdc5ffeUDGeHYHM7vhlU8",
+    "opencode:ses_efd00a235ffe1y7jaxTb5cArVA",
+    "opencode:ses_efcb37832ffeILGRN6gAhiuy9b",
+    "opencode:ses_efc8d68a9ffe98FIQkHNfkHrv0"
   ],
   "session_origins": {
     "opencode:ses_f2b2e54dffferwwZ0cC23F6mRm": "direct",
@@ -502,22 +516,26 @@
     "opencode:ses_efe2bea18ffeZ48P00J8rr6bI1": "appended",
     "opencode:ses_efdd2d8acffei0ZFVxJHr3TkH7": "appended",
     "opencode:ses_efda0c58dffevmp6Hb7ckipFIA": "appended",
-    "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45": "appended"
+    "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45": "appended",
+    "opencode:ses_efd0e5696ffee6DWov6rn3uOhe": "appended",
+    "opencode:ses_efd00cdc5ffeUDGeHYHM7vhlU8": "appended",
+    "opencode:ses_efd00a235ffe1y7jaxTb5cArVA": "appended",
+    "opencode:ses_efcb37832ffeILGRN6gAhiuy9b": "appended",
+    "opencode:ses_efc8d68a9ffe98FIQkHNfkHrv0": "appended"
   },
   "plan_name": "flowshot",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "`zbus::proxy` WARN: \"Failed to populate properties cache via GetAll: ... Object does not exist at path /org/freedesktop/portal/desktop/...\" — ashpd's proxies racing portal session/request teardown after captures. Benign teardown race (ashpd 0.10 internal).",
-      "session_id": "opencode:ses_efd393b05ffeOSkWhwXBf4Ue45",
-      "agent": "Sisyphus-Junior",
-      "category": "quick",
+      "task_title": "**wgpu 0.20.1 → latest (30.x)** — the big one. We use: instance/adapter/device creation, surface config (custom present-mode selection incl. Mailbox), custom WGSL render pipelines (vector/text/image/invert/shadow), MSAA (sample-count negotiation), texture atlas + sub-region sampling, offscreen render-to-texture + readback, multi-surface (per-monitor windows). Audit our actual usage in `crates/flowshot-ui/src/render/` + `gpu/` + `egui_host/` and map each API to what changed across wgpu 0.21..30 (fetch the wgpu CHANGELOGs/migration notes — the repo has per-version BREAKING sections).",
+      "session_id": "opencode:ses_efd0e5696ffee6DWov6rn3uOhe",
+      "agent": "librarian",
       "started_at": "2026-09-25T01:39:47.072Z",
       "ended_at": "2026-09-25T01:50:14.031Z",
       "elapsed_ms": 626959,
       "status": "completed",
-      "updated_at": "2026-10-03T17:19:03.765Z"
+      "updated_at": "2026-10-03T18:05:54.783Z"
     },
     "todo:2": {
       "task_key": "todo:2",

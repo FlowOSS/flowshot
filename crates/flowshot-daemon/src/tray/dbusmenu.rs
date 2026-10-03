@@ -5,20 +5,23 @@
 //! Wire shape: `GetLayout` replies `(u revision, (i id, a{sv} props,
 //! av children))` - children are recursively the same structure wrapped
 //! in variants. [`Layout`] derives that signature; child structs are
-//! built through `StructureBuilder` (lesson learned: manual
-//! `Value`/`Dict` assembly is a rabbit hole, the builder is not).
+//! built through the infallible tuple `From` impl (`Value::from((..))` =
+//! `Value::Structure`; lesson learned: manual `Value`/`Dict` assembly is
+//! a rabbit hole, and zvariant 5's `StructureBuilder::build` is fallible).
 //!
-//! All methods are SYNC (sync dispatch runs inline on
-//! the connection's driver thread): the layout answers from the cached
-//! probe, and the only slow operation - the wayland output probe - is
-//! pushed onto the tokio runtime through [`TrayCore::refresh_outputs`].
+//! All methods are SYNC (sync dispatch runs inline on the connection's
+//! dispatch task - the zbus-5 tokio reactor task when built inside a
+//! tokio runtime, the private async-io driver thread otherwise): the
+//! layout answers from the cached probe, and the only slow operation -
+//! the wayland output probe - is pushed onto the tokio runtime through
+//! [`TrayCore::refresh_outputs`].
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use serde::Serialize;
 use zbus::fdo;
-use zbus::zvariant::{OwnedValue, StructureBuilder, Type, Value};
+use zbus::zvariant::{OwnedValue, Type, Value};
 
 use super::TrayCore;
 use super::menu::{MenuNode, ROOT_ID, SCREEN_SUBMENU_ID, find_node};
@@ -86,13 +89,11 @@ fn children_values(
     nodes
         .iter()
         .map(|node| {
-            Value::from(
-                StructureBuilder::new()
-                    .add_field(node.id)
-                    .add_field(node_props(node, filter))
-                    .add_field(children_values(&node.children, child_depth, filter))
-                    .build(),
-            )
+            Value::from((
+                node.id,
+                node_props(node, filter),
+                children_values(&node.children, child_depth, filter),
+            ))
         })
         .collect()
 }
@@ -319,7 +320,7 @@ mod tests {
 
     #[test]
     fn layout_signature_matches_the_dbusmenu_spec() {
-        assert_eq!(Layout::signature().as_str(), "(ia{sv}av)");
+        assert_eq!(Layout::SIGNATURE.to_string(), "(ia{sv}av)");
     }
 
     #[test]

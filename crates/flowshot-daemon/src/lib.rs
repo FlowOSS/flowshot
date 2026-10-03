@@ -31,7 +31,7 @@
 //!   ladder (paste-ready Hyprland/Sway/GNOME snippets, `KGlobalAccel`
 //!   guidance) behind `flowshot --print-bind-help`;
 //! - [`tray`] - the SNI tray: `org.kde.StatusNotifierItem` +
-//!   `com.canonical.dbusmenu` hand-rolled on the same zbus-4 connection,
+//!   `com.canonical.dbusmenu` hand-rolled on the same zbus connection,
 //!   the F12-parity menu dispatching into [`CommandSink`], the
 //!   `[daemon].tray` gate, the absent-watcher degrade (warn, never
 //!   crash), and the `tray` lifecycle persistence reason;
@@ -46,21 +46,26 @@
 //!
 //! # Executor decision (recorded)
 //!
-//! The daemon's OWN bus stays on workspace **zbus 4** (default features =
-//! async-io reactor), driven from a **tokio** runtime. Source-verified
-//! mechanics (zbus 4.4 `abstractions/executor.rs` + `connection/builder.rs`):
-//! each connection owns a PRIVATE `async-executor` instance plus a dedicated
-//! driver thread (`zbus::Connection executor`) that ticks until the
-//! connection's tasks end - so zbus-4 futures are drivable from ANY
-//! executor (the stub-harness-proven pattern) with no interference with tokio.
-//! Portal-facing async coexists on the same runtime: `ashpd` (zbus 5 +
-//! tokio reactor) runs inside private current-thread runtimes at its call
-//! sites (the worker pattern), and `notify-rust` (zbus 5, blocking
-//! `show()`) only ever runs on dedicated notification threads. A direct
-//! zbus-5 dependency was REJECTED: it would deepen the existing duplicate
-//! zbus family for zero functional gain. Teardown discipline: zbus-4
-//! async-io has NO drop-time close, so [`daemon::Daemon::run`] and
-//! [`instance::acquire_or_forward`] close connections explicitly.
+//! The daemon's OWN bus rides workspace **zbus 5** from a **tokio**
+//! runtime. Source-verified mechanics (zbus 5.19 `abstractions/mod.rs`
+//! `use_tokio` + `connection/builder.rs`): BOTH reactors compile in
+//! (default async-io + tokio unified via ashpd) and the reactor is chosen
+//! PER CONNECTION at build time - built inside a tokio runtime, the
+//! connection's internal tasks ride that runtime and die with it (the
+//! daemon's bus, the CLI handshake, the portal-worker probes); built
+//! outside, the connection gets the old zbus-4 model (PRIVATE
+//! `async-executor` + dedicated driver thread, futures drivable from ANY
+//! executor). The p2p test stubs pin that async-io path via
+//! `Builder::async_io_unix_stream`. Portal-facing async coexists on the
+//! same runtime: `ashpd` (zbus 5 + tokio reactor) runs inside private
+//! current-thread runtimes at its call sites (the worker pattern), and
+//! `notify-rust` (zbus 5, blocking `show()`) only ever runs on dedicated
+//! notification threads. The upgrade also UNIFIES the family: the direct
+//! edge and ashpd/notify-rust now share one zbus 5. Teardown discipline
+//! (todo 11, unchanged): the async-io reactor has NO drop-time close, so
+//! [`daemon::Daemon::run`] and [`instance::acquire_or_forward`] close
+//! connections explicitly; on the tokio reactor `close()` remains the
+//! deterministic release and runtime teardown is the backstop.
 
 pub mod autostart;
 pub mod bus;

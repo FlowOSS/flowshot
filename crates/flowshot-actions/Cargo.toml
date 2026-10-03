@@ -15,13 +15,15 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 image = { workspace = true }
-reqwest = { workspace = true, features = ["rustls-tls", "multipart"] }
+reqwest = { workspace = true, features = ["rustls", "multipart"] }
 tokio = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 wl-clipboard-rs = { workspace = true }
-ashpd = { workspace = true }
+# ashpd 0.13 gates every portal behind its own feature; this crate drives
+# OpenURI only (open-with action + Imgur delete URL).
+ashpd = { workspace = true, features = ["open_uri"] }
 rfd = { workspace = true }
 url = "2.5"
 

@@ -28,9 +28,10 @@ flowshot-daemon = { path = "../flowshot-daemon" }
 # Todo 38: the exit-code table downcasts the capture error chain for the
 # protocol permission refusal (IccError::PermissionDenied -> exit 5).
 flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
-# Same executor decision as the daemon crate (todo 32): workspace zbus 4,
-# futures driven from tokio; connections are closed explicitly (zbus-4
-# async-io has no drop-time close, todo-11 lesson).
+# Same executor decision as the daemon crate (todo 32, zbus 5): the CLI
+# drives zbus futures from its own tokio runtime, so its connections ride
+# zbus-5's tokio reactor; connections are still closed explicitly (the
+# async-io reactor path has no drop-time close, todo-11 lesson).
 zbus = { workspace = true }
 clap = { workspace = true }
 clap_complete = { workspace = true }

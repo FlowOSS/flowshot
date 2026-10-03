@@ -4,8 +4,9 @@
 //! Startup order matters (zbus caveat): the object server is registered
 //! BEFORE the name is requested, so the winner can serve immediately -
 //! the race-free single-instance property the design mandates (Oracle r4).
-//! Teardown calls `Connection::close()` explicitly: zbus-4 with the
-//! async-io reactor has NO drop-time close.
+//! Teardown calls `Connection::close()` explicitly: zbus's async-io
+//! reactor path has NO drop-time close, and `close()` is the deterministic
+//! release on the tokio reactor path too.
 
 use std::sync::Arc;
 use std::time::Duration;

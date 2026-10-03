@@ -10,7 +10,7 @@
 //! serializes every test in this binary (no concurrent `getenv` readers;
 //! lib-unit tests run in a separate binary and never touch `ashpd`).
 //!
-//! The stub reproduces the wire contract `ashpd` 0.10.3 codes against
+//! The stub reproduces the wire contract `ashpd` 0.13.13 codes against
 //! (source-verified): request paths
 //! `/org/freedesktop/portal/desktop/request/{SENDER}/{TOKEN}`, session
 //! paths `.../session/{SENDER}/{TOKEN}`, `Response(u, a{sv})` signals on
@@ -45,8 +45,9 @@ use flowshot_daemon::shortcut::{
     ACTIVE_SCREEN, CompositorFlavor, Registration, ShortcutOptions, ShortcutWiring,
 };
 use flowshot_daemon::state::DaemonState;
+use zbus::message::Header;
 use zbus::zvariant::{ObjectPath, OwnedValue, SerializeDict, Type, Value};
-use zbus::{Connection, ConnectionBuilder, MessageHeader, fdo, object_server::ObjectServer};
+use zbus::{Connection, fdo, object_server::ObjectServer};
 
 // The portal's reply payloads, typed exactly like ashpd's own wire structs
 // (SerializeDict = a{sv}).
@@ -206,7 +207,7 @@ const SHORTCUTS_IFACE: &str = "org.freedesktop.portal.GlobalShortcuts";
 
 /// The portal's `{SENDER}` path element: the caller's unique name without
 /// the leading colon, dots underscored (ashpd `Proxy::unique_name`).
-fn sender_element(header: &MessageHeader<'_>) -> fdo::Result<String> {
+fn sender_element(header: &Header<'_>) -> fdo::Result<String> {
     let sender = header
         .sender()
         .ok_or_else(|| fdo::Error::Failed("method call without sender".to_owned()))?;
@@ -257,7 +258,7 @@ impl StubPortal {
 
     async fn create_session(
         &self,
-        #[zbus(header)] header: MessageHeader<'_>,
+        #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] conn: &Connection,
         #[zbus(object_server)] server: &ObjectServer,
         options: HashMap<String, OwnedValue>,
@@ -297,7 +298,7 @@ impl StubPortal {
 
     async fn bind_shortcuts(
         &self,
-        #[zbus(header)] header: MessageHeader<'_>,
+        #[zbus(header)] header: Header<'_>,
         #[zbus(connection)] conn: &Connection,
         session_handle: ObjectPath<'_>,
         shortcuts: Vec<(String, HashMap<String, OwnedValue>)>,
@@ -484,19 +485,20 @@ async fn scenario(broker_address: &str) {
     drop(registration_a);
 
     // ---- the stub portal appears on the broker --------------------------
-    let stub_conn = ConnectionBuilder::address(broker_address)
+    // serve_at (NOT post-build object_server().at()): zbus 5 dispatches
+    // method calls through a lazily-subscribed task; the builder awaits its
+    // registration before the socket reader spawns, and the name is only
+    // requested afterwards, so no early call can race the subscription.
+    let portal = StubPortal::default();
+    let handles = portal.handles.clone();
+    let stub_conn = zbus::connection::Builder::address(broker_address)
+        .unwrap()
+        .serve_at(PORTAL_PATH, portal)
         .unwrap()
         .build()
         .await
         .unwrap();
     stub_conn.request_name(PORTAL_NAME).await.unwrap();
-    let portal = StubPortal::default();
-    let handles = portal.handles.clone();
-    stub_conn
-        .object_server()
-        .at(PORTAL_PATH, portal)
-        .await
-        .unwrap();
 
     // ---- phase B: registration binds, persists, nudges, pins -----------
     let dir_b = temp_dir("portal");
@@ -589,7 +591,7 @@ async fn scenario(broker_address: &str) {
     registration_e.shutdown().await;
     assert!(!state_e.reasons().shortcuts);
 
-    // ---- teardown (zbus-4 explicit-close discipline) --------------------
+    // ---- teardown (zbus explicit-close discipline) ----------------------
     std::fs::remove_dir_all(&dir_a).ok();
     std::fs::remove_dir_all(&dir_b).ok();
     stub_conn.close().await.unwrap();

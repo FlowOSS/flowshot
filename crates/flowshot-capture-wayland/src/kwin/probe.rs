@@ -47,16 +47,19 @@ impl KwinAvailability {
 ///
 /// Infallible by design: no bus, no name owner, or a failed introspection
 /// all mean "unavailable" (the negotiation ladder degrades, it never fails
-/// on a probe). Reactor-agnostic: `zbus`'s `async-io` executor drives the
-/// connection from any runtime.
+/// on a probe). Reactor-agnostic: zbus 5 picks the connection's reactor at
+/// build time from the ambient context (tokio runtime active -> tokio
+/// reactor, tasks die with the runtime; otherwise the private async-io
+/// executor + driver thread), and both are drivable from here.
 pub async fn probe_kwin() -> KwinAvailability {
     match Connection::session().await {
         Ok(connection) => {
             let availability = probe_on(&connection).await;
-            // Deterministic teardown: a dropped zbus handle leaves the socket
-            // open with its reader task parked (async-io tasks outlive our
-            // runtime); close() shuts the socket down so the descriptor is
-            // released without waiting on the bus.
+            // Deterministic teardown on BOTH reactors: the async-io one
+            // leaves the socket open with its reader task parked on drop
+            // (tasks outlive any private runtime), and close() is the one
+            // API that releases the descriptor without waiting on the bus
+            // or on runtime teardown.
             if let Err(error) = connection.close().await {
                 tracing::debug!(%error, "the KWin probe connection close reported an error");
             }

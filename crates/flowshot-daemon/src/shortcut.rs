@@ -24,7 +24,7 @@
 //!
 //! # Restore data (pinned reality, see [`persist`])
 //!
-//! `ashpd` 0.10.3's `GlobalShortcuts` has NO restore token and exposes no
+//! `ashpd` 0.13.13's `GlobalShortcuts` has NO restore token and exposes no
 //! session handle, so a portal session cannot survive a restart; the
 //! config-dir file persists the RE-REGISTRATION set plus the
 //! notified-once flag ("restore-data file created + reused across daemon

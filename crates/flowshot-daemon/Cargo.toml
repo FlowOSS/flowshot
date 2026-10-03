@@ -52,31 +52,39 @@ winit = { workspace = true }
 # The headless execution mode's GPU context (feature test-drive; already in
 # the graph via flowshot-ui).
 wgpu = { workspace = true }
-# EXECUTOR DECISION (todo 32): the daemon's OWN bus stays on workspace zbus 4
-# (default features = async-io reactor) driven from a tokio runtime. Source-
-# verified: each zbus-4 connection owns a PRIVATE async-executor + dedicated
-# driver thread, so its futures are drivable from ANY executor (todo-11-proven)
-# without tokio interference. ashpd and notify-rust carry zbus 5 internally
-# (tokio / blocking stacks); a direct zbus 5 edge here would deepen the
-# duplicate family for zero gain. Teardown discipline: zbus-4-async-io has NO
-# drop-time close - the daemon calls Connection::close() explicitly on shutdown.
+# EXECUTOR DECISION (todo 32, restated for zbus 5 - source-verified in
+# 5.19 abstractions/mod.rs `use_tokio`): zbus 5 compiles BOTH reactors here
+# (default async-io + tokio unified in via ashpd) and picks PER CONNECTION at
+# build time: built inside a tokio runtime -> tokio reactor (internal tasks
+# ride that runtime, die with it); built outside -> the zbus-4 model (private
+# async-executor + dedicated driver thread, futures drivable from ANY
+# executor). The daemon's own bus is built inside the daemon's tokio runtime,
+# so it rides the tokio reactor; the p2p test stubs pin the async-io reactor
+# via Builder::async_io_unix_stream. Teardown discipline UNCHANGED (todo 11):
+# the async-io reactor has NO drop-time close - the daemon calls
+# Connection::close() explicitly on shutdown and stub harnesses close both
+# ends; on the tokio reactor close() stays the deterministic release and
+# runtime teardown is the backstop.
 zbus = { workspace = true, features = ["p2p"] }
 notify-rust = { workspace = true }
-# OpenURI portal for notification click actions (todo-29/31 pattern) AND the
-# GlobalShortcuts portal client (todo 34). PINNED API REALITY (0.10.3, source-
-# verified): GlobalShortcuts has NO restore_token/persist_mode (unlike
-# ScreenCast) and exposes neither the session handle nor the handle tokens
-# (pub(crate)) - "restore data" is therefore the re-registration set, see
-# src/shortcut.rs module docs. The session-bus connection is a process-global
-# OnceLock singleton (proxy.rs) - correct in production, and the reason the
-# stub-portal test drives it through DBUS_SESSION_BUS_ADDRESS.
-ashpd = { workspace = true }
+# OpenURI portal for notification click actions (todo-29/31 pattern), the
+# GlobalShortcuts portal client (todo 34), and the Settings portal color-scheme
+# query. ashpd 0.13 gates every portal behind its own feature (default = tokio
+# reactor only). PINNED API REALITY (0.13.13, source-verified): GlobalShortcuts
+# has NO restore_token/persist_mode (unlike ScreenCast) and exposes neither the
+# session handle nor the handle tokens (pub(crate)) - "restore data" is
+# therefore the re-registration set, see src/shortcut.rs module docs. The
+# session-bus connection is a process-global OnceLock singleton (proxy.rs
+# `static SESSION`) - correct in production, and the reason the stub-portal
+# test drives it through DBUS_SESSION_BUS_ADDRESS.
+ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings"] }
 # Restore-data persistence (JSON in the config dir) + `StreamExt` for the
 # portal's Activated signal stream (todo 34). Both pre-locked workspace deps.
 serde = { workspace = true }
 serde_json = { workspace = true }
 futures = { workspace = true }
-# Member-manifest addition (todo-31 `url` precedent; already locked via ashpd).
+# Member-manifest addition (todo-31 `url` precedent; already locked - the
+# actions crate depends on it too).
 url = "2.5"
 tokio = { workspace = true }
 thiserror = { workspace = true }

@@ -2,11 +2,12 @@
 //! config dir"; acceptance: "restore-data file created + reused across
 //! daemon restarts").
 //!
-//! PINNED API REALITY (ashpd 0.10.3, source-verified - the
+//! PINNED API REALITY (ashpd 0.13.13, source-verified - the
 //! "restore-data" wording assumes `ScreenCast`-style restore tokens):
 //! `GlobalShortcuts` has NO `restore_token`/`persist_mode`, and ashpd
 //! exposes neither the session handle nor the handle tokens
-//! (`Session::path` and `HandleToken` are `pub(crate)`). A portal session
+//! (`Session` has no public path accessor and `HandleToken` is
+//! `pub(crate)` without the `backend` feature). A portal session
 //! therefore CANNOT survive a daemon restart; what persists is the
 //! RE-REGISTRATION set (ids, descriptions, triggers, the portal-assigned
 //! trigger descriptions) plus the one-time-notification state, so a restart

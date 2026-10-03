@@ -47,7 +47,12 @@ pub struct PortalUriOpener;
 
 impl UriOpener for PortalUriOpener {
     fn open_uri(&self, uri: &str) -> Result<(), DaemonError> {
+        // Two boundary parses: `url::Url` validates + percent-normalizes
+        // (ashpd 0.13 dropped `url`; its own `Uri` only checks non-empty +
+        // scheme), then ashpd's `Uri` is the type the portal call consumes.
         let url = url::Url::parse(uri)
+            .map_err(|error| DaemonError::Portal(format!("invalid URI {uri}: {error}")))?;
+        let portal_uri = ashpd::Uri::parse(url.as_str())
             .map_err(|error| DaemonError::Portal(format!("invalid URI {uri}: {error}")))?;
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -55,7 +60,7 @@ impl UriOpener for PortalUriOpener {
         runtime
             .block_on(async {
                 ashpd::desktop::open_uri::OpenFileRequest::default()
-                    .send_uri(&url)
+                    .send_uri(&portal_uri)
                     .await
             })
             .map(|_request| ())
