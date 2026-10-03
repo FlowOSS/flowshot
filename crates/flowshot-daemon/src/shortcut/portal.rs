@@ -1,12 +1,12 @@
 //! The `org.freedesktop.portal.GlobalShortcuts` client (the
-//! primary path) on `ashpd` 0.10.3.
+//! primary path) on `ashpd` 0.13.13.
 //!
-//! PINNED API REALITY (vendored 0.10.3 source read before coding;
-//! 0.13-era API expectations do NOT apply):
+//! PINNED API REALITY (vendored 0.13.13 source read before coding):
 //!
-//! - `GlobalShortcuts::new()` -> `create_session()` -> `bind_shortcuts(
-//!   session, &[NewShortcut], None)`; the parent-window identifier stays
-//!   `None` (the daemon is headless).
+//! - `GlobalShortcuts::new()` -> `create_session(CreateSessionOptions)` ->
+//!   `bind_shortcuts(session, &[NewShortcut], None, BindShortcutsOptions)`;
+//!   0.13 moved the call options into (default-able) option structs and the
+//!   parent-window identifier stays `None` (the daemon is headless).
 //! - `bind_shortcuts` returns a `Request` whose response is ALREADY
 //!   resolved (`Proxy::request` joins `prepare_response` with the call), so
 //!   `response()` is safe immediately after the await.
@@ -16,8 +16,9 @@
 //!   facade therefore runs registration inside `tokio::spawn` (a panic
 //!   arrives as `JoinError`, never as a daemon crash).
 //! - The connection is a process-global `OnceLock` singleton bound to the
-//!   session bus (`proxy.rs`): correct in production; the stub-portal test
-//!   steers it via `DBUS_SESSION_BUS_ADDRESS` before first use.
+//!   session bus (`proxy.rs` `static SESSION`): correct in production; the
+//!   stub-portal test steers it via `DBUS_SESSION_BUS_ADDRESS` before first
+//!   use.
 //! - `Activated` is broadcast for EVERY session on the interface, so the
 //!   listener dispatches only ids present in this daemon's command map.
 
@@ -27,8 +28,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ashpd::desktop::Session;
-use ashpd::desktop::global_shortcuts::{Activated, GlobalShortcuts, NewShortcut};
+use ashpd::desktop::global_shortcuts::{
+    Activated, BindShortcutsOptions, GlobalShortcuts, NewShortcut,
+};
+use ashpd::desktop::{CreateSessionOptions, Session};
 use futures::{Stream, StreamExt};
 use tokio::sync::Notify;
 
@@ -43,7 +46,7 @@ use crate::state::DaemonState;
 /// the bound shortcut reply (id, description, portal-assigned trigger
 /// description).
 pub struct PortalParts {
-    pub(super) session: Session<'static, GlobalShortcuts<'static>>,
+    pub(super) session: Session<GlobalShortcuts>,
     pub(super) activated: Pin<Box<dyn Stream<Item = Activated> + Send>>,
     /// What the portal bound (may be a subset/reorder of the request).
     pub bound: Vec<(String, String, String)>,
@@ -70,7 +73,7 @@ pub async fn register(specs: &[ShortcutSpec]) -> Result<PortalParts, DaemonError
         .await
         .map_err(|error| classify(&error))?;
     let session = shortcuts
-        .create_session()
+        .create_session(CreateSessionOptions::default())
         .await
         .map_err(|error| classify(&error))?;
     let requested: Vec<NewShortcut> = specs
@@ -81,7 +84,7 @@ pub async fn register(specs: &[ShortcutSpec]) -> Result<PortalParts, DaemonError
         })
         .collect();
     let request = shortcuts
-        .bind_shortcuts(&session, &requested, None)
+        .bind_shortcuts(&session, &requested, None, BindShortcutsOptions::default())
         .await
         .map_err(|error| classify(&error))?;
     let reply = request.response().map_err(|error| classify(&error))?;

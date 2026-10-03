@@ -67,21 +67,24 @@ wgpu = { workspace = true }
 # runtime teardown is the backstop.
 zbus = { workspace = true, features = ["p2p"] }
 notify-rust = { workspace = true }
-# OpenURI portal for notification click actions (todo-29/31 pattern) AND the
-# GlobalShortcuts portal client (todo 34). PINNED API REALITY (0.10.3, source-
-# verified): GlobalShortcuts has NO restore_token/persist_mode (unlike
-# ScreenCast) and exposes neither the session handle nor the handle tokens
-# (pub(crate)) - "restore data" is therefore the re-registration set, see
-# src/shortcut.rs module docs. The session-bus connection is a process-global
-# OnceLock singleton (proxy.rs) - correct in production, and the reason the
-# stub-portal test drives it through DBUS_SESSION_BUS_ADDRESS.
-ashpd = { workspace = true }
+# OpenURI portal for notification click actions (todo-29/31 pattern), the
+# GlobalShortcuts portal client (todo 34), and the Settings portal color-scheme
+# query. ashpd 0.13 gates every portal behind its own feature (default = tokio
+# reactor only). PINNED API REALITY (0.13.13, source-verified): GlobalShortcuts
+# has NO restore_token/persist_mode (unlike ScreenCast) and exposes neither the
+# session handle nor the handle tokens (pub(crate)) - "restore data" is
+# therefore the re-registration set, see src/shortcut.rs module docs. The
+# session-bus connection is a process-global OnceLock singleton (proxy.rs
+# `static SESSION`) - correct in production, and the reason the stub-portal
+# test drives it through DBUS_SESSION_BUS_ADDRESS.
+ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings"] }
 # Restore-data persistence (JSON in the config dir) + `StreamExt` for the
 # portal's Activated signal stream (todo 34). Both pre-locked workspace deps.
 serde = { workspace = true }
 serde_json = { workspace = true }
 futures = { workspace = true }
-# Member-manifest addition (todo-31 `url` precedent; already locked via ashpd).
+# Member-manifest addition (todo-31 `url` precedent; already locked - the
+# actions crate depends on it too).
 url = "2.5"
 tokio = { workspace = true }
 thiserror = { workspace = true }

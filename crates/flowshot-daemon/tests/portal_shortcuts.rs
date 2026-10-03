@@ -10,7 +10,7 @@
 //! serializes every test in this binary (no concurrent `getenv` readers;
 //! lib-unit tests run in a separate binary and never touch `ashpd`).
 //!
-//! The stub reproduces the wire contract `ashpd` 0.10.3 codes against
+//! The stub reproduces the wire contract `ashpd` 0.13.13 codes against
 //! (source-verified): request paths
 //! `/org/freedesktop/portal/desktop/request/{SENDER}/{TOKEN}`, session
 //! paths `.../session/{SENDER}/{TOKEN}`, `Response(u, a{sv})` signals on

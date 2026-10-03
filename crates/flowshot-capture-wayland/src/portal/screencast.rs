@@ -34,8 +34,12 @@ mod backend;
 use std::os::fd::OwnedFd;
 
 use ashpd::desktop::PersistMode;
-use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
-use ashpd::desktop::{Request, Session};
+use ashpd::desktop::screencast::{
+    CursorMode, OpenPipeWireRemoteOptions, Screencast, SelectSourcesOptions, SourceType,
+    StartCastOptions,
+};
+use ashpd::desktop::{CreateSessionOptions, Request, Session};
+use ashpd::enumflags2::BitFlags;
 use assemble::assemble_frame;
 use flowshot_capture::CaptureOpts;
 
@@ -52,7 +56,7 @@ use crate::stitch::CapturedOutputs;
 struct Handshake {
     fd: OwnedFd,
     metas: Vec<StreamMeta>,
-    session: Session<'static, Screencast<'static>>,
+    session: Session<Screencast>,
 }
 
 /// Runs one complete portal screencast capture on the worker thread.
@@ -184,8 +188,8 @@ fn pair_lone_stream(
 /// The portal handshake: session, source selection, start, and the
 /// `PipeWire` remote fd.
 async fn handshake(paint_cursor: bool, multiple: bool) -> Result<Handshake, PortalScreenCastError> {
-    let proxy: Screencast<'static> = classify(Screencast::new().await)?;
-    let session = classify(proxy.create_session().await)?;
+    let proxy: Screencast = classify(Screencast::new().await)?;
+    let session = classify(proxy.create_session(CreateSessionOptions::default()).await)?;
     // hideCursor config drives paint_cursor: Embedded composites the cursor
     // into the stream, Hidden excludes it (Metadata is a cursor-STREAM
     // channel v1 does not consume; XDPH falls back for it anyway).
@@ -198,22 +202,30 @@ async fn handshake(paint_cursor: bool, multiple: bool) -> Result<Handshake, Port
         proxy
             .select_sources(
                 &session,
-                cursor_mode,
-                SourceType::Monitor.into(),
-                multiple,
-                None,
-                PersistMode::DoNot,
+                SelectSourcesOptions::default()
+                    .set_cursor_mode(cursor_mode)
+                    .set_sources(BitFlags::from(SourceType::Monitor))
+                    .set_multiple(multiple)
+                    .set_persist_mode(PersistMode::DoNot),
             )
             .await,
     )?;
     classify(select.response())?;
-    let start = classify(proxy.start(&session, None).await)?;
+    let start = classify(
+        proxy
+            .start(&session, None, StartCastOptions::default())
+            .await,
+    )?;
     let streams = classify(start.response())?;
     if streams.streams().is_empty() {
         return Err(PortalErrorKind::NoStreams.into());
     }
     let metas = streams.streams().iter().map(stream_meta).collect();
-    let fd = classify(proxy.open_pipe_wire_remote(&session).await)?;
+    let fd = classify(
+        proxy
+            .open_pipe_wire_remote(&session, OpenPipeWireRemoteOptions::default())
+            .await,
+    )?;
     Ok(Handshake { fd, metas, session })
 }
 
@@ -231,7 +243,7 @@ fn stream_meta(stream: &ashpd::desktop::screencast::Stream) -> StreamMeta {
 /// Best-effort session teardown: the portal releases the share when the
 /// session closes, and the caller's `PipeWire` nodes are already gone
 /// (core disconnect precedes this call).
-async fn close_session(session: Session<'static, Screencast<'static>>) {
+async fn close_session(session: Session<Screencast>) {
     if let Err(error) = session.close().await {
         tracing::warn!(%error, "closing the portal screencast session failed");
     }

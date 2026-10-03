@@ -71,7 +71,7 @@ calloop-wayland-source = "0.3.0"
 wl-clipboard-rs = "0.9.3"
 
 # Portal / D-Bus
-ashpd = "0.10.0"
+ashpd = "0.13.13"
 zbus = "5.19.0"
 pipewire = "0.10.0"
 resvg = "0.47.0"

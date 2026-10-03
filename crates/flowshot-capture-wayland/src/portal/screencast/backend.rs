@@ -1,6 +1,7 @@
 //! The [`CaptureBackend`](flowshot_capture::CaptureBackend) implementation
 //! of [`PortalScreenCastBackend`](super::super::PortalScreenCastBackend).
 
+use ashpd::desktop::CreateSessionOptions;
 use ashpd::desktop::screencast::Screencast;
 use async_trait::async_trait;
 use flowshot_capture::{
@@ -81,8 +82,8 @@ impl CaptureBackend for super::super::PortalScreenCastBackend {
 
 /// Creates and immediately closes a portal session (the permission probe).
 async fn session_probe() -> Result<(), PortalScreenCastError> {
-    let proxy: Screencast<'static> = classify(Screencast::new().await)?;
-    let session = classify(proxy.create_session().await)?;
+    let proxy: Screencast = classify(Screencast::new().await)?;
+    let session = classify(proxy.create_session(CreateSessionOptions::default()).await)?;
     close_session(session).await;
     Ok(())
 }

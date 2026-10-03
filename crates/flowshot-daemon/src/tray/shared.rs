@@ -266,12 +266,15 @@ async fn open_uri_portal(path: &PathBuf) -> Result<(), String> {
             .display()
     );
 
-    // Parse URI
+    // Parse URI (Url percent-encodes the raw path, e.g. spaces), then wrap
+    // in ashpd 0.13's own Uri type the portal call consumes.
     let url = url::Url::parse(&uri).map_err(|e| format!("Invalid URI {uri}: {e}"))?;
+    let portal_uri =
+        ashpd::Uri::parse(url.as_str()).map_err(|e| format!("Invalid URI {uri}: {e}"))?;
 
     // Open via portal
     ashpd::desktop::open_uri::OpenFileRequest::default()
-        .send_uri(&url)
+        .send_uri(&portal_uri)
         .await
         .map_err(|e| format!("OpenURI portal call failed: {e}"))?;
 
