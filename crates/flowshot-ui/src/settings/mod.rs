@@ -1,8 +1,9 @@
 //! The settings surface: egui embedded in OUR wgpu renderer
-//! (draft D8(b), the Ruffle pattern) - one of the two recorded exceptions to
-//! the winit+wgpu+cosmic-text stack (the other is the launcher
-//! dialog); the shared embedded plumbing lives in `crate::egui_host`, and
-//! the overlay and editor never touch egui.
+//! (draft D8(b), the Ruffle pattern) - one of the recorded exceptions to
+//! the winit+wgpu+cosmic-text stack (the others are the launcher dialog
+//! and the first-launch consent dialog); the shared embedded plumbing
+//! lives in `crate::egui_host`, and the overlay and editor never touch
+//! egui.
 //!
 //! # Layout
 //!

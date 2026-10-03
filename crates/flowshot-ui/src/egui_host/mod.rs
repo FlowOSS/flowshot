@@ -3,9 +3,10 @@
 //! runtime - egui is a guest in this crate's renderer, never a second
 //! windowing stack (a MUST-NOT).
 //!
-//! Shared by the two sanctioned egui windows: the settings surface
-//! ([`crate::settings`]) and the capture launcher dialog
-//! ([`crate::launcher`]). The overlay and editor never touch egui.
+//! Shared by the sanctioned egui windows: the settings surface
+//! ([`crate::settings`]), the capture launcher dialog
+//! ([`crate::launcher`]), and the first-launch telemetry consent dialog
+//! ([`crate::consent`]). The overlay and editor never touch egui.
 //!
 //! egui-winit is deliberately absent (version dead end - see the crate
 //! manifest note): [`input::InputState`] feeds the context from raw winit

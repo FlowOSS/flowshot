@@ -138,13 +138,17 @@ pub fn settings_style(tokens: &DesignTokens, ui: &UiConfig, mode: ThemeMode) -> 
     // A solid, reserved, always-drawn scrollbar (egui's default floats
     // invisibly until hovered - no scroll affordance for a settings page).
     // The handle reads against the bar well through `Surfaces::control`.
-    // Placement is intentional: egui pins the reserved bar to the window's
-    // right edge, so the bar OWNS the right window-margin band (browser /
-    // GNOME scrollbar-at-window-edge pattern); the panel-colored strip
-    // between the content viewport and the bar is the window margin
-    // itself, uniform with the other three sides. Floating bars were
-    // rejected: they fade out at idle, and `bar_outer_margin` shifts of
-    // the reserved bar eat column width without moving the pin.
+    // Placement: egui pins the reserved bar to the right edge of the
+    // scroll area's outer rect, which FOLLOWS the content width - with
+    // wrapped content that is the viewport's right edge, inset from the
+    // window edge by the window margin (the panel-colored strip right of
+    // the bar is the margin itself, uniform with the other three sides).
+    // The pre-telemetry renders showed the bar flush at the window edge
+    // only because unwrapped note rows overflowed the content column by
+    // exactly the margin - a coincidence, not a pin (a wider overflow
+    // pushed the bar off-window). Floating bars were rejected: they fade
+    // out at idle, and `bar_outer_margin` shifts of the reserved bar eat
+    // column width without moving the pin.
     spacing.scroll = egui::style::ScrollStyle {
         bar_width: small * SCROLL_BAR_WIDTH,
         ..egui::style::ScrollStyle::solid()
