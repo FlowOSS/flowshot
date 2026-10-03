@@ -50,7 +50,7 @@ use flowshot_core::scene::{
 };
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::backdrop::{Backdrop, BackdropOptions, FrozenCapture};
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::render::{RenderTarget, Renderer, RgbaImage};
 use flowshot_ui::{
     EditorTools, FramePixels, InputRouter, OverlayCore, SyntheticInput, WindowSlot,
@@ -143,10 +143,7 @@ struct Scene {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = parse_args()?;
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance)?;
     let mut scene = build_scene(&gpu, &args)?;
     let sample_count = if gpu

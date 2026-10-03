@@ -56,7 +56,7 @@ use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::editor::{
     EditorEnv, EditorState, EditorTools, EditorView, ToolKind, ToolRegistry,
 };
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS};
+use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::render::{
     Color, Command, DisplayList, ImageCommand, Point, Rect, RenderTarget, Renderer, RgbaImage,
     ShadowSpec, Shape, TextAnchor, TextCommand, TextureId, linear_to_srgb, read_texture_rgba,
@@ -99,10 +99,7 @@ struct Gpu {
 
 fn gpu_or_skip() -> Option<Gpu> {
     init_tracing();
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = new_instance();
     match GpuContext::new_headless(&instance) {
         Ok(ctx) => Some(Gpu {
             _instance: instance,

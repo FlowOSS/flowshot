@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::UiError;
-use flowshot_ui::gpu::{GpuContext, OVERLAY_BACKENDS, configure_overlay_surface};
+use flowshot_ui::gpu::{GpuContext, configure_overlay_surface, new_instance};
 use flowshot_ui::render::{
     Color, DisplayList, Rect, RenderTarget, Renderer, RgbaImage, Shape, TextureId,
 };
@@ -131,10 +131,7 @@ impl GalleryApp {
         let size = window.inner_size();
         self.size = (size.width.max(1), size.height.max(1));
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: OVERLAY_BACKENDS,
-            ..wgpu::InstanceDescriptor::default()
-        });
+        let instance = new_instance();
         let surface = instance
             .create_surface(Arc::clone(&window))
             .map_err(|source| UiError::SurfaceCreation {

@@ -85,10 +85,7 @@ impl OverlayApp {
     }
 
     fn init_surfaces(&mut self) -> Result<(), UiError> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: crate::gpu::OVERLAY_BACKENDS,
-            ..wgpu::InstanceDescriptor::default()
-        });
+        let instance = crate::gpu::new_instance();
         let mut surfaces = Vec::with_capacity(self.windows.len());
         for entry in &self.windows {
             let surface = instance

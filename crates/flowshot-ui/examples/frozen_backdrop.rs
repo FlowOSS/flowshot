@@ -443,10 +443,7 @@ fn verify_offscreen(
     let (width, height) = backdrop
         .texture_size(index)
         .ok_or("output index has no prepared frozen frame")?;
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: flowshot_ui::gpu::OVERLAY_BACKENDS,
-        ..wgpu::InstanceDescriptor::default()
-    });
+    let instance = flowshot_ui::gpu::new_instance();
     let gpu = GpuContext::new_headless(&instance)?;
     let mut backdrop = backdrop;
     let mut renderer = Renderer::new(&gpu.device, &gpu.queue, wgpu::TextureFormat::Rgba8UnormSrgb);

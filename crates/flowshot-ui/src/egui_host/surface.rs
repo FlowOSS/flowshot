@@ -113,10 +113,11 @@ impl EguiSurface {
             self.renderer
                 .update_buffers(&gpu.device, &gpu.queue, encoder, &paint_jobs, &screen);
         let fill = self.ctx.style().visuals.panel_fill;
-        // sRGB targets encode the clear value (linear components, the eframe
-        // convention); gamma-space targets (the offscreen `Rgba8Unorm` QA
-        // path) take the sRGB bytes directly, so readback lands in the same
-        // byte space the theme specifies.
+        // sRGB targets (the debug-logged sRGB-only fallback) encode the clear
+        // value from linear components (the eframe convention); gamma-space
+        // targets - the live egui host surfaces and the offscreen QA path -
+        // take the sRGB bytes directly, so pixels land in the same byte
+        // space the theme specifies.
         let clear = if self.color_format.is_srgb() {
             let linear = egui::Rgba::from(fill).to_array();
             wgpu::Color {

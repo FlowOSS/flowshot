@@ -11,7 +11,7 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::{Window, WindowId};
 
 use crate::error::UiError;
-use crate::gpu::{self, GpuContext, OVERLAY_BACKENDS};
+use crate::gpu::{self, GpuContext};
 
 use super::super::model::SettingsModel;
 use super::super::strings;
@@ -68,10 +68,7 @@ impl SettingsApp {
                 source,
             }
         })?);
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: OVERLAY_BACKENDS,
-            ..wgpu::InstanceDescriptor::default()
-        });
+        let instance = gpu::new_instance();
         let surface =
             instance
                 .create_surface(window.clone())
