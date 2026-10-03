@@ -75,6 +75,8 @@ pub const GROUP_PIN: &str = "Pin";
 pub const GROUP_UPLOAD: &str = "Upload";
 /// Group header: `[daemon]`.
 pub const GROUP_DAEMON: &str = "Daemon";
+/// Group header: `[telemetry]`.
+pub const GROUP_TELEMETRY: &str = "Telemetry";
 /// Group header: the Interface tab's theme + `[ui]` color card.
 pub const GROUP_APPEARANCE: &str = "Appearance";
 /// Group header: the editor shortcut recorder card.
@@ -152,6 +154,10 @@ pub const FIELD_TRAY: &str = "System tray icon";
 pub const FIELD_NOTIFICATIONS: &str = "Desktop notifications";
 /// `[daemon].startup_launch`.
 pub const FIELD_STARTUP_LAUNCH: &str = "Launch at system startup";
+/// `[telemetry].enabled`.
+pub const FIELD_TELEMETRY_ENABLED: &str = "Send telemetry";
+/// `[telemetry].include_technical_details`.
+pub const FIELD_TELEMETRY_DETAILS: &str = "Include technical details";
 /// `[ui].accent_color`.
 pub const FIELD_ACCENT_COLOR: &str = "Accent color";
 /// `[ui].contrast_color`.
@@ -172,6 +178,25 @@ pub const HINT_UPLOAD_UNCONFIGURED: &str =
     "Upload is disabled while the client ID is empty (`flowshot upload` exits with a hint).";
 /// Hint under the filename pattern field.
 pub const HINT_FILENAME_PATTERN: &str = "strftime placeholders: %F = date, %H-%M = time.";
+/// Hint under `[telemetry].enabled` (the consent dialog's copy: the
+/// recommendation is text, the toggle itself is the user's own click).
+pub const HINT_TELEMETRY_ENABLED: &str =
+    "Crash reports + basic environment info — recommended. Nothing is sent unless you opt in.";
+/// Hint under `[telemetry].include_technical_details` (the GDPR honesty
+/// text, the consent dialog's copy).
+pub const HINT_TELEMETRY_DETAILS: &str =
+    "GPU model, kernel version, monitor layout, install ID — may be identifying under GDPR.";
+/// The telemetry disclosure expander's header.
+pub const LABEL_TELEMETRY_WHAT: &str = "What exactly is sent";
+/// Disclosure body: the tier-1 contents (source of truth: the daemon
+/// telemetry module's docs).
+pub const TELEMETRY_TIER1: &str = "With telemetry on: distro, arch, package manager, session type, desktop family, compositor version (Hyprland only), GPU family, and the surface tag, attached to path-scrubbed, identifier-stripped error reports.";
+/// Disclosure body: the tier-2 contents (source of truth: the daemon
+/// telemetry module's docs).
+pub const TELEMETRY_TIER2: &str = "With technical details on: the full GPU adapter string, the exact kernel release, the monitor layout (connector + size + scale), and a per-install random UUID (persisted at <xdg-data-home>/flowshot/telemetry-id; deleting the file regenerates it).";
+/// Note under the telemetry toggles: every process fixes its telemetry
+/// state at init (first init wins), so edits cannot live-apply.
+pub const HINT_TELEMETRY_NEXT_START: &str = "Changes apply the next time FlowShot starts (each process fixes its telemetry state at startup).";
 /// Live-preview row label.
 pub const LABEL_PREVIEW: &str = "Preview";
 /// Hint while a shortcut slot awaits a key press.

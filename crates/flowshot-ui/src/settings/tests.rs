@@ -463,7 +463,8 @@ fn settings_style_projects_token_geometry() {
     assert_eq!(style.spacing.interact_size.y, m.control_height());
     assert_eq!(style.spacing.icon_width, m.base_size());
     // The scrollbar is solid + reserved (a floating bar fades out at
-    // idle and has no affordance); it owns the right window-margin band
+    // idle and has no affordance); it sits at the scroll viewport's
+    // right edge
     assert!(!style.spacing.scroll.floating);
     assert_eq!(style.spacing.scroll.bar_width, 8.0);
     // Crisp clipping at the scroll viewport
@@ -539,7 +540,7 @@ fn fonts_register_the_hierarchy_weights() {
 }
 
 /// Every row label the tabs render, measured against the label column.
-const ROW_LABELS: [&str; 41] = [
+const ROW_LABELS: [&str; 43] = [
     super::strings::FIELD_HIDE_CURSOR,
     super::strings::FIELD_SAVE_LAST_REGION,
     super::strings::FIELD_SAVE_PATH,
@@ -575,6 +576,8 @@ const ROW_LABELS: [&str; 41] = [
     super::strings::FIELD_TRAY,
     super::strings::FIELD_NOTIFICATIONS,
     super::strings::FIELD_STARTUP_LAUNCH,
+    super::strings::FIELD_TELEMETRY_ENABLED,
+    super::strings::FIELD_TELEMETRY_DETAILS,
     super::strings::FIELD_ACCENT_COLOR,
     super::strings::FIELD_CONTRAST_COLOR,
     super::strings::FIELD_DIM_OPACITY,

@@ -11,8 +11,8 @@
 //! edits re-theme these primitives on the next frame with no plumbing.
 
 use egui::{
-    Align, Button, Color32, Frame, Layout, Margin, Response, RichText, Rounding, Sense, Shape,
-    Stroke, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
+    Align, Button, Color32, Frame, Label, Layout, Margin, Response, RichText, Rounding, Sense,
+    Shape, Stroke, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
 };
 
 use crate::egui_host::theme::{self, ink_on};
@@ -203,7 +203,12 @@ fn note(ui: &mut Ui, m: &FormMetrics, text: &str, color: Color32) {
     let available = ui.available_width();
     ui.horizontal(|ui| {
         ui.add_space(m.label_width(available) + m.gutter());
-        ui.colored_label(color, text);
+        // Explicit wrap: inside the horizontal a label defaults to Extend,
+        // so a long note would overflow the card and clip at the scroll
+        // viewport instead of wrapping in the control column (and the
+        // overflow shifts the reserved scrollbar - it pins to the content
+        // width's right edge).
+        ui.add(Label::new(RichText::new(text).color(color)).wrap_mode(egui::TextWrapMode::Wrap));
     });
 }
 

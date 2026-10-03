@@ -1,11 +1,12 @@
 //! General tab: every config key, grouped by its TOML table (F12 parity -
 //! `[capture]`, `[save]`, `[editor]`, `[tools.*]`, `[pin]`, `[upload]`,
-//! `[daemon]`; the `[ui]` group lives in the Interface tab and
-//! `[editor].color_palette` in its palette editor). One section card per
-//! config-domain group.
+//! `[daemon]`, `[telemetry]`; the `[ui]` group lives in the Interface tab
+//! and `[editor].color_palette` in its palette editor). One section card
+//! per config-domain group.
 
 mod editor;
 mod save;
+mod telemetry;
 mod tools;
 mod upload;
 
@@ -40,6 +41,9 @@ pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<
         });
         changed |= card(ui, m, strings::GROUP_DAEMON, |ui| {
             daemon_group(ui, m, config)
+        });
+        changed |= card(ui, m, strings::GROUP_TELEMETRY, |ui| {
+            telemetry::show(ui, m, config)
         });
     }
     if changed {

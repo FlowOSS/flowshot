@@ -77,6 +77,7 @@ mod surface;
 
 pub mod backdrop;
 pub mod completion;
+pub mod consent;
 pub mod editor;
 pub mod error;
 pub mod export;
