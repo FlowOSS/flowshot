@@ -164,7 +164,10 @@ fn toolbar_list(ui: &mut Ui, m: &FormMetrics, buttons: &mut Vec<String>) -> bool
 fn palette_editor(ui: &mut Ui, m: &FormMetrics, palette: &mut Vec<String>) -> bool {
     let mut changed = false;
     let mut remove: Option<usize> = None;
-    row(ui, m, "", |ui| {
+
+    let available = ui.available_width();
+    ui.horizontal(|ui| {
+        ui.add_space(m.label_width(available) + m.gutter());
         ui.horizontal_wrapped(|ui| {
             for (index, entry) in palette.iter_mut().enumerate() {
                 ui.push_id(index, |ui| {
@@ -184,6 +187,7 @@ fn palette_editor(ui: &mut Ui, m: &FormMetrics, palette: &mut Vec<String>) -> bo
             }
         });
     });
+
     if let Some(index) = remove {
         palette.remove(index);
         changed = true;

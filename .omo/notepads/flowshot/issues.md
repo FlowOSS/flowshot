@@ -363,3 +363,17 @@ IGNORE it until the user says so themselves. Todo 39 stays [~] user-gated.
   `hyprctl dispatch "hl.dsp.window.close({window='address:0x..'})"` (table arg; a bare string
   arg silently no-ops as "ok"). The consent-wiring-era evidence pattern notes still cite the
   old syntax.
+
+## 2026-10-04 (POST-RELEASE, user-reported): settings Interface tab — color palette swatches layout defect
+Settings -> Interface -> "Color palette swatches" (the [editor].color_palette editor): swatches are
+broken visually — don't fit the panel's design language and extend to the RIGHT with a huge blank
+space (likely a row not constrained to the card's content width; the palette editor is one of the
+domain widgets in settings/tabs/interface.rs the settings-rework noted as not-a-form-row). 
+
+FIXED: Modified palette_editor() in crates/flowshot-ui/src/settings/tabs/interface.rs to:
+- Remove fixed-height allocation that prevented wrapping
+- Allow vertical growth for wrapped swatch rows
+- Maintain proper alignment with other controls
+- Ensure swatches wrap properly within the card bounds
+
+Evidence: .omo/evidence/palette-layout-fix/
