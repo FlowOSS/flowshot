@@ -99,7 +99,7 @@ fn inject_escape_requests_exit_from_any_window() {
         WindowSlot::new(1),
         KeyCode::Escape,
     ));
-    assert_eq!(report.actions, [] as [crate::input::Action; 0]);
+    assert!(report.actions.is_empty());
     assert!(core.exit_requested());
 }
 
@@ -110,7 +110,7 @@ fn non_escape_keys_do_not_request_exit() {
         WindowSlot::new(0),
         KeyCode::Enter,
     ));
-    assert_eq!(report.actions, [] as [crate::input::Action; 0]);
+    assert!(report.actions.is_empty());
     assert!(!core.exit_requested());
 }
 
@@ -161,7 +161,7 @@ fn unknown_slot_injection_is_inert() {
     ));
     assert_eq!(report.global_position, None);
     assert_eq!(report.clamped_position, None);
-    assert_eq!(report.actions, [] as [crate::input::Action; 0]);
+    assert!(report.actions.is_empty());
     assert!(core.cursor().is_none());
     // Esc from an unknown slot still tears down (teardown must not depend
     // on slot bookkeeping).
@@ -267,7 +267,7 @@ fn non_finite_motion_leaves_cursor_state_untouched() {
         0.0,
     ));
     assert_eq!(report.global_position, None);
-    assert_eq!(report.actions, [] as [crate::input::Action; 0]);
+    assert!(report.actions.is_empty());
     assert_eq!(core.cursor().copied(), before);
 }
 

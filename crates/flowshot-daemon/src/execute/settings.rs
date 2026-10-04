@@ -9,7 +9,9 @@
 //! - documented, packaging revisit).
 
 use flowshot_core::tokens::DesignTokens;
+use flowshot_ui::pins::WindowCustomizer;
 use flowshot_ui::settings::{ClipboardBridge, SettingsWindow, SettingsWindowOptions, ThemeMode};
+use winit::platform::wayland::WindowAttributesExtWayland;
 
 use super::session::{self, SessionKind, SessionResult, SessionSpec};
 use super::{ExecCtx, ExecOutcome, ExecuteError};
@@ -80,10 +82,9 @@ pub fn settings_child(spec: &SessionSpec) -> SessionResult {
                 "settings applied"
             );
         })),
-        window_customizer: Some(super::window::session_window_customizer(
-            "flowshot-settings",
-            "FlowShot Settings",
-        )),
+        window_customizer: Some(WindowCustomizer::new(|attributes| {
+            attributes.with_name("flowshot-settings", "FlowShot Settings")
+        })),
     };
     let window = match SettingsWindow::new(options) {
         Ok(window) => window,
@@ -133,13 +134,7 @@ pub fn clipboard_bridge() -> ClipboardBridge {
     ClipboardBridge::new(
         || None,
         |text| {
-            let clipboard = match flowshot_actions::Clipboard::for_session() {
-                Ok(clipboard) => clipboard,
-                Err(error) => {
-                    tracing::warn!(%error, "settings clipboard unavailable");
-                    return;
-                }
-            };
+            let clipboard = flowshot_actions::Clipboard::wayland();
             if let Err(error) = clipboard.copy_text(text) {
                 tracing::warn!(%error, "settings clipboard write failed");
             }

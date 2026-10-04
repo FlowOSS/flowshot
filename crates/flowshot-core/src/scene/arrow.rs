@@ -298,7 +298,7 @@ mod tests {
         assert!(arrow.shaft_and_head().is_none());
         let mut sink = RecSink::default();
         arrow.paint(&mut sink);
-        assert_eq!(sink.calls, [] as [crate::scene::test_support::Call; 0]);
+        assert!(sink.calls.is_empty());
         assert_eq!(arrow.bounding_rect(), Rect::new(5.0, 5.0, 0.0, 0.0));
     }
 

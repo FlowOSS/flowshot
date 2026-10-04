@@ -8,10 +8,9 @@
 # The only recorded exceptions are flowshot-ui's two dev-dependencies,
 # used for QA-harness composition in examples/ and tests/ ONLY (the lib
 # never imports them; see crates/flowshot-ui/Cargo.toml comments and
-# ADR-006). flowshot-actions is the platform-native clipboard owner BY
-# DESIGN (daemon-ownership on Wayland via wl-clipboard-rs and on X11 via
-# x11rb ICCCM; plan todo 1 / Oracle r2 F-5); flowshot-capture-wayland and
-# flowshot-capture-x11 are the platform crates.
+# ADR-006). flowshot-actions is Wayland-native BY DESIGN (clipboard
+# daemon-ownership, plan todo 1 / Oracle r2 F-5); flowshot-capture-wayland
+# is THE platform crate.
 #
 # QA-harness dev-dependency: examples/pin_window.rs bridges PinActionSink.
 flowshot-ui|[dev-dependencies]|flowshot-actions

@@ -82,10 +82,9 @@ fn overlay_spec(result_path: &Path) -> String {
 
 #[test]
 fn session_child_fails_gracefully_headless_without_a_nested_runtime_panic() {
-    // Given: a valid overlay spec and a headless environment (no
-    // display-server socket - neither WAYLAND_DISPLAY nor DISPLAY - and no
-    // bus), so the child's capture preparation fails fast without ever
-    // touching a compositor or opening a window.
+    // Given: a valid overlay spec and a headless environment (no Wayland
+    // socket, no bus), so the child's capture preparation fails fast
+    // without ever touching a compositor or opening a window.
     let dir = scratch_root("session-dispatch");
     let xdg = dir.join("xdg-runtime");
     std::fs::create_dir_all(&xdg).unwrap();
@@ -102,7 +101,6 @@ fn session_child_fails_gracefully_headless_without_a_nested_runtime_panic() {
             .env("HOME", &dir)
             .env("XDG_RUNTIME_DIR", &xdg)
             .env_remove("WAYLAND_DISPLAY")
-            .env_remove("DISPLAY")
             .env_remove("HYPRLAND_INSTANCE_SIGNATURE")
             .env(
                 "DBUS_SESSION_BUS_ADDRESS",

@@ -255,7 +255,7 @@ mod tests {
             Path::new("shot.png").to_path_buf(),
         ));
         assert_eq!(click_uri, None);
-        assert_eq!(notification.actions, [] as [String; 0]);
+        assert!(notification.actions.is_empty());
     }
 
     #[test]
@@ -277,7 +277,7 @@ mod tests {
         ] {
             let (notification, click_uri) = notification_for(&record);
             assert_eq!(click_uri, None, "{record:?} must not be clickable");
-            assert_eq!(notification.actions, [] as [String; 0]);
+            assert!(notification.actions.is_empty());
         }
         let (aborted, _) = notification_for(&NotificationRecord::Aborted);
         assert_eq!(aborted.summary, strings::SUMMARY_ABORTED);
@@ -294,7 +294,7 @@ mod tests {
         let opener = MockUriOpener::default();
         click_action("__closed", "file:///tmp/a.png", &opener);
         click_action("some-button", "file:///tmp/a.png", &opener);
-        assert_eq!(opener.opened(), [] as [String; 0]);
+        assert!(opener.opened().is_empty());
         click_action(strings::ACTION_KEY_DEFAULT, "file:///tmp/a.png", &opener);
         assert_eq!(opener.opened(), vec!["file:///tmp/a.png".to_owned()]);
     }

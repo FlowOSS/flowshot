@@ -471,7 +471,7 @@ mod tests {
             OPAQUE,
             &mut path,
         );
-        assert_ne!(path.vertices, [] as [[f32; 6]; 0]);
+        assert!(!path.vertices.is_empty());
     }
 
     fn lyon_size(width: f32, height: f32) -> crate::render::geom::Size {

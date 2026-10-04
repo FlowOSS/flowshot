@@ -369,21 +369,20 @@ mod tests {
     fn every_probe_degrades_without_panic_on_this_machine() {
         // The live glue must never panic whatever the environment holds.
         let environment = Environment::probe();
-        assert_ne!(environment.distro, "");
-        assert_ne!(environment.package_manager, "");
-        assert_ne!(environment.session_type, "");
-        assert_ne!(environment.desktop, "");
-        assert_ne!(environment.gpu_family, "");
+        assert!(!environment.distro.is_empty());
+        assert!(!environment.package_manager.is_empty());
+        assert!(!environment.session_type.is_empty());
+        assert!(!environment.desktop.is_empty());
+        assert!(!environment.gpu_family.is_empty());
         assert_eq!(environment.arch, std::env::consts::ARCH);
     }
 
     #[test]
     fn live_machine_reports_the_expected_taxonomy() {
-        // The QA machines: an x86_64 Arch Hyprland Wayland box and an
-        // x86_64 Arch i3 X11 box (Phase A). The exact-value asserts only
-        // run when the live environment actually is one of those sessions
-        // (CI containers degrade to unknown, which the test then verifies
-        // instead).
+        // This QA machine: x86_64 Arch box, Hyprland Wayland session. The
+        // exact-value asserts only run when the live environment actually
+        // is that session (CI containers degrade to unknown, which the
+        // test then verifies instead).
         let environment = Environment::probe();
         if std::env::var_os("WAYLAND_DISPLAY").is_some() {
             assert_eq!(environment.session_type, "wayland");
@@ -396,12 +395,6 @@ mod tests {
                 environment.compositor_version.is_some(),
                 "hyprctl --version must resolve on a Hyprland session"
             );
-        } else if std::env::var_os("DISPLAY").is_some_and(|value| !value.is_empty()) {
-            // A headed X11 session: the taxonomy names it; no wayland
-            // desktop tag and no compositor version exist on X11.
-            assert_eq!(environment.session_type, "x11");
-            assert_eq!(environment.desktop, "other");
-            assert_eq!(environment.compositor_version, None);
         } else {
             assert_eq!(environment.session_type, "unknown");
             assert_eq!(environment.desktop, "other");

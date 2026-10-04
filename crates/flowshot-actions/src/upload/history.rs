@@ -121,18 +121,13 @@ impl UploadHistory {
 mod tests {
     use super::*;
 
-    use std::sync::atomic::{AtomicU64, Ordering};
-
     fn unique_tempdir() -> PathBuf {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
         let dir = std::env::temp_dir().join(format!(
-            "flowshot-actions-upload-test-{}-{}-{}",
+            "flowshot-actions-upload-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_nanos()),
-            counter
+                .map_or(0, |d| d.as_nanos())
         ));
         let _ = std::fs::create_dir_all(&dir);
         dir
@@ -153,7 +148,7 @@ mod tests {
         let path = dir.join("history.jsonl");
         let history = UploadHistory::open(&path, 25)?;
         let records = history.read_all()?;
-        assert_eq!(records, [] as [UploadRecord; 0]);
+        assert!(records.is_empty());
         let _ = std::fs::remove_dir_all(&dir);
         Ok(())
     }

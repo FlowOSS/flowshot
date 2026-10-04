@@ -5,12 +5,11 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 
 use std::io::Write;
 
 use flowshot_actions::ExportError;
-use flowshot_actions::clipboard::{Action, PostCapture, run_post_capture};
+use flowshot_actions::clipboard::{Action, Clipboard, PostCapture, run_post_capture};
 use flowshot_actions::export::{format_geometry, write_raw_png};
 use flowshot_actions::upload::{Imgur, UploadHistory};
 use flowshot_core::config::{SaveAction, SaveConfig};
@@ -80,7 +79,7 @@ pub async fn run_post(
         .filter(|action| *action != Action::Pin)
         .collect();
     let save_config = save_config_override(&config.save, request);
-    let hold_release = sinks::clipboard_for_run(ctx.state.as_ref());
+    let clipboard = Clipboard::wayland();
     let dialog = PicturesDirDialog;
     let notifier = ctx
         .notifier
@@ -99,7 +98,7 @@ pub async fn run_post(
             image: &image,
             save_config: &save_config,
             notifications_enabled: config.daemon.notifications,
-            clipboard: &hold_release.clipboard,
+            clipboard: &clipboard,
             dialog: &dialog,
             notify: &notify,
             uploader: uploader.as_deref(),
@@ -111,16 +110,11 @@ pub async fn run_post(
     if report
         .outcomes
         .contains(&flowshot_actions::clipboard::ActionOutcome::Copied)
-        && !hold_release.lost.load(Ordering::Acquire)
         && let Some(state) = ctx.state.as_ref()
     {
-        // The daemon process now serves the offer (a persistence reason).
-        // X11: the loss hook inside `hold_release` clears it when another
-        // client supersedes the offer (SelectionClear), so the daemon can
-        // idle-exit afterwards. Wayland: wl-clipboard-rs gives no replaced
-        // callback - the hold stands until process exit (conservative
-        // direction, documented asymmetry). The latch skips the pin when
-        // the offer was ALREADY lost during the pipeline run.
+        // The daemon process now serves the data-control offer (a
+        // persistence reason); release detection is the known wl-clipboard
+        // gap (observed 2026-09-26) - conservative direction.
         state.set_clipboard_offer_held(true);
     }
     if pin_requested {

@@ -416,12 +416,12 @@ mod tests {
     #[tokio::test]
     async fn capture_region_on_an_empty_layout_is_a_typed_error() {
         let backend = MockBackend::new(BackendKind::WlrScreencopy).with_outputs(Vec::new());
-        assert_eq!(
+        assert!(
             backend
                 .capture_outputs(CaptureOpts::default())
                 .await
-                .unwrap(),
-            [] as [crate::frame::Frame; 0]
+                .unwrap()
+                .is_empty()
         );
         let err = backend
             .capture_region(logical(0.0, 0.0, 4.0, 4.0))

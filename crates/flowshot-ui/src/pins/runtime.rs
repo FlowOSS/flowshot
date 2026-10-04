@@ -31,10 +31,9 @@ pub struct PinSpec {
 
 /// Binary-layer hook applied to every pin window's attributes before
 /// creation. The lib crate stays platform-pure; the binary layer or a
-/// QA harness uses this to set the session's shell-facing name (Wayland
-/// `app_id` `flowshot-pin`, X11 `WM_CLASS`) via the matching winit
-/// platform extension - the same seam the overlay shell defers its name
-/// to.
+/// QA harness uses this to set the Wayland `app_id` (`flowshot-pin`) via
+/// `winit::platform::wayland::WindowAttributesExtWayland` - the same seam
+/// the overlay shell defers `app_id` to.
 #[derive(Clone)]
 pub struct WindowCustomizer(
     std::sync::Arc<dyn Fn(WindowAttributes) -> WindowAttributes + Send + Sync + 'static>,

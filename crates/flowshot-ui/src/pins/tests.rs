@@ -112,15 +112,6 @@ fn zoom_keeps_the_cursor_image_point_screen_stable() {
 }
 
 #[test]
-fn default_behavior_never_client_resizes() {
-    // The Wayland-safety contract: `client_resize` opts the shell into the
-    // X11 ConfigureRequest path; the default must stay false so a Wayland
-    // session can never hit winit's stateless-window client-side resize
-    // (no `Resized` event -> the render surface desyncs from the window).
-    assert!(!PinBehavior::default().client_resize);
-}
-
-#[test]
 fn top_left_anchor_policy_holds_too() {
     let behavior = PinBehavior {
         anchor: ResizeAnchor::TopLeft,
@@ -155,10 +146,7 @@ fn oversized_image_starts_clamped_to_screen() {
     assert_eq!(h, 1080); // height-limited fit, frame included
     // Zoom-in is already at the ceiling: inert.
     let t0 = Instant::now();
-    assert_eq!(
-        wheel(&mut state, 1, t0),
-        [] as [crate::pins::event::PinEffect; 0]
-    );
+    assert!(wheel(&mut state, 1, t0).is_empty());
 }
 
 #[test]
@@ -172,20 +160,14 @@ fn tiny_image_starts_magnified_to_the_min_size_floor() {
 fn zoom_out_stops_at_the_min_size_floor() {
     let mut state = PinState::new((40, 20), (1920, 1080), 1.0, PinBehavior::default());
     let t0 = Instant::now();
-    assert_eq!(
-        wheel(&mut state, -1, t0),
-        [] as [crate::pins::event::PinEffect; 0]
-    );
+    assert!(wheel(&mut state, -1, t0).is_empty());
     // From scale 1 a 400x300 image floors at 1/3 (both axes >= 100).
     let mut state = pin();
     for _ in 0..40 {
         wheel(&mut state, -1, t0);
     }
     assert!((state.scale() - 1.0 / 3.0).abs() < 1e-9);
-    assert_eq!(
-        wheel(&mut state, -1, t0),
-        [] as [crate::pins::event::PinEffect; 0]
-    );
+    assert!(wheel(&mut state, -1, t0).is_empty());
     // The floor binds the SMALLER axis to exactly MIN_SIZE.
     assert!((f64::from(300) * state.scale() - 100.0).abs() < 1e-9);
 }
@@ -235,7 +217,7 @@ fn opacity_keys_follow_the_f27_table() {
         },
         t0,
     );
-    assert_eq!(effects, [] as [crate::pins::event::PinEffect; 0]);
+    assert!(effects.is_empty());
 }
 
 #[test]
@@ -443,10 +425,7 @@ fn ctrl_q_and_double_click_close() {
         pressed: false,
     };
     let mut state = pin();
-    assert_eq!(
-        route(&mut state, press, t0),
-        [] as [crate::pins::event::PinEffect; 0]
-    );
+    assert!(route(&mut state, press, t0).is_empty());
     route(&mut state, release, t0 + Duration::from_millis(80));
     // The SECOND press inside the interval is the double-click.
     let effects = route(&mut state, press, t0 + Duration::from_millis(160));
@@ -455,7 +434,7 @@ fn ctrl_q_and_double_click_close() {
     let mut state = pin();
     route(&mut state, press, t0);
     let effects = route(&mut state, press, t0 + Duration::from_millis(500));
-    assert_eq!(effects, [] as [crate::pins::event::PinEffect; 0]);
+    assert!(effects.is_empty());
 }
 
 #[test]

@@ -755,10 +755,7 @@ fn right_click_opens_the_wheel_except_during_an_edit() {
     take_log();
     let update = press(&mut ed, &env, MouseButton::Right, 500.0, 500.0);
     assert!(update.consumed);
-    assert_eq!(
-        update.effects,
-        [] as [crate::editor::types::EditorEffect; 0]
-    );
+    assert!(update.effects.is_empty());
     assert!(take_log().contains(&"edit-press".to_owned()));
 }
 
@@ -918,18 +915,12 @@ fn preview_is_gated_by_config_and_tool() {
     });
     ed.activate_tool(ToolKind::Pencil);
     take_log();
-    assert_eq!(
-        paint_commands(&ed, Some(at(400.0, 400.0))),
-        [] as [crate::render::Command; 0]
-    );
+    assert!(paint_commands(&ed, Some(at(400.0, 400.0))).is_empty());
     // Tool gate off (marker stub): no preview either.
     ed.configure(EditorTools::default());
     ed.activate_tool(ToolKind::Marker);
     take_log();
-    assert_eq!(
-        paint_commands(&ed, Some(at(400.0, 400.0))),
-        [] as [crate::render::Command; 0]
-    );
+    assert!(paint_commands(&ed, Some(at(400.0, 400.0))).is_empty());
     assert!(!take_log().contains(&"quiet-paint-UNEXPECTED".to_owned()));
     // No cursor yet: no preview, but the scene still paints.
     ed.activate_tool(ToolKind::Pencil);

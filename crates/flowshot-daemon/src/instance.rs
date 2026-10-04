@@ -139,14 +139,7 @@ fn classify_method_error(service: &str, name: &str, detail: &str) -> Result<(), 
             detail: format!("{name}: {detail}"),
         });
     }
-    // NameHasNoOwner: the owner exited before routing. NoReply: the call
-    // was still pending when the owner's connection disconnected (the
-    // broker's answer - empirically verified by tests/supersession.rs;
-    // the stale-binary self-check's park-and-exit relies on it). Both
-    // mean "the owner vanished around this call": retry is the remedy.
-    if name == "org.freedesktop.DBus.Error.NameHasNoOwner"
-        || name == "org.freedesktop.DBus.Error.NoReply"
-    {
+    if name == "org.freedesktop.DBus.Error.NameHasNoOwner" {
         return Err(DaemonError::OwnerVanished);
     }
     Err(DaemonError::ForeignNameHolder {
@@ -263,7 +256,7 @@ mod tests {
         match error {
             DaemonError::ForeignNameHolder { service, detail } => {
                 assert_eq!(service, SERVICE);
-                assert_ne!(detail, "");
+                assert!(!detail.is_empty());
                 // The hint (Display) names the stale-registration remedy.
                 assert!(message.contains("stale"));
             }

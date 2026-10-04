@@ -88,9 +88,9 @@ impl OverlayRuntime {
     ///
     /// # Errors
     ///
-    /// Returns [`UiError::NoDisplayServer`] when neither `WAYLAND_DISPLAY`
-    /// nor `DISPLAY` is set (or both are empty), and [`UiError::EventLoop`]
-    /// when the event loop cannot be created.
+    /// Returns [`UiError::NoDisplayServer`] when `WAYLAND_DISPLAY` is unset
+    /// or empty (with a hint - `FlowShot` never falls back to X11), and
+    /// [`UiError::EventLoop`] when the event loop cannot be created.
     pub fn new() -> Result<Self, UiError> {
         require_display_server()?;
         let event_loop = EventLoop::<UiEvent>::with_user_event().build()?;
@@ -166,9 +166,9 @@ impl OverlayRuntime {
         }
     }
 
-    /// Registers the binary-layer window-attributes hook (the session's
-    /// shell-facing name - Wayland `app_id` / X11 `WM_CLASS` - applied by
-    /// the daemon's session child, a recorded shell deviation; the
+    /// Registers the binary-layer window-attributes hook (Wayland
+    /// `app_id=flowshot` via `WindowAttributesExtWayland`, applied by the
+    /// daemon's session child - a recorded shell deviation; the
     /// `pins::WindowCustomizer` precedent keeps this crate platform-pure).
     #[must_use]
     pub fn with_window_customizer(mut self, customizer: crate::pins::WindowCustomizer) -> Self {
@@ -205,80 +205,16 @@ impl OverlayRuntime {
     }
 }
 
-/// Verifies a display-server session is present before touching winit.
+/// Verifies a compositor session is present before touching winit.
 ///
 /// Portable environment probe (purity gate: no platform imports in this
 /// crate): `WAYLAND_DISPLAY` is the standard session variable every Wayland
-/// compositor exports to its clients, `DISPLAY` the X11 equivalent - the
-/// interactive UI runs on both session types (X11 Phase B). With NEITHER
-/// variable set there is no session to open a window on, so the gate is a
-/// typed startup error with a hint - never a silent platform switch.
+/// compositor exports to its clients. `FlowShot` never falls back to X11
+/// (draft F9), so an unset variable is a typed startup error with a hint -
+/// never a silent platform switch. The X11 roadmap phase revisits this probe.
 pub(crate) fn require_display_server() -> Result<(), UiError> {
-    if has_display_server(
-        std::env::var_os("WAYLAND_DISPLAY").as_deref(),
-        std::env::var_os("DISPLAY").as_deref(),
-    ) {
-        Ok(())
-    } else {
-        Err(UiError::NoDisplayServer)
-    }
-}
-
-/// The gate rule with the environment values injectable (headless tests):
-/// either session variable set and non-empty means a display server is
-/// reachable. Empty values count as unset (the `flowshot-actions`
-/// `session_from_env` rule this gate mirrors).
-fn has_display_server(
-    wayland_display: Option<&std::ffi::OsStr>,
-    display: Option<&std::ffi::OsStr>,
-) -> bool {
-    let set = |value: Option<&std::ffi::OsStr>| value.is_some_and(|value| !value.is_empty());
-    set(wayland_display) || set(display)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::has_display_server;
-    use std::ffi::OsStr;
-
-    #[test]
-    fn gate_passes_on_a_wayland_session_variable() {
-        assert!(has_display_server(Some(OsStr::new("wayland-0")), None));
-    }
-
-    #[test]
-    fn gate_passes_on_an_x11_display_variable_alone() {
-        assert!(has_display_server(None, Some(OsStr::new(":0"))));
-    }
-
-    #[test]
-    fn gate_passes_on_an_xwayland_session_exporting_both() {
-        assert!(has_display_server(
-            Some(OsStr::new("wayland-0")),
-            Some(OsStr::new(":1"))
-        ));
-    }
-
-    #[test]
-    fn gate_passes_when_only_the_empty_variable_is_dropped() {
-        // An empty WAYLAND_DISPLAY counts as unset, but DISPLAY still
-        // carries the session (the empty=unset rule).
-        assert!(has_display_server(
-            Some(OsStr::new("")),
-            Some(OsStr::new(":0"))
-        ));
-    }
-
-    #[test]
-    fn gate_rejects_when_neither_variable_is_set() {
-        assert!(!has_display_server(None, None));
-    }
-
-    #[test]
-    fn gate_rejects_when_both_variables_are_empty() {
-        assert!(!has_display_server(
-            Some(OsStr::new("")),
-            Some(OsStr::new(""))
-        ));
+    match std::env::var_os("WAYLAND_DISPLAY") {
+        Some(value) if !value.is_empty() => Ok(()),
+        _ => Err(UiError::NoDisplayServer),
     }
 }

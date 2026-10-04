@@ -126,12 +126,8 @@ pub enum SessionResult {
 }
 
 /// Single-active-window-session gate (the dropped
-/// `allowMultipleGuiInstances` semantic: ONE exclusive GUI session at a
-/// time; direct window-less captures are not gated). Pin sessions are
-/// EXEMPT: pins are not exclusive GUI sessions - the multi-pin registry
-/// and the `pins_alive` lifecycle reason are built for coexisting pins,
-/// and a new capture must work while pins float (Flameshot parity, where
-/// the single-instance option gates the capture GUI, never pin widgets).
+/// `allowMultipleGuiInstances` semantic: ONE GUI session at a time;
+/// direct window-less captures are not gated).
 static SESSION_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 struct SessionGuard;
@@ -156,19 +152,6 @@ impl Drop for SessionGuard {
     }
 }
 
-/// Whether one session kind takes the single-active-window-session gate:
-/// every exclusive GUI session does; pins are EXEMPT (the multi-pin
-/// registry and the `pins_alive` lifecycle reason exist for coexisting
-/// pins, and a new capture must work while pins float - Flameshot parity,
-/// where the single-instance option gates the capture GUI, never pin
-/// widgets). Platform-free: the exemption applies to Wayland and X11
-/// alike. A NEW variant is gated by default (the safe direction: an
-/// exclusive session that wrongly coexists is worse than a coexisting one
-/// that wrongly gates); exempt it here deliberately, with a test.
-const fn takes_session_gate(kind: &SessionKind) -> bool {
-    !matches!(kind, SessionKind::Pin)
-}
-
 /// Parent side: spawns one session child and waits for its result.
 ///
 /// # Errors
@@ -177,11 +160,7 @@ const fn takes_session_gate(kind: &SessionKind) -> bool {
 /// when the child produced no parsable result, [`ExecuteError::Usage`]
 /// when another window session is already active.
 pub async fn spawn(spec: SessionSpec) -> Result<SessionResult, ExecuteError> {
-    let _guard = if takes_session_gate(&spec.kind) {
-        Some(SessionGuard::acquire()?)
-    } else {
-        None
-    };
+    let _guard = SessionGuard::acquire()?;
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| ExecuteError::Task(format!("clock before the epoch: {error}")))?
@@ -358,43 +337,4 @@ pub fn kind_from_token(token: &str) -> Option<flowshot_ui::CompletionKind> {
         "open-with" => flowshot_ui::CompletionKind::OpenWith,
         _ => return None,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn pin_sessions_are_exempt_from_the_single_window_gate() {
-        // The multi-pin architecture: pins coexist with each other and
-        // with new captures (review M-2's untested behavior change).
-        assert!(!takes_session_gate(&SessionKind::Pin));
-    }
-
-    #[test]
-    fn exclusive_gui_sessions_take_the_gate() {
-        for kind in [
-            SessionKind::Overlay,
-            SessionKind::Launcher,
-            SessionKind::Settings,
-            SessionKind::Consent,
-        ] {
-            assert!(takes_session_gate(&kind), "{kind:?} must be gated");
-        }
-    }
-
-    #[test]
-    fn guard_acquire_is_exclusive_and_drop_releases() {
-        // One sequential body: SESSION_ACTIVE is process-global.
-        let first = SessionGuard::acquire();
-        assert!(first.is_ok());
-        assert!(matches!(
-            SessionGuard::acquire(),
-            Err(ExecuteError::Usage(_))
-        ));
-        drop(first);
-        let third = SessionGuard::acquire();
-        assert!(third.is_ok());
-        drop(third);
-    }
 }

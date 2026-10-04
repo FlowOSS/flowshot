@@ -115,7 +115,7 @@ impl MockClipboard {
 impl ClipboardBackend for MockClipboard {
     fn serve(&self, offer: ClipboardOffer) -> Result<(), ClipboardError> {
         if self.inner.failing.load(Ordering::SeqCst) {
-            return Err(ClipboardError::from(copy::Error::NoSeats));
+            return Err(ClipboardError::Transport(copy::Error::NoSeats));
         }
         self.inner
             .offers
@@ -237,7 +237,7 @@ mod tests {
         mock.set_failing(true);
         let result = clipboard.copy_text("nope");
         assert!(matches!(result, Err(ClipboardError::Transport(_))));
-        assert_eq!(mock.offers(), [] as [ClipboardOffer; 0]);
+        assert!(mock.offers().is_empty());
     }
 
     #[test]

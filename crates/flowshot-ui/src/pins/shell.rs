@@ -8,24 +8,15 @@
 //! size - the ONLY client resize path Hyprland honors (it marks every
 //! toplevel stateful via unconditional TILED states, so winit's
 //! `request_inner_size` is a no-op; live-probed 2026-09-26, see
-//! [`super::zoom`]) - and additionally issues `request_inner_size`, the
-//! X11 leg, where a hints update alone reconfigures nothing and the
-//! client `ConfigureRequest` does the resize. The compositor answers with
-//! `Resized`, which reconfigures the surface and repaints.
-//!
-//! Input semantics: synthetic key events (winit's focus-time keymap
-//! resync replaying still-held keys at the newly focused window) are
-//! NOT routed - they are not fresh user intent, and a pin focused
-//! because its sibling closed on Escape must not inherit that Escape
-//! and chain-close. Real presses (hardware or injected) are never
-//! synthetic; modifier state still syncs via `ModifiersChanged`.
+//! [`super::zoom`]). The compositor answers with `Resized`, which
+//! reconfigures the surface and repaints.
 
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent};
+use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::keyboard::PhysicalKey;
 use winit::window::{Window, WindowId};
@@ -113,19 +104,6 @@ impl PinApp {
     }
 }
 
-/// Translates a winit key event into the pin input (`None` for keys
-/// without a physical code - the state machine matches on codes).
-fn key_input(key: &KeyEvent) -> Option<PinInput> {
-    let PhysicalKey::Code(code) = key.physical_key else {
-        return None;
-    };
-    Some(PinInput::Key {
-        code,
-        pressed: key.state == ElementState::Pressed,
-        repeat: key.repeat,
-    })
-}
-
 impl ApplicationHandler<PinUiEvent> for PinApp {
     fn resumed(&mut self, target: &ActiveEventLoop) {
         if !self.entries.is_empty() || self.fatal_error.is_some() {
@@ -177,15 +155,19 @@ impl ApplicationHandler<PinUiEvent> for PinApp {
                     pressed: state == ElementState::Pressed,
                 },
             ),
-            // Synthetic keys are focus-resync artifacts (module header).
-            WindowEvent::KeyboardInput {
-                event: key,
-                is_synthetic: false,
-                ..
-            } => {
-                if let Some(input) = key_input(&key) {
-                    self.route(target, index, &input);
-                }
+            WindowEvent::KeyboardInput { event: key, .. } => {
+                let PhysicalKey::Code(code) = key.physical_key else {
+                    return;
+                };
+                self.route(
+                    target,
+                    index,
+                    &PinInput::Key {
+                        code,
+                        pressed: key.state == ElementState::Pressed,
+                        repeat: key.repeat,
+                    },
+                );
             }
             WindowEvent::ModifiersChanged(modifiers) => {
                 self.route(target, index, &PinInput::Modifiers(modifiers.state()));

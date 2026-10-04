@@ -13,8 +13,7 @@
 //!   on the clipboard and export seams.
 //!
 //! The UI crate cannot depend on this one (purity gate: this crate is
-//! platform-native by design - it owns the Wayland and X11 clipboard
-//! backends), so the UI exposes the
+//! Wayland-native by design), so the UI exposes the
 //! `flowshot_ui::pins::PinActionSink` callback trait and the BINARY layer
 //! (CLI / daemon) bridges the two: it converts the UI's
 //! `PinSnapshot` into a [`PinImage`] (same field shape, no shared type by

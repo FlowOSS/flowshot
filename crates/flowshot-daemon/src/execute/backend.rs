@@ -1,17 +1,7 @@
 //! The capture-ladder runner: probe the live session,
 //! negotiate the backend order, and construct the first backend that
 //! actually serves outputs - the negotiation ladder made executable.
-//!
-//! Session routing (plan decision #7): `WAYLAND_DISPLAY` set-and-nonempty
-//! selects the Wayland leg; else `DISPLAY` set-and-nonempty selects the X11
-//! leg; with neither variable the Wayland leg's spawn produces the existing
-//! typed connect error. The routing rule is the clipboard crate's
-//! [`detect_session`] - one implementation of the decision, shared by the
-//! capture leg and the clipboard backend pick.
-//!
-//! [`detect_session`]: flowshot_actions::clipboard::detect_session
 
-use flowshot_actions::clipboard::{SessionKind, detect_session};
 use flowshot_capture::{BackendKind, CaptureBackend, CaptureError, negotiate};
 use flowshot_capture_wayland::{
     IccBackend, KwinScreenShot2Backend, PortalScreenCastBackend, PortalScreenshotBackend,
@@ -65,29 +55,12 @@ pub async fn open_session() -> Result<CaptureSession, ExecuteError> {
 pub async fn open_session_excluding(
     exclude: &[BackendKind],
 ) -> Result<CaptureSession, ExecuteError> {
-    match detect_session() {
-        Ok(SessionKind::X11) => {
-            tracing::debug!(session = "x11", "capture session routing");
-            return open_x11_session(exclude).await;
-        }
-        // A Wayland session keeps the compositor legs.
-        Ok(SessionKind::Wayland) => {
-            tracing::debug!(session = "wayland", "capture session routing");
-        }
-        // No session variable at all: the leg below produces the existing
-        // typed connect error (path unchanged); the log says what it is
-        // rather than claiming a Wayland session that does not exist.
-        Err(_) => {
-            tracing::debug!(session = "none", "capture session routing");
-        }
-    }
     let thread = flowshot_capture_wayland::CaptureThread::spawn()?;
     let probe = thread.probe()?;
     let outputs = thread.outputs()?;
     thread.shutdown();
     let kinds = negotiate(&probe, None)?;
     tracing::info!(
-        session = "wayland",
         ladder = ?kinds,
         desktop = ?probe.desktop,
         excluded = ?exclude,
@@ -100,15 +73,7 @@ pub async fn open_session_excluding(
             tried.push(kind);
             continue;
         }
-        let backend = match construct(kind).await {
-            Ok(backend) => backend,
-            Err(error) => {
-                tracing::warn!(backend = ?kind, %error, "ladder rung failed at construction; falling through");
-                tried.push(kind);
-                last = Some(error);
-                continue;
-            }
-        };
+        let backend = construct(kind);
         match backend.outputs().await {
             Ok(live) => {
                 tracing::info!(backend = ?kind, outputs = live.len(), "capture backend ready");
@@ -134,123 +99,26 @@ pub async fn open_session_excluding(
     }))
 }
 
-/// The X11 leg (plan decision #7): [`probe_x11`] feeds the same
-/// negotiation ladder (yielding the single X11 rung); a failed probe is
-/// the existing typed no-backend error. Mirrors the Wayland leg's ladder
-/// walk deliberately - sibling platform legs stay parallel implementations
-/// (the `stitch.rs` duplication precedent), the Wayland leg is not
-/// refactored.
-///
-/// [`probe_x11`]: flowshot_capture_x11::probe_x11
-async fn open_x11_session(exclude: &[BackendKind]) -> Result<CaptureSession, ExecuteError> {
-    let Some(probe) = flowshot_capture_x11::probe_x11() else {
-        // DISPLAY is set but the session is not capturable (an unreachable
-        // server, RANDR < 1.2). `probe_x11` logs the reason at debug level;
-        // name the leg at warn so the default log level stays diagnosable.
-        tracing::warn!(
-            "the X11 session probe found no capturable server \
-             (RUST_LOG=flowshot_capture_x11=debug names the reason)"
-        );
-        return Err(ExecuteError::Capture(CaptureError::NoBackendAvailable {
-            missing: vec![BackendKind::X11],
-        }));
-    };
-    let kinds = negotiate(&probe, None)?;
-    tracing::info!(
-        session = "x11",
-        ladder = ?kinds,
-        desktop = ?probe.desktop,
-        excluded = ?exclude,
-        "capture ladder negotiated"
-    );
-    let mut tried: Vec<BackendKind> = Vec::new();
-    let mut last: Option<CaptureError> = None;
-    for kind in kinds {
-        if exclude.contains(&kind) {
-            tried.push(kind);
-            continue;
-        }
-        let backend = match construct(kind).await {
-            Ok(backend) => backend,
-            Err(error) => {
-                tracing::warn!(backend = ?kind, %error, "ladder rung failed at construction; falling through");
-                tried.push(kind);
-                last = Some(error);
-                continue;
-            }
-        };
-        match backend.outputs().await {
-            Ok(live) => {
-                tracing::info!(backend = ?kind, outputs = live.len(), "capture backend ready");
-                return Ok(CaptureSession {
-                    backend,
-                    kind,
-                    outputs: live,
-                });
-            }
-            Err(error) => {
-                tracing::warn!(backend = ?kind, %error, "ladder rung failed; falling through");
-                tried.push(kind);
-                last = Some(error);
-            }
-        }
-    }
-    if let Some(error) = last {
-        tracing::error!(?tried, "every ladder rung failed");
-        return Err(ExecuteError::Capture(error));
-    }
-    Err(ExecuteError::Capture(CaptureError::NoBackendAvailable {
-        missing: tried,
-    }))
-}
-
-/// The most specific display for a capture error: the platform source when
-/// one is attached - it carries the environment-derived hints (e.g. the X11
-/// `DISPLAY` remediation) that the `CaptureError` display drops - else the
-/// error itself.
-pub(crate) fn error_detail(error: &CaptureError) -> String {
-    std::error::Error::source(error).map_or_else(|| error.to_string(), ToString::to_string)
-}
-
-async fn construct(kind: BackendKind) -> Result<Box<dyn CaptureBackend>, CaptureError> {
-    Ok(match kind {
+fn construct(kind: BackendKind) -> Box<dyn CaptureBackend> {
+    match kind {
         BackendKind::ExtImageCopyCapture => Box::new(IccBackend::new()),
         BackendKind::WlrScreencopy => Box::new(ScreencopyBackend::new()),
         BackendKind::KwinScreenShot2 => Box::new(KwinScreenShot2Backend::new()),
         BackendKind::PortalScreenCast => Box::new(PortalScreenCastBackend::new()),
         BackendKind::PortalScreenshot => Box::new(PortalScreenshotBackend::new()),
-        // The X11 rung connects eagerly (probing the capture caps) through
-        // the deadline-bounded worker bridge; the warn keeps the DISPLAY
-        // hint (which the CaptureError display does not carry) in the
-        // default-level log.
-        BackendKind::X11 => Box::new(
-            flowshot_capture_x11::X11Backend::connect_bounded()
-                .await
-                .inspect_err(|error| {
-                    tracing::warn!(error = %error_detail(error), "X11 backend connect failed");
-                })?,
-        ),
         // Roadmap kinds never come out of `negotiate` (v1 gate); treating
         // them as a backend absence keeps the match exhaustive without a
         // panic path.
-        BackendKind::Windows | BackendKind::MacOs => {
+        BackendKind::X11 | BackendKind::Windows | BackendKind::MacOs => {
             tracing::error!(?kind, "roadmap backend kind reached construction");
             Box::new(IccBackend::new())
         }
-    })
-}
-
-/// Resolves the live cursor through the session's strategy: the layered
-/// Wayland ladder (ICC cursor session -> Hyprland IPC -> first-motion
-/// deferral) or the X11 one-shot `XQueryPointer` read.
-pub async fn resolve_cursor() -> Option<LogicalPoint> {
-    match detect_session() {
-        Ok(SessionKind::X11) => resolve_cursor_x11().await,
-        Ok(SessionKind::Wayland) | Err(_) => resolve_cursor_wayland().await,
     }
 }
 
-async fn resolve_cursor_wayland() -> Option<LogicalPoint> {
+/// Resolves the live cursor through the layered strategy (ICC
+/// cursor session -> Hyprland IPC -> first-motion deferral).
+pub async fn resolve_cursor() -> Option<LogicalPoint> {
     let source = flowshot_capture_wayland::resolve_cursor_pos(Some(IccBackend::new())).await;
     let position = source.position();
     tracing::info!(
@@ -259,33 +127,4 @@ async fn resolve_cursor_wayland() -> Option<LogicalPoint> {
         "cursor position ladder"
     );
     position.map(|(x, y)| LogicalPoint::from_raw(f64::from(x), f64::from(y)))
-}
-
-/// X11 has no cursor stream in Phase A: one-shot `XQueryPointer`. Every
-/// failure degrades to `None` - a missing preselect never fails a capture.
-async fn resolve_cursor_x11() -> Option<LogicalPoint> {
-    let backend = match flowshot_capture_x11::X11Backend::connect_bounded().await {
-        Ok(backend) => backend,
-        Err(error) => {
-            tracing::warn!(
-                error = %error_detail(&error),
-                "X11 cursor read unavailable; preselect degrades"
-            );
-            return None;
-        }
-    };
-    match backend.cursor_pos().await {
-        Ok(position) => {
-            tracing::info!(
-                layer = "x11-query-pointer",
-                resolved = position.is_some(),
-                "cursor position ladder"
-            );
-            position
-        }
-        Err(error) => {
-            tracing::warn!(%error, "X11 cursor position read failed; preselect degrades");
-            None
-        }
-    }
 }

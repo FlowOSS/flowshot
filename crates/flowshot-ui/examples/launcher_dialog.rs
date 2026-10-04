@@ -36,10 +36,8 @@ use flowshot_ui::launcher::{
     LaunchCallback, LauncherRequest, LauncherWindow, LauncherWindowOptions, MonitorProbe,
     RegionGeometry,
 };
-
-mod common;
-
-use common::session_window_customizer;
+use flowshot_ui::pins::WindowCustomizer;
+use winit::platform::wayland::WindowAttributesExtWayland;
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()
@@ -75,10 +73,9 @@ fn run() -> Result<(), String> {
                 Err(error) => eprintln!("CAPTURE FAILED: {error}"),
             }
         })),
-        window_customizer: Some(session_window_customizer(
-            "flowshot-launcher",
-            "Capture Launcher",
-        )),
+        window_customizer: Some(WindowCustomizer::new(|attributes| {
+            attributes.with_name("flowshot-launcher", "Capture Launcher")
+        })),
         ..LauncherWindowOptions::default()
     };
     let window =

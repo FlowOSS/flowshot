@@ -43,7 +43,7 @@
 //! REGISTRY (the daemon's "pins alive" persistence reason) and the
 //! copy/save action functions live in `flowshot-actions::pin` on the
 //! clipboard/export seams. The crates share NO types (ui purity gate forbids
-//! depending on the platform-owning actions crate); the binary layer
+//! depending on the Wayland-native actions crate); the binary layer
 //! bridges them by implementing [`PinActionSink`] - the QA example
 //! `examples/pin_window.rs` is the reference composition.
 //!

@@ -311,7 +311,7 @@ fn toolbar_tooltip_waits_the_delay_then_shows_the_active_binding() {
     };
 
     // During the 400ms delay the toolbar paints no text at all.
-    assert_eq!(painted_texts(&core, hovered), [] as [String; 0]);
+    assert!(painted_texts(&core, hovered).is_empty());
     let shown = hovered + crate::widgets::TOOLTIP_DELAY;
     assert!(
         painted_texts(&core, shown).contains(&"Arrow — pointed arrow [A]".to_owned()),
@@ -326,10 +326,7 @@ fn toolbar_tooltip_waits_the_delay_then_shows_the_active_binding() {
 
     // Leaving the button hides the tooltip.
     move_to(&mut core, x, y + 200.0);
-    assert_eq!(
-        painted_texts(&core, shown + crate::widgets::TOOLTIP_DELAY),
-        [] as [String; 0]
-    );
+    assert!(painted_texts(&core, shown + crate::widgets::TOOLTIP_DELAY).is_empty());
 }
 
 #[test]

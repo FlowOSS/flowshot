@@ -7,8 +7,8 @@ truth.
 - [ADR-001: Physical-first geometry](adr-001-physical-first-geometry.md): all
   geometry is physical pixels first; scale converts at exactly one boundary.
   The Flameshot #4871 class of mixed-DPI corruption is unrepresentable.
-- [ADR-002: Capture backend ladder](adr-002-capture-backend-ladder.md): six
-  rungs (five Wayland, one X11), probed at runtime, never table-driven.
+- [ADR-002: Capture backend ladder](adr-002-capture-backend-ladder.md): five
+  rungs, probed at runtime, never table-driven.
 - [ADR-003: UI stack](adr-003-ui-stack.md): winit + wgpu + cosmic-text, with
   one recorded exception (egui for the settings window).
 - [ADR-004: Daemon lifecycle](adr-004-daemon-lifecycle.md): a single-instance

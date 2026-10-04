@@ -1,26 +1,15 @@
-//! Display-server clipboards with daemon-owned offers.
+//! Wayland-native clipboard with daemon-owned offers.
 //!
 //! # Ownership model (draft F27)
 //!
 //! The DAEMON process owns the clipboard offer: [`Clipboard`] hands the
-//! offer to a [`ClipboardBackend`], and the production backends
-//! ([`WaylandClipboard`], [`X11Clipboard`]) serve it from a thread
-//! inside the calling process (Wayland: `zwlr_data_control` via
-//! `wl-clipboard-rs` — no `wl-copy` shell-out, no GTK/arboard; X11:
-//! ICCCM `CLIPBOARD` selection ownership via `x11rb`). The capturing UI
-//! exits freely; the offer lives as long as the daemon, and dies with it
-//! (documented behavior). The daemon's lifecycle treats a held offer
+//! offer to a [`ClipboardBackend`], and the production backend
+//! ([`WaylandClipboard`]) serves it from a thread inside the calling
+//! process over `zwlr_data_control` (`wl-clipboard-rs` — no `wl-copy`
+//! shell-out, no GTK/arboard). The capturing UI exits freely; the offer
+//! lives as long as the daemon, and dies with it (documented behavior).
+//! The daemon's lifecycle treats a held offer
 //! as a persistence reason.
-//!
-//! # Session selection
-//!
-//! [`Clipboard::for_session`] picks the backend from the environment:
-//! `WAYLAND_DISPLAY` set → Wayland; else `DISPLAY` set → X11; else
-//! [`ClipboardError::NoSession`]. Phase A semantics: on X11 only the
-//! headless capture path (capture + post-capture actions with the
-//! daemon-owned offer) is supported; the interactive overlay, editor,
-//! pins, and dialogs remain Wayland-gated (`flowshot-ui`'s
-//! `require_display_server`).
 //!
 //! # Routes
 //!
@@ -43,19 +32,11 @@
 //! - plain text offers `text/plain` (the backend auto-adds the common
 //!   text variants).
 
-// allow: SIZE_OK — one cohesive clipboard facade: the ownership-model
-// contract docs, the backend seam, the session routing, and the facade
-// constructors share one MIME policy; splitting scatters the routing rule
-// from the constructors that embody it. Marginal overshoot (253 pure LOC);
-// first growth extracts the session routing (`SessionKind`/`detect_session`)
-// into `clipboard/session.rs`.
-
 mod actions;
 mod backend;
 mod keepalive;
 mod offer;
 mod pipeline;
-mod x11;
 
 pub use actions::{Action, LegacyFlags, effective_actions, execution_order};
 pub use backend::{
@@ -67,11 +48,8 @@ pub use offer::{
     image_and_path_offer, image_mime, image_offer, path_offer,
 };
 pub use pipeline::{ActionOutcome, PostCapture, PostCaptureReport, run_post_capture};
-pub use x11::X11Clipboard;
 
-use std::ffi::OsStr;
 use std::path::Path;
-use std::sync::Arc;
 
 use flowshot_core::config::{ClipboardFormat, SaveConfig};
 use image::DynamicImage;
@@ -81,8 +59,8 @@ use crate::export::{encode_jpeg, encode_png};
 
 /// Backend seam: where clipboard offers are actually served.
 ///
-/// Production uses [`WaylandClipboard`] or [`X11Clipboard`] (per
-/// session); tests use [`MockClipboard`] (headless, no display server).
+/// Production uses [`WaylandClipboard`]; tests use [`MockClipboard`]
+/// (headless, no compositor).
 pub trait ClipboardBackend: Send + Sync + std::fmt::Debug {
     /// Take clipboard ownership and serve `offer` to paste requests.
     ///
@@ -93,67 +71,10 @@ pub trait ClipboardBackend: Send + Sync + std::fmt::Debug {
     fn serve(&self, offer: ClipboardOffer) -> Result<(), ClipboardError>;
 }
 
-/// Callback fired when a served clipboard offer is LOST: another client
-/// superseded it (X11: the serving thread observes `SelectionClear`) or
-/// the serving connection died.
-///
-/// # Platform asymmetry (documented, deliberate)
-///
-/// Only [`X11Clipboard`] fires this hook, and only while the exiting
-/// serve was still the process's most recent ownership claim (a
-/// self-supersede — a second `serve()` — stays silent; see its module
-/// docs). The Wayland backend NEVER fires it: `wl-clipboard-rs` offers no
-/// "selection replaced" callback, so Wayland callers keep the
-/// conservative never-clear behavior (a daemon's held-offer persistence
-/// reason is released only by process exit). This is the wired form of
-/// the release-detection caveat the `flowshot-daemon` state module
-/// documents.
-pub type OfferLossHook = Arc<dyn Fn() + Send + Sync>;
-
-/// The display-server session a clipboard backend is picked for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SessionKind {
-    /// A Wayland session (`WAYLAND_DISPLAY` set).
-    Wayland,
-    /// An X11 session (`DISPLAY` set, no `WAYLAND_DISPLAY`).
-    X11,
-}
-
-/// The session routing rule with the environment values injectable
-/// (headless tests). Empty values count as unset. `WAYLAND_DISPLAY`
-/// wins: an `XWayland` session exports both.
-fn session_from_env(
-    wayland_display: Option<&OsStr>,
-    display: Option<&OsStr>,
-) -> Result<SessionKind, ClipboardError> {
-    let set = |value: Option<&OsStr>| value.is_some_and(|value| !value.is_empty());
-    if set(wayland_display) {
-        Ok(SessionKind::Wayland)
-    } else if set(display) {
-        Ok(SessionKind::X11)
-    } else {
-        Err(ClipboardError::NoSession)
-    }
-}
-
-/// Detect the display-server session from the environment.
-///
-/// # Errors
-///
-/// [`ClipboardError::NoSession`] when neither `WAYLAND_DISPLAY` nor
-/// `DISPLAY` is set (or both are empty).
-pub fn detect_session() -> Result<SessionKind, ClipboardError> {
-    session_from_env(
-        std::env::var_os("WAYLAND_DISPLAY").as_deref(),
-        std::env::var_os("DISPLAY").as_deref(),
-    )
-}
-
 /// Clipboard facade used by the post-capture pipeline.
 ///
-/// Construct via [`Clipboard::for_session`] /
-/// [`Clipboard::for_session_with_loss_hook`] (the daemon production
-/// routes) or [`Clipboard::new`] with any backend (tests).
+/// Construct via [`Clipboard::wayland`] (daemon production route) or
+/// [`Clipboard::new`] with any backend (tests).
 #[derive(Debug)]
 pub struct Clipboard {
     backend: Box<dyn ClipboardBackend>,
@@ -170,55 +91,9 @@ impl Clipboard {
 
     /// The data-control backend, for the daemon process (the offer is
     /// owned by THIS process's serving thread — see [`WaylandClipboard`]).
-    /// Crate-internal: production callers route through
-    /// [`Self::for_session`].
     #[must_use]
-    pub(crate) fn wayland() -> Self {
+    pub fn wayland() -> Self {
         Self::new(WaylandClipboard::new())
-    }
-
-    /// The X11 selection-owner backend, for the daemon process (the
-    /// offer is owned by THIS process's serving thread — see
-    /// [`X11Clipboard`]). Crate-internal: production callers route
-    /// through [`Self::for_session`].
-    #[must_use]
-    pub(crate) fn x11() -> Self {
-        Self::new(X11Clipboard::new())
-    }
-
-    /// The backend for the current session: `WAYLAND_DISPLAY` set →
-    /// the Wayland backend; else `DISPLAY` set → the X11 selection
-    /// owner. `WAYLAND_DISPLAY` wins: an `XWayland` session exports both.
-    ///
-    /// # Errors
-    ///
-    /// [`ClipboardError::NoSession`] when neither `WAYLAND_DISPLAY` nor
-    /// `DISPLAY` is set.
-    pub fn for_session() -> Result<Self, ClipboardError> {
-        Ok(match detect_session()? {
-            SessionKind::Wayland => Self::wayland(),
-            SessionKind::X11 => Self::x11(),
-        })
-    }
-
-    /// [`Self::for_session`] with an offer-loss hook wired into the X11
-    /// backend: the daemon's release path for the `clipboard-offer`
-    /// persistence reason when another client supersedes the offer
-    /// (`SelectionClear` is observable on X11).
-    ///
-    /// The Wayland arm DISCARDS the hook (it can never fire — see
-    /// [`OfferLossHook`] for the documented asymmetry); callers must not
-    /// rely on it for Wayland release detection.
-    ///
-    /// # Errors
-    ///
-    /// [`ClipboardError::NoSession`] when neither `WAYLAND_DISPLAY` nor
-    /// `DISPLAY` is set.
-    pub fn for_session_with_loss_hook(hook: OfferLossHook) -> Result<Self, ClipboardError> {
-        Ok(match detect_session()? {
-            SessionKind::Wayland => Self::wayland(),
-            SessionKind::X11 => Self::new(X11Clipboard::with_loss_hook(hook)),
-        })
     }
 
     /// Copy pre-encoded image bytes under the format's MIME type
@@ -442,35 +317,5 @@ mod tests {
         mock.set_failing(true);
         let result = clipboard.copy_capture(&DynamicImage::new_rgb8(2, 2), &SaveConfig::default());
         assert!(matches!(result, Err(ClipboardError::Transport(_))));
-    }
-
-    #[test]
-    fn session_prefers_wayland_when_both_env_vars_set() {
-        // An XWayland session exports both; the native session wins.
-        let kind = session_from_env(Some(OsStr::new("wayland-0")), Some(OsStr::new(":0")));
-        assert!(matches!(kind, Ok(SessionKind::Wayland)));
-    }
-
-    #[test]
-    fn session_falls_back_to_x11_without_wayland_display() {
-        let kind = session_from_env(None, Some(OsStr::new(":0")));
-        assert!(matches!(kind, Ok(SessionKind::X11)));
-    }
-
-    #[test]
-    fn session_without_either_env_var_is_no_session_error() {
-        let result = session_from_env(None, None);
-        assert!(matches!(result, Err(ClipboardError::NoSession)));
-        let message = ClipboardError::NoSession.to_string();
-        assert!(
-            message.contains("WAYLAND_DISPLAY") && message.contains("DISPLAY"),
-            "error must name both session variables: {message}"
-        );
-    }
-
-    #[test]
-    fn session_treats_empty_env_values_as_unset() {
-        let result = session_from_env(Some(OsStr::new("")), Some(OsStr::new("")));
-        assert!(matches!(result, Err(ClipboardError::NoSession)));
     }
 }

@@ -67,9 +67,12 @@ pub fn run_overlay_session(session: OverlaySession) -> SessionOutcome {
         options,
         selection_config,
     ) {
-        Ok(runtime) => runtime.with_window_customizer(
-            crate::execute::window::session_window_customizer("flowshot", "FlowShot"),
-        ),
+        Ok(runtime) => {
+            runtime.with_window_customizer(flowshot_ui::pins::WindowCustomizer::new(|attributes| {
+                use winit::platform::wayland::WindowAttributesExtWayland;
+                attributes.with_name("flowshot", "FlowShot")
+            }))
+        }
         Err(error) => return SessionOutcome::Failed(error),
     };
     let events = Arc::new(SessionEvents::default());

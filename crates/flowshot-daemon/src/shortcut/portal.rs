@@ -238,7 +238,7 @@ mod tests {
 
         dispatch_activated(&ctx, "some-other-apps-shortcut");
 
-        assert_eq!(sink.commands(), [] as [crate::command::DaemonCommand; 0]);
+        assert!(sink.commands().is_empty());
         assert!(state.idle_for(Instant::now()) < Duration::from_secs(60));
     }
 

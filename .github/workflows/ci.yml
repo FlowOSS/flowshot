@@ -11,14 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # libspa-sys (via the pipewire crate, portal ScreenCast capture) pkg-configs
-      # libpipewire-0.3 at build time; slimmed runner images no longer ship the
-      # headers. The other system-library wall (glib-sys via dead rfd) was removed
-      # from the graph instead - see commit 1301d33.
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libpipewire-0.3-dev
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -29,14 +21,8 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
       - name: Check clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy -- -D warnings
       - name: Run tests
         run: cargo test
       - name: Check dependencies
-        # cargo-deny is not preinstalled on the runner (the previous bare
-        # `cargo deny check` step could never have run - every earlier run
-        # died in the compile phase first); the official action mirrors the
-        # local `just deny` gate.
-        uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check
+        run: cargo deny check

@@ -6,17 +6,14 @@ use serde::{Deserialize, Serialize};
 
 /// Identifies a capture backend implementation.
 ///
-/// The first six variants form the negotiation ladder and are declared in
+/// The first five variants form the v1 negotiation ladder and are declared in
 /// exact ladder priority order (see
 /// [`NEGOTIATION_LADDER`](crate::negotiate::NEGOTIATION_LADDER)): native
-/// zero-copy compositor capture first, portal fallbacks next, `X11` last.
-/// `X11` sits last by declaration, not by preference: a session is either
-/// Wayland or `X11`, never both, so a probe reports rungs from one family
-/// only and the two never compete.
+/// zero-copy compositor capture first, portal fallbacks last.
 ///
-/// The last two variants are roadmap placeholders for non-Linux platforms.
-/// They are documented, non-constructible outcomes of negotiation:
-/// [`CapabilityProbe::supports`](crate::CapabilityProbe::supports)
+/// The last three variants are roadmap placeholders for non-compositor
+/// platforms. They are documented, non-constructible outcomes of v1
+/// negotiation: [`CapabilityProbe::supports`](crate::CapabilityProbe::supports)
 /// reports `false` for them on every probe, so [`negotiate()`](crate::negotiate())
 /// never returns them, and forcing one is a typed
 /// [`CaptureError::NoBackendAvailable`](crate::CaptureError::NoBackendAvailable).
@@ -41,7 +38,7 @@ pub enum BackendKind {
     /// interactive picker UX on GNOME).
     #[serde(rename = "portal-screenshot")]
     PortalScreenshot,
-    /// `X11` via `xcb` `GetImage` (X11-only sessions: i3, Xfce, Openbox).
+    /// Roadmap: `X11` via `XGetImage`. Not available in v1.
     #[serde(rename = "x11")]
     X11,
     /// Roadmap: Windows.Graphics.Capture. Not available in v1.
@@ -60,13 +57,12 @@ impl BackendKind {
     /// ```
     /// use flowshot_capture::BackendKind;
     ///
-    /// assert!(BackendKind::Windows.is_roadmap());
+    /// assert!(BackendKind::X11.is_roadmap());
     /// assert!(!BackendKind::ExtImageCopyCapture.is_roadmap());
-    /// assert!(!BackendKind::X11.is_roadmap());
     /// ```
     #[must_use]
     pub const fn is_roadmap(self) -> bool {
-        matches!(self, Self::Windows | Self::MacOs)
+        matches!(self, Self::X11 | Self::Windows | Self::MacOs)
     }
 
     /// The wire protocol or service name this backend speaks, used in
@@ -92,7 +88,7 @@ impl BackendKind {
             Self::KwinScreenShot2 => "org.kde.KWin.ScreenShot2",
             Self::PortalScreenCast => "org.freedesktop.portal.ScreenCast",
             Self::PortalScreenshot => "org.freedesktop.portal.Screenshot",
-            Self::X11 => "X11 (xcb GetImage)",
+            Self::X11 => "X11 (roadmap, not built in v1)",
             Self::Windows => "Windows.Graphics.Capture (roadmap, not built in v1)",
             Self::MacOs => "ScreenCaptureKit (roadmap, not built in v1)",
         }

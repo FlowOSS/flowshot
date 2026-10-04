@@ -11,10 +11,8 @@
 //! Splits: `wiring` holds `configure_core` (the SINGLE wiring function
 //! shared with the headless execution mode) and the launch mapping;
 //! `session` holds the child's blocking winit leg and the
-//! frame/geometry helpers; `reroute` holds the X11 headless reroute
-//! decision.
+//! frame/geometry helpers.
 
-mod reroute;
 mod session;
 mod wiring;
 
@@ -34,15 +32,8 @@ pub use self::session::{
 };
 pub use self::wiring::{CoreSinks, SessionEvents, build_launch_request, configure_core};
 
-use self::reroute::x11_headless_region;
-
 /// The parent-side orchestration of one interactive capture (or
 /// `flowshot color` with `color_mode`).
-///
-/// X11 headless exception: `--no-edit` invocations whose target resolves
-/// without a window (a typed `--region` token, a persisted last region,
-/// `--region at-cursor`) reroute onto the direct leg
-/// ([`x11_headless_region`]) instead of spawning the overlay child.
 ///
 /// # Errors
 ///
@@ -54,13 +45,6 @@ pub async fn run_interactive(
     color_mode: bool,
 ) -> Result<ExecOutcome, ExecuteError> {
     super::post::validate_stdout_modes(&request)?;
-    if let Some(target) = x11_headless_region(&request, ctx).await? {
-        tracing::info!(
-            ?target,
-            "X11 headless region reroute; no overlay child is spawned"
-        );
-        return super::direct::run(target, request, ctx, started).await;
-    }
     let (config, config_path) = ctx.load_config();
     if request.delay_ms > 0 {
         tracing::info!(delay_ms = request.delay_ms, "capture delay armed");
@@ -114,7 +98,7 @@ pub async fn run_interactive(
             // The PARENT owns the clipboard copy (the offer must
             // outlive the window session - in daemon mode this process is
             // the resident daemon).
-            let clipboard = flowshot_actions::Clipboard::for_session()?;
+            let clipboard = flowshot_actions::Clipboard::wayland();
             clipboard.copy_text(&hex)?;
             if let Some(state) = ctx.state.as_ref() {
                 state.set_clipboard_offer_held(true);

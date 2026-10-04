@@ -39,20 +39,16 @@ pub enum DesktopEnv {
 }
 
 /// The v1 negotiation ladder, in strict priority order: native zero-copy
-/// compositor capture first, portal fallbacks next, `X11` last.
+/// compositor capture first, portal fallbacks last.
 ///
-/// [`BackendKind::X11`] is the last rung by declaration, not by preference: a
-/// session is either Wayland or `X11`, never both, so a probe that observes
-/// `X11` observes no Wayland rung and the two families never compete for
-/// position. Roadmap kinds ([`BackendKind::Windows`], [`BackendKind::MacOs`])
-/// remain deliberately absent.
-pub const NEGOTIATION_LADDER: [BackendKind; 6] = [
+/// Roadmap kinds ([`BackendKind::X11`], [`BackendKind::Windows`],
+/// [`BackendKind::MacOs`]) are deliberately absent.
+pub const NEGOTIATION_LADDER: [BackendKind; 5] = [
     BackendKind::ExtImageCopyCapture,
     BackendKind::WlrScreencopy,
     BackendKind::KwinScreenShot2,
     BackendKind::PortalScreenCast,
     BackendKind::PortalScreenshot,
-    BackendKind::X11,
 ];
 
 /// What the platform probe observed about a session's capture capabilities.
@@ -112,7 +108,7 @@ impl CapabilityProbe {
 /// [`NEGOTIATION_LADDER`] order: `ext-image-copy-capture-v1` ->
 /// `zwlr-screencopy-v1` -> `org.kde.KWin.ScreenShot2` ->
 /// `org.freedesktop.portal.ScreenCast` ->
-/// `org.freedesktop.portal.Screenshot` -> `X11`.
+/// `org.freedesktop.portal.Screenshot`.
 ///
 /// `config_override` is the `force_backend` config key. It wins over the
 /// ladder: when set and supported, the result is exactly that one kind. A
@@ -318,21 +314,9 @@ mod tests {
 
     #[test]
     fn force_roadmap_backend_is_rejected() {
-        let err = negotiate(&hyprland_2026(), Some(BackendKind::Windows)).unwrap_err();
-        assert!(matches!(err, CaptureError::NoBackendAvailable { .. }));
-        assert!(err.to_string().contains("Windows.Graphics.Capture"));
-    }
-
-    #[test]
-    fn force_x11_on_a_wayland_probe_fails_fast_naming_it() {
         let err = negotiate(&hyprland_2026(), Some(BackendKind::X11)).unwrap_err();
-        match &err {
-            CaptureError::NoBackendAvailable { missing } => {
-                assert_eq!(missing, &vec![BackendKind::X11]);
-            }
-            other => panic!("expected NoBackendAvailable, got {other:?}"),
-        }
-        assert!(err.to_string().contains(BackendKind::X11.protocol_name()));
+        assert!(matches!(err, CaptureError::NoBackendAvailable { .. }));
+        assert!(err.to_string().contains("X11"));
     }
 
     #[test]
@@ -355,17 +339,7 @@ mod tests {
     fn full_probe_preserves_exact_ladder_order() {
         let full = probe(DesktopEnv::Other, NEGOTIATION_LADDER);
         let backends = negotiate(&full, None).unwrap();
-        assert_eq!(
-            backends,
-            vec![
-                BackendKind::ExtImageCopyCapture,
-                BackendKind::WlrScreencopy,
-                BackendKind::KwinScreenShot2,
-                BackendKind::PortalScreenCast,
-                BackendKind::PortalScreenshot,
-                BackendKind::X11,
-            ]
-        );
+        assert_eq!(backends, NEGOTIATION_LADDER.to_vec());
     }
 
     #[test]
@@ -382,12 +356,11 @@ mod tests {
     fn roadmap_kinds_in_available_set_are_ignored() {
         let odd = probe(
             DesktopEnv::Other,
-            [BackendKind::Windows, BackendKind::MacOs]
+            [BackendKind::X11, BackendKind::Windows, BackendKind::MacOs]
                 .into_iter()
                 .chain([BackendKind::PortalScreenshot]),
         );
-        assert!(!odd.supports(BackendKind::Windows));
-        assert!(!odd.supports(BackendKind::MacOs));
+        assert!(!odd.supports(BackendKind::X11));
         let backends = negotiate(&odd, None).unwrap();
         assert_eq!(backends, vec![BackendKind::PortalScreenshot]);
     }
@@ -413,38 +386,5 @@ mod tests {
             negotiate(&icc_only, None).unwrap(),
             vec![BackendKind::ExtImageCopyCapture]
         );
-    }
-
-    #[test]
-    fn x11_only_probe_negotiates_the_x11_rung() {
-        let x11 = probe(DesktopEnv::Other, [BackendKind::X11]);
-        assert!(x11.supports(BackendKind::X11));
-        assert_eq!(negotiate(&x11, None).unwrap(), vec![BackendKind::X11]);
-    }
-
-    #[test]
-    fn force_x11_on_an_x11_probe_selects_it() {
-        let x11 = probe(DesktopEnv::Other, [BackendKind::X11]);
-        assert_eq!(
-            negotiate(&x11, Some(BackendKind::X11)).unwrap(),
-            vec![BackendKind::X11]
-        );
-    }
-
-    #[test]
-    fn wayland_probe_does_not_gain_the_x11_rung() {
-        let wayland = probe(
-            DesktopEnv::Sway,
-            [
-                BackendKind::ExtImageCopyCapture,
-                BackendKind::WlrScreencopy,
-                BackendKind::KwinScreenShot2,
-                BackendKind::PortalScreenCast,
-                BackendKind::PortalScreenshot,
-            ],
-        );
-        let backends = negotiate(&wayland, None).unwrap();
-        assert!(!backends.contains(&BackendKind::X11));
-        assert_eq!(backends.len(), 5);
     }
 }

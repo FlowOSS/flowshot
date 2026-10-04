@@ -30,11 +30,6 @@
 //!   `shortcuts` persistence reason, and the compositor-bind fallback
 //!   ladder (paste-ready Hyprland/Sway/GNOME snippets, `KGlobalAccel`
 //!   guidance) behind `flowshot --print-bind-help`;
-//! - [`stale`] - the stale-binary self-check: a dispatch-time
-//!   `/proc/self/exe` probe; a superseded image exits cleanly UNSERVED
-//!   (`ShutdownReason::Superseded`), and the broker's `NoReply` answer
-//!   to the pending call rides the CLI's single dispatch retry into a
-//!   fresh-daemon respawn;
 //! - [`tray`] - the SNI tray: `org.kde.StatusNotifierItem` +
 //!   `com.canonical.dbusmenu` hand-rolled on the same zbus connection,
 //!   the F12-parity menu dispatching into [`CommandSink`], the
@@ -84,7 +79,6 @@ pub mod notify;
 pub mod paths;
 pub mod request;
 pub mod shortcut;
-pub mod stale;
 pub mod state;
 pub mod strings;
 pub mod telemetry;
@@ -98,7 +92,7 @@ mod logo_raster;
 #[cfg(test)]
 mod testsupport;
 
-pub use bus::{BusWiring, IFACE, OBJECT_PATH, SERVICE};
+pub use bus::{IFACE, OBJECT_PATH, SERVICE};
 pub use command::{ChannelSink, CommandSink, DaemonCommand, LoggingSink, RecordingSink};
 pub use daemon::{Daemon, DaemonOptions, ShutdownReason, Startup};
 pub use error::DaemonError;
@@ -113,7 +107,6 @@ pub use shortcut::{
     ACTIVE_SCREEN, CompositorFlavor, Registration, RestoreData, ShortcutOptions, ShortcutSpec,
     ShortcutWiring, bind_help, default_shortcuts,
 };
-pub use stale::{ExeIdentity, SupersessionGate};
 pub use state::{DaemonState, PersistenceReasons};
 pub use tray::{TrayHandle, TrayOptions, TrayWiring};
 

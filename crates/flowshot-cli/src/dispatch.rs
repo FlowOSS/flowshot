@@ -46,22 +46,8 @@ use crate::wire::{self, WireCall};
 const SPAWN_WAIT: Duration = Duration::from_secs(5);
 /// Poll interval while waiting for the helper.
 const SPAWN_POLL: Duration = Duration::from_millis(50);
-/// The broker's answer when the owner disconnected without replying.
-const NO_REPLY: &str = "org.freedesktop.DBus.Error.NoReply";
-
-/// The `D-Bus` error names meaning "the owner vanished around this call":
-/// `NameHasNoOwner` (the name was released between the probe and the
-/// routing - the original single-retry remedy) and [`NO_REPLY`] (the
-/// broker's answer for a call still pending when the owner's connection
-/// disconnected - empirically verified against `dbus-daemon` by the
-/// daemon's `tests/supersession.rs`; the stale-binary self-check's
-/// park-and-exit relies on it). A healthy `FlowShot` daemon replies within
-/// its 5 s startup reply window, far inside the bus's 25 s default
-/// timeout - but a WEDGED daemon (its bus task blocked) can time out
-/// while still holding the name, so a `NoReply` retry re-probes ownership
-/// first ([`retry_allowed`]): the same side-effecting call is never
-/// handed to a live owner twice.
-const OWNER_VANISHED_ERRORS: [&str; 2] = ["org.freedesktop.DBus.Error.NameHasNoOwner", NO_REPLY];
+/// The `D-Bus` error name meaning "the owner vanished mid-handshake".
+const NAME_HAS_NO_OWNER: &str = "org.freedesktop.DBus.Error.NameHasNoOwner";
 
 /// Runs one resolved invocation to completion.
 ///
@@ -156,62 +142,15 @@ async fn one_shot_launcher() -> Result<ExitCode, CliError> {
 }
 
 /// Forwards one wire call to the daemon, with a single full retry when the
-/// owner vanished around the call (the remedy the daemon's
-/// `OwnerVanished` classification names; see [`OWNER_VANISHED_ERRORS`]
-/// and [`retry_allowed`] for the wedged-owner guard).
+/// owner vanished between the probe and the call (the remedy the daemon's
+/// `OwnerVanished` classification names).
 async fn dispatch_bus(call: &WireCall, bus_address: Option<&str>) -> Result<ExitCode, CliError> {
     match dispatch_bus_once(call, bus_address).await {
-        Err(error) => {
-            let Some(name) = method_error_name(&error) else {
-                return Err(error);
-            };
-            if !OWNER_VANISHED_ERRORS.contains(&name) {
-                return Err(error);
-            }
-            let still_owned = name == NO_REPLY && name_owned(bus_address).await;
-            if !retry_allowed(name, still_owned) {
-                tracing::warn!(
-                    "NoReply but the daemon still owns the bus name (wedged?); not retrying the side-effecting call"
-                );
-                return Err(error);
-            }
+        Err(CliError::Dbus(zbus::Error::MethodError(name, _, _))) if name == NAME_HAS_NO_OWNER => {
             dispatch_bus_once(call, bus_address).await
         }
-        ok => ok,
+        other => other,
     }
-}
-
-/// Whether a single retry is allowed for a vanished-owner method error:
-/// `NameHasNoOwner` always (the name was already free, so the fresh
-/// handshake spawns a helper); [`NO_REPLY`] only when the ownership
-/// re-probe found the name free - a wedged-but-alive owner still holds
-/// it and must not be handed the same side-effecting call twice.
-fn retry_allowed(name: &str, still_owned: bool) -> bool {
-    if name == NO_REPLY {
-        !still_owned
-    } else {
-        OWNER_VANISHED_ERRORS.contains(&name)
-    }
-}
-
-/// The `D-Bus` method-error name carried by `error`, when it is one.
-fn method_error_name(error: &CliError) -> Option<&str> {
-    match error {
-        CliError::Dbus(zbus::Error::MethodError(name, _, _)) => Some(name.as_str()),
-        _ => None,
-    }
-}
-
-/// Fresh probe of the name ownership (the [`NO_REPLY`] disambiguation).
-/// An unreachable bus counts as unowned: the retry then fails honestly
-/// with its own connect error.
-async fn name_owned(bus_address: Option<&str>) -> bool {
-    let Ok(connection) = instance::connect(bus_address).await else {
-        return false;
-    };
-    let owned = name_has_owner(&connection).await;
-    close(connection).await;
-    owned
 }
 
 async fn dispatch_bus_once(
@@ -323,34 +262,5 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
 async fn close(connection: Connection) {
     if let Err(error) = connection.close().await {
         tracing::debug!(%error, "the bus connection close reported an error");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn no_reply_retries_only_when_the_name_is_free() {
-        // Wedged owner (still holds the name): NO retry - the same
-        // side-effecting capture must not run twice.
-        assert!(!retry_allowed(NO_REPLY, true));
-        // Dead owner (the broker released the name): the single retry
-        // re-handshakes and spawns a fresh helper.
-        assert!(retry_allowed(NO_REPLY, false));
-    }
-
-    #[test]
-    fn name_has_no_owner_always_retries() {
-        assert!(retry_allowed(
-            "org.freedesktop.DBus.Error.NameHasNoOwner",
-            false
-        ));
-    }
-
-    #[test]
-    fn other_method_errors_never_retry_through_this_path() {
-        assert!(!retry_allowed("org.freedesktop.DBus.Error.Failed", false));
-        assert!(!retry_allowed("org.freedesktop.DBus.Error.TimedOut", true));
     }
 }

@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn kernel_release_probe_never_panics_and_yields_a_value() {
         let release = probe_kernel_release();
-        assert_ne!(release, "");
+        assert!(!release.is_empty());
     }
 
     #[test]
@@ -214,17 +214,10 @@ mod tests {
 
     #[test]
     fn monitor_layout_probe_degrades_without_a_compositor() {
-        // Headless: neither WAYLAND_DISPLAY nor DISPLAY -> spawn fails ->
-        // None, no panic. On a headed session (Wayland OR X11) the probe
-        // returns the connector list or degrades to None (the probe drives
-        // the Wayland capture stack only; X11 reports no monitor layout -
-        // a documented degradation, see docs/setup-x11.md Known limits);
-        // both are valid.
+        // Headless: no WAYLAND_DISPLAY -> spawn fails -> None, no panic.
+        // On a live session it returns the connector list; both are valid.
         let layout = probe_monitor_layout();
-        let headed = ["WAYLAND_DISPLAY", "DISPLAY"]
-            .iter()
-            .any(|name| std::env::var_os(name).is_some_and(|value| !value.is_empty()));
-        if headed {
+        if std::env::var_os("WAYLAND_DISPLAY").is_some() {
             assert!(layout.is_none_or(|text| !text.is_empty()));
         } else {
             assert_eq!(layout, None);

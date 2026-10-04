@@ -531,7 +531,7 @@ fn case28_arrows_without_selection_are_inert() {
     let slot = WindowSlot::new(0);
     let report = key(&mut core, slot, KeyCode::ArrowLeft);
     assert_eq!(core.selection().rect(), None);
-    assert_eq!(report.actions, [] as [crate::input::Action; 0]);
+    assert!(report.actions.is_empty());
 }
 
 // ---------------------------------------------------------------------------

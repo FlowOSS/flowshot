@@ -17,7 +17,7 @@
 
 use std::time::Instant;
 
-use cosmic_text::{Buffer, FontSystem, Metrics, Shaping, SwashCache};
+use cosmic_text::{Buffer, Metrics, Shaping, SwashCache};
 use flowshot_core::geometry::{
     LogicalPoint, LogicalRect, OutputInfo, OutputLayout, PhysicalSize, Transform,
 };
@@ -260,46 +260,22 @@ fn caret_and_layout_sanity() {
     assert_eq!(session.caret().height, 32.0 * 1.2);
 }
 
-/// True when any face in the font database covers `c` - the environmental
-/// precondition for the CJK fallback test. Mirrors what fontconfig fallback
-/// can do at runtime: the same database, the same swash charmap lookup.
-fn any_font_covers(fonts: &mut FontSystem, c: char) -> bool {
-    let faces: Vec<_> = fonts
-        .db_mut()
-        .faces()
-        .map(|face| (face.id, face.weight))
-        .collect();
-    faces.into_iter().any(|(id, weight)| {
-        fonts
-            .get_font(id, weight)
-            .is_some_and(|font| font.as_swash().charmap().map(c) != 0)
-    })
-}
-
 #[test]
 fn cjk_glyphs_resolve_through_fontconfig_fallback() {
     // Plan acceptance: CJK font-fallback fixture - glyph coverage assert
     // via swash (a notdef/tofu glyph has id 0 and/or rasterizes empty).
-    //
-    // Environmental skip (never faked coverage): the fallback can only
-    // resolve when fontconfig actually has a CJK-capable font. When shaping
-    // yields notdef AND no face in the database covers the probe char (e.g.
-    // `fc-list :lang=zh` empty), the test skips with an explicit note - the
-    // codebase's SKIP convention (cf. the dbus-daemon-gated integration
-    // tests). A covering font in the db keeps every assertion below at full
-    // strength, so a genuinely broken fallback still fails; the scan runs
-    // only on the notdef path, so CJK-capable machines pay nothing.
     with_font_system(
         |fonts| {
             let mut cache = SwashCache::new();
             let mut buffer = Buffer::new(fonts, Metrics::new(POINT_16, LINE_16));
             buffer.set_text("日本語", &family_attrs(""), Shaping::Advanced, None);
             buffer.shape_until_scroll(fonts, false);
-            let mut glyph_ids = Vec::new();
+            let mut glyphs = 0usize;
             let mut inked = 0usize;
             for run in buffer.layout_runs() {
                 for glyph in run.glyphs {
-                    glyph_ids.push(glyph.glyph_id);
+                    glyphs += 1;
+                    assert_ne!(glyph.glyph_id, 0, "notdef (tofu) for a CJK char");
                     let physical = glyph.physical((0.0, run.line_y), 1.0);
                     if let Some(image) = cache.get_image(fonts, physical.cache_key).as_ref()
                         && image.placement.width > 0
@@ -309,17 +285,7 @@ fn cjk_glyphs_resolve_through_fontconfig_fallback() {
                     }
                 }
             }
-            if glyph_ids.contains(&0) && !any_font_covers(fonts, '日') {
-                eprintln!(
-                    "SKIP: fontconfig has no font covering CJK (fc-list :lang=zh is empty \
-                     on this machine) - CJK fallback test not run"
-                );
-                return;
-            }
-            for glyph_id in &glyph_ids {
-                assert_ne!(*glyph_id, 0, "notdef (tofu) for a CJK char");
-            }
-            assert_eq!(glyph_ids.len(), 3, "one glyph per CJK char");
+            assert_eq!(glyphs, 3, "one glyph per CJK char");
             assert_eq!(inked, 3, "every CJK glyph rasterized with ink");
         },
         (),

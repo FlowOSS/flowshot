@@ -271,9 +271,9 @@ impl NotifySink for GatedNotify<'_> {
 mod tests {
     use super::*;
     use crate::clipboard::MockClipboard;
-    use crate::clipboard::offer::{ClipboardOffer, MIME_PNG, MIME_TEXT_PLAIN, MIME_URI_LIST};
+    use crate::clipboard::offer::{MIME_PNG, MIME_TEXT_PLAIN, MIME_URI_LIST};
     use crate::error::ExportError;
-    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Mutex, PoisonError};
 
     #[derive(Debug)]
@@ -325,15 +325,12 @@ mod tests {
     }
 
     fn unique_tempdir() -> PathBuf {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
         let dir = std::env::temp_dir().join(format!(
-            "flowshot-actions-clipboard-test-{}-{}-{}",
+            "flowshot-actions-clipboard-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_nanos()),
-            counter
+                .map_or(0, |d| d.as_nanos())
         ));
         let _ = std::fs::create_dir_all(&dir);
         dir
@@ -447,7 +444,7 @@ mod tests {
         let fixture = Fixture::new(SaveConfig::default(), Ok(None));
         let report = run_post_capture(&[Action::CopyPath], &fixture.context()).await;
         assert_eq!(report.outcomes, [ActionOutcome::PathCopyNoSave]);
-        assert_eq!(fixture.mock.offers(), [] as [ClipboardOffer; 0]);
+        assert!(fixture.mock.offers().is_empty());
     }
 
     #[tokio::test]
@@ -504,7 +501,7 @@ mod tests {
         assert!(matches!(report.outcomes[0], ActionOutcome::Saved(_)));
         assert_eq!(report.outcomes[1], ActionOutcome::NotificationGated);
         // Gate covers ALL notifications: save's own toast stayed silent.
-        assert_eq!(fixture.notify.saved_paths(), [] as [PathBuf; 0]);
+        assert!(fixture.notify.saved_paths().is_empty());
         assert_eq!(fixture.notify.success_count(), 0);
         let _ = std::fs::remove_dir_all(&dir);
     }

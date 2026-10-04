@@ -1179,7 +1179,7 @@ out = "DROPPED(user-amendment-3): open-with goes through the portal OpenURI (moo
 id = "ini-useX11LegacyScreenshot"
 domain = "ini-key"
 item = "useX11LegacyScreenshot"
-out = "DROPPED(user-amendment-3): FlowShot's native X11 backend (flowshot-capture-x11) supersedes Flameshot's legacy-X11 toggle; no Flameshot ini import (reason superseded 2026-10-07: the original 'no X11 code path' rationale predates the x11-support branch)"
+out = "DROPPED(user-amendment-3): X11 is roadmap; FlowShot is Wayland-native with no X11 code path"
 
 [[row]]
 id = "ini-uiLanguage"

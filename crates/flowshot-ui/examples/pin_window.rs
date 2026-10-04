@@ -38,16 +38,15 @@ use flowshot_actions::{Clipboard, ExportError};
 use flowshot_core::config::SaveConfig;
 #[cfg(feature = "test-drive")]
 use flowshot_ui::pins::PinInput;
-use flowshot_ui::pins::{PinActionSink, PinBehavior, PinId, PinImage, PinRuntime, PinSpec};
+use flowshot_ui::pins::{
+    PinActionSink, PinBehavior, PinId, PinImage, PinRuntime, PinSpec, WindowCustomizer,
+};
 #[cfg(feature = "test-drive")]
 use winit::event::{MouseButton, TouchPhase};
 use winit::keyboard::KeyCode;
 #[cfg(feature = "test-drive")]
 use winit::keyboard::ModifiersState;
-
-mod common;
-
-use common::session_window_customizer;
+use winit::platform::wayland::WindowAttributesExtWayland;
 
 struct NoDialog;
 
@@ -293,16 +292,9 @@ fn main() -> ExitCode {
         }
         println!("REGISTRY alive={}", registry.len());
     }
-    let clipboard = match Clipboard::for_session() {
-        Ok(clipboard) => clipboard,
-        Err(error) => {
-            eprintln!("no clipboard session available: {error}");
-            return ExitCode::from(1);
-        }
-    };
     let bridge = Arc::new(ActionBridge {
         registry: Arc::clone(&registry),
-        clipboard,
+        clipboard: Clipboard::wayland(),
         save_config: SaveConfig {
             path: save_dir,
             path_fixed: true,
@@ -317,11 +309,11 @@ fn main() -> ExitCode {
             return ExitCode::from(1);
         }
     };
-    // The binary layer's platform hook: the session's shell-facing name the
-    // compositor/WM reports as the window class (the daemon wires the real
-    // binary through execute::window::session_window_customizer).
-    let runtime =
-        runtime.with_window_customizer(session_window_customizer("flowshot-pin", "FlowShot Pin"));
+    // The binary layer's platform hook: the Wayland app_id the compositor
+    // reports as the window class (todo 35 wires this in the real binary).
+    let runtime = runtime.with_window_customizer(WindowCustomizer::new(|attributes| {
+        attributes.with_name("flowshot-pin", "FlowShot Pin")
+    }));
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     match runtime.run() {

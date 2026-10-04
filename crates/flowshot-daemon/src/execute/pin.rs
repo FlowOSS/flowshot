@@ -20,8 +20,9 @@ use flowshot_core::Config;
 use flowshot_core::config::SaveConfig;
 use flowshot_ui::ExportedImage;
 use flowshot_ui::pins::{
-    PinActionSink, PinBehavior, PinId, PinImage, PinRuntime, PinSnapshot, PinSpec,
+    PinActionSink, PinBehavior, PinId, PinImage, PinRuntime, PinSnapshot, PinSpec, WindowCustomizer,
 };
+use winit::platform::wayland::WindowAttributesExtWayland;
 
 use super::post::PicturesDirDialog;
 use super::session::{self, PinParams, SessionKind, SessionResult, SessionSpec};
@@ -111,18 +112,12 @@ pub fn pin_child(spec: &SessionSpec) -> SessionResult {
         Err(error) => return failed(format!("pin image load failed: {error}")),
     };
     let config = session::load_config(spec.config_path.as_deref());
-    let clipboard = match Clipboard::for_session() {
-        Ok(clipboard) => clipboard,
-        Err(error) => return failed(format!("no clipboard session available: {error}")),
-    };
     let bridge = Arc::new(ActionBridge {
-        clipboard,
+        clipboard: Clipboard::wayland(),
         save_config: config.save.clone(),
     });
     let behavior = PinBehavior {
         min_size: f64::from(pin.min_size),
-        anchor: super::window::session_resize_anchor(),
-        client_resize: super::window::session_client_resize(),
         ..PinBehavior::default()
     };
     let spec_window = PinSpec {
@@ -133,10 +128,9 @@ pub fn pin_child(spec: &SessionSpec) -> SessionResult {
         Ok(runtime) => runtime,
         Err(error) => return failed(format!("pin runtime startup failed: {error}")),
     };
-    let runtime = runtime.with_window_customizer(super::window::session_window_customizer(
-        "flowshot-pin",
-        "FlowShot Pin",
-    ));
+    let runtime = runtime.with_window_customizer(WindowCustomizer::new(|attributes| {
+        attributes.with_name("flowshot-pin", "FlowShot Pin")
+    }));
     tracing::info!(pin = pin.id, "pin window session started");
     match runtime.run() {
         Ok(()) => {

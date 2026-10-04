@@ -129,8 +129,7 @@ ways.
 
 - Four platforms. 156 `Q_OS_WIN` / `Q_OS_MAC` / `Q_OS_LINUX` conditionals
   across 33 files, X11-specific code in 6 files, Wayland workarounds in 12.
-  FlowShot ships Wayland plus native X11 (headless capture and the
-  interactive UI); the porting gates live in
+  FlowShot is Wayland-only v1; the porting gates live in
   `docs/architecture/adr-006-cross-platform-gates.md`.
 - 49 translation files, 161,052 lines of Qt Linguist XML. FlowShot is
   English-only so far.

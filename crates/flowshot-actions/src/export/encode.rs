@@ -93,6 +93,8 @@ mod tests {
         let high = encode_jpeg(&img, 100).unwrap_or_default();
         assert_eq!(&low[..3], &[0xFF, 0xD8, 0xFF]);
         assert_eq!(&high[..3], &[0xFF, 0xD8, 0xFF]);
+        assert!(!low.is_empty());
+        assert!(!high.is_empty());
     }
 
     #[test]

@@ -282,7 +282,7 @@ mod tests {
         let path = PencilPath::new(vec![point(1.0, 1.0)], RED, 2.0);
         let mut sink = RecSink::default();
         path.paint(&mut sink);
-        assert_eq!(sink.calls, [] as [crate::scene::test_support::Call; 0]);
+        assert!(sink.calls.is_empty());
         assert_eq!(path.bounding_rect(), Rect::new(0.0, 0.0, 2.0, 2.0));
     }
 

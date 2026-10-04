@@ -85,10 +85,7 @@ mod tests {
         let registry = ToolRegistry::new();
         assert!(registry.create(ToolKind::Pencil).is_none());
         assert!(!registry.contains(ToolKind::Pencil));
-        assert_eq!(
-            registry.registered(),
-            [] as [crate::editor::kind::ToolKind; 0]
-        );
+        assert!(registry.registered().is_empty());
     }
 
     #[test]

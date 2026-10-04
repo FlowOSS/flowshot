@@ -40,11 +40,6 @@ flowshot-capture = { path = "../flowshot-capture" }
 # a dedicated wayland connection bounded by 10 s deadlines). Workspace
 # member edge only: zero new external crates in the lock.
 flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
-# X11 Phase A (plan decision #7): the session-routed X11 capture leg
-# (probe_x11 + X11Backend) in execute/backend.rs. Sibling of
-# flowshot-capture-wayland; workspace member edge only (x11rb is already
-# locked via flowshot-actions' X11 clipboard).
-flowshot-capture-x11 = { path = "../flowshot-capture-x11" }
 # Todo 38 executor: the overlay/pin/launcher/settings window runtimes, the
 # completion export boundary, and the launch vocabulary. The daemon is the
 # platform-integration layer (it already carries the wayland capture crates),

@@ -130,7 +130,7 @@ mod tests {
         assert_eq!(*color, Color::from_rgba8(0, 0, 0, 255));
         // Rest: white 1px dot segments, all axis-aligned on the rect edges.
         let dots = &commands[1..];
-        assert_ne!(dots, [] as [&Command; 0]);
+        assert!(!dots.is_empty());
         assert!(dots.iter().all(|command| matches!(
             command,
             Command::Stroke { shape: Shape::Line { .. }, width, color }

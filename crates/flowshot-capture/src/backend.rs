@@ -1,8 +1,7 @@
 //! The asynchronous capture backend contract.
 //!
 //! Every platform implementation (compositor protocols, `D-Bus` fast paths,
-//! portals, the X11 backend, and the roadmap Windows/`macOS` backends)
-//! implements
+//! portals, and the roadmap `X11`/Windows/`macOS` backends) implements
 //! [`CaptureBackend`]. The contract is async by design: native frame delivery,
 //! portal `D-Bus` round-trips, and OS pickers are all asynchronous, and a
 //! synchronous capture entry point would force blocking shims on every

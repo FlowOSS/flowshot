@@ -69,9 +69,6 @@ mod tests {
         .unwrap_or_else(|error| panic!("fixture must be valid: {error}"));
         let probe = StubProbe(vec![output.clone()]);
         assert_eq!(probe.probe(), vec![output]);
-        assert_eq!(
-            StubProbe(vec![]).probe(),
-            [] as [flowshot_core::geometry::OutputInfo; 0]
-        );
+        assert!(StubProbe(vec![]).probe().is_empty());
     }
 }
