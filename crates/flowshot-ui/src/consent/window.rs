@@ -1,7 +1,8 @@
 //! Event-loop ownership and cross-thread control for the consent dialog
 //! (the `LauncherWindow` shape): [`ConsentWindow::new`] verifies the
 //! session; [`ConsentWindow::run`] spawns the window on `Resumed` and
-//! blocks until any dismissal path records the choice.
+//! blocks until the dialog closes (a saved answer, a dismissal, or a
+//! programmatic exit).
 
 use winit::event_loop::{EventLoop, EventLoopProxy};
 
@@ -16,8 +17,9 @@ use super::options::ConsentWindowOptions;
 #[derive(Debug, Clone)]
 pub enum ConsentEvent {
     /// Gracefully close the dialog WITHOUT recording an answer (the
-    /// programmatic path - only a user dismissal writes the config, so an
-    /// operator-initiated close re-arms the daemon-startup prompt).
+    /// programmatic path - only "Save choice" writes the config, so an
+    /// operator-initiated close re-arms the daemon-startup prompt exactly
+    /// like a user dismissal).
     Exit,
 }
 
@@ -93,8 +95,8 @@ impl ConsentWindow {
     ///
     /// Returns the typed fatal error when startup failed inside the loop
     /// (window/GPU/surface creation) and [`UiError::EventLoop`] when the
-    /// loop itself errored. Every clean close (answer recorded OR
-    /// programmatic exit) returns `Ok`.
+    /// loop itself errored. Every clean close (saved answer, dismissal,
+    /// or programmatic exit) returns `Ok`.
     pub fn run(self) -> Result<(), UiError> {
         let Self {
             event_loop,

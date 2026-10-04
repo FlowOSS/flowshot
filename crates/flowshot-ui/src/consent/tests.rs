@@ -1,8 +1,8 @@
 //! Consent-dialog unit tests: the trigger rule (who shows the dialog
-//! when), the answer -> config state machine (written once, never shown
-//! again; "not now" = both false), and the widget layer driven headlessly
-//! through a bare [`egui::Context`] with synthetic raw input (the
-//! launcher-tests pattern).
+//! when), the answer -> config state machine (ONLY "Save choice" writes
+//! and settles; every dismissal records nothing and re-arms the prompt),
+//! and the widget layer driven headlessly through a bare [`egui::Context`]
+//! with synthetic raw input (the launcher-tests pattern).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -34,10 +34,15 @@ fn daemon_startup_is_the_only_prompting_surface_while_unanswered() {
 }
 
 #[test]
-fn no_surface_prompts_again_after_any_recorded_answer() {
-    // Given: every answer the dialog can write (saved choices + deferral)
+fn no_surface_prompts_again_after_a_saved_answer() {
+    // Given: the saved answers the dialog can write (the ONLY persisting
+    // path - dismissals write nothing)
     let answered = [
-        ConsentModel::deferred(),
+        TelemetryConfig {
+            enabled: false,
+            include_technical_details: false,
+            asked_on_first_launch: true,
+        },
         TelemetryConfig {
             enabled: true,
             include_technical_details: false,
@@ -96,21 +101,21 @@ fn save_choice_maps_both_checkboxes_independently() {
 }
 
 #[test]
-fn not_now_records_both_false_and_never_nags_again() {
-    // Given/When: the deferred answer ("Not now", Esc, window close) -
-    // written regardless of the pre-checked send box
-    let deferred = ConsentModel::deferred();
-    // Then: both flags false, the question recorded ...
-    assert_eq!(
-        deferred,
-        TelemetryConfig {
-            enabled: false,
-            include_technical_details: false,
-            asked_on_first_launch: true,
-        }
-    );
-    // ... so the trigger stays silent on every surface
-    assert!(!should_prompt(&deferred, PromptSurface::DaemonStartup));
+fn only_a_saved_choice_persists_and_dismissals_rearm_the_prompt() {
+    // Given: the fresh config of an install that dismissed the dialog
+    // ("Not now", Esc, or the window close)
+    let fresh = TelemetryConfig::default();
+    // Then: the dismissal carries NO config write ...
+    assert_eq!(ConsentAction::Dismiss.persisted(), None);
+    assert_eq!(ConsentAction::None.persisted(), None);
+    // ... so the question stays unanswered and the NEXT daemon start asks
+    // again (the user's re-ask directive: no silent-forever deferral)
+    assert!(should_prompt(&fresh, PromptSurface::DaemonStartup));
+    // While a save carries exactly the checkbox answers, settling the
+    // prompt on every surface
+    let saved = ConsentModel::default().saved_choice();
+    assert_eq!(ConsentAction::Save(saved).persisted(), Some(&saved));
+    assert!(!should_prompt(&saved, PromptSurface::DaemonStartup));
 }
 
 #[test]
@@ -185,18 +190,18 @@ fn first_frame_is_inert() {
 }
 
 #[test]
-fn escape_defers_without_touching_the_checkboxes() {
+fn escape_dismisses_without_touching_the_checkboxes() {
     let ctx = test_context();
     let mut model = ConsentModel::default();
     run_frame(&ctx, &mut model, Vec::new());
     // Drive BOTH boxes away from the defaults (send off, details on): Esc
-    // must still defer, never save the current answers.
+    // must still dismiss, never save the current answers.
     *model.send_mut() = false;
     *model.details_mut() = true;
     assert_eq!(
         run_frame(&ctx, &mut model, vec![key_event(egui::Key::Escape)]),
-        ConsentAction::NotNow,
-        "Esc is a dismissal, not a save of the current answers"
+        ConsentAction::Dismiss,
+        "Esc is a dismissal: it closes without recording anything"
     );
 }
 

@@ -27,9 +27,12 @@ pub enum PromptSurface {
 /// The trigger rule: prompt exactly while the question is unanswered, and
 /// only on the daemon-startup surface.
 ///
-/// Any recorded answer (`asked_on_first_launch = true` - "Save choice" AND
-/// every user dismissal path) silences it for good; only a killed process
-/// (no answer recorded) or a factory Reset legitimately re-arms it.
+/// ONLY a saved answer (`asked_on_first_launch = true`, written by "Save
+/// choice") silences it for good. Every dismissal ("Not now", Esc, the
+/// window close) records NOTHING, so the next daemon start asks again -
+/// the re-ask contract the user directed over a silent-forever deferral;
+/// the settings window's Telemetry card is the permanent control. A killed
+/// process or a factory Reset re-arms it the same way.
 #[must_use]
 pub fn should_prompt(config: &TelemetryConfig, surface: PromptSurface) -> bool {
     match surface {
@@ -44,9 +47,10 @@ pub fn should_prompt(config: &TelemetryConfig, surface: PromptSurface) -> bool {
 /// both-unchecked GDPR-conservative default): "send telemetry" starts
 /// CHECKED - the recommended tier-1 opt-in the user can uncheck before
 /// saving; the GDPR-relevant details box starts UNCHECKED (recommended
-/// off). Consent remains an AFFIRMATIVE ACT: nothing is sent until the
-/// user saves, and every dismissal path writes [`Self::deferred`] (both
-/// false) regardless of the pre-check.
+/// off). Consent remains an AFFIRMATIVE ACT: nothing is sent - and
+/// nothing is written - until the user saves; every dismissal path
+/// records nothing regardless of the pre-check, and the next daemon
+/// start asks again.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsentModel {
     send: bool,
@@ -63,17 +67,6 @@ impl Default for ConsentModel {
 }
 
 impl ConsentModel {
-    /// The deferred answer ("Not now", Esc, the window close button): both
-    /// flags false, the question recorded - the dialog never nags again.
-    #[must_use]
-    pub const fn deferred() -> TelemetryConfig {
-        TelemetryConfig {
-            enabled: false,
-            include_technical_details: false,
-            asked_on_first_launch: true,
-        }
-    }
-
     /// The "send telemetry" checkbox.
     #[must_use]
     pub const fn send(&self) -> bool {

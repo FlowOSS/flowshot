@@ -24,8 +24,9 @@ pub const OPTION_DETAILS_LABEL: &str = "Include detailed technical information";
 pub const OPTION_DETAILS_HINT: &str =
     "GPU model, kernel version, monitor layout, install ID — may be identifying under GDPR.";
 
-/// Records the checkbox answers (`asked_on_first_launch` flips true).
+/// Records the checkbox answers (`asked_on_first_launch` flips true) -
+/// the only path that settles the question.
 pub const SAVE_CHOICE: &str = "Save choice";
-/// Defers permanently: both flags false, the question recorded - the
-/// dialog never nags again.
+/// Dismisses without recording anything: the next daemon start asks
+/// again (the settings Telemetry card is the permanent control).
 pub const NOT_NOW: &str = "Not now";

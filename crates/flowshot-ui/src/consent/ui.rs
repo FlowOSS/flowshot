@@ -23,26 +23,49 @@ use super::model::ConsentModel;
 use super::strings;
 
 /// What a rendered consent frame asks the window layer to do.
+///
+/// The re-ask contract (USER DIRECTIVE 2026-10-04, module docs): ONLY
+/// [`Self::Save`] settles the question. Every dismissal - the "Not now"
+/// button, Esc, or the window close - is [`Self::Dismiss`]: it closes the
+/// dialog and persists NOTHING, so the next daemon start asks again.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ConsentAction {
     /// Nothing; keep editing.
     #[default]
     None,
     /// Record the checkbox answers ("Save choice" button or Enter);
-    /// carries the config write for the persistence seam.
+    /// carries the config write for the persistence seam - the ONLY
+    /// action that settles the prompt.
     Save(TelemetryConfig),
-    /// Record the deferred choice ("Not now" button, Esc, or the window
-    /// close - the window layer maps every dismissal here).
-    NotNow,
+    /// Close without recording ("Not now" button, Esc, or the window
+    /// close - the window layer maps every dismissal here). No config
+    /// write: `asked_on_first_launch` stays false and the daemon-startup
+    /// prompt re-arms. The settings Telemetry card is the permanent
+    /// control; the dialog deliberately has no "don't ask again".
+    Dismiss,
+}
+
+impl ConsentAction {
+    /// The config write this action carries: [`Self::Save`] is the only
+    /// persisting action - [`Self::Dismiss`] and [`Self::None`] write
+    /// nothing (the re-ask contract). The frame dispatcher routes through
+    /// this accessor, so the unit tests pin the persistence seam itself.
+    #[must_use]
+    pub const fn persisted(&self) -> Option<&TelemetryConfig> {
+        match self {
+            Self::None | Self::Dismiss => None,
+            Self::Save(choice) => Some(choice),
+        }
+    }
 }
 
 /// Renders the dialog body; returns the frame's window-level action.
 pub(super) fn show(ui: &mut Ui, model: &mut ConsentModel, m: &FormMetrics) -> ConsentAction {
     // Keyboard shortcuts are checked BEFORE the widgets render (the
-    // launcher's Enter convention): Esc defers, Enter saves the current
-    // answers - both record the choice exactly once.
+    // launcher's Enter convention): Esc dismisses (records nothing),
+    // Enter saves the current answers.
     if ui.input(|input| input.key_pressed(Key::Escape)) {
-        return ConsentAction::NotNow;
+        return ConsentAction::Dismiss;
     }
     if ui.input(|input| input.key_pressed(Key::Enter)) {
         return ConsentAction::Save(model.saved_choice());
@@ -144,7 +167,7 @@ fn button_row(ui: &mut Ui, m: &FormMetrics, model: &ConsentModel) -> ConsentActi
             action = ConsentAction::Save(model.saved_choice());
         }
         if ui.button(strings::NOT_NOW).clicked() {
-            action = ConsentAction::NotNow;
+            action = ConsentAction::Dismiss;
         }
     });
     action

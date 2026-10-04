@@ -10,14 +10,15 @@ use flowshot_core::tokens::DesignTokens;
 use crate::egui_host::ThemeMode;
 use crate::pins::WindowCustomizer;
 
-/// Receives the chosen telemetry config when the dialog closes through ANY
-/// user dismissal path ("Save choice", "Not now", Esc, the window close) -
-/// exactly one invocation per dialog lifetime. The binary layer merges it
-/// into the loaded config and persists through
-/// [`Config::save`](flowshot_core::config::Config::save) (the
-/// migration-safe save path); the lib never writes the file. A programmatic
-/// [`ConsentHandle::request_exit`](super::ConsentHandle::request_exit) is
-/// NOT a user answer and invokes nothing.
+/// Receives the chosen telemetry config when the user SAVES ("Save
+/// choice" or Enter) - at most one invocation per dialog lifetime, and
+/// the ONLY persisting path: every dismissal ("Not now", Esc, the window
+/// close) and a programmatic
+/// [`ConsentHandle::request_exit`](super::ConsentHandle::request_exit)
+/// invoke NOTHING (no config write; the daemon-startup prompt re-arms).
+/// The binary layer merges the choice into the loaded config and persists
+/// through [`Config::save`](flowshot_core::config::Config::save) (the
+/// migration-safe save path); the lib never writes the file.
 #[derive(Clone)]
 pub struct ConsentCallback(Arc<dyn Fn(&TelemetryConfig) + Send + Sync + 'static>);
 

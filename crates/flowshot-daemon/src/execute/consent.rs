@@ -315,13 +315,14 @@ mod tests {
         // Given: the first-launch shape - no config directory at all.
         let dir = scratch_dir("fresh");
         let path = dir.join("config").join("flowshot").join("flowshot.toml");
-        // When: the dialog records the deferred answer.
-        let deferred = flowshot_ui::consent::ConsentModel::deferred();
-        record_choice(&path, deferred);
+        // When: the dialog records the saved answer (the ONLY writing
+        // path - a dismissal records nothing and re-arms the prompt).
+        let saved = flowshot_ui::consent::ConsentModel::default().saved_choice();
+        record_choice(&path, saved);
         // Then: the tree was created and the answer recorded, so the
-        // dialog never nags again.
+        // dialog never asks again.
         let reloaded = Config::load(&path).unwrap();
-        assert_eq!(reloaded.telemetry, deferred);
+        assert_eq!(reloaded.telemetry, saved);
         assert!(reloaded.telemetry.asked_on_first_launch);
         std::fs::remove_dir_all(&dir).ok();
     }

@@ -4,8 +4,8 @@
 //! and the child must dispatch it into the dialog leg - which fails
 //! TYPED and invisible in a headless environment (the display-server
 //! check fires before any window exists) while recording NO answer (a
-//! failed prompt re-arms the daemon-startup dialog; only a user
-//! dismissal writes the config).
+//! failed prompt re-arms the daemon-startup dialog; only a saved
+//! choice writes the config).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
