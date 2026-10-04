@@ -398,7 +398,7 @@ fn tab_vocabulary_covers_the_four_f12_tabs() {
 
 // --- the settings-rework layout grid + theme projection -------------------
 
-use super::layout::FormMetrics;
+use super::layout::{FormMetrics, PaletteMetrics, plan_palette};
 use flowshot_core::config::UiConfig;
 
 #[test]
@@ -611,4 +611,119 @@ fn label_column_fits_every_row_label_on_one_line() {
             "{label:?} shapes to {width}px but the column is {label_width}px"
         );
     }
+}
+
+// --- the palette swatch grid (manual row chunking, no horizontal_wrapped) ---
+
+/// The palette cell geometry, measured headlessly the same way
+/// `palette_editor` measures it live: the swatch is egui's color button
+/// (exactly `interact_size.x`), the remove/add buttons are galley +
+/// 2*`button_padding` (egui's button frame inner margin).
+fn measured_palette_metrics() -> PaletteMetrics {
+    let ctx = egui::Context::default();
+    ctx.set_fonts(theme::fonts());
+    let tokens = DesignTokens::default();
+    let style = theme::settings_style(&tokens, &UiConfig::default(), ThemeMode::Dark);
+    let m = FormMetrics::from_tokens(&tokens);
+    let (mut gap, mut swatch_w, mut padding) = (0.0_f32, 0.0_f32, 0.0_f32);
+    ctx.run_ui(egui::RawInput::default(), |ui| {
+        ui.set_style(style.clone());
+        gap = ui.spacing().item_spacing.x;
+        swatch_w = ui.spacing().interact_size.x;
+        padding = ui.spacing().button_padding.x;
+    })
+    .drop_without_applying_deltas();
+    let font = egui::FontId::proportional(m.base_size());
+    let galley_w = |text: &str| {
+        ctx.fonts_mut(|fonts| {
+            fonts
+                .layout_no_wrap(text.into(), font.clone(), egui::Color32::WHITE)
+                .size()
+                .x
+        })
+    };
+    PaletteMetrics {
+        cell_w: swatch_w + gap + galley_w(super::strings::BUTTON_REMOVE) + 2.0 * padding,
+        gap,
+        add_w: galley_w(super::strings::BUTTON_ADD_SWATCH) + 2.0 * padding,
+    }
+}
+
+/// The number of rows carrying swatches (a trailing add-button-only row,
+/// present when the last swatch row is full, is not counted).
+fn swatch_row_count(grid: &super::layout::PaletteGrid) -> usize {
+    grid.rows
+        .iter()
+        .filter(|row| row.swatches.start < row.swatches.end)
+        .count()
+}
+
+/// The control-column width the palette grid gets at window width `win` (the
+/// card inner width minus the label column and gutter), matching
+/// `palette_editor`'s budget. The reserved solid scrollbar takes 8px.
+fn palette_control_w(win: f32) -> f32 {
+    let m = FormMetrics::from_tokens(&DesignTokens::default());
+    let scroll = win - 2.0 * m.window_margin() - 8.0;
+    let inner = m.content_width(scroll) - 2.0 * m.card_padding();
+    (inner - m.label_width(inner) - m.gutter()).max(0.0)
+}
+
+#[test]
+fn palette_grid_chunks_the_real_20_swatch_palette_within_the_control_column() {
+    // Given: the real default palette (20 swatches) and the measured geometry
+    let swatches = Config::default().editor.color_palette.len();
+    assert_eq!(swatches, 20, "the default palette must ship 20 swatches");
+    let metrics = measured_palette_metrics();
+
+    // When: planned across a wide-to-narrow window sweep
+    let mut prev_cpr = usize::MAX;
+    for win in [1280.0_f32, 900.0, 700.0, 500.0, 460.0, 400.0] {
+        let control_w = palette_control_w(win);
+        let grid = plan_palette(control_w, metrics, swatches);
+        // Then: at least one cell per row (degenerate-safe, never zero)
+        assert!(grid.cells_per_row >= 1, "win {win}: zero cells per row");
+        // And: cells_per_row never grows as the window narrows (monotone)
+        assert!(
+            grid.cells_per_row <= prev_cpr,
+            "win {win}: cells_per_row grew while narrowing"
+        );
+        prev_cpr = grid.cells_per_row;
+        // And: the swatches occupy exactly ceil(20 / cells_per_row) rows
+        assert_eq!(
+            swatch_row_count(&grid),
+            swatches.div_ceil(grid.cells_per_row),
+            "win {win}: wrong swatch row count"
+        );
+        // And: every row fits the control column (containment) whenever the
+        // column is at least one cell wide - below that the lone cell
+        // degrades alone (documented in plan_palette)
+        if control_w >= metrics.cell_w.max(metrics.add_w) {
+            for row in &grid.rows {
+                assert!(
+                    row.width <= control_w + f32::EPSILON,
+                    "win {win}: row width {} overflows control {control_w}",
+                    row.width
+                );
+            }
+        }
+    }
+
+    // And: the grid actually shrinks its cells-per-row across the sweep, with
+    // the wide QA width pinned at 3-up / 7 rows (regression guard)
+    let wide = plan_palette(palette_control_w(1280.0), metrics, swatches);
+    let narrow = plan_palette(palette_control_w(460.0), metrics, swatches);
+    assert_eq!(wide.cells_per_row, 3, "1280 must be 3-up");
+    assert_eq!(narrow.cells_per_row, 2, "460 must shrink to 2-up");
+    assert_eq!(swatch_row_count(&wide), 7, "20 swatches / 3-up = 7 rows");
+}
+
+#[test]
+fn palette_grid_degrades_to_one_cell_per_row_when_narrower_than_a_cell() {
+    // Given: a control column narrower than a single swatch cell
+    let metrics = measured_palette_metrics();
+    // When: planned below one cell width
+    let grid = plan_palette(metrics.cell_w - 1.0, metrics, 20);
+    // Then: it still renders one cell per row (never zero, never a div-by-zero)
+    assert_eq!(grid.cells_per_row, 1);
+    assert_eq!(swatch_row_count(&grid), 20);
 }
