@@ -1,8 +1,9 @@
 //! The consent frame pipeline: acquire -> egui frame -> paint -> present,
 //! and the dispatch of the frame's [`ConsentAction`]. Every answering path
-//! (button, Enter, Esc, window close) funnels through [`choose`], which
-//! invokes the persistence seam and exits - one action per frame plus the
-//! exit-on-dispatch is what makes the callback fire exactly once.
+//! (button, Enter, Esc, window close) funnels through [`choose`]: ONLY a
+//! save invokes the persistence seam, a dismissal exits without any write,
+//! and both exit the loop - one action per frame plus the exit-on-dispatch
+//! is what makes the callback fire at most once.
 
 use std::time::{Duration, Instant};
 
@@ -12,7 +13,6 @@ use crate::egui_host::{cursor_icon, points, scale_to_ppp, theme};
 use crate::settings::FormMetrics;
 
 use super::app::ConsentApp;
-use super::model::ConsentModel;
 use super::ui::{self as widgets, ConsentAction};
 
 pub(super) fn render(app: &mut ConsentApp, event_loop: &ActiveEventLoop) {
@@ -94,22 +94,28 @@ pub(super) fn render(app: &mut ConsentApp, event_loop: &ActiveEventLoop) {
     choose(app, event_loop, action);
 }
 
-/// Dispatches one answered action: the persistence seam receives the
-/// chosen config (the deferred one for "Not now") and the loop exits.
+/// Dispatches one answered action through the [`ConsentAction::persisted`]
+/// seam: a save hands the choice to the callback, a dismissal closes
+/// WITHOUT any config write (the daemon-startup prompt re-arms), and
 /// [`ConsentAction::None`] keeps the dialog open.
 pub(super) fn choose(app: &mut ConsentApp, event_loop: &ActiveEventLoop, action: ConsentAction) {
-    let choice = match action {
-        ConsentAction::None => return,
-        ConsentAction::Save(choice) => choice,
-        ConsentAction::NotNow => ConsentModel::deferred(),
-    };
-    tracing::info!(
-        enabled = choice.enabled,
-        technical_details = choice.include_technical_details,
-        "telemetry consent recorded"
-    );
-    if let Some(callback) = &app.options.on_choice {
-        callback.invoke(choice);
+    if matches!(action, ConsentAction::None) {
+        return;
+    }
+    match action.persisted() {
+        Some(choice) => {
+            tracing::info!(
+                enabled = choice.enabled,
+                technical_details = choice.include_technical_details,
+                "telemetry consent recorded"
+            );
+            if let Some(callback) = &app.options.on_choice {
+                callback.invoke(*choice);
+            }
+        }
+        None => {
+            tracing::info!("consent dismissed without an answer; the next daemon start asks again");
+        }
     }
     event_loop.exit();
 }

@@ -348,3 +348,18 @@ IGNORE it until the user says so themselves. Todo 39 stays [~] user-gated.
   --config with empty actions.
 - note_gpu_adapter pass-through STILL unwired (prior entries unchanged — the consent task
   touched neither gpu.rs nor the session-child GPU legs).
+
+## 2026-10-04 (consent-polish): doc-wording follow-ups (OUT of the task's file scope)
+- docs/config-reference.md [telemetry] intro: "The first-launch consent dialog asks once and
+  writes the answers back to this group" — STALE after the re-ask directive: the dialog asks on
+  EVERY daemon start until answered, and only "Save choice" writes back (dismissals write
+  nothing). The asked_on_first_launch row ("records that the consent dialog was answered so it
+  is never shown again") is still true of the flag but should say only a SAVED answer sets it.
+- crates/flowshot-core/src/config.rs TelemetryConfig rustdoc: "asked_on_first_launch records
+  that the consent dialog was answered so it is asked exactly once" — same wording fix
+  (answered = saved; dismissals re-ask). core was out of the consent-polish scope.
+- HYPERLAND 0.56 QA GOTCHA (for future live runs): `hyprctl dispatch closewindow address:0x..`
+  is DEAD — dispatch args are Lua now; the working form is
+  `hyprctl dispatch "hl.dsp.window.close({window='address:0x..'})"` (table arg; a bare string
+  arg silently no-ops as "ok"). The consent-wiring-era evidence pattern notes still cite the
+  old syntax.

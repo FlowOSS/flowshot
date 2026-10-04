@@ -17,16 +17,19 @@
 //! next daemon startup asks, and the settings window's Telemetry card
 //! offers the same choice at any time.
 //!
-//! # Answer contract (recorded exactly once)
+//! # Answer contract (only "Save choice" settles)
 //!
-//! EVERY user dismissal path records an answer through the
-//! [`ConsentCallback`] seam: "Save choice" (or Enter) writes the two
-//! checkbox answers; "Not now", Esc, and the window close button all write
-//! the deferred choice ([`ConsentModel::deferred`]: both flags false) -
-//! always with `asked_on_first_launch = true`, so the dialog never nags
-//! again. A programmatic [`ConsentHandle::request_exit`] is NOT an answer
-//! (nothing is written; the prompt re-arms), and a killed process records
-//! nothing either - honest, because nothing was chosen.
+//! USER DIRECTIVE 2026-10-04 (re-ask over silent-forever): ONLY "Save
+//! choice" (or Enter) records an answer through the [`ConsentCallback`]
+//! seam - the two checkbox answers with `asked_on_first_launch = true`,
+//! so the dialog never asks again. "Not now", Esc, and the window close
+//! button are DISMISSALS: they close the dialog and write NOTHING (the
+//! flag stays false), so the next daemon start asks again. A programmatic
+//! [`ConsentHandle::request_exit`] and a killed process record nothing
+//! either - honest, because nothing was chosen. To bound the re-asking
+//! there is deliberately NO "don't ask again" path on the dialog: the
+//! settings window's Telemetry card is the permanent control, and the
+//! pitch copy says the choice can change there at any time.
 //!
 //! # Checkbox defaults (user directive)
 //!
@@ -35,10 +38,11 @@
 //! recommended tier-1 opt-in, and the user can uncheck it before saving.
 //! "Include detailed technical information" (potentially identifying under
 //! GDPR) starts UNCHECKED - recommended off. Consent remains an
-//! affirmative act either way: nothing is sent until the user clicks a
-//! button, and every dismissal path records the deferred choice (both
-//! false) regardless of the pre-check. The two checkboxes are independent
-//! config fields; the daemon gates the tier-2 payload on both anyway.
+//! affirmative act either way: nothing is sent - and nothing is written -
+//! until the user saves; every dismissal path records nothing regardless
+//! of the pre-check (the prompt re-arms). The two checkboxes are
+//! independent config fields; the daemon gates the tier-2 payload on both
+//! anyway.
 //!
 //! # Persistence seam (read-only config consumption)
 //!

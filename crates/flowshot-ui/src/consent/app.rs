@@ -183,9 +183,10 @@ impl ApplicationHandler<ConsentEvent> for ConsentApp {
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
-            // The window close button IS a user dismissal: it records the
-            // deferred choice, exactly like "Not now" (module header).
-            WindowEvent::CloseRequested => frame::choose(self, event_loop, ConsentAction::NotNow),
+            // The window close button is a dismissal: it closes WITHOUT
+            // recording anything, exactly like "Not now" (module header -
+            // the next daemon start asks again).
+            WindowEvent::CloseRequested => frame::choose(self, event_loop, ConsentAction::Dismiss),
             WindowEvent::Destroyed => event_loop.exit(),
             WindowEvent::RedrawRequested => frame::render(self, event_loop),
             other => {
@@ -193,7 +194,7 @@ impl ApplicationHandler<ConsentEvent> for ConsentApp {
                     egui.input_mut().on_window_event(&other)
                 });
                 match signal {
-                    WindowSignal::Close => frame::choose(self, event_loop, ConsentAction::NotNow),
+                    WindowSignal::Close => frame::choose(self, event_loop, ConsentAction::Dismiss),
                     WindowSignal::Resized => {
                         self.resize();
                         if let Some(window) = &self.window {
