@@ -126,8 +126,12 @@ pub enum SessionResult {
 }
 
 /// Single-active-window-session gate (the dropped
-/// `allowMultipleGuiInstances` semantic: ONE GUI session at a time;
-/// direct window-less captures are not gated).
+/// `allowMultipleGuiInstances` semantic: ONE exclusive GUI session at a
+/// time; direct window-less captures are not gated). Pin sessions are
+/// EXEMPT: pins are not exclusive GUI sessions - the multi-pin registry
+/// and the `pins_alive` lifecycle reason are built for coexisting pins,
+/// and a new capture must work while pins float (Flameshot parity, where
+/// the single-instance option gates the capture GUI, never pin widgets).
 static SESSION_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 struct SessionGuard;
@@ -160,7 +164,13 @@ impl Drop for SessionGuard {
 /// when the child produced no parsable result, [`ExecuteError::Usage`]
 /// when another window session is already active.
 pub async fn spawn(spec: SessionSpec) -> Result<SessionResult, ExecuteError> {
-    let _guard = SessionGuard::acquire()?;
+    let _guard = match spec.kind {
+        SessionKind::Pin => None,
+        SessionKind::Overlay
+        | SessionKind::Launcher
+        | SessionKind::Settings
+        | SessionKind::Consent => Some(SessionGuard::acquire()?),
+    };
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| ExecuteError::Task(format!("clock before the epoch: {error}")))?

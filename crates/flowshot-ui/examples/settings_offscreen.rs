@@ -19,7 +19,7 @@ use flowshot_ui::gpu::{GpuContext, new_instance};
 use flowshot_ui::settings::{SettingsModel, Tab, ThemeMode, render_offscreen};
 
 const WIDTH: u32 = 1280;
-const HEIGHT: u32 = 800;
+const HEIGHT: u32 = 1600;
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()

@@ -252,7 +252,7 @@ fn drags_outside_every_bound_commit_nothing() {
         ..env()
     };
     stroke(&mut ed, &env, (40.0, 40.0), (60.0, 44.0));
-    assert!(ed.pixel_effects().is_empty());
+    assert_eq!(ed.pixel_effects(), []);
     assert_eq!(ed.undo_stack().undo_depth(), 0, "no unit for a no-op");
 }
 
@@ -265,7 +265,7 @@ fn zero_length_and_one_pixel_drags_are_noops() {
     ed.pointer_release(&env(), MouseButton::Left, at(10.0, 10.0));
     // 1x1 region: the F27 grid collapses to zero (failure QA).
     stroke(&mut ed, &env(), (10.0, 10.0), (11.0, 11.0));
-    assert!(ed.pixel_effects().is_empty());
+    assert_eq!(ed.pixel_effects(), []);
     assert_eq!(ed.undo_stack().undo_depth(), 0);
 }
 
@@ -274,7 +274,7 @@ fn no_installed_frame_commits_nothing_and_does_not_panic() {
     let mut ed = editor();
     ed.activate_tool(ToolKind::Pixelate);
     stroke(&mut ed, &env(), (4.0, 4.0), (40.0, 30.0));
-    assert!(ed.pixel_effects().is_empty());
+    assert_eq!(ed.pixel_effects(), []);
 }
 
 // ---------------------------------------------------------------------------

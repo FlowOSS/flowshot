@@ -12,8 +12,8 @@
 //!   transform, never an averaged scale).
 //! - [`CapabilityProbe`] + [`negotiate()`]: the backend ladder
 //!   (`ext-image-copy-capture` -> `wlr-screencopy` -> `KWin ScreenShot2` ->
-//!   portal `ScreenCast` -> portal `Screenshot`), filtered by what the session
-//!   actually offers, with a config `force_backend` override.
+//!   portal `ScreenCast` -> portal `Screenshot` -> `X11`), filtered by what
+//!   the session actually offers, with a config `force_backend` override.
 //! - [`MockBackend`]: a fixture-driven implementation for downstream tests.
 //!
 //! Geometry types ([`flowshot_core::geometry::OutputInfo`], rectangles, transforms) are reused from

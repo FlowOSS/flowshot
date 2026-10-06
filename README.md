@@ -2,7 +2,10 @@
 
 # FlowShot
 
-FlowShot is a screenshot tool for Linux/Wayland, built by FlowOSS. It covers the
+FlowShot is a screenshot tool for Linux/Wayland, built by FlowOSS. X11
+sessions are covered for headless capture (full/screen/region with copy, save,
+raw output); the interactive editor, pins, and dialogs are Wayland-only in
+this release. It covers the
 Flameshot feature set (region, fullscreen, and per-monitor capture; the full
 annotation kit; pins; upload; tray; global hotkeys) with the Wayland breakage
 that tool never fixed actually repaired, and with its own deliberately
@@ -22,7 +25,7 @@ and each fix is verified on a live compositor, not assumed:
   monitor continues onto the next.
 - **Mouse-position-aware capture** on Hyprland, wlroots compositors, and COSMIC:
   the capture starts pre-selected at the output (or region) under the cursor.
-  The position comes from the compositor's own protocols, never from X11.
+  The position comes from the compositor's own protocols, not from Xwayland.
 - **Clipboard that survives.** The background daemon owns the clipboard offer,
   so pasted content stays valid after the capture window closes.
 - **Correct pixels on mixed-DPI setups.** All geometry is physical-pixels
@@ -32,7 +35,8 @@ and each fix is verified on a live compositor, not assumed:
 - **A crosshair you can actually see**, and a `--hide-cursor` option.
 - **Built-in global shortcuts** through the XDG GlobalShortcuts portal, with
   paste-ready compositor binds as the fallback.
-- **Never a forced Xwayland fallback.** There is no X11 code path.
+- **Never a forced Xwayland fallback.** The X11 support that ships is native
+  X11 (xcb `GetImage`), and a Wayland session never routes to it.
 
 The per-desktop reality, including the places where a compositor's protocols
 force an honest degradation (GNOME), lives in [docs/](docs/).
@@ -103,7 +107,8 @@ cargo build --release
 ./target/release/flowshot --help
 ```
 
-Runtime requirements: a Wayland compositor, a D-Bus session bus, and (for the
+Runtime requirements: a Wayland compositor or (headless capture only) an X11
+server, a D-Bus session bus, and (for the
 portal features) `xdg-desktop-portal` plus your desktop's portal backend. The
 tray needs an SNI host (waybar's tray module, KDE Plasma's system tray, the
 GNOME AppIndicator extension).
@@ -199,8 +204,9 @@ Every key, its type, default, and range: [docs/config-reference.md](docs/config-
 | niri | wlr-screencopy | No (first-motion fallback) | ICC support is an open upstream PR |
 | KDE Plasma | KWin ScreenShot2 D-Bus | First-motion fallback | Needs the packaged `.desktop` file. [Guide](docs/setup-kde.md) |
 | GNOME | XDG portal (Screenshot / ScreenCast) | No (GNOME exposes no cursor-position API) | Portal picker appears on some paths. [Guide](docs/setup-gnome.md) |
+| i3 / X11 desktops | xcb GetImage (MIT-SHM fd-passing fast path) | One-shot (XQueryPointer; `--region at-cursor` is Phase B) | Headless capture only in this release — editor/pins/dialogs need Wayland. [Guide](docs/setup-x11.md) |
 
-The runtime picks the backend by probing the live compositor, not from this
+The runtime picks the backend by probing the live session, not from this
 table; a compositor that grows protocol support is picked up without a
 FlowShot update. Details: [docs/architecture/adr-002-capture-backend-ladder.md](docs/architecture/adr-002-capture-backend-ladder.md).
 
@@ -226,7 +232,11 @@ The capture backends, overlay, annotation editor, pins, export actions,
 daemon, tray, shortcuts, settings UI, launcher dialog, and the CLI wired end
 to end through the daemon are implemented and verified (unit/property tests
 plus live-session QA; see
-[docs/verification.md](docs/verification.md)). Still open before the first
+[docs/verification.md](docs/verification.md)). X11 Phase A shipped
+2026-10-04: the headless capture path (full/screen/region, copy/save/raw/
+print-geometry/delay, daemon-owned clipboard) is live-verified on i3,
+evidence bundle `.omo/evidence/x11-phase-a/`; the interactive UI on X11
+remains Phase B. Still open before the first
 release:
 
 - Packaging: AUR, Nix flake, Flatpak (**TBD**).
@@ -237,6 +247,6 @@ release:
 
 What FlowShot deliberately does not do: no screen recording, no OCR, no scroll
 capture, no telemetry, no update checker, no importing Flameshot's old config,
-no GNOME shell extension, no X11/Windows/macOS code yet (the porting gates and
-roadmap are in
+no GNOME shell extension, no Windows/macOS code yet (the porting gates and
+roadmap, including the shipped X11 phase, are in
 [docs/architecture/adr-006-cross-platform-gates.md](docs/architecture/adr-006-cross-platform-gates.md)).

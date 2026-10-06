@@ -26,6 +26,7 @@ use zbus::zvariant::OwnedValue;
 use crate::command::{CommandSink, DaemonCommand};
 use crate::lifecycle::Clock;
 use crate::request::CaptureRequest;
+use crate::stale::SupersessionGate;
 use crate::state::DaemonState;
 
 /// The well-known bus name (single-instance token: acquisition is atomic
@@ -38,6 +39,21 @@ pub const OBJECT_PATH: &str = "/org/flowoss/FlowShot";
 /// The interface name (methods are exposed on the same name).
 pub const IFACE: &str = "org.flowoss.FlowShot";
 
+/// What the bus interface observes and triggers beyond the command sink
+/// (grouped wiring object - the [`crate::shortcut::ShortcutWiring`] /
+/// [`crate::tray::TrayWiring`] precedent).
+#[derive(Debug)]
+pub struct BusWiring {
+    /// Shared daemon state (the activity stamp).
+    pub state: Arc<DaemonState>,
+    /// The activity stamp's time source.
+    pub clock: Arc<dyn Clock>,
+    /// The stale-binary gate: every dispatch probes the running binary
+    /// and a superseded image exits cleanly instead of serving (see
+    /// [`crate::stale`]).
+    pub supersession: SupersessionGate,
+}
+
 /// The object-server implementation: parses at the boundary, touches the
 /// activity stamp, and hands typed commands to the sink.
 #[derive(Debug)]
@@ -45,14 +61,20 @@ pub struct FlowShotInterface {
     sink: Arc<dyn CommandSink>,
     state: Arc<DaemonState>,
     clock: Arc<dyn Clock>,
+    supersession: SupersessionGate,
 }
 
 impl FlowShotInterface {
-    /// An interface dispatching into `sink`, keeping `state`'s activity
-    /// stamp fresh from `clock`.
+    /// An interface dispatching into `sink`; `wiring` carries the
+    /// activity-stamp sources and the stale-binary gate.
     #[must_use]
-    pub fn new(sink: Arc<dyn CommandSink>, state: Arc<DaemonState>, clock: Arc<dyn Clock>) -> Self {
-        Self { sink, state, clock }
+    pub fn new(sink: Arc<dyn CommandSink>, wiring: BusWiring) -> Self {
+        Self {
+            sink,
+            state: wiring.state,
+            clock: wiring.clock,
+            supersession: wiring.supersession,
+        }
     }
 
     /// The bus reply contract (the silent-failure fix): the reply waits
@@ -61,7 +83,29 @@ impl FlowShotInterface {
     /// message), while a receipt resolving `Ok` (success, or the startup
     /// reply window elapsed with a window session still running) replies
     /// acceptance. Untracked sinks reply immediately.
+    ///
+    /// The stale-binary gate runs FIRST: a superseded image never serves
+    /// (its session-child spawns would fail with confusing IO errors).
     async fn accept(&self, command: DaemonCommand) -> fdo::Result<()> {
+        if self.supersession.is_stale() {
+            // Exit unserved and DELIBERATELY NEVER REPLY: the shutdown
+            // releases the bus name and the broker then answers this
+            // pending call with `NoReply` (empirically verified against
+            // dbus-daemon by tests/supersession.rs) - one of the two
+            // owner-vanished errors the CLI's single dispatch retry
+            // remedies by re-handshaking, which acquires the now-free
+            // name and spawns a fresh daemon from the new binary.
+            // Replying before the shutdown would race the name release
+            // (the retry could still reach this dying daemon); parking is
+            // cancelled by the connection close (or, at the latest, by
+            // process exit), and the broker's reply bounds the client's
+            // wait either way.
+            tracing::warn!(
+                "this daemon's binary was superseded on disk; exiting unserved so the caller respawns a fresh daemon"
+            );
+            self.supersession.trigger_exit();
+            return std::future::pending::<fdo::Result<()>>().await;
+        }
         self.state.touch(self.clock.now());
         let Some(receipt) = self.sink.dispatch_tracked(command) else {
             return Ok(());
@@ -303,7 +347,7 @@ mod tests {
             "unexpected error: {error}"
         );
         stub.shutdown().await;
-        assert!(sink.commands().is_empty());
+        assert_eq!(sink.commands(), [] as [crate::command::DaemonCommand; 0]);
     }
 
     #[tokio::test]

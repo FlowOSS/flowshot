@@ -64,6 +64,7 @@ const IN_APP_CRATES: &[&str] = &[
     "flowshot_core",
     "flowshot_capture",
     "flowshot_capture_wayland",
+    "flowshot_capture_x11",
     "flowshot_ui",
     "flowshot_actions",
     "flowshot_daemon",

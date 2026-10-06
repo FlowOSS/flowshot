@@ -26,12 +26,17 @@ impl PinApp {
                 }
                 PinEffect::SetWindowSize { width, height } => {
                     if let Some(entry) = self.entries.get(index) {
-                        let size: Option<winit::dpi::Size> =
-                            Some(PhysicalSize::new(width, height).into());
+                        let target = PhysicalSize::new(width, height);
+                        let size: Option<winit::dpi::Size> = Some(target.into());
                         // min == max == target: the compositor-driven resize
-                        // path (see the module header).
+                        // path (Wayland; see the module header).
                         entry.window.set_min_inner_size(size);
                         entry.window.set_max_inner_size(size);
+                        // X11: a WM_NORMAL_HINTS update alone reconfigures
+                        // nothing - the client ConfigureRequest is what
+                        // resizes the window (a no-op for stateful Wayland
+                        // windows, e.g. Hyprland; see super::zoom).
+                        let _ = entry.window.request_inner_size(target);
                     }
                 }
                 PinEffect::Reupload => {

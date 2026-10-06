@@ -67,9 +67,9 @@ impl ConsentWindow {
     ///
     /// # Errors
     ///
-    /// Returns [`UiError::NoDisplayServer`] when `WAYLAND_DISPLAY` is unset
-    /// or empty, and [`UiError::EventLoop`] when the event loop cannot be
-    /// created.
+    /// Returns [`UiError::NoDisplayServer`] when neither `WAYLAND_DISPLAY`
+    /// nor `DISPLAY` is set (or both are empty), and [`UiError::EventLoop`]
+    /// when the event loop cannot be created.
     pub fn new(options: ConsentWindowOptions) -> Result<Self, UiError> {
         require_display_server()?;
         let event_loop = EventLoop::<ConsentEvent>::with_user_event().build()?;

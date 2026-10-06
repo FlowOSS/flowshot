@@ -1,7 +1,9 @@
 # Porting roadmap
 
-Status: roadmap only — **no code exists** for any platform beyond
-Linux/Wayland, and none is planned for the first release. This document is
+Status: Phase 1 (X11) **SHIPPED** 2026-10-04 for the headless capture path
+(`crates/flowshot-capture-x11`, evidence `.omo/evidence/x11-phase-a/`).
+Every other platform remains roadmap only: **no code exists** for it and
+none is planned for the first release. This document is
 the concrete entry-point map promised by
 [ADR-006](architecture/adr-006-cross-platform-gates.md) (draft findings
 F19/F20/F24). Crate versions were spot-checked against
@@ -30,10 +32,12 @@ Every capture phase below is the same shape:
   exemption is unused. Any future `unsafe` there requires a SAFETY comment
   per block (engineering standard #4).
 - **The seam**: `flowshot-capture::CaptureBackend` is the only contract a
-  platform crate must satisfy; `BackendKind` already declares the roadmap
-  variants `X11`, `Windows`, `MacOs` (documented, non-constructible in v1:
+  platform crate must satisfy; `BackendKind` declares the roadmap
+  variants `Windows`, `MacOs` (documented, non-constructible in v1:
   `is_roadmap()`, `CapabilityProbe::supports` reports `false`, forcing one
-  is a typed `CaptureError::NoBackendAvailable`).
+  is a typed `CaptureError::NoBackendAvailable`). `X11` was promoted out of
+  the roadmap set when Phase 1 shipped: on an X11 session the probe reports
+  it and it negotiates like any other rung.
 - **Session model**: the CLI spawns a session child that owns the UI event
   loop on its main thread. That model is also the X11/macOS answer to
   main-thread windowing requirements — no re-architecture needed per port.
@@ -71,13 +75,47 @@ where each lives in the shipped contract:
 
 | F20 requirement | Shipped surface | Conforms |
 |---|---|---|
-| Must be ASYNC (SCK streams, WGC `FrameArrived`, portal D-Bus are async; X11 `GetImage` is sync) | `#[async_trait] trait CaptureBackend`; every capture/output/permission method `async`; sync platforms wrap in blocking tasks | yes |
-| `request_permission()` (no-op Linux/X11, multi-step macOS, WGC picker) | `async fn request_permission() -> PermissionResult`, infallible by contract; `can_capture()` helper | yes |
+| Must be ASYNC (SCK streams, WGC `FrameArrived`, portal D-Bus are async; X11 `GetImage` is sync) | `#[async_trait] trait CaptureBackend`; every capture/output/permission method `async`; sync platforms wrap in blocking tasks (shipped: the X11 backend runs `GetImage` on a dedicated worker thread bridged into the async trait) | yes |
+| `request_permission()` (no-op Linux/X11, multi-step macOS, WGC picker) | `async fn request_permission() -> PermissionResult`, infallible by contract; `can_capture()` helper (the shipped X11 backend returns `NotRequired`; X11 has no capture permission model) | yes |
 | Per-output `scale_factor()` (Win per-monitor DPI, mac `backingScaleFactor`, Wayland `wl_output::scale`) | `OutputInfo.scale: f64` + `Frame.scale: f64` ("never an averaged value across outputs") | yes |
 | Optional cursor stream + per-OS cursor compositing semantics | `cursor_events() -> Option<CursorStream>` (`Pin<Box<dyn Stream<Item = CursorEvent> + Send>>`, enter/leave/moved/hotspot); `CaptureOpts.paint_cursor` for compositor-side painting | yes |
 | Frame delivery: CPU buffer (Linux/X11) vs GPU texture (Win D3D11, mac IOSurface) | `FrameBuffer { data, width, height, stride, format }` with typed `FrameFormat { Xrgb8888, Argb8888, Rgba8888 }`; v1 is CPU-buffer-only (dmabuf recorded as future optimization). **Porter note**: WGC/SCK ports either stage to CPU (v1-compatible, one copy) or extend `Frame` with a GPU-texture variant — a trait evolution decision recorded here, not taken in v1 | yes (CPU path); GPU path documented |
 
-## Phase 1 — X11 (cheapest; research already source-verified, F19)
+## Phase 1 — X11 — SHIPPED 2026-10-04 (Phase A: headless capture)
+
+Shipped as `crates/flowshot-capture-x11`, live-verified on i3 (evidence:
+`.omo/evidence/x11-phase-a/`). The shipped scope is the headless capture
+path: `capture full`, `capture screen [OUTPUT]`, and
+`capture --region WxH[+X+Y]` with `--no-edit`, plus copy/save/`--raw`/
+`--print-geometry`/delay and the daemon-owned clipboard (INCR for large
+payloads). The interactive overlay/editor/pins/dialogs on X11 are Phase B,
+as are `capture last` and `--region at-cursor` (both keep the honest
+`NoDisplayServer` failure in this release). There is still no Xwayland
+fallback path: sessions are mutually exclusive, and a Wayland session never
+routes to the X11 backend.
+
+Deviations from the research sketch below (behavior won; the sketch is
+preserved as the 2026-09-28 record):
+
+- **x11rb 0.14 used directly.** The xcap path stayed research-only, as
+  planned; there is no xcap dependency.
+- **SHM is fd-passing, not SysV**: `memfd` + `shm::attach_fd` +
+  `shm::get_image`, gated on server SHM >= 1.2 (AttachFd landed in MIT-SHM
+  1.2; the plan-era "SHM 1.15" figure was wrong), with plain `GetImage` as
+  the fallback. Rationale: zero `unsafe`, and it mirrors the Wayland memfd
+  pattern (`icc/shm.rs`). Measured on the QA machine: 38 ms SHM vs 80 ms
+  plain per 18.6 MB frame.
+- **No unsafe allow-list growth**: the exemption was not needed; the
+  allow-list stays at its one (still empty) entry and
+  `flowshot-capture-x11` is `#![forbid(unsafe_code)]`.
+- **Scale derivation as specced**: `Xft.dpi` (RESOURCE_MANAGER) preferred,
+  RANDR mm-size heuristic fallback, quantized to 0.25, clamped to
+  [1.0, 4.0], documented approximate.
+- **`cursor_events()` deferred**: returns `None` (documented degradation);
+  a poll-based stream is a Phase B candidate. The cursor itself is painted
+  from XFIXES at capture time.
+
+### Research sketch (2026-09-28 record, pre-shipment)
 
 Target: the remaining X11-only desktops. On Linux, Wayland stays the only
 supported session type for the v1 product; there is no Xwayland fallback

@@ -9,6 +9,8 @@
 //! row primitives (`settings::tabs::form`) and the QA pixel asserts consume
 //! the SAME numbers, which is what makes the rendered grid unit-testable.
 
+use std::ops::Range;
+
 use flowshot_core::tokens::DesignTokens;
 
 use crate::egui_host::theme;
@@ -214,5 +216,118 @@ impl FormMetrics {
             + self.content_left()
             + self.label_width(self.content_width(available) - 2.0 * self.card_padding())
             + self.gutter()
+    }
+}
+
+/// The measured per-item geometry the palette swatch grid chunks with (all
+/// widths in points, measured once per frame from the live egui style + font).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct PaletteMetrics {
+    /// One swatch cell's width: swatch button + item spacing + remove button.
+    pub(crate) cell_w: f32,
+    /// The horizontal item spacing between cells in a row.
+    pub(crate) gap: f32,
+    /// The "+ Add swatch" button's width.
+    pub(crate) add_w: f32,
+}
+
+/// One planned row of the palette swatch grid.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct PaletteRow {
+    /// The palette indices of the swatches this row carries (empty for a
+    /// trailing add-button-only row).
+    pub(crate) swatches: Range<usize>,
+    /// Whether the "+ Add swatch" button is this row's last cell.
+    pub(crate) add_button: bool,
+    /// The row's laid-out width (cells + gaps + the add button when present),
+    /// for the containment asserts.
+    pub(crate) width: f32,
+}
+
+/// The planned palette swatch grid: uniform rows of swatch cells with the
+/// "+ Add swatch" button flowing as the last cell. The deterministic
+/// replacement for `egui::horizontal_wrapped` - see [`plan_palette`].
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct PaletteGrid {
+    /// Swatch cells per row (always >= 1).
+    pub(crate) cells_per_row: usize,
+    /// The rows, top to bottom.
+    pub(crate) rows: Vec<PaletteRow>,
+}
+
+/// The width of a row carrying `count` swatch cells with `count - 1` gaps
+/// between them; zero for an empty row.
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "a swatch count is a small whole number; usize->f32 is exact far beyond any realizable row"
+)]
+fn palette_row_width(count: usize, cell_w: f32, gap: f32) -> f32 {
+    if count == 0 {
+        0.0
+    } else {
+        count as f32 * cell_w + (count - 1) as f32 * gap
+    }
+}
+
+/// Plans the palette swatch grid for `swatches` entries within a
+/// `control_w`-wide control column - the deterministic row chunking that
+/// replaces `egui::horizontal_wrapped`. Two prior passes relied on the
+/// wrapped layout inferring its width from the card's layout chain; it never
+/// did, so the swatches escaped the card's right edge in one line.
+///
+/// A row of `k` cells spans `k*cell_w + (k-1)*gap`, so the most cells that
+/// fit is `floor((control_w + gap) / (cell_w + gap))`, floored to a minimum
+/// of 1: a column narrower than one cell still renders one cell per row
+/// (the lone cell overflows the degenerate column alone) rather than dividing
+/// by zero or stacking the overflow horizontally. Swatches chunk uniformly
+/// into rows of that many; the add button then flows into the last row's
+/// remaining slack, or onto its own row when the last swatch row is full.
+/// Every row's width is `<= control_w` whenever `control_w >= max(cell_w,
+/// add_w)` (every realizable window width - the control column's floor is
+/// only breached below a ~430px window, where one cell degrades alone).
+#[must_use]
+pub(crate) fn plan_palette(
+    control_w: f32,
+    metrics: PaletteMetrics,
+    swatches: usize,
+) -> PaletteGrid {
+    let PaletteMetrics { cell_w, gap, add_w } = metrics;
+    let pitch = cell_w + gap;
+    let cells_per_row = if pitch > 0.0 {
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "the quotient is a small non-negative cell count; a negative (degenerate) quotient saturates to 0 and the max(1) floor takes over"
+        )]
+        let count = ((control_w + gap) / pitch).floor() as usize;
+        count.max(1)
+    } else {
+        1
+    };
+    let mut rows: Vec<PaletteRow> = Vec::new();
+    let mut start = 0;
+    while start < swatches {
+        let end = (start + cells_per_row).min(swatches);
+        rows.push(PaletteRow {
+            swatches: start..end,
+            add_button: false,
+            width: palette_row_width(end - start, cell_w, gap),
+        });
+        start = end;
+    }
+    match rows.last_mut() {
+        Some(last) if last.width + gap + add_w <= control_w => {
+            last.width += gap + add_w;
+            last.add_button = true;
+        }
+        _ => rows.push(PaletteRow {
+            swatches: 0..0,
+            add_button: true,
+            width: add_w,
+        }),
+    }
+    PaletteGrid {
+        cells_per_row,
+        rows,
     }
 }

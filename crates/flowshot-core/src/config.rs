@@ -746,7 +746,7 @@ mod tests {
         assert_eq!(config.editor.undo_limit, 100);
         assert!(!config.editor.double_click_copies);
         assert!(config.editor.side_panel);
-        assert!(!config.editor.color_palette.is_empty());
+        assert_ne!(config.editor.color_palette, [] as [String; 0]);
 
         // [tools.*]
         assert_eq!(config.tools.arrow.style, ArrowStyle::Straight);
@@ -772,7 +772,7 @@ mod tests {
         assert_eq!(config.ui.accent_color, palette.accent);
         assert_eq!(config.ui.contrast_color, palette.contrast);
         assert_eq!(config.ui.dim_opacity, 190);
-        assert!(!config.ui.toolbar_buttons.is_empty());
+        assert_ne!(config.ui.toolbar_buttons, [] as [String; 0]);
 
         // [daemon]
         assert!(!config.daemon.tray);

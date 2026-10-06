@@ -18,7 +18,7 @@ use egui::Ui;
 
 use super::super::fields::{self, combo, hex_color, number};
 use super::super::form::{card, row, title_case};
-use super::super::layout::FormMetrics;
+use super::super::layout::{FormMetrics, PaletteMetrics, plan_palette};
 use super::super::model::{SettingsModel, ThemeChoice};
 use super::super::strings;
 use super::TabContext;
@@ -161,29 +161,65 @@ fn toolbar_list(ui: &mut Ui, m: &FormMetrics, buttons: &mut Vec<String>) -> bool
     changed
 }
 
+/// A text button's laid-out width: its galley plus egui's two button-padding
+/// insets (the button frame's inner margin). Measured from the live font so
+/// the swatch grid's cell width tracks the real glyph advance, not a guess.
+fn button_width(ui: &mut Ui, m: &FormMetrics, text: &str) -> f32 {
+    let font = egui::FontId::proportional(m.base_size());
+    let color = ui.visuals().text_color();
+    let padding = ui.spacing().button_padding.x;
+    let galley = ui.fonts_mut(|fonts| fonts.layout_no_wrap(text.into(), font, color));
+    galley.size().x + 2.0 * padding
+}
+
 fn palette_editor(ui: &mut Ui, m: &FormMetrics, palette: &mut Vec<String>) -> bool {
+    // The control-column budget: the card inner width minus the label column
+    // and gutter - the same x every other control starts at. The grid indents
+    // to it below, so the swatches align with the rows above.
+    let available = ui.available_width();
+    let indent = m.label_width(available) + m.gutter();
+    let control_w = (available - indent).max(0.0);
+
+    // Measure the cell geometry once, then chunk by hand: horizontal_wrapped
+    // never inferred a wrap width inside this layout chain (two prior passes
+    // shipped swatches overflowing the card edge in one line). The swatch is
+    // egui's color button (exactly interact_size wide); remove/add are text
+    // buttons (galley + 2*button_padding).
+    let swatch_w = ui.spacing().interact_size.x;
+    let gap = ui.spacing().item_spacing.x;
+    let metrics = PaletteMetrics {
+        cell_w: swatch_w + gap + button_width(ui, m, strings::BUTTON_REMOVE),
+        gap,
+        add_w: button_width(ui, m, strings::BUTTON_ADD_SWATCH),
+    };
+    let grid = plan_palette(control_w, metrics, palette.len());
+
     let mut changed = false;
     let mut remove: Option<usize> = None;
-    row(ui, m, "", |ui| {
-        ui.horizontal_wrapped(|ui| {
-            for (index, entry) in palette.iter_mut().enumerate() {
-                ui.push_id(index, |ui| {
-                    ui.horizontal(|ui| {
-                        if fields::swatch(ui, m, entry) {
-                            changed = true;
-                        }
-                        if ui.button(strings::BUTTON_REMOVE).clicked() {
-                            remove = Some(index);
-                        }
-                    });
+    ui.horizontal(|ui| {
+        ui.add_space(indent);
+        ui.vertical(|ui| {
+            for row in &grid.rows {
+                ui.horizontal(|ui| {
+                    for index in row.swatches.clone() {
+                        ui.push_id(index, |ui| {
+                            if fields::swatch(ui, m, &mut palette[index]) {
+                                changed = true;
+                            }
+                            if ui.button(strings::BUTTON_REMOVE).clicked() {
+                                remove = Some(index);
+                            }
+                        });
+                    }
+                    if row.add_button && ui.button(strings::BUTTON_ADD_SWATCH).clicked() {
+                        palette.push(fields::NEW_SWATCH_HEX.to_owned());
+                        changed = true;
+                    }
                 });
-            }
-            if ui.button(strings::BUTTON_ADD_SWATCH).clicked() {
-                palette.push(fields::NEW_SWATCH_HEX.to_owned());
-                changed = true;
             }
         });
     });
+
     if let Some(index) = remove {
         palette.remove(index);
         changed = true;

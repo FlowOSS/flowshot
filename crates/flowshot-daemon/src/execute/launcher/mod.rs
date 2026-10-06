@@ -29,8 +29,6 @@ use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::launcher::{
     LaunchCallback, LauncherRequest, LauncherWindow, LauncherWindowOptions, MonitorProbe,
 };
-use flowshot_ui::pins::WindowCustomizer;
-use winit::platform::wayland::WindowAttributesExtWayland;
 
 use super::session::{self, SessionKind, SessionResult, SessionSpec};
 use super::{ExecCtx, ExecOutcome, ExecuteError, elapsed};
@@ -143,9 +141,10 @@ pub fn launcher_child(spec: &SessionSpec) -> SessionResult {
         monitor_probe: Some(MonitorProbe::new(probe_outputs)),
         on_capture: Some(on_capture),
         clipboard: Some(super::settings::clipboard_bridge()),
-        window_customizer: Some(WindowCustomizer::new(|attributes| {
-            attributes.with_name("flowshot-launcher", "Capture Launcher")
-        })),
+        window_customizer: Some(super::window::session_window_customizer(
+            "flowshot-launcher",
+            "Capture Launcher",
+        )),
     };
     let window = match LauncherWindow::new(options) {
         Ok(window) => window,
@@ -173,6 +172,17 @@ pub fn launcher_child(spec: &SessionSpec) -> SessionResult {
 }
 
 fn probe_outputs() -> Vec<flowshot_core::geometry::OutputInfo> {
+    use flowshot_actions::clipboard::{SessionKind, detect_session};
+    match detect_session() {
+        Ok(SessionKind::X11) => probe_outputs_x11(),
+        // A Wayland session - or no session variable at all, where this leg
+        // keeps its existing warn-and-empty degradation (the UI gate errors
+        // first anyway; the execute/backend.rs routing precedent).
+        Ok(SessionKind::Wayland) | Err(_) => probe_outputs_wayland(),
+    }
+}
+
+fn probe_outputs_wayland() -> Vec<flowshot_core::geometry::OutputInfo> {
     match flowshot_capture_wayland::CaptureThread::spawn() {
         Ok(thread) => thread.outputs().unwrap_or_else(|error| {
             tracing::warn!(%error, "launcher monitor probe failed");
@@ -183,4 +193,19 @@ fn probe_outputs() -> Vec<flowshot_core::geometry::OutputInfo> {
             Vec::new()
         }
     }
+}
+
+fn probe_outputs_x11() -> Vec<flowshot_core::geometry::OutputInfo> {
+    use flowshot_capture::CaptureBackend;
+    // The session child has no ambient executor; the X11 backend's worker
+    // futures are runtime-agnostic, so a plain block_on drives the RANDR
+    // enumeration (the query_system_theme blocking-probe precedent).
+    let probe = async {
+        let backend = flowshot_capture_x11::X11Backend::connect()?;
+        backend.outputs().await
+    };
+    futures::executor::block_on(probe).unwrap_or_else(|error| {
+        tracing::warn!(%error, "launcher monitor probe failed");
+        Vec::new()
+    })
 }

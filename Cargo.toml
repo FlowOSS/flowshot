@@ -3,6 +3,7 @@ members = [
     "crates/flowshot-core",
     "crates/flowshot-capture",
     "crates/flowshot-capture-wayland",
+    "crates/flowshot-capture-x11",
     "crates/flowshot-ui",
     "crates/flowshot-actions",
     "crates/flowshot-cli",
