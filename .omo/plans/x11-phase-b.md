@@ -115,7 +115,7 @@ per-output windows).
   let respawn happen; issues.md 2026-10-04 entry is the spec).
 - [ ] 5. **Gates green**: fmt, `clippy --workspace --all-targets -D warnings`,
   `cargo test --workspace` ×2, purity-gate, deny.
-- [ ] 6. **Live QA evidence bundle** at `.omo/evidence/x11-phase-b/` per
+- [x] 6. **Live QA evidence bundle** at `.omo/evidence/x11-phase-b/` per
   docs/verification.md: the full interactive matrix (overlay select→save/copy,
   editor tools smoke, Esc cancel, pins, color, settings, launcher, consent if
   triggerable, last/at-cursor reroutes, riders' proofs), xdotool-driven,
