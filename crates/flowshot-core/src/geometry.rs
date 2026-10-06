@@ -1680,7 +1680,10 @@ mod tests {
         let region = LogicalRect::from_raw(0.0, 0.0, 10.0, 10.0);
         assert_eq!(layout.union_bounds(), None);
         assert_eq!(layout.clamp_region_to_layout(region), None);
-        assert!(layout.crop_rects(region).is_empty());
+        assert_eq!(
+            layout.crop_rects(region),
+            [] as [crate::geometry::OutputCrop<'_>; 0]
+        );
         assert!(layout.output_at(LogicalPoint::from_raw(0.0, 0.0)).is_none());
     }
 

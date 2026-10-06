@@ -26,6 +26,7 @@ wl-clipboard-rs = { workspace = true }
 ashpd = { workspace = true, features = ["open_uri"] }
 rfd = { workspace = true }
 url = "2.5"
+x11rb = "0.14"
 
 [dev-dependencies]
 wiremock = { workspace = true }

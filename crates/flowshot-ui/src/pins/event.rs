@@ -80,8 +80,9 @@ pub enum PinEffect {
     /// Repaint the window.
     Redraw,
     /// Resize the window to exactly this physical extent (the shell pins
-    /// min+max inner size - the only client resize path Hyprland honors,
-    /// see [`super::zoom`] module header).
+    /// min+max inner size - the only client resize path Hyprland honors -
+    /// and issues the X11 `ConfigureRequest`; see [`super::zoom`] module
+    /// header).
     SetWindowSize {
         /// Target width, physical px.
         width: u32,

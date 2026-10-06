@@ -16,7 +16,7 @@ use tokio::sync::Notify;
 use zbus::Connection;
 
 use crate::autostart::Autostart;
-use crate::bus::{FlowShotInterface, OBJECT_PATH, SERVICE};
+use crate::bus::{BusWiring, FlowShotInterface, OBJECT_PATH, SERVICE};
 use crate::command::{CommandSink, LoggingSink};
 use crate::error::DaemonError;
 use crate::execute::consent::ConsentPrompt;
@@ -24,6 +24,7 @@ use crate::instance::{self, close_quietly};
 use crate::lifecycle::{Clock, DaemonMode, LifecycleMonitor, LifecyclePolicy, TokioClock};
 use crate::notify::{DesktopNotifier, GatedNotifier, Notifier};
 use crate::shortcut::{Registration, ShortcutOptions, ShortcutWiring};
+use crate::stale::{ExeIdentity, SupersessionGate};
 use crate::state::DaemonState;
 use crate::tray::{TrayHandle, TrayOptions, TrayWiring};
 
@@ -70,6 +71,12 @@ pub struct DaemonOptions {
     ///
     /// [`ShortcutOptions`]: crate::shortcut::ShortcutOptions
     pub consent: ConsentPrompt,
+    /// Stale-binary gate baseline override (QA knob, the `bus_address`
+    /// precedent): `None` snapshots the running binary at startup
+    /// (production); `Some(identity)` compares dispatches against the
+    /// injected identity, so tests can force the superseded path with a
+    /// foreign baseline.
+    pub supersession_baseline: Option<ExeIdentity>,
 }
 
 impl DaemonOptions {
@@ -107,6 +114,7 @@ impl DaemonOptions {
             shortcuts: ShortcutOptions::default(),
             tray,
             consent: ConsentPrompt::default(),
+            supersession_baseline: None,
         }
     }
 }
@@ -114,8 +122,10 @@ impl DaemonOptions {
 /// What startup produced.
 #[derive(Debug)]
 pub enum Startup {
-    /// This process owns the bus name and can serve.
-    Running(Daemon),
+    /// This process owns the bus name and can serve (boxed: the
+    /// composition is larger than `clippy::large_enum_variant`'s budget
+    /// next to the data-free sibling).
+    Running(Box<Daemon>),
     /// Another daemon already holds the name; nothing was registered.
     AlreadyRunning,
 }
@@ -127,6 +137,10 @@ pub enum ShutdownReason {
     IdleExit,
     /// The tray menu's `Quit` entry fired.
     Quit,
+    /// The on-disk binary was superseded (the stale-binary self-check):
+    /// the daemon exited WITHOUT serving the triggering dispatch so the
+    /// caller's retry respawns a fresh daemon (see [`crate::stale`]).
+    Superseded,
     /// `SIGINT` (Ctrl-C).
     Interrupted,
     /// `SIGTERM` (the supervisor stopped the unit).
@@ -144,6 +158,7 @@ pub struct Daemon {
     shortcuts: Registration,
     tray: TrayHandle,
     quit: Arc<Notify>,
+    superseded: Arc<Notify>,
 }
 
 impl Daemon {
@@ -165,11 +180,21 @@ impl Daemon {
             )) as Arc<dyn Notifier>
         });
         let quit = Arc::new(Notify::new());
+        let superseded = Arc::new(Notify::new());
         let connection = instance::connect(options.bus_address.as_deref()).await?;
+        let supersession = match options.supersession_baseline {
+            Some(baseline) => {
+                SupersessionGate::with_baseline(Some(baseline), Arc::clone(&superseded))
+            }
+            None => SupersessionGate::new(Arc::clone(&superseded)),
+        };
         let interface = FlowShotInterface::new(
             Arc::clone(&sink),
-            Arc::clone(&options.state),
-            Arc::clone(&clock),
+            BusWiring {
+                state: Arc::clone(&options.state),
+                clock: Arc::clone(&clock),
+                supersession,
+            },
         );
         connection
             .object_server()
@@ -233,7 +258,7 @@ impl Daemon {
             Arc::clone(&options.state),
             clock,
         );
-        Ok(Startup::Running(Self {
+        Ok(Startup::Running(Box::new(Self {
             connection,
             monitor,
             notifier,
@@ -241,7 +266,8 @@ impl Daemon {
             shortcuts,
             tray,
             quit,
-        }))
+            superseded,
+        })))
     }
 
     /// Serves until the lifecycle exits (auto-spawned idle) or a shutdown
@@ -260,11 +286,13 @@ impl Daemon {
             shortcuts,
             tray,
             quit,
+            superseded,
         } = self;
         let reason = tokio::select! {
             _idle = monitor.run_until_exit() => ShutdownReason::IdleExit,
             signal = shutdown_signal() => signal,
             () = quit.notified() => ShutdownReason::Quit,
+            () = superseded.notified() => ShutdownReason::Superseded,
         };
         tracing::info!(reason = ?reason, "daemon shutting down");
         tray.shutdown().await;

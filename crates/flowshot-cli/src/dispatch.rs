@@ -46,8 +46,20 @@ use crate::wire::{self, WireCall};
 const SPAWN_WAIT: Duration = Duration::from_secs(5);
 /// Poll interval while waiting for the helper.
 const SPAWN_POLL: Duration = Duration::from_millis(50);
-/// The `D-Bus` error name meaning "the owner vanished mid-handshake".
-const NAME_HAS_NO_OWNER: &str = "org.freedesktop.DBus.Error.NameHasNoOwner";
+/// The `D-Bus` error names meaning "the owner vanished around this call":
+/// `NameHasNoOwner` (the name was released between the probe and the
+/// routing - the original single-retry remedy) and `NoReply` (the broker's
+/// answer for a call still pending when the owner's connection
+/// disconnected - empirically verified against `dbus-daemon` by the
+/// daemon's `tests/supersession.rs`; the stale-binary self-check's
+/// park-and-exit relies on it). A `FlowShot` daemon replies within its 5 s
+/// startup reply window, far inside the bus's 25 s default timeout, so a
+/// `NoReply` from one always means "died mid-call", never "slow" - the
+/// single full retry (re-handshake -> fresh daemon) is safe for both.
+const OWNER_VANISHED_ERRORS: [&str; 2] = [
+    "org.freedesktop.DBus.Error.NameHasNoOwner",
+    "org.freedesktop.DBus.Error.NoReply",
+];
 
 /// Runs one resolved invocation to completion.
 ///
@@ -142,11 +154,13 @@ async fn one_shot_launcher() -> Result<ExitCode, CliError> {
 }
 
 /// Forwards one wire call to the daemon, with a single full retry when the
-/// owner vanished between the probe and the call (the remedy the daemon's
-/// `OwnerVanished` classification names).
+/// owner vanished around the call (the remedy the daemon's
+/// `OwnerVanished` classification names; see [`OWNER_VANISHED_ERRORS`]).
 async fn dispatch_bus(call: &WireCall, bus_address: Option<&str>) -> Result<ExitCode, CliError> {
     match dispatch_bus_once(call, bus_address).await {
-        Err(CliError::Dbus(zbus::Error::MethodError(name, _, _))) if name == NAME_HAS_NO_OWNER => {
+        Err(CliError::Dbus(zbus::Error::MethodError(name, _, _)))
+            if OWNER_VANISHED_ERRORS.contains(&name.as_str()) =>
+        {
             dispatch_bus_once(call, bus_address).await
         }
         other => other,

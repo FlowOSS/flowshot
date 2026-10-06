@@ -25,9 +25,12 @@
 #      windows/macos). Full-line `//` comments are stripped before matching
 #      (doc comments may NAME the forbidden seam, e.g. the WindowCustomizer
 #      rationale); code lines are matched case-sensitively, so portable
-#      env-var probes ("WAYLAND_DISPLAY" via std::env::var_os) and roadmap
-#      enum vocabulary (BackendKind::X11, serde rename "x11") stay invisible
-#      by construction - they are values and identifiers, not imports.
+#      env-var probes ("WAYLAND_DISPLAY" via std::env::var_os), platform
+#      enum vocabulary (BackendKind::X11, serde rename "x11"), and
+#      diagnostic string literals naming a banned platform crate (e.g.
+#      "X11 (xcb GetImage)", where `xcb` is followed by a space, not `::`)
+#      stay invisible by construction - they are values and identifiers,
+#      not imports.
 #
 # winit itself is NOT banned: it is the cross-platform windowing seam the UI
 # is built on (draft D1, ADR-003). The plan's gate list is "wayland/x11

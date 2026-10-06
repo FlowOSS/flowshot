@@ -46,7 +46,25 @@ use winit::event::{MouseButton, TouchPhase};
 use winit::keyboard::KeyCode;
 #[cfg(feature = "test-drive")]
 use winit::keyboard::ModifiersState;
-use winit::platform::wayland::WindowAttributesExtWayland;
+
+/// Session-aware shell name - a copy of the daemon's
+/// `execute::window::session_window_customizer` (flowshot-daemon depends on
+/// flowshot-ui, so the examples cannot import it without a dependency
+/// cycle). Wayland `app_id` vs X11 `WM_CLASS`, same `(general, instance)`
+/// signature on both winit extension traits.
+fn session_window_customizer(app_id: &'static str, title: &'static str) -> WindowCustomizer {
+    use flowshot_actions::clipboard::{SessionKind, detect_session};
+    match detect_session() {
+        Ok(SessionKind::X11) => WindowCustomizer::new(move |attributes| {
+            use winit::platform::x11::WindowAttributesExtX11;
+            attributes.with_name(app_id, title)
+        }),
+        Ok(SessionKind::Wayland) | Err(_) => WindowCustomizer::new(move |attributes| {
+            use winit::platform::wayland::WindowAttributesExtWayland;
+            attributes.with_name(app_id, title)
+        }),
+    }
+}
 
 struct NoDialog;
 
@@ -292,9 +310,16 @@ fn main() -> ExitCode {
         }
         println!("REGISTRY alive={}", registry.len());
     }
+    let clipboard = match Clipboard::for_session() {
+        Ok(clipboard) => clipboard,
+        Err(error) => {
+            eprintln!("no clipboard session available: {error}");
+            return ExitCode::from(1);
+        }
+    };
     let bridge = Arc::new(ActionBridge {
         registry: Arc::clone(&registry),
-        clipboard: Clipboard::wayland(),
+        clipboard,
         save_config: SaveConfig {
             path: save_dir,
             path_fixed: true,
@@ -309,11 +334,11 @@ fn main() -> ExitCode {
             return ExitCode::from(1);
         }
     };
-    // The binary layer's platform hook: the Wayland app_id the compositor
-    // reports as the window class (todo 35 wires this in the real binary).
-    let runtime = runtime.with_window_customizer(WindowCustomizer::new(|attributes| {
-        attributes.with_name("flowshot-pin", "FlowShot Pin")
-    }));
+    // The binary layer's platform hook: the session's shell-facing name the
+    // compositor/WM reports as the window class (the daemon wires the real
+    // binary through execute::window::session_window_customizer).
+    let runtime =
+        runtime.with_window_customizer(session_window_customizer("flowshot-pin", "FlowShot Pin"));
     #[cfg(feature = "test-drive")]
     spawn_stdin_injector(runtime.handle().clone());
     match runtime.run() {

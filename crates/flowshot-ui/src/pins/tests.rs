@@ -146,7 +146,10 @@ fn oversized_image_starts_clamped_to_screen() {
     assert_eq!(h, 1080); // height-limited fit, frame included
     // Zoom-in is already at the ceiling: inert.
     let t0 = Instant::now();
-    assert!(wheel(&mut state, 1, t0).is_empty());
+    assert_eq!(
+        wheel(&mut state, 1, t0),
+        [] as [crate::pins::event::PinEffect; 0]
+    );
 }
 
 #[test]
@@ -160,14 +163,20 @@ fn tiny_image_starts_magnified_to_the_min_size_floor() {
 fn zoom_out_stops_at_the_min_size_floor() {
     let mut state = PinState::new((40, 20), (1920, 1080), 1.0, PinBehavior::default());
     let t0 = Instant::now();
-    assert!(wheel(&mut state, -1, t0).is_empty());
+    assert_eq!(
+        wheel(&mut state, -1, t0),
+        [] as [crate::pins::event::PinEffect; 0]
+    );
     // From scale 1 a 400x300 image floors at 1/3 (both axes >= 100).
     let mut state = pin();
     for _ in 0..40 {
         wheel(&mut state, -1, t0);
     }
     assert!((state.scale() - 1.0 / 3.0).abs() < 1e-9);
-    assert!(wheel(&mut state, -1, t0).is_empty());
+    assert_eq!(
+        wheel(&mut state, -1, t0),
+        [] as [crate::pins::event::PinEffect; 0]
+    );
     // The floor binds the SMALLER axis to exactly MIN_SIZE.
     assert!((f64::from(300) * state.scale() - 100.0).abs() < 1e-9);
 }
@@ -217,7 +226,7 @@ fn opacity_keys_follow_the_f27_table() {
         },
         t0,
     );
-    assert!(effects.is_empty());
+    assert_eq!(effects, [] as [crate::pins::event::PinEffect; 0]);
 }
 
 #[test]
@@ -425,7 +434,10 @@ fn ctrl_q_and_double_click_close() {
         pressed: false,
     };
     let mut state = pin();
-    assert!(route(&mut state, press, t0).is_empty());
+    assert_eq!(
+        route(&mut state, press, t0),
+        [] as [crate::pins::event::PinEffect; 0]
+    );
     route(&mut state, release, t0 + Duration::from_millis(80));
     // The SECOND press inside the interval is the double-click.
     let effects = route(&mut state, press, t0 + Duration::from_millis(160));
@@ -434,7 +446,7 @@ fn ctrl_q_and_double_click_close() {
     let mut state = pin();
     route(&mut state, press, t0);
     let effects = route(&mut state, press, t0 + Duration::from_millis(500));
-    assert!(effects.is_empty());
+    assert_eq!(effects, [] as [crate::pins::event::PinEffect; 0]);
 }
 
 #[test]

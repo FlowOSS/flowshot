@@ -1,7 +1,7 @@
 # ADR-002: Capture backend ladder and negotiation
 
 Status: accepted, implemented (flowshot-capture `negotiate`,
-flowshot-capture-wayland backends).
+flowshot-capture-wayland and flowshot-capture-x11 backends).
 
 ## Context
 
@@ -17,7 +17,7 @@ releases.
 
 Backends are tried in a fixed ladder, strongest first, selected by probing
 the **live session** (advertised Wayland globals, D-Bus name ownership,
-portal version), never by a desktop-name table:
+portal version, X11 server reachability), never by a desktop-name table:
 
 1. `ext-image-copy-capture-v1` (ICC). Direct protocol, per-output sessions,
    optional compositor-painted cursor, cursor-position sessions. Verified
@@ -31,8 +31,12 @@ portal version), never by a desktop-name table:
    one session per stream batch with a top-up loop covering both
    one-stream-per-session and N-stream portals. Verified live against
    Hyprland's XDPH portal stack.
-5. `org.freedesktop.portal.Screenshot`. Last rung; file-URI result,
+5. `org.freedesktop.portal.Screenshot`. Last Wayland rung; file-URI result,
    compositor-defined interaction on some paths.
+6. X11 `GetImage` (xcb, MIT-SHM fd-passing fast path). Reached only on X11
+   sessions (no `WAYLAND_DISPLAY`); the session types are mutually
+   exclusive, so this rung never competes with the Wayland ones. Shipped
+   2026-10-04 for the headless capture path.
 
 Negotiation rules (`negotiate()`):
 
@@ -42,8 +46,10 @@ Negotiation rules (`negotiate()`):
   **capabilities**: forcing a kind the probe does not support fails fast at
   negotiation with a typed error naming it, instead of dying at protocol bind
   time.
-- Roadmap kinds (X11, Windows, macOS) exist as documented enum variants but
+- Roadmap kinds (Windows, macOS) exist as documented enum variants but
   are non-constructible through negotiation and through `force_backend`.
+  X11 left the roadmap set when Phase A shipped: on an X11 session the
+  probe reports it and the last rung serves.
 - Every failure is typed: `NoBackendAvailable` names the missing protocols;
   permission denial is a distinct `PermissionResult`, never a hang and never
   a silently black capture (Hyprland's denial frame, a black field with a
@@ -64,5 +70,8 @@ Negotiation rules (`negotiate()`):
   backend-neutral infrastructure (deadline dispatch, SHM buffers, worker
   threads). Backend-tagged selection logic is deliberately duplicated rather
   than abstracted prematurely.
-- Non-goals held: no X11 code path exists or is reachable; no runtime
-  shell-outs to grim/wl-copy/slurp anywhere in the stack.
+- Non-goals held: no runtime
+  shell-outs to grim/wl-copy/slurp anywhere in the stack. (The original
+  no-X11 non-goal was amended 2026-10-04: X11 headless capture is now the
+  ladder's last rung; the interactive UI remains Wayland-only pending
+  Phase B.)

@@ -26,8 +26,9 @@ because the live run caught them).
 
 Live QA runs on the development machine: Hyprland 0.56.2, NVIDIA GPU, two
 monitors at scale 1 (plus synthetic headless outputs for scale-2 and rotated
-fixtures). Every claim in FlowShot's docs and evidence carries one of these
-classes:
+fixtures), and an i3 session on X11 (single eDP-1 2880x1620, derived scale
+2.25) for the X11 capture path. Every claim in FlowShot's docs and evidence
+carries one of these classes:
 
 - **LIVE-verified**: exercised on the real session, with the observed values
   recorded (pixel oracles via grim, `hyprctl`/`busctl` reads, logs).
@@ -66,6 +67,20 @@ the exact commands, the observed values, the gate outputs, the verification
 class of every claim, and honest records of deviations and foreign defects
 found along the way. Evidence files record observed values inline because
 temp artifacts are transient.
+
+### Landed bundles
+
+- **X11 Phase A headless capture** (2026-10-04, **LIVE-verified**):
+  `.omo/evidence/x11-phase-a/`. Ten checks on the live i3 session, all PASS:
+  full capture pixel-cross-checked against an independent
+  `import -window root` oracle, `--region WxH+X+Y` geometry pixel-exact
+  against a crop of the full frame, screen by connector name and by index,
+  `--raw` stdout PNG, `--print-geometry`, daemon-owned CLIPBOARD with INCR
+  (a 1.08 MB offer served after the CLI exited and gone after the daemon
+  was killed), the exit-code matrix (0/1/2/4), SHM fd-passing vs plain
+  timing (38 ms vs 80 ms), the `-d` delay path, and daemon idle-exit
+  lifecycle. Per-check values and environment dump: `index.txt` in the
+  bundle.
 
 ## The deferred GUI-QA batch
 

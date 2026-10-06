@@ -13,9 +13,10 @@ use std::time::{Duration, Instant};
 
 use zbus::Connection;
 
-use crate::bus::{FlowShotInterface, OBJECT_PATH, SERVICE};
+use crate::bus::{BusWiring, FlowShotInterface, OBJECT_PATH, SERVICE};
 use crate::command::CommandSink;
 use crate::lifecycle::TokioClock;
+use crate::stale::SupersessionGate;
 use crate::state::DaemonState;
 
 /// Serializes all stub-based tests (the `STUB_LOCK` precedent): their
@@ -75,7 +76,19 @@ async fn build_server(
     state: Arc<DaemonState>,
 ) -> zbus::Result<Connection> {
     let guid = zbus::Guid::generate();
-    let interface = FlowShotInterface::new(sink, state, Arc::new(TokioClock));
+    // Inert supersession gate (no baseline): the p2p stubs never exit
+    // mid-call, so the bus tests observe the plain dispatch contract.
+    let interface = FlowShotInterface::new(
+        sink,
+        BusWiring {
+            state,
+            clock: Arc::new(TokioClock),
+            supersession: SupersessionGate::with_baseline(
+                None,
+                Arc::new(tokio::sync::Notify::new()),
+            ),
+        },
+    );
     // serve_at (NOT post-build object_server().at()): zbus 5 dispatches
     // method calls through a lazily-subscribed task; the builder awaits its
     // registration before the socket reader spawns, so the peer's first
