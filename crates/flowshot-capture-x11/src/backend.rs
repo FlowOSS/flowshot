@@ -72,6 +72,21 @@ impl X11Backend {
         Ok(Self { caps, display })
     }
 
+    /// Deadline-bounded [`connect`](Self::connect): the blocking chain runs
+    /// on the worker bridge, so a half-alive server surfaces as a typed
+    /// [`CaptureError::Timeout`] at the bridge deadline instead of parking
+    /// the caller forever, and async callers stop blocking their executor
+    /// thread. Sync callers (examples, QA oracles) keep
+    /// [`connect`](Self::connect).
+    ///
+    /// # Errors
+    ///
+    /// The [`CaptureError`] of the connect/capability-probe chain (the
+    /// [`X11Error`] conversion) or of the worker deadline.
+    pub async fn connect_bounded() -> Result<Self, CaptureError> {
+        spawn_worker("flowshot-x11-connect", Self::connect).await
+    }
+
     /// The capabilities probed at construction.
     #[must_use]
     pub const fn caps(&self) -> X11Caps {

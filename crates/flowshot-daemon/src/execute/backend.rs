@@ -95,7 +95,7 @@ pub async fn open_session_excluding(
             tried.push(kind);
             continue;
         }
-        let backend = match construct(kind) {
+        let backend = match construct(kind).await {
             Ok(backend) => backend,
             Err(error) => {
                 tracing::warn!(backend = ?kind, %error, "ladder rung failed at construction; falling through");
@@ -165,7 +165,7 @@ async fn open_x11_session(exclude: &[BackendKind]) -> Result<CaptureSession, Exe
             tried.push(kind);
             continue;
         }
-        let backend = match construct(kind) {
+        let backend = match construct(kind).await {
             Ok(backend) => backend,
             Err(error) => {
                 tracing::warn!(backend = ?kind, %error, "ladder rung failed at construction; falling through");
@@ -199,20 +199,31 @@ async fn open_x11_session(exclude: &[BackendKind]) -> Result<CaptureSession, Exe
     }))
 }
 
-fn construct(kind: BackendKind) -> Result<Box<dyn CaptureBackend>, CaptureError> {
+/// The most specific display for a capture error: the platform source when
+/// one is attached - it carries the environment-derived hints (e.g. the X11
+/// `DISPLAY` remediation) that the `CaptureError` display drops - else the
+/// error itself.
+pub(crate) fn error_detail(error: &CaptureError) -> String {
+    std::error::Error::source(error).map_or_else(|| error.to_string(), ToString::to_string)
+}
+
+async fn construct(kind: BackendKind) -> Result<Box<dyn CaptureBackend>, CaptureError> {
     Ok(match kind {
         BackendKind::ExtImageCopyCapture => Box::new(IccBackend::new()),
         BackendKind::WlrScreencopy => Box::new(ScreencopyBackend::new()),
         BackendKind::KwinScreenShot2 => Box::new(KwinScreenShot2Backend::new()),
         BackendKind::PortalScreenCast => Box::new(PortalScreenCastBackend::new()),
         BackendKind::PortalScreenshot => Box::new(PortalScreenshotBackend::new()),
-        // The X11 rung connects eagerly (probing the capture caps); the
-        // connect failure rides the crate's X11Error -> CaptureError
-        // conversion, and the warn keeps the DISPLAY hint (which the
-        // CaptureError display does not carry) in the default-level log.
+        // The X11 rung connects eagerly (probing the capture caps) through
+        // the deadline-bounded worker bridge; the warn keeps the DISPLAY
+        // hint (which the CaptureError display does not carry) in the
+        // default-level log.
         BackendKind::X11 => Box::new(
-            flowshot_capture_x11::X11Backend::connect()
-                .inspect_err(|error| tracing::warn!(%error, "X11 backend connect failed"))?,
+            flowshot_capture_x11::X11Backend::connect_bounded()
+                .await
+                .inspect_err(|error| {
+                    tracing::warn!(error = %error_detail(error), "X11 backend connect failed");
+                })?,
         ),
         // Roadmap kinds never come out of `negotiate` (v1 gate); treating
         // them as a backend absence keeps the match exhaustive without a
@@ -248,10 +259,13 @@ async fn resolve_cursor_wayland() -> Option<LogicalPoint> {
 /// X11 has no cursor stream in Phase A: one-shot `XQueryPointer`. Every
 /// failure degrades to `None` - a missing preselect never fails a capture.
 async fn resolve_cursor_x11() -> Option<LogicalPoint> {
-    let backend = match flowshot_capture_x11::X11Backend::connect() {
+    let backend = match flowshot_capture_x11::X11Backend::connect_bounded().await {
         Ok(backend) => backend,
         Err(error) => {
-            tracing::warn!(%error, "X11 cursor read unavailable; preselect degrades");
+            tracing::warn!(
+                error = %error_detail(&error),
+                "X11 cursor read unavailable; preselect degrades"
+            );
             return None;
         }
     };

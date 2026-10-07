@@ -201,11 +201,14 @@ fn probe_outputs_x11() -> Vec<flowshot_core::geometry::OutputInfo> {
     // futures are runtime-agnostic, so a plain block_on drives the RANDR
     // enumeration (the query_system_theme blocking-probe precedent).
     let probe = async {
-        let backend = flowshot_capture_x11::X11Backend::connect()?;
+        let backend = flowshot_capture_x11::X11Backend::connect_bounded().await?;
         backend.outputs().await
     };
     futures::executor::block_on(probe).unwrap_or_else(|error| {
-        tracing::warn!(%error, "launcher monitor probe failed");
+        tracing::warn!(
+            error = %crate::execute::backend::error_detail(&error),
+            "launcher monitor probe failed"
+        );
         Vec::new()
     })
 }
