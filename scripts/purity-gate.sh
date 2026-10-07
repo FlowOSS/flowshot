@@ -4,11 +4,14 @@
 # Asserts the platform-free crates carry ZERO platform coupling in lib code:
 #
 #   gated crates:  flowshot-core, flowshot-capture, flowshot-ui
-#   platform crate: flowshot-capture-wayland (everything compositor-facing
-#                   lives there; it is NOT gated)
+#   platform crates: flowshot-capture-wayland (everything compositor-facing)
+#                   and flowshot-capture-x11 (everything X-server-facing);
+#                   neither is gated. Every future platform sibling must be
+#                   added to BOTH banned lists below.
 #   out of scope:  flowshot-cli / flowshot-daemon / flowshot-actions are the
-#                  binary/wiring layer and the Wayland-native clipboard owner
-#                  by design (plan todo 1, Oracle r2 F-5, ADR-004/006)
+#                  binary/wiring layer and the platform-native clipboard
+#                  owner by design (Wayland via wl-clipboard-rs, X11 via
+#                  x11rb ICCCM; plan todo 1, Oracle r2 F-5, ADR-004/006)
 #
 # Checks per gated crate:
 #   1. Cargo.toml: no platform crate in ANY *dependencies section, except
@@ -50,10 +53,10 @@ allowlist_file="$repo_root/scripts/purity-allowlist.txt"
 gated_crates=(flowshot-core flowshot-capture flowshot-ui)
 
 # Platform crates, Cargo.toml package-name form (hyphens).
-banned_deps_alt='wayland-client|wayland-protocols|wayland-protocols-wlr|wayland-backend|wayland-scanner|smithay-client-toolkit|sctk|calloop|calloop-wayland-source|wl-clipboard-rs|x11|x11rb|x11rb-protocol|xcb|xcap|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify-rust|nix|rustix|libc|memfd|pipewire|pipewire-sys|libspa|libspa-sys|fontconfig|flowshot-capture-wayland|flowshot-actions'
+banned_deps_alt='wayland-client|wayland-protocols|wayland-protocols-wlr|wayland-backend|wayland-scanner|smithay-client-toolkit|sctk|calloop|calloop-wayland-source|wl-clipboard-rs|x11|x11rb|x11rb-protocol|xcb|xcap|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify-rust|nix|rustix|libc|memfd|pipewire|pipewire-sys|libspa|libspa-sys|fontconfig|flowshot-capture-wayland|flowshot-capture-x11|flowshot-actions'
 
 # Same crates, Rust identifier form (underscores), import-shaped patterns.
-banned_ids_alt='wayland_[a-z_]+|wl_clipboard[a-z_]*|smithay[a-z_]*|sctk[a-z_]*|calloop[a-z_]*|x11[a-z_0-9]*|xcb|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify_rust|nix|rustix|libc|memfd|pipewire|libspa|fontconfig|flowshot_capture_wayland|flowshot_actions'
+banned_ids_alt='wayland_[a-z_]+|wl_clipboard[a-z_]*|smithay[a-z_]*|sctk[a-z_]*|calloop[a-z_]*|x11[a-z_0-9]*|xcb|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify_rust|nix|rustix|libc|memfd|pipewire|libspa|fontconfig|flowshot_capture_wayland|flowshot_capture_x11|flowshot_actions'
 
 src_patterns=(
     "(^|[^A-Za-z0-9_])(pub[[:space:]]+)?(use|extern[[:space:]]+crate)[[:space:]]+(${banned_ids_alt})(::|[[:space:]]*;|[[:space:]]+as[[:space:]]|\\\{)"

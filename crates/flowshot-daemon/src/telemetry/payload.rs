@@ -216,8 +216,10 @@ mod tests {
     fn monitor_layout_probe_degrades_without_a_compositor() {
         // Headless: neither WAYLAND_DISPLAY nor DISPLAY -> spawn fails ->
         // None, no panic. On a headed session (Wayland OR X11) the probe
-        // returns the connector list or degrades to None (the probe itself
-        // is wayland-only in Phase A); both are valid.
+        // returns the connector list or degrades to None (the probe drives
+        // the Wayland capture stack only; X11 reports no monitor layout -
+        // a documented degradation, see docs/setup-x11.md Known limits);
+        // both are valid.
         let layout = probe_monitor_layout();
         let headed = ["WAYLAND_DISPLAY", "DISPLAY"]
             .iter()

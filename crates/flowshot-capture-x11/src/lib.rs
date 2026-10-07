@@ -3,14 +3,16 @@
 //! Openbox).
 //!
 //! Sibling of `flowshot-capture-wayland` and the platform layer of the X11
-//! Phase A plan (headless capture path): `flowshot capture full | screen |
-//! --region WxH[+X+Y]` with `--no-edit`, driven through the shared
+//! plan: headless capture (`flowshot capture full | screen |
+//! --region WxH[+X+Y]` with `--no-edit`) driven through the shared
 //! [`flowshot_capture`] contracts - a
 //! [`CapabilityProbe`](flowshot_capture::CapabilityProbe) for the negotiation
 //! ladder and [`OutputInfo`](flowshot_core::geometry::OutputInfo) for
-//! geometry. The interactive overlay, pins, and dialogs stay Wayland-only in
-//! Phase A, and `capture last` / `--region at-cursor` are Phase A gaps too:
-//! they fail with the honest `NoDisplayServer` message (Phase B candidates).
+//! geometry. Phase B ships the interactive surfaces on X11 too: the
+//! overlay, pins, and dialogs run through the daemon's session-routed
+//! window customizer (not through this crate), and `capture last` /
+//! `--region at-cursor` take the headless reroute in `flowshot-daemon`'s
+//! `execute/overlay/reroute.rs`.
 //!
 //! # Modules
 //!
@@ -37,7 +39,9 @@
 //!   image compositing), each operation bridged from a blocking worker thread
 //!   into a runtime-agnostic future.
 //! - [`cursor_pos`]: the one-shot cursor position in global logical space
-//!   (the cursor-aware-preselect feed; X11 has no cursor stream in Phase A).
+//!   (the cursor-aware-preselect feed; X11 offers no client-visible cursor
+//!   stream - out of scope by plan, the one-shot reads are the shipped
+//!   path).
 //! - [`stitch::to_rgba`]: the v1 pixel-format -> `RGBA` conversion shared by
 //!   the region stitcher and the live-diagnostic examples.
 //!
