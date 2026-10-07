@@ -70,10 +70,15 @@ pub async fn open_session_excluding(
             tracing::debug!(session = "x11", "capture session routing");
             return open_x11_session(exclude).await;
         }
-        // A Wayland session - or no session variable at all, where the leg
-        // below produces the existing typed connect error (path unchanged).
-        Ok(SessionKind::Wayland) | Err(_) => {
+        // A Wayland session keeps the compositor legs.
+        Ok(SessionKind::Wayland) => {
             tracing::debug!(session = "wayland", "capture session routing");
+        }
+        // No session variable at all: the leg below produces the existing
+        // typed connect error (path unchanged); the log says what it is
+        // rather than claiming a Wayland session that does not exist.
+        Err(_) => {
+            tracing::debug!(session = "none", "capture session routing");
         }
     }
     let thread = flowshot_capture_wayland::CaptureThread::spawn()?;
