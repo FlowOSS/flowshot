@@ -1,14 +1,16 @@
 //! Live X11 capture smoke - needs a running X session (`DISPLAY`).
 //!
 //! Drives the real [`X11Backend`] through the async [`CaptureBackend`] trait
-//! (the daemon's call path): full-output capture -> `/tmp/x11-capture.png`,
-//! a logical region capture -> `/tmp/x11-capture-region.png`, per-frame
+//! (the daemon's call path): full-output capture -> `x11-capture.png`,
+//! a logical region capture -> `x11-capture-region.png` (both under
+//! `$FLOWSHOT_QA_OUT`, default a per-run temp directory), per-frame
 //! geometry/format/byte-size dump with raw sample pixels (the solid-color
 //! pixel oracle reads these), the one-shot cursor position, and a
 //! `MIT-SHM` vs plain `GetImage` timing comparison.
 //!
 //! Run: `cargo run -p flowshot-capture-x11 --example capture`
 
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use flowshot_capture::{CaptureBackend, CaptureOpts, FrameBuffer};
@@ -17,11 +19,23 @@ use flowshot_core::geometry::{Logical, LogicalRect};
 
 type BoxError = Box<dyn std::error::Error>;
 
-const FULL_PNG: &str = "/tmp/x11-capture.png";
-const REGION_PNG: &str = "/tmp/x11-capture-region.png";
+/// The QA output directory: `$FLOWSHOT_QA_OUT` when set, else a per-run
+/// temp directory. Fixed shared `/tmp` paths clobber each other when two
+/// runs overlap - and the QA pixel oracle reads these files, so a stale
+/// or half-written PNG can be attributed to the wrong build.
+fn out_dir() -> PathBuf {
+    match std::env::var_os("FLOWSHOT_QA_OUT") {
+        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => std::env::temp_dir().join(format!("flowshot-x11-capture-{}", std::process::id())),
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), BoxError> {
+    let out = out_dir();
+    std::fs::create_dir_all(&out)?;
+    let full_png = out.join("x11-capture.png");
+    let region_png = out.join("x11-capture-region.png");
     let backend = X11Backend::connect()?;
     println!("DISPLAY: {}", backend.display());
     println!("caps: {:?}", backend.caps());
@@ -54,12 +68,12 @@ async fn main() -> Result<(), BoxError> {
         describe_frame(frame);
     }
     write_png(
-        FULL_PNG,
+        &full_png,
         &frames.first().ok_or("capture returned no frames")?.buffer,
     )?;
     if frames.len() > 1 {
         for frame in &frames {
-            let name = format!("/tmp/x11-capture-{:?}.png", frame.output);
+            let name = out.join(format!("x11-capture-{:?}.png", frame.output));
             write_png(&name, &frame.buffer)?;
         }
     }
@@ -92,8 +106,8 @@ async fn main() -> Result<(), BoxError> {
     );
     let stitched = backend.capture_region(region).await?;
     describe_frame(&stitched);
-    write_png(REGION_PNG, &stitched.buffer)?;
-    println!("wrote {FULL_PNG} and {REGION_PNG}");
+    write_png(&region_png, &stitched.buffer)?;
+    println!("wrote {} and {}", full_png.display(), region_png.display());
     Ok(())
 }
 
@@ -155,7 +169,7 @@ fn describe_frame(frame: &flowshot_capture::Frame) {
     }
 }
 
-fn write_png(path: &str, buffer: &FrameBuffer) -> Result<(), BoxError> {
+fn write_png(path: &Path, buffer: &FrameBuffer) -> Result<(), BoxError> {
     let width = usize::try_from(buffer.width)?;
     let height = usize::try_from(buffer.height)?;
     let mut rgba = Vec::with_capacity(width * height * 4);
@@ -168,6 +182,6 @@ fn write_png(path: &str, buffer: &FrameBuffer) -> Result<(), BoxError> {
     let image = image::RgbaImage::from_raw(u32::try_from(width)?, u32::try_from(height)?, rgba)
         .ok_or("PNG geometry mismatch")?;
     image.save(path)?;
-    println!("wrote {path} ({width}x{height} RGBA -> PNG)");
+    println!("wrote {} ({width}x{height} RGBA -> PNG)", path.display());
     Ok(())
 }
