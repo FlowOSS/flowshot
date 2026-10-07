@@ -29,8 +29,14 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
       - name: Check clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Run tests
         run: cargo test
       - name: Check dependencies
-        run: cargo deny check
+        # cargo-deny is not preinstalled on the runner (the previous bare
+        # `cargo deny check` step could never have run - every earlier run
+        # died in the compile phase first); the official action mirrors the
+        # local `just deny` gate.
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
