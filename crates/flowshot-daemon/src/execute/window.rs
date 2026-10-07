@@ -2,9 +2,9 @@
 //! daemon's session children create (overlay, pin, launcher, settings,
 //! consent): one shell-facing name, routed per display server.
 
-use flowshot_actions::clipboard::{SessionKind, detect_session};
-use flowshot_ui::pins::WindowCustomizer;
+use flowshot_actions::clipboard::{detect_session, SessionKind};
 use flowshot_ui::pins::zoom::ResizeAnchor;
+use flowshot_ui::pins::WindowCustomizer;
 
 /// Builds the [`WindowCustomizer`] stamping the session's shell-facing
 /// window name: the Wayland arm sets `app_id`/title via
@@ -46,4 +46,16 @@ pub(crate) fn session_resize_anchor() -> ResizeAnchor {
         Ok(SessionKind::X11) => ResizeAnchor::TopLeft,
         Ok(SessionKind::Wayland) | Err(_) => ResizeAnchor::Center,
     }
+}
+
+/// Whether pin zoom resizes are client-driven for the session's display
+/// server (same routing as [`session_resize_anchor`]): X11 needs the
+/// client's `request_inner_size` `ConfigureRequest` - a `WM_NORMAL_HINTS`
+/// update alone reconfigures nothing. On Wayland the flag must stay
+/// false: winit resizes stateless (floating) windows client-side without
+/// a `Resized` event, desyncing the pin's render surface (the min/max
+/// hints in `pins/effects.rs` are the compositor-driven path there).
+#[must_use]
+pub(crate) fn session_client_resize() -> bool {
+    matches!(detect_session(), Ok(SessionKind::X11))
 }

@@ -112,6 +112,15 @@ fn zoom_keeps_the_cursor_image_point_screen_stable() {
 }
 
 #[test]
+fn default_behavior_never_client_resizes() {
+    // The Wayland-safety contract: `client_resize` opts the shell into the
+    // X11 ConfigureRequest path; the default must stay false so a Wayland
+    // session can never hit winit's stateless-window client-side resize
+    // (no `Resized` event -> the render surface desyncs from the window).
+    assert!(!PinBehavior::default().client_resize);
+}
+
+#[test]
 fn top_left_anchor_policy_holds_too() {
     let behavior = PinBehavior {
         anchor: ResizeAnchor::TopLeft,
@@ -144,7 +153,7 @@ fn oversized_image_starts_clamped_to_screen() {
     let (w, h) = state.target_window();
     assert!(w <= 1920 && h <= 1080, "window {w}x{h} exceeds the screen");
     assert_eq!(h, 1080); // height-limited fit, frame included
-    // Zoom-in is already at the ceiling: inert.
+                         // Zoom-in is already at the ceiling: inert.
     let t0 = Instant::now();
     assert_eq!(
         wheel(&mut state, 1, t0),

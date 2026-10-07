@@ -122,6 +122,7 @@ pub fn pin_child(spec: &SessionSpec) -> SessionResult {
     let behavior = PinBehavior {
         min_size: f64::from(pin.min_size),
         anchor: super::window::session_resize_anchor(),
+        client_resize: super::window::session_client_resize(),
         ..PinBehavior::default()
     };
     let spec_window = PinSpec {
