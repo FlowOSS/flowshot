@@ -105,6 +105,20 @@ fn next_owner_epoch() -> u64 {
     OWNER_EPOCH.fetch_add(1, Ordering::AcqRel) + 1
 }
 
+/// Rewinds a claimed-but-never-established epoch (a `serve()` whose setup
+/// failed): without the rewind, the dead claim would silence the
+/// STILL-LIVE previous owner's genuine later loss (its
+/// [`report_loss_if_latest`] check would see the newer epoch), pinning a
+/// daemon's clipboard-offer hold until killed. The compare-exchange
+/// rewinds only when no newer claim happened in between; a newer claim
+/// belongs to a `serve()` that either succeeds (genuinely superseding the
+/// previous owner, whose silence is then correct) or fails and rewinds
+/// itself.
+fn unclaim_owner_epoch(epoch: u64) {
+    let _rewound =
+        OWNER_EPOCH.compare_exchange(epoch, epoch - 1, Ordering::AcqRel, Ordering::Acquire);
+}
+
 /// Serving-thread exit report: fires `hook` iff `epoch` is still the
 /// latest claim (self-supersede exits silently — see [`OWNER_EPOCH`]).
 fn report_loss_if_latest(hook: Option<&OfferLossHook>, epoch: u64) {
@@ -197,13 +211,35 @@ impl ClipboardBackend for X11Clipboard {
         let epoch = next_owner_epoch();
         let (ready_tx, ready_rx) = mpsc::channel();
         let hook = self.loss_hook.clone();
-        let thread = std::thread::Builder::new()
+        let thread = match std::thread::Builder::new()
             .name(THREAD_NAME.to_owned())
             .spawn(move || run_owner(offer, ready_tx, hook, epoch))
-            .map_err(ClipboardError::transport)?;
-        let window = ready_rx.recv().map_err(|_: RecvError| {
-            ClipboardError::X11("the serving thread exited before reporting ownership".to_owned())
-        })??;
+        {
+            Ok(thread) => thread,
+            Err(error) => {
+                unclaim_owner_epoch(epoch);
+                return Err(ClipboardError::transport(error));
+            }
+        };
+        let window = match ready_rx
+            .recv()
+            .map_err(|_: RecvError| {
+                ClipboardError::X11(
+                    "the serving thread exited before reporting ownership".to_owned(),
+                )
+            })
+            .flatten()
+        {
+            Ok(window) => window,
+            Err(error) => {
+                // The claim never became a live ownership: rewind it so a
+                // still-live previous owner's genuine later loss is not
+                // silenced by the dead claim.
+                unclaim_owner_epoch(epoch);
+                drop(thread);
+                return Err(error);
+            }
+        };
         let previous = self
             .current
             .lock()
@@ -862,6 +898,24 @@ mod tests {
 
         // No hook configured: the report is a silent no-op.
         report_loss_if_latest(None, newer);
+
+        // Given: a live claim, then a newer serve() that fails its setup.
+        fired.store(false, Ordering::Release);
+        let live = next_owner_epoch();
+        let failed = next_owner_epoch();
+        // When: the failed setup unclaims its epoch.
+        unclaim_owner_epoch(failed);
+        // Then: the live claim's genuine loss still reports - the dead
+        // claim no longer silences it.
+        report_loss_if_latest(Some(&hook), live);
+        assert!(fired.load(Ordering::Acquire));
+        // And: a subsequent live claim resumes the normal silence rule.
+        fired.store(false, Ordering::Release);
+        let newest = next_owner_epoch();
+        report_loss_if_latest(Some(&hook), live);
+        assert!(!fired.load(Ordering::Acquire));
+        report_loss_if_latest(Some(&hook), newest);
+        assert!(fired.load(Ordering::Acquire));
     }
 
     #[test]
