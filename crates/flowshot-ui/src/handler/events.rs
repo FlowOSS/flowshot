@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use flowshot_core::geometry;
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, MouseScrollDelta, WindowEvent};
+use winit::event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::keyboard::PhysicalKey;
 use winit::window::WindowId;
@@ -96,21 +96,7 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
                 event: key,
                 is_synthetic: false,
                 ..
-            } => {
-                let PhysicalKey::Code(code) = key.physical_key else {
-                    return;
-                };
-                self.route_sync(
-                    target,
-                    slot,
-                    &InputEvent::Key {
-                        code,
-                        pressed: key.state == ElementState::Pressed,
-                        repeat: key.repeat,
-                        text: key.text.as_deref().map(str::to_owned),
-                    },
-                );
-            }
+            } => self.route_key(target, slot, key),
             WindowEvent::ModifiersChanged(modifiers) => {
                 let report = self
                     .core
@@ -206,6 +192,25 @@ impl OverlayApp {
     /// Routes one input event, applies the shell actions, and mirrors the
     /// text-edit caret into the window's IME cursor area (keys,
     /// pointer buttons, and IME events can all move the caret).
+    /// Routes one real (non-synthetic) key event into the selection
+    /// engine; synthetic X11 focus-resync replays never reach here (the
+    /// `window_event` match arm filters them).
+    fn route_key(&mut self, target: &ActiveEventLoop, slot: WindowSlot, key: &KeyEvent) {
+        let PhysicalKey::Code(code) = key.physical_key else {
+            return;
+        };
+        self.route_sync(
+            target,
+            slot,
+            &InputEvent::Key {
+                code,
+                pressed: key.state == ElementState::Pressed,
+                repeat: key.repeat,
+                text: key.text.as_deref().map(str::to_owned),
+            },
+        );
+    }
+
     fn route_sync(&mut self, target: &ActiveEventLoop, slot: WindowSlot, event: &InputEvent) {
         let report = self.core.route(slot, event);
         self.apply_actions(target, &report.actions);
