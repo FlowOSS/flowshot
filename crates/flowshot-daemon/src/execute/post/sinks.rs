@@ -4,12 +4,13 @@
 //! hold-release bridge.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use flowshot_actions::ExportError;
-use flowshot_actions::clipboard::{Clipboard, OfferLossHook};
+use flowshot_actions::clipboard::{Clipboard, ClipboardBackend, ClipboardOffer, OfferLossHook};
 use flowshot_actions::export::{FileDialogSink, NotifySink};
+use flowshot_actions::ClipboardError;
+use flowshot_actions::ExportError;
 
 use crate::notify::{NotificationRecord, Notifier};
 use crate::state::DaemonState;
@@ -103,21 +104,39 @@ pub(super) struct ClipboardHoldRelease {
     pub lost: Arc<AtomicBool>,
 }
 
+/// The inert clipboard for runs with no usable display session (headless
+/// CI, ssh-spawned daemons, containers): every serve fails with the typed
+/// [`ClipboardError::NoSession`], which the pipeline records as a failed
+/// Copy outcome while save/upload/notify/pin still run - `main`'s
+/// pre-session-routing semantics, where clipboard construction was
+/// infallible and a copy failure was just another outcome.
+#[derive(Debug)]
+struct NoSessionClipboard;
+
+impl ClipboardBackend for NoSessionClipboard {
+    fn serve(&self, _offer: ClipboardOffer) -> Result<(), ClipboardError> {
+        Err(ClipboardError::NoSession)
+    }
+}
+
 /// Builds the session clipboard for one post-capture run.
 ///
-/// # Errors
-///
-/// [`flowshot_actions::ClipboardError::NoSession`] when neither
-/// `WAYLAND_DISPLAY` nor `DISPLAY` is set.
-pub(super) fn clipboard_for_run(
-    state: Option<&Arc<DaemonState>>,
-) -> Result<ClipboardHoldRelease, flowshot_actions::ClipboardError> {
+/// Infallible by contract: a daemon with no display session gets the inert
+/// [`NoSessionClipboard`] instead of an early return, so one unavailable
+/// clipboard can never discard an already-successful capture (the review's
+/// CRITICAL finding: the hoisted `?` aborted the whole pipeline headless
+/// and turned the untouched `upload_e2e` tests red on CI).
+pub(super) fn clipboard_for_run(state: Option<&Arc<DaemonState>>) -> ClipboardHoldRelease {
     let lost = Arc::new(AtomicBool::new(false));
     let hook = hold_release_hook(state.cloned(), Arc::clone(&lost));
-    Ok(ClipboardHoldRelease {
-        clipboard: Clipboard::for_session_with_loss_hook(hook)?,
-        lost,
-    })
+    let clipboard = match Clipboard::for_session_with_loss_hook(hook) {
+        Ok(clipboard) => clipboard,
+        Err(error) => {
+            tracing::debug!(%error, "clipboard unavailable; copy degrades to a recorded outcome");
+            Clipboard::new(NoSessionClipboard)
+        }
+    };
+    ClipboardHoldRelease { clipboard, lost }
 }
 
 /// The hook body (split out for the headless transition tests): latch
@@ -164,5 +183,15 @@ mod tests {
         let hook = hold_release_hook(None, Arc::clone(&lost));
         hook();
         assert!(lost.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn no_session_clipboard_fails_typed_through_the_facade() {
+        // The inert backend headless `clipboard_for_run` degrades to: the
+        // facade must surface the typed NoSession error - the value the
+        // pipeline records as a failed Copy outcome - not panic or hang.
+        let clipboard = Clipboard::new(NoSessionClipboard);
+        let result = clipboard.copy_text("flowshot");
+        assert!(matches!(result, Err(ClipboardError::NoSession)));
     }
 }

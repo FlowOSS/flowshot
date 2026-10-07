@@ -80,7 +80,7 @@ pub async fn run_post(
         .filter(|action| *action != Action::Pin)
         .collect();
     let save_config = save_config_override(&config.save, request);
-    let hold_release = sinks::clipboard_for_run(ctx.state.as_ref())?;
+    let hold_release = sinks::clipboard_for_run(ctx.state.as_ref());
     let dialog = PicturesDirDialog;
     let notifier = ctx
         .notifier
