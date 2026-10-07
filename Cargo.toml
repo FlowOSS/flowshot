@@ -95,7 +95,6 @@ clap_mangen = "0.3.3"
 reqwest = { version = "0.13.5", features = ["json"] }
 
 # File dialogs
-rfd = "0.12.1"
 
 # Font
 fontconfig = "0.6.0"

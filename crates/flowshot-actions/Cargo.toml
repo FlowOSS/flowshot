@@ -24,7 +24,6 @@ wl-clipboard-rs = { workspace = true }
 # ashpd 0.13 gates every portal behind its own feature; this crate drives
 # OpenURI only (open-with action + Imgur delete URL).
 ashpd = { workspace = true, features = ["open_uri"] }
-rfd = { workspace = true }
 url = "2.5"
 x11rb = "0.14"
 
