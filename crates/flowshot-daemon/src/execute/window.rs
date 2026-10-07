@@ -2,9 +2,9 @@
 //! daemon's session children create (overlay, pin, launcher, settings,
 //! consent): one shell-facing name, routed per display server.
 
-use flowshot_actions::clipboard::{detect_session, SessionKind};
-use flowshot_ui::pins::zoom::ResizeAnchor;
+use flowshot_actions::clipboard::{SessionKind, detect_session};
 use flowshot_ui::pins::WindowCustomizer;
+use flowshot_ui::pins::zoom::ResizeAnchor;
 
 /// Builds the [`WindowCustomizer`] stamping the session's shell-facing
 /// window name: the Wayland arm sets `app_id`/title via

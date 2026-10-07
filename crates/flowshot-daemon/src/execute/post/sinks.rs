@@ -4,13 +4,13 @@
 //! hold-release bridge.
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use flowshot_actions::clipboard::{Clipboard, ClipboardBackend, ClipboardOffer, OfferLossHook};
-use flowshot_actions::export::{FileDialogSink, NotifySink};
 use flowshot_actions::ClipboardError;
 use flowshot_actions::ExportError;
+use flowshot_actions::clipboard::{Clipboard, ClipboardBackend, ClipboardOffer, OfferLossHook};
+use flowshot_actions::export::{FileDialogSink, NotifySink};
 
 use crate::notify::{NotificationRecord, Notifier};
 use crate::state::DaemonState;

@@ -153,7 +153,7 @@ fn oversized_image_starts_clamped_to_screen() {
     let (w, h) = state.target_window();
     assert!(w <= 1920 && h <= 1080, "window {w}x{h} exceeds the screen");
     assert_eq!(h, 1080); // height-limited fit, frame included
-                         // Zoom-in is already at the ceiling: inert.
+    // Zoom-in is already at the ceiling: inert.
     let t0 = Instant::now();
     assert_eq!(
         wheel(&mut state, 1, t0),

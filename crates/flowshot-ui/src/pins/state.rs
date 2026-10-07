@@ -24,7 +24,7 @@ use super::menu::PinMenu;
 use super::pinch::PinchTracker;
 use super::spec::{MARGIN, MIN_SIZE};
 use super::zoom::{
-    clamp_scale, content_size, scale_bounds, window_size, ResizeAnchor, ScaleBounds,
+    ResizeAnchor, ScaleBounds, clamp_scale, content_size, scale_bounds, window_size,
 };
 
 /// Behavior configuration of one pin (the `[pin]` config group plus the
