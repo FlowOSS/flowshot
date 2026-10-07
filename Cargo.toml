@@ -71,6 +71,12 @@ calloop = "0.13.0"
 calloop-wayland-source = "0.3.0"
 wl-clipboard-rs = "0.9.3"
 
+# X11
+# The safe-Rust XCB binding; wire types arrive through `x11rb::protocol`
+# (x11rb forwards each extension feature to its own x11rb-protocol dep,
+# so no separate direct x11rb-protocol dependency is needed).
+x11rb = "0.14"
+
 # Portal / D-Bus
 ashpd = "0.13.13"
 zbus = "5.19.0"

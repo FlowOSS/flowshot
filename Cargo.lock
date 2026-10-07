@@ -1499,7 +1499,6 @@ dependencies = [
  "tokio",
  "tracing",
  "x11rb 0.14.0",
- "x11rb-protocol 0.14.0",
 ]
 
 [[package]]
