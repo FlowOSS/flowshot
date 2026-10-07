@@ -96,7 +96,7 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
                 event: key,
                 is_synthetic: false,
                 ..
-            } => self.route_key(target, slot, key),
+            } => self.route_key(target, slot, &key),
             WindowEvent::ModifiersChanged(modifiers) => {
                 let report = self
                     .core
