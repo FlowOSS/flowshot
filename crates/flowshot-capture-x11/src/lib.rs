@@ -24,7 +24,9 @@
 //!   `x11rb::connect` reports once and the connection itself does not
 //!   remember.
 //! - [`probe_x11`]: the session probe feeding negotiation - `Some` when
-//!   `DISPLAY` is set, the server is reachable, and RANDR >= 1.3 is present.
+//!   `DISPLAY` is set, the server is reachable, and RANDR >= 1.3 is
+//!   present, and only when `WAYLAND_DISPLAY` is NOT set (an `XWayland`
+//!   session is served by the Wayland rungs).
 //!   [`X11Caps`] records the RANDR/XFIXES/MIT-SHM versions the capture path
 //!   branches on.
 //! - [`outputs`]: RANDR output enumeration (`GetMonitors` with a lit-CRTC

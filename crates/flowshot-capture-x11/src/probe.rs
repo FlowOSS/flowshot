@@ -107,8 +107,10 @@ pub fn query_caps(conn: &RustConnection) -> Result<X11Caps, X11Error> {
 
 /// Probes the process environment for a capturable X11 session.
 ///
-/// Returns a probe advertising [`BackendKind::X11`] when `DISPLAY` is set,
-/// the X server is reachable, and RANDR >= 1.3 is present; `None` otherwise.
+/// Returns a probe advertising [`BackendKind::X11`] when this is NOT a
+/// Wayland session (`WAYLAND_DISPLAY` unset or empty - an `XWayland`
+/// session exports both and the Wayland rungs serve it), `DISPLAY` is set, the X
+/// server is reachable, and RANDR >= 1.3 is present; `None` otherwise.
 /// Every `None` reason is logged at debug level - probing runs on sessions
 /// that are legitimately not X11, so `None` is an answer, not a failure.
 ///
@@ -116,6 +118,20 @@ pub fn query_caps(conn: &RustConnection) -> Result<X11Caps, X11Error> {
 /// names Wayland desktops only, and negotiation never filters on it.
 #[must_use]
 pub fn probe_x11() -> Option<CapabilityProbe> {
+    // The session families are mutually exclusive for negotiation, and
+    // the exclusion is enforced HERE so every caller gets it (not only
+    // the daemon's session routing): an XWayland session exports BOTH
+    // variables, and advertising X11 there would let
+    // `force_backend = "x11"` capture the XWayland root window - only X11
+    // clients' content, every Wayland-native window missing (a silently
+    // wrong image, not a typed failure). Same rule as
+    // `flowshot_actions::clipboard::detect_session`: WAYLAND_DISPLAY wins.
+    if wayland_session_present(std::env::var_os("WAYLAND_DISPLAY").as_deref()) {
+        tracing::debug!(
+            "WAYLAND_DISPLAY is set; this is a Wayland session - X11 stays off the ladder"
+        );
+        return None;
+    }
     if std::env::var_os("DISPLAY").is_none_or(|display| display.is_empty()) {
         tracing::debug!("DISPLAY is not set; X11 capture is unavailable");
         return None;
@@ -153,6 +169,14 @@ pub fn probe_x11() -> Option<CapabilityProbe> {
             None
         }
     }
+}
+
+/// The Wayland-session rule with the environment value injectable (the
+/// `session_from_env` precedent): `WAYLAND_DISPLAY` set and non-empty
+/// means the Wayland rungs serve the session, so X11 stays off the
+/// ladder. Empty values count as unset.
+fn wayland_session_present(wayland_display: Option<&std::ffi::OsStr>) -> bool {
+    wayland_display.is_some_and(|value| !value.is_empty())
 }
 
 /// RANDR is mandatory: absence is a typed [`X11Error::MissingExtension`].
@@ -232,5 +256,18 @@ mod tests {
     fn display_shows_dotted_version() {
         assert_eq!(ExtensionVersion::new(1, 5).to_string(), "1.5");
         assert_eq!(ExtensionVersion::new(1, 15).to_string(), "1.15");
+    }
+
+    #[test]
+    fn wayland_sessions_keep_x11_off_the_ladder() {
+        use std::ffi::OsStr;
+
+        // An XWayland session exports WAYLAND_DISPLAY: the Wayland rungs
+        // serve it and probe_x11 must answer None (the daemon routing
+        // agrees, but the probe enforces it for EVERY caller).
+        assert!(wayland_session_present(Some(OsStr::new("wayland-1"))));
+        // Empty counts as unset (a headless shell may export it empty).
+        assert!(!wayland_session_present(Some(OsStr::new(""))));
+        assert!(!wayland_session_present(None));
     }
 }
