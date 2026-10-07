@@ -332,7 +332,7 @@ mod tests {
             }
             other => panic!("expected NoBackendAvailable, got {other:?}"),
         }
-        assert!(err.to_string().contains("X11 (xcb GetImage)"));
+        assert!(err.to_string().contains(BackendKind::X11.protocol_name()));
     }
 
     #[test]
@@ -342,7 +342,6 @@ mod tests {
         match &err {
             CaptureError::NoBackendAvailable { missing } => {
                 assert_eq!(missing, &NEGOTIATION_LADDER.to_vec());
-                assert_eq!(missing.len(), 6);
             }
             other => panic!("expected NoBackendAvailable, got {other:?}"),
         }
@@ -350,7 +349,6 @@ mod tests {
         for kind in NEGOTIATION_LADDER {
             assert!(message.contains(kind.protocol_name()), "{message}");
         }
-        assert!(message.contains("X11 (xcb GetImage)"), "{message}");
     }
 
     #[test]
