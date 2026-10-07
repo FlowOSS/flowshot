@@ -23,9 +23,12 @@ use crate::error::X11Error;
 /// 1.5; the server answers with its own version when older).
 const RANDR_CLIENT_VERSION: (u32, u32) = (1, 5);
 
-/// The oldest RANDR this backend works with (`GetScreenResources` +
-/// `GetCrtcInfo` + `GetOutputInfo` era).
-const RANDR_MIN_VERSION: (u32, u32) = (1, 2);
+/// The oldest RANDR this backend works with: the pre-1.5 enumeration
+/// fallback calls `GetScreenResourcesCurrent`, a RANDR **1.3** request
+/// (the previously advertised 1.2 floor sat below what the code actually
+/// issues - a 1.2 server passed the probe, then every enumeration failed
+/// as a protocol error).
+const RANDR_MIN_VERSION: (u32, u32) = (1, 3);
 
 /// The XFIXES version this crate asks for (`GetCursorImage` itself is 1.0;
 /// the answer is the server's own version when older).
@@ -78,7 +81,7 @@ impl fmt::Display for ExtensionVersion {
 /// the fd-passing fast path (`None` falls back to plain `GetImage`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct X11Caps {
-    /// The RANDR version; at least 1.2 for this backend to work at all.
+    /// The RANDR version; at least 1.3 for this backend to work at all.
     pub randr: ExtensionVersion,
     /// The XFIXES version, when the server provides XFIXES.
     pub xfixes: Option<ExtensionVersion>,
@@ -105,7 +108,7 @@ pub fn query_caps(conn: &RustConnection) -> Result<X11Caps, X11Error> {
 /// Probes the process environment for a capturable X11 session.
 ///
 /// Returns a probe advertising [`BackendKind::X11`] when `DISPLAY` is set,
-/// the X server is reachable, and RANDR >= 1.2 is present; `None` otherwise.
+/// the X server is reachable, and RANDR >= 1.3 is present; `None` otherwise.
 /// Every `None` reason is logged at debug level - probing runs on sessions
 /// that are legitimately not X11, so `None` is an answer, not a failure.
 ///
@@ -141,7 +144,7 @@ pub fn probe_x11() -> Option<CapabilityProbe> {
         Ok(caps) => {
             tracing::debug!(
                 randr = %caps.randr,
-                "RANDR is older than 1.2; X11 capture is unavailable"
+                "RANDR is older than 1.3; X11 capture is unavailable"
             );
             None
         }

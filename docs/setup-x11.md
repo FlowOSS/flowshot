@@ -16,7 +16,7 @@ settings/launcher/consent dialogs, and color picker.
 - An X11 session (`DISPLAY` set). XWayland is not a target: on a Wayland
   session the Wayland backends serve, and there is no X11 fallback path in
   either direction.
-- RANDR >= 1.2 for output enumeration (names, geometry, transforms). Any
+- RANDR >= 1.3 for output enumeration (names, geometry, transforms). Any
   Xorg from the last decade qualifies.
 - Optional: XFIXES for painting the cursor into the capture. Without it the
   capture simply omits the cursor, same as `hide_cursor = true`.
