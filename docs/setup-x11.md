@@ -1,14 +1,15 @@
 # FlowShot on X11 (i3 and other X11 desktops)
 
 Verification status: **live-verified on i3** (Xorg, single eDP-1 2880x1620,
-derived scale 2.25; SHM 1.2, RANDR 1.5, XFIXES 5.0), evidence bundle
-`.omo/evidence/x11-phase-a/`. X11 support in this release is the headless
-capture path: `capture full`, `capture screen [OUTPUT]`, and
-`capture --region WxH[+X+Y]` with `--no-edit`, plus copy/save/`--raw`/
-`--print-geometry`/delay and the daemon-owned clipboard. The interactive
-region overlay, annotation editor, pins, settings/launcher dialogs, and the
-color picker are Wayland-only pending Phase B; on X11 they exit 1 with a
-typed message that says exactly that.
+derived scale 2.25; SHM 1.2, RANDR 1.5, XFIXES 5.0) in two bundles: the
+headless capture path (Phase A, 2026-10-04) and the interactive UI
+(Phase B, 2026-10-05/06); the observed values are recorded inline in
+[verification.md](verification.md) under "Landed bundles". X11 support
+covers the full product: `capture full`, `capture screen [OUTPUT]`, and
+`capture --region WxH[+X+Y]` (with or without `--no-edit`),
+copy/save/`--raw`/`--print-geometry`/delay, the daemon-owned clipboard,
+and the interactive region overlay, annotation editor, pins,
+settings/launcher/consent dialogs, and color picker.
 
 ## Requirements
 
@@ -34,6 +35,29 @@ cursor is composited from XFIXES at capture time; there is no live cursor
 stream on X11 in this release, so `capture screen` with no argument and
 offset-less `--region WxH` centering use a one-shot `XQueryPointer` read.
 
+## Interactive UI
+
+The region overlay, annotation editor, pins, settings, launcher, and
+consent dialogs run natively on X11 - live-verified on i3 with picom
+(observed values: the Phase B entry in
+[verification.md](verification.md)):
+
+- Transparency: the overlay keeps real alpha (`with_transparent(true)`)
+  and picom composites it correctly (the QA decision measured a dimmed
+  frozen desktop, decisively not black). Transparency needs a compositing
+  manager; an uncomposited bare X session was not QA'd.
+- i3 focus: i3 auto-floats and auto-focuses FlowShot windows via their
+  WM_CLASS (verified: `FlowShot Pin`/`flowshot-pin`,
+  `FlowShot Settings`/`flowshot-settings`,
+  `Capture Launcher`/`flowshot-launcher`, and the consent dialog), so the
+  overlay is draggable immediately and pins take keyboard focus for
+  their hotkeys (opacity digits, Esc precedence menu-then-pin).
+- `capture last` and `--region at-cursor` take a headless reroute on X11
+  (no overlay window): the persisted last region, or the output under a
+  one-shot `XQueryPointer` cursor read, goes straight to the direct leg.
+- Multi-monitor overlay spanning on X11 is hardware-gated (the QA machine
+  is single-panel) and not claimed.
+
 ## Global shortcuts
 
 There is no shortcut portal on a bare X11 session, so window-manager binds
@@ -49,15 +73,13 @@ bindsym Ctrl+Print exec flowshot capture --region 1280x720 --no-edit -c
 `flowshot --print-bind-help` prints the current snippet set from the
 installed binary.
 
-The verbs that work on X11 in this release are the headless ones: `full`,
+The verbs that work on X11 are the headless ones - `full`,
 `screen [OUTPUT]` (by connector name or index), and
 `--region WxH[+X+Y]` (offset-less `WxH` centers on the cursor), all with
-`--no-edit`, plus `-c`/`-o`/`--raw`/`--print-geometry`/`-d`. Bare
-`flowshot capture` (interactive region select) needs Wayland. `capture
-last` and `--region at-cursor` are headless-shaped but still fail on X11 in
-this release; both are Phase B candidates. These are the headless verbs and
-that interactive region select needs Wayland (the same is noted elsewhere in
-this document).
+`--no-edit`, plus `-c`/`-o`/`--raw`/`--print-geometry`/`-d` - and the
+interactive ones: bare `flowshot capture` opens the native overlay, while
+`capture last` and `--region at-cursor` take the headless reroute (see
+"Interactive UI" above).
 
 ## Clipboard
 
@@ -94,13 +116,8 @@ pixels (a `--region 800x600+100+100` at scale 2.25 exports 1800x1350
 pixels), and `--print-geometry` reports the logical form (physical divided
 by scale).
 
-## Known limits in this release (Phase A)
+## Known limits
 
-- No interactive overlay, annotation editor, pins, settings dialog,
-  consent/launcher dialogs, or color picker on X11. They exit 1 with the
-  typed `NoDisplayServer` message. Phase B is the later plan for these.
-- `capture last` and `--region at-cursor` fail the same way on X11, even
-  with a saved last region in the config. Both are Phase B candidates.
 - Global shortcuts are window-manager binds; there is no portal
   integration on bare i3.
 - The cursor is composited from XFIXES at capture time; there is no live
@@ -110,3 +127,6 @@ by scale).
 - Derived scale is only as good as the monitor's reported physical size.
   Some panels report rounded or wrong millimeter sizes, so if the scale
   matters, set `Xft.dpi` explicitly (above).
+- X11 telemetry reports no monitor layout: the layout probe drives the
+  Wayland capture stack only (a disclosed degradation, not a capture
+  difference).

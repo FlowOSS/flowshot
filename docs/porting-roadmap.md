@@ -1,7 +1,9 @@
 # Porting roadmap
 
-Status: Phase 1 (X11) **SHIPPED** 2026-10-04 for the headless capture path
-(`crates/flowshot-capture-x11`, evidence `.omo/evidence/x11-phase-a/`).
+Status: Phase 1 (X11) **SHIPPED** - headless capture 2026-10-04,
+interactive UI (Phase B) 2026-10-06 (`crates/flowshot-capture-x11`;
+verification records with inlined observed values:
+[verification.md](verification.md)).
 Every other platform remains roadmap only: **no code exists** for it and
 none is planned for the first release. This document is
 the concrete entry-point map promised by
@@ -83,14 +85,14 @@ where each lives in the shipped contract:
 
 ## Phase 1 — X11 — SHIPPED 2026-10-04 (Phase A: headless capture)
 
-Shipped as `crates/flowshot-capture-x11`, live-verified on i3 (evidence:
-`.omo/evidence/x11-phase-a/`). The shipped scope is the headless capture
-path: `capture full`, `capture screen [OUTPUT]`, and
-`capture --region WxH[+X+Y]` with `--no-edit`, plus copy/save/`--raw`/
-`--print-geometry`/delay and the daemon-owned clipboard (INCR for large
-payloads). The interactive overlay/editor/pins/dialogs on X11 are Phase B,
-as are `capture last` and `--region at-cursor` (both keep the honest
-`NoDisplayServer` failure in this release). There is still no Xwayland
+Shipped as `crates/flowshot-capture-x11`, live-verified on i3 (observed
+values: [verification.md](verification.md) "Landed bundles"). The shipped
+scope covers the headless capture path - `capture full`,
+`capture screen [OUTPUT]`, and `capture --region WxH[+X+Y]` with
+`--no-edit`, plus copy/save/`--raw`/`--print-geometry`/delay and the
+daemon-owned clipboard (INCR for large payloads) - and, with Phase B, the
+interactive overlay/editor/pins/dialogs plus the headless `capture last`
+and `--region at-cursor` reroutes. There is still no Xwayland
 fallback path: sessions are mutually exclusive, and a Wayland session never
 routes to the X11 backend.
 

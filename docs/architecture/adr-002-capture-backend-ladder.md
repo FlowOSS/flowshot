@@ -72,6 +72,6 @@ Negotiation rules (`negotiate()`):
   than abstracted prematurely.
 - Non-goals held: no runtime
   shell-outs to grim/wl-copy/slurp anywhere in the stack. (The original
-  no-X11 non-goal was amended 2026-10-04: X11 headless capture is now the
-  ladder's last rung; the interactive UI remains Wayland-only pending
-  Phase B.)
+  no-X11 non-goal was amended 2026-10-04: X11 is now the ladder's last
+  rung, and Phase B shipped the interactive UI on X11 in the same
+  branch.)

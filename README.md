@@ -3,10 +3,9 @@
 # FlowShot
 
 FlowShot is a screenshot tool for Linux/Wayland, built by FlowOSS. X11
-sessions are covered for headless capture (full/screen/region with copy, save,
-raw output); the interactive editor, pins, and dialogs are Wayland-only in
-this release. It covers the
-Flameshot feature set (region, fullscreen, and per-monitor capture; the full
+sessions are fully covered: headless capture (full/screen/region with copy,
+save, raw output) and the interactive editor, pins, and dialogs. It covers
+the Flameshot feature set (region, fullscreen, and per-monitor capture; the full
 annotation kit; pins; upload; tray; global hotkeys) with the Wayland breakage
 that tool never fixed actually repaired, and with its own deliberately
 redesigned command line and config. It is capability-compatible with Flameshot,
@@ -107,9 +106,9 @@ cargo build --release
 ./target/release/flowshot --help
 ```
 
-Runtime requirements: a Wayland compositor or (headless capture only) an X11
-server, a D-Bus session bus, and (for the
-portal features) `xdg-desktop-portal` plus your desktop's portal backend. The
+Runtime requirements: a Wayland compositor or an X11 server, a D-Bus
+session bus, and (for the portal features) `xdg-desktop-portal` plus your
+desktop's portal backend. The
 tray needs an SNI host (waybar's tray module, KDE Plasma's system tray, the
 GNOME AppIndicator extension).
 
@@ -204,7 +203,7 @@ Every key, its type, default, and range: [docs/config-reference.md](docs/config-
 | niri | wlr-screencopy | No (first-motion fallback) | ICC support is an open upstream PR |
 | KDE Plasma | KWin ScreenShot2 D-Bus | First-motion fallback | Needs the packaged `.desktop` file. [Guide](docs/setup-kde.md) |
 | GNOME | XDG portal (Screenshot / ScreenCast) | No (GNOME exposes no cursor-position API) | Portal picker appears on some paths. [Guide](docs/setup-gnome.md) |
-| i3 / X11 desktops | xcb GetImage (MIT-SHM fd-passing fast path) | One-shot (XQueryPointer; `--region at-cursor` is Phase B) | Headless capture only in this release — editor/pins/dialogs need Wayland. [Guide](docs/setup-x11.md) |
+| i3 / X11 desktops | xcb GetImage (MIT-SHM fd-passing fast path) | One-shot (XQueryPointer, incl. `--region at-cursor`) | Fully supported; headless + interactive live-verified on i3 (single panel; multi-monitor spanning hardware-gated). [Guide](docs/setup-x11.md) |
 
 The runtime picks the backend by probing the live session, not from this
 table; a compositor that grows protocol support is picked up without a
@@ -232,11 +231,14 @@ The capture backends, overlay, annotation editor, pins, export actions,
 daemon, tray, shortcuts, settings UI, launcher dialog, and the CLI wired end
 to end through the daemon are implemented and verified (unit/property tests
 plus live-session QA; see
-[docs/verification.md](docs/verification.md)). X11 Phase A shipped
-2026-10-04: the headless capture path (full/screen/region, copy/save/raw/
-print-geometry/delay, daemon-owned clipboard) is live-verified on i3,
-evidence bundle `.omo/evidence/x11-phase-a/`; the interactive UI on X11
-remains Phase B. Still open before the first
+[docs/verification.md](docs/verification.md)). X11 support shipped in two
+live-verified phases on i3: Phase A (2026-10-04) the headless capture path
+(full/screen/region, copy/save/raw/print-geometry/delay, daemon-owned
+clipboard) and Phase B (2026-10-06) the interactive UI (overlay, editor,
+pins, dialogs, color picker, the headless `capture last` /
+`--region at-cursor` reroutes); the observed values are recorded inline in
+[docs/verification.md](docs/verification.md). Multi-monitor spanning on X11
+is hardware-gated (single-panel QA machine). Still open before the first
 release:
 
 - Packaging: AUR, Nix flake, Flatpak (**TBD**).
