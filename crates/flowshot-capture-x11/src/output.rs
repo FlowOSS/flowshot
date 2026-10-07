@@ -122,11 +122,18 @@ impl MonitorData {
 ///
 /// Rotation bits outside the four defined values (a protocol violation) are
 /// treated as unrotated.
+///
+/// Verification status: the rotation direction and the two single-reflection
+/// cases are independently oracle-confirmed (xrandr's rotation semantics and
+/// core's `map_point`/`Flipped` definitions); the reflect-then-rotate
+/// composition order is spec-derived from the convention documented above
+/// (the QA machine is a single unrotated panel) - the 16-row test table pins
+/// the composition through this function.
 pub(crate) fn transform_from_rotation(rotation: Rotation) -> Transform {
     let bits = u16::from(rotation);
     let reflect_x = bits & u16::from(Rotation::REFLECT_X) != 0;
     let reflect_y = bits & u16::from(Rotation::REFLECT_Y) != 0;
-    let quarter_turns = match bits & ROTATION_BITS {
+    let quarter_turns: u16 = match bits & ROTATION_BITS {
         b if b == u16::from(Rotation::ROTATE90) => 1,
         b if b == u16::from(Rotation::ROTATE180) => 2,
         b if b == u16::from(Rotation::ROTATE270) => 3,
@@ -134,9 +141,26 @@ pub(crate) fn transform_from_rotation(rotation: Rotation) -> Transform {
         _ => 0,
     };
     let flipped = reflect_x ^ reflect_y;
-    let offset = if reflect_y { 2 } else { 0 };
-    let index = (quarter_turns + offset) % 4 + if flipped { 4 } else { 0 };
-    Transform::ALL[index]
+    let turns = (quarter_turns + if reflect_y { 2 } else { 0 }) % 4;
+    // The variant is returned directly: no silent dependence on
+    // `Transform::ALL`'s ordering (the previous index arithmetic). The
+    // `_` arms cover turn 0 (and the unreachable >=4: `turns` is taken
+    // modulo 4 above).
+    if flipped {
+        match turns {
+            1 => Transform::Flipped90,
+            2 => Transform::Flipped180,
+            3 => Transform::Flipped270,
+            _ => Transform::Flipped,
+        }
+    } else {
+        match turns {
+            1 => Transform::Rot90,
+            2 => Transform::Rot180,
+            3 => Transform::Rot270,
+            _ => Transform::Normal,
+        }
+    }
 }
 
 /// One lit monitor as RANDR reported it, paired with the shared

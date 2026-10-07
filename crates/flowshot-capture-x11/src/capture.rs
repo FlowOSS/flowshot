@@ -249,6 +249,10 @@ fn grab_shm(conn: &X11Connection, monitor: &MonitorData) -> Result<Vec<u8>, X11E
     )?
     .reply()?;
     if usize::try_from(reply.size).unwrap_or(usize::MAX) != size {
+        // Release the segment before bailing: the caller's plain-GetImage
+        // fallback reuses THIS connection, so it must not run with a stray
+        // segment attached.
+        detach_quietly(conn, seg);
         return Err(X11Error::ImageSizeMismatch {
             expected: size,
             actual: usize::try_from(reply.size).unwrap_or(usize::MAX),
@@ -257,13 +261,19 @@ fn grab_shm(conn: &X11Connection, monitor: &MonitorData) -> Result<Vec<u8>, X11E
     let mut pixels = vec![0u8; size];
     let mut handle = &file;
     handle.read_exact(&mut pixels)?;
+    detach_quietly(conn, seg);
+    Ok(pixels)
+}
+
+/// Best-effort `shm::detach`: a failure is a logged degradation because
+/// the one-shot connection close reclaims the segment.
+fn detach_quietly(conn: &X11Connection, seg: u32) {
     let detached = shm::detach(conn.conn(), seg)
         .map_err(ReplyError::from)
         .and_then(VoidCookie::check);
     if let Err(error) = detached {
         tracing::debug!(%error, "MIT-SHM detach failed; the connection close will clean up");
     }
-    Ok(pixels)
 }
 
 /// The correctness base: core-protocol `GetImage` on the root window, pixels

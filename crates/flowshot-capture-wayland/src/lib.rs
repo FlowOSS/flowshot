@@ -132,7 +132,10 @@ pub mod desktop;
 pub mod error;
 pub mod globals;
 pub mod resolve;
-pub mod stitch;
+// The stitch algebra lives in the contract crate (shared with
+// flowshot-capture-x11); re-exported here so `crate::stitch` and the
+// public `flowshot_capture_wayland::stitch` path both keep working.
+pub use flowshot_capture::stitch;
 
 pub use cursor::CursorImage;
 pub use error::{ConnectError, IccError, ProbeError, ScreencopyError};

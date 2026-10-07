@@ -162,7 +162,7 @@ impl CaptureBackend for X11Backend {
             capture_run(&conn, caps, CaptureOpts::new(false))
         })
         .await?;
-        captured.stitch(region)
+        captured.stitch(BackendKind::X11, region)
     }
 
     fn cursor_events(&self) -> Option<CursorStream> {

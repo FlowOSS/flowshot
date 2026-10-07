@@ -2,31 +2,31 @@
 //! through the physical-first [`OutputLayout`] algebra of `flowshot-core`.
 //!
 //! The stitched frame follows the shared region-capture contract (identical
-//! to [`MockBackend`] and the Wayland stitcher): destination scale 1.0 - one
-//! pixel per logical unit - [`OutputRef::Composite`], and
-//! [`Transform::Normal`]. Each output contributes its physical crop (computed
-//! with THAT output's scale, never an averaged factor), resampled
-//! nearest-neighbour into its logical destination rect; rotated outputs are
-//! remapped to layout orientation first. Sequential per-output `GetImage`
-//! reads mean fast-moving content can skew between outputs
-//! (`grim`/`scrot`-equivalent, documented in the backend).
+//! to [`MockBackend`](crate::MockBackend)): destination scale 1.0 - one
+//! pixel per logical unit -
+//! [`OutputRef::Composite`], and [`Transform::Normal`]. Each output
+//! contributes its physical crop (computed with THAT output's scale, never
+//! an averaged factor), resampled nearest-neighbour into its logical
+//! destination rect; rotated outputs are remapped to layout orientation
+//! first. Sequential per-output captures mean fast-moving content can skew
+//! between outputs (`grim`-equivalent, documented in the runner).
 //!
-//! Adapted from `flowshot-capture-wayland/src/stitch.rs`; the duplication is
-//! deliberate - sibling platform crates must not depend on each other, and
-//! the shared `flowshot-capture` contract crate stays platform-free.
-//!
-//! [`MockBackend`]: flowshot_capture::MockBackend
+//! This module is the shared, platform-free stitch algebra BOTH platform
+//! crates consume (each re-exports it as its own `stitch`): the executable
+//! form of the shared region-capture contract. `kind` tags every error
+//! with the calling backend.
 
 use bytes::BytesMut;
-use flowshot_capture::{CaptureError, Frame, FrameBuffer, FrameFormat, OutputRef};
 use flowshot_core::geometry::{LogicalRect, OutputInfo, OutputLayout, PhysicalRect, Transform};
+
+use crate::{BackendKind, CaptureError, Frame, FrameBuffer, FrameFormat, OutputRef};
 
 /// The outputs of one capture run paired with their frames.
 ///
-/// Produced by [`crate::capture`] and consumed by [`CapturedOutputs::stitch`];
+/// Produced by a capture pass and consumed by [`CapturedOutputs::stitch`];
 /// `frames[i]` belongs to `outputs[i]`.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct CapturedOutputs {
+pub struct CapturedOutputs {
     /// The captured outputs, in capture order.
     pub outputs: Vec<OutputInfo>,
     /// One frame per output, native pre-transform orientation with the
@@ -38,37 +38,41 @@ impl CapturedOutputs {
     /// Stitches the captured frames covering `region` (global logical space)
     /// into one composite frame at scale 1.0.
     ///
+    /// `kind` tags the errors with the backend that produced the frames.
+    ///
     /// # Errors
     ///
     /// [`CaptureError::RegionOutsideLayout`] when `region` does not
     /// intersect the layout or rounds to zero pixels, and
     /// [`CaptureError::Backend`] when an output's frame is missing, a crop
     /// falls outside its frame, or a remap rejects a buffer.
-    pub fn stitch(&self, region: LogicalRect) -> Result<Frame, CaptureError> {
+    pub fn stitch(&self, kind: BackendKind, region: LogicalRect) -> Result<Frame, CaptureError> {
         let layout = OutputLayout::new(self.outputs.clone());
         let clamped = layout
             .clamp_region_to_layout(region)
             .ok_or(CaptureError::RegionOutsideLayout { region })?;
         let (width, height) =
             stitched_size(&clamped).ok_or(CaptureError::RegionOutsideLayout { region })?;
-        let destination_width = usize_dim(width)?;
-        let destination_height = usize_dim(height)?;
+        let destination_width = usize_dim(kind, width)?;
+        let destination_height = usize_dim(kind, height)?;
         let pixel_count = destination_width
             .checked_mul(destination_height)
-            .ok_or_else(|| internal_error("region dimensions overflow usize"))?;
+            .ok_or_else(|| internal_error(kind, "region dimensions overflow usize"))?;
         let mut data = vec![
             0u8;
-            pixel_count
-                .checked_mul(4)
-                .ok_or_else(|| internal_error("region dimensions overflow usize"))?
+            pixel_count.checked_mul(4).ok_or_else(|| internal_error(
+                kind,
+                "region dimensions overflow usize"
+            ))?
         ];
 
         for crop in layout.crop_rects(clamped) {
             let frame = self
                 .frame_for(&crop.output.connector)
-                .ok_or_else(|| internal_error("capture produced no frame for an output"))?;
-            let upright = oriented(&frame.buffer, frame.transform)?;
+                .ok_or_else(|| internal_error(kind, "capture produced no frame for an output"))?;
+            let upright = oriented(kind, &frame.buffer, frame.transform)?;
             blit_crop(
+                kind,
                 &upright,
                 crop.physical,
                 DestinationRect::of(&crop.logical, &clamped),
@@ -84,7 +88,7 @@ impl CapturedOutputs {
                 height,
                 stride: width
                     .checked_mul(4)
-                    .ok_or_else(|| internal_error("region stride overflows u32"))?,
+                    .ok_or_else(|| internal_error(kind, "region stride overflows u32"))?,
                 format: FrameFormat::Rgba8888,
             },
             output: OutputRef::Composite,
@@ -102,8 +106,7 @@ impl CapturedOutputs {
 
 /// Converts one pixel of any v1 frame format to byte order R, G, B, A.
 ///
-/// Shared by the stitcher and the live-diagnostic examples (PNG encoding
-/// wants RGBA).
+/// Shared by the stitcher and the QA harnesses (PNG encoding wants RGBA).
 #[must_use]
 pub fn to_rgba(format: FrameFormat, pixel: [u8; 4]) -> [u8; 4] {
     match format {
@@ -130,7 +133,12 @@ fn stitched_size(clamped: &LogicalRect) -> Option<(u32, u32)> {
 
 /// Rounds a logical edge to an integer pixel edge (half away from zero),
 /// saturating at the `i32` bounds; non-finite input rounds to `0`.
-fn round_to_i32(value: f64) -> i32 {
+///
+/// Shared with the Wayland portal composite geometry
+/// (`flowshot-capture-wayland`'s `portal` module), which rounds logical
+/// output origins into physical composite space the same way.
+#[must_use]
+pub fn round_to_i32(value: f64) -> i32 {
     if !value.is_finite() {
         return 0;
     }
@@ -180,19 +188,20 @@ impl DestinationRect {
 ///
 /// [`CaptureError::Backend`] when the remap rejects the buffers.
 fn oriented(
+    kind: BackendKind,
     buffer: &FrameBuffer,
     transform: Transform,
 ) -> Result<std::borrow::Cow<'_, FrameBuffer>, CaptureError> {
     if transform == Transform::Normal {
         return Ok(std::borrow::Cow::Borrowed(buffer));
     }
-    let width = usize_dim(buffer.width)?;
-    let height = usize_dim(buffer.height)?;
+    let width = usize_dim(kind, buffer.width)?;
+    let height = usize_dim(kind, buffer.height)?;
     let mut data = vec![0u8; buffer.data.len()];
     transform
         .remap_buffer(&buffer.data, &mut data, width, height, 4)
         .map_err(|error| CaptureError::Backend {
-            backend: flowshot_capture::BackendKind::X11,
+            backend: kind,
             source: error.into(),
         })?;
     let (width, height) = if transform.swaps_dimensions() {
@@ -206,7 +215,7 @@ fn oriented(
         height,
         stride: width
             .checked_mul(4)
-            .ok_or_else(|| internal_error("oriented stride overflows u32"))?,
+            .ok_or_else(|| internal_error(kind, "oriented stride overflows u32"))?,
         format: buffer.format,
     }))
 }
@@ -219,13 +228,15 @@ fn oriented(
 /// [`CaptureError::Backend`] when a crop coordinate is negative, a sample
 /// falls outside the source frame, or a conversion overflows `usize`.
 fn blit_crop(
+    kind: BackendKind,
     source: &FrameBuffer,
     physical: PhysicalRect,
     destination: DestinationRect,
     data: &mut [u8],
     destination_width: usize,
 ) -> Result<(), CaptureError> {
-    let edge = |value: i32, what: &str| usize::try_from(value).map_err(|_| internal_error(what));
+    let edge =
+        |value: i32, what: &str| usize::try_from(value).map_err(|_| internal_error(kind, what));
     let source_x = edge(physical.x.0, "crop rect is negative")?;
     let source_y = edge(physical.y.0, "crop rect is negative")?;
     let crop_width = edge(physical.width.0, "crop rect is negative")?;
@@ -243,16 +254,21 @@ fn blit_crop(
         for column in 0..dest_width {
             let sample_x = source_x + column * crop_width / dest_width;
             let pixel = source.pixel(
-                u32::try_from(sample_x).map_err(|_| internal_error("crop sample overflows u32"))?,
-                u32::try_from(sample_y).map_err(|_| internal_error("crop sample overflows u32"))?,
+                u32::try_from(sample_x)
+                    .map_err(|_| internal_error(kind, "crop sample overflows u32"))?,
+                u32::try_from(sample_y)
+                    .map_err(|_| internal_error(kind, "crop sample overflows u32"))?,
             );
             let Some(pixel) = pixel else {
-                return Err(internal_error("crop sample fell outside the frame"));
+                return Err(internal_error(kind, "crop sample fell outside the frame"));
             };
             let rgba = to_rgba(source.format, pixel);
             let offset = ((dest_y + row) * destination_width + dest_x + column) * 4;
             let Some(slot) = data.get_mut(offset..offset + 4) else {
-                return Err(internal_error("destination offset overflows the stitch"));
+                return Err(internal_error(
+                    kind,
+                    "destination offset overflows the stitch",
+                ));
             };
             slot.copy_from_slice(&rgba);
         }
@@ -260,13 +276,13 @@ fn blit_crop(
     Ok(())
 }
 
-fn usize_dim(value: u32) -> Result<usize, CaptureError> {
-    usize::try_from(value).map_err(|_| internal_error("dimension overflows usize"))
+fn usize_dim(kind: BackendKind, value: u32) -> Result<usize, CaptureError> {
+    usize::try_from(value).map_err(|_| internal_error(kind, "dimension overflows usize"))
 }
 
-fn internal_error(message: &str) -> CaptureError {
+fn internal_error(kind: BackendKind, message: &str) -> CaptureError {
     CaptureError::Backend {
-        backend: flowshot_capture::BackendKind::X11,
+        backend: kind,
         source: message.to_owned().into(),
     }
 }
@@ -399,7 +415,9 @@ mod tests {
             outputs: outputs.clone(),
         };
         // When stitching the full 8x3 span,
-        let frame = captured.stitch(region(0.0, 0.0, 8.0, 3.0)).unwrap();
+        let frame = captured
+            .stitch(BackendKind::ExtImageCopyCapture, region(0.0, 0.0, 8.0, 3.0))
+            .unwrap();
         // Then the composite is 8x3 RGBA with each output's color on its side.
         assert_eq!((frame.buffer.width, frame.buffer.height), (8, 3));
         assert_eq!(frame.output, OutputRef::Composite);
@@ -432,7 +450,9 @@ mod tests {
             outputs,
         };
         // When stitching its full logical extent,
-        let frame = captured.stitch(region(0.0, 0.0, 4.0, 3.0)).unwrap();
+        let frame = captured
+            .stitch(BackendKind::ExtImageCopyCapture, region(0.0, 0.0, 4.0, 3.0))
+            .unwrap();
         // Then the destination is the LOGICAL size (scale-1.0 contract).
         assert_eq!((frame.buffer.width, frame.buffer.height), (4, 3));
         assert_eq!(frame.buffer.pixel(2, 2), Some(GREEN));
@@ -475,7 +495,9 @@ mod tests {
             outputs,
         };
         // When stitching the full logical extent,
-        let stitched = captured.stitch(region(0.0, 0.0, 4.0, 3.0)).unwrap();
+        let stitched = captured
+            .stitch(BackendKind::ExtImageCopyCapture, region(0.0, 0.0, 4.0, 3.0))
+            .unwrap();
         // Then the upright image shows the red column as the bottom row.
         assert_eq!((stitched.buffer.width, stitched.buffer.height), (4, 3));
         assert_eq!(stitched.buffer.pixel(0, 2), Some(RED));
@@ -505,7 +527,12 @@ mod tests {
             )],
             outputs,
         };
-        let err = captured.stitch(region(100.0, 100.0, 4.0, 4.0)).unwrap_err();
+        let err = captured
+            .stitch(
+                BackendKind::ExtImageCopyCapture,
+                region(100.0, 100.0, 4.0, 4.0),
+            )
+            .unwrap_err();
         assert!(matches!(err, CaptureError::RegionOutsideLayout { .. }));
     }
 
@@ -539,7 +566,9 @@ mod tests {
             )],
             outputs,
         };
-        let err = captured.stitch(region(0.0, 0.0, 8.0, 3.0)).unwrap_err();
+        let err = captured
+            .stitch(BackendKind::ExtImageCopyCapture, region(0.0, 0.0, 8.0, 3.0))
+            .unwrap_err();
         assert!(matches!(err, CaptureError::Backend { .. }));
     }
 
@@ -586,7 +615,9 @@ mod tests {
             outputs,
         };
         // When stitching a 4x2 region spanning the boundary at x=8,
-        let frame = captured.stitch(region(6.0, 2.0, 4.0, 2.0)).unwrap();
+        let frame = captured
+            .stitch(BackendKind::ExtImageCopyCapture, region(6.0, 2.0, 4.0, 2.0))
+            .unwrap();
         // Then the composite is 4x2 with red left of the seam, green right.
         assert_eq!((frame.buffer.width, frame.buffer.height), (4, 2));
         assert_eq!(frame.buffer.pixel(1, 0), Some(RED));

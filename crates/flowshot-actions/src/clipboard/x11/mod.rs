@@ -42,15 +42,19 @@
 //! - Connection: the serving thread owns its own [`RustConnection`];
 //!   connections are not shared across threads in this pattern.
 
-// allow: SIZE_OK — one indivisible ICCCM protocol state machine (selection
-// ownership, timestamp acquisition, SelectionRequest dispatch, sender-side
-// INCR, MULTIPLE) sharing one OwnerState; splitting scatters the protocol
-// flow without behavioral gain. Pure headless-testable helpers
-// (target_names/incr math/atom_pairs) live at the bottom with the tests.
-// Reassess if this file grows again: extract `x11/pure.rs` first.
+// allow: SIZE_OK — what remains after the `pure` (headless-testable
+// composition, INCR math, atom-pair decode) and `wire` (atom interning,
+// offer construction, property writes) extractions is the one indivisible
+// ICCCM protocol state machine: selection ownership, timestamp
+// acquisition, the epoch / loss-report machinery, SelectionRequest
+// dispatch, sender-side INCR and MULTIPLE, all sharing one OwnerState.
+// Further splitting would scatter a single protocol flow without
+// behavioral gain. Reassess if this file grows again.
+
+mod pure;
+mod wire;
 
 use std::collections::HashMap;
-use std::ops::Range;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvError};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -65,16 +69,12 @@ use x11rb::protocol::xproto::{
 };
 use x11rb::rust_connection::RustConnection;
 
-use super::offer::{ClipboardOffer, MIME_TEXT_PLAIN};
+use super::offer::ClipboardOffer;
 use super::{ClipboardBackend, OfferLossHook};
 use crate::error::ClipboardError;
+use pure::{PROTOCOL_TARGETS, atom_pairs, incr_chunk_size, next_incr_slice};
+use wire::{build_offer, change_property8, change_property32, intern};
 
-/// Headroom between the server's maximum request size and the INCR
-/// chunk budget (`ChangeProperty` header plus safety margin).
-const REQUEST_OVERHEAD: usize = 1024;
-/// Upper bound for one INCR chunk, below the protocol maximum: some
-/// requestors mishandle oversized property changes.
-const INCR_CHUNK_CAP: usize = 256 * 1024;
 /// Deadline for the timestamp `PropertyNotify` to arrive.
 const TIMESTAMP_TIMEOUT: Duration = Duration::from_secs(5);
 /// Poll interval while waiting for the timestamp `PropertyNotify`.
@@ -83,12 +83,6 @@ const POLL_INTERVAL: Duration = Duration::from_millis(1);
 const MULTIPLE_LIST_LIMIT: u32 = 4096;
 /// Name of the dedicated serving thread.
 const THREAD_NAME: &str = "flowshot-x11-clipboard";
-
-/// Automatic text variants served alongside `text/plain` (parity with
-/// the Wayland backend, whose `wl-clipboard-rs` adds the same aliases).
-const TEXT_ALIASES: [&str; 4] = ["text/plain;charset=utf-8", "UTF8_STRING", "STRING", "TEXT"];
-/// ICCCM protocol targets every selection owner must serve.
-const PROTOCOL_TARGETS: [&str; 3] = ["TARGETS", "TIMESTAMP", "MULTIPLE"];
 
 /// Process-wide ownership epoch: every `serve()` claim (across ALL
 /// backend instances — the daemon builds a fresh one per capture) bumps
@@ -692,177 +686,6 @@ impl OwnerState {
     }
 }
 
-/// Intern one atom by name (created when missing).
-fn intern<C: ConnectionExt>(conn: &C, name: &[u8]) -> Result<Atom, ClipboardError> {
-    Ok(conn
-        .intern_atom(false, name)
-        .map_err(ClipboardError::transport)?
-        .reply()
-        .map_err(ClipboardError::transport)?
-        .atom)
-}
-
-/// Intern every servable target of the offer (MIME atoms plus the
-/// automatic text variants), deduplicated, in [`target_names`] order -
-/// the composition is the single source of truth shared with the
-/// `TARGETS` answer, so the served list can never drift from it.
-fn build_offer<C: ConnectionExt>(
-    conn: &C,
-    offer: ClipboardOffer,
-) -> Result<ServedOffer, ClipboardError> {
-    let mimes: Vec<String> = offer
-        .entries
-        .iter()
-        .map(|entry| entry.mime.clone())
-        .collect();
-    let mime_refs: Vec<&str> = mimes.iter().map(String::as_str).collect();
-    let datas: Vec<Arc<[u8]>> = offer
-        .entries
-        .into_iter()
-        .map(|entry| Arc::from(entry.data))
-        .collect();
-    let mut targets: Vec<ServedTarget> = Vec::new();
-    for name in target_names(&mime_refs) {
-        if PROTOCOL_TARGETS.contains(&name) {
-            // Protocol targets are answered from `Atoms`, never served
-            // from offer data.
-            continue;
-        }
-        let Some(index) = mime_refs
-            .iter()
-            .position(|mime| servable_names(mime).contains(&name))
-        else {
-            continue;
-        };
-        let atom = intern(conn, name.as_bytes())?;
-        if targets.iter().any(|t| t.target == atom) {
-            continue;
-        }
-        targets.push(ServedTarget {
-            target: atom,
-            prop_type: atom,
-            data: Arc::clone(&datas[index]),
-        });
-    }
-    Ok(ServedOffer { targets })
-}
-
-/// Format-8 `ChangeProperty` (Replace) with error checking.
-fn change_property8<C: ConnectionExt>(
-    conn: &C,
-    window: Window,
-    property: Atom,
-    prop_type: Atom,
-    data: &[u8],
-) -> Result<(), ClipboardError> {
-    let len = u32::try_from(data.len())
-        .map_err(|_| ClipboardError::X11("property payload exceeds u32".to_owned()))?;
-    conn.change_property(PropMode::REPLACE, window, property, prop_type, 8, len, data)
-        .map_err(ClipboardError::transport)?
-        .check()
-        .map_err(ClipboardError::transport)
-}
-
-/// Format-32 `ChangeProperty` (Replace) with error checking.
-fn change_property32<C: ConnectionExt>(
-    conn: &C,
-    window: Window,
-    property: Atom,
-    prop_type: Atom,
-    data: &[u32],
-) -> Result<(), ClipboardError> {
-    let bytes: Vec<u8> = data.iter().flat_map(|v| v.to_ne_bytes()).collect();
-    let len = u32::try_from(data.len())
-        .map_err(|_| ClipboardError::X11("property payload exceeds u32".to_owned()))?;
-    conn.change_property(
-        PropMode::REPLACE,
-        window,
-        property,
-        prop_type,
-        32,
-        len,
-        &bytes,
-    )
-    .map_err(ClipboardError::transport)?
-    .check()
-    .map_err(ClipboardError::transport)
-}
-
-// ---- pure helpers (headless-testable) ----
-
-/// The target names one MIME entry is servable under: the MIME itself
-/// plus, for `text/plain`, the automatic text variants.
-fn servable_names(mime: &str) -> Vec<&str> {
-    let mut names = vec![mime];
-    if mime == MIME_TEXT_PLAIN {
-        names.extend(TEXT_ALIASES);
-    }
-    names
-}
-
-/// The full `TARGETS` list for an offer with these MIME types: protocol
-/// targets first, then every servable target, deduplicated, in offer
-/// order. The single source of truth for the composition: [`build_offer`]
-/// interns exactly this list (minus the protocol names) into the served
-/// targets, and [`OwnerState::write_targets`] answers with the protocol
-/// atoms followed by those served atoms - the same order by construction.
-fn target_names<'a>(mimes: &[&'a str]) -> Vec<&'a str> {
-    let mut out: Vec<&'a str> = Vec::new();
-    for name in PROTOCOL_TARGETS {
-        push_unique(&mut out, name);
-    }
-    for mime in mimes {
-        for name in servable_names(mime) {
-            push_unique(&mut out, name);
-        }
-    }
-    out
-}
-
-/// Append `name` unless already present (the `TARGETS` dedup rule).
-fn push_unique<'a>(list: &mut Vec<&'a str>, name: &'a str) {
-    if !list.contains(&name) {
-        list.push(name);
-    }
-}
-
-/// The INCR chunk budget for a server whose maximum request size is
-/// `max_request_bytes`: the request size minus [`REQUEST_OVERHEAD`],
-/// capped at [`INCR_CHUNK_CAP`], never zero.
-fn incr_chunk_size(max_request_bytes: usize) -> usize {
-    max_request_bytes
-        .saturating_sub(REQUEST_OVERHEAD)
-        .clamp(1, INCR_CHUNK_CAP)
-}
-
-/// The next INCR slice for a transfer at `offset` of `total` bytes, and
-/// whether the transfer is finished: once `offset` reaches `total`, the
-/// slice is empty — the ICCCM terminator written after the requestor
-/// deleted the final data chunk.
-fn next_incr_slice(offset: usize, chunk: usize, total: usize) -> (Range<usize>, bool) {
-    if offset >= total {
-        return (0..0, true);
-    }
-    let end = (offset + chunk).min(total);
-    (offset..end, false)
-}
-
-/// Parse a `MULTIPLE` pair-list property value into (target, property)
-/// atom pairs; a truncated tail is ignored.
-fn atom_pairs(value: &[u8]) -> Vec<(Atom, Atom)> {
-    value
-        .as_chunks::<8>()
-        .0
-        .iter()
-        .map(|[t0, t1, t2, t3, d0, d1, d2, d3]| {
-            (
-                u32::from_ne_bytes([*t0, *t1, *t2, *t3]),
-                u32::from_ne_bytes([*d0, *d1, *d2, *d3]),
-            )
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -916,132 +739,5 @@ mod tests {
         assert!(!fired.load(Ordering::Acquire));
         report_loss_if_latest(Some(&hook), newest);
         assert!(fired.load(Ordering::Acquire));
-    }
-
-    #[test]
-    fn target_names_image_offer_lists_protocol_targets_and_mime() {
-        assert_eq!(
-            target_names(&["image/png"]),
-            ["TARGETS", "TIMESTAMP", "MULTIPLE", "image/png"]
-        );
-    }
-
-    #[test]
-    fn target_names_text_offer_expands_automatic_variants() {
-        assert_eq!(
-            target_names(&["text/plain"]),
-            [
-                "TARGETS",
-                "TIMESTAMP",
-                "MULTIPLE",
-                "text/plain",
-                "text/plain;charset=utf-8",
-                "UTF8_STRING",
-                "STRING",
-                "TEXT"
-            ]
-        );
-    }
-
-    #[test]
-    fn target_names_combined_offer_keeps_offer_order() {
-        assert_eq!(
-            target_names(&["image/png", "image/jpeg", "text/plain", "text/uri-list"]),
-            [
-                "TARGETS",
-                "TIMESTAMP",
-                "MULTIPLE",
-                "image/png",
-                "image/jpeg",
-                "text/plain",
-                "text/plain;charset=utf-8",
-                "UTF8_STRING",
-                "STRING",
-                "TEXT",
-                "text/uri-list"
-            ]
-        );
-    }
-
-    #[test]
-    fn target_names_deduplicates_explicit_alias_entries() {
-        let targets = target_names(&["text/plain", "UTF8_STRING", "text/plain"]);
-        assert_eq!(targets.iter().filter(|t| **t == "UTF8_STRING").count(), 1);
-        assert_eq!(targets.iter().filter(|t| **t == "text/plain").count(), 1);
-    }
-
-    #[test]
-    fn servable_names_expands_only_text_plain() {
-        assert_eq!(servable_names("image/png"), ["image/png"]);
-        assert_eq!(servable_names("text/uri-list"), ["text/uri-list"]);
-        assert_eq!(servable_names("text/plain").len(), 1 + TEXT_ALIASES.len());
-    }
-
-    #[test]
-    fn incr_chunk_size_caps_at_256kib() {
-        assert_eq!(incr_chunk_size(16 * 1024 * 1024), INCR_CHUNK_CAP);
-        assert_eq!(incr_chunk_size(INCR_CHUNK_CAP * 2), INCR_CHUNK_CAP);
-    }
-
-    #[test]
-    fn incr_chunk_size_reserves_overhead_below_cap() {
-        assert_eq!(incr_chunk_size(64 * 1024), 64 * 1024 - REQUEST_OVERHEAD);
-    }
-
-    #[test]
-    fn incr_chunk_size_clamps_degenerate_server_limits() {
-        assert_eq!(incr_chunk_size(REQUEST_OVERHEAD), 1);
-        assert_eq!(incr_chunk_size(0), 1);
-    }
-
-    /// Walk the sender-side INCR state machine: chunks until the payload
-    /// is exhausted, then the empty terminator slice.
-    fn incr_walk(total: usize, chunk: usize) -> Vec<(Range<usize>, bool)> {
-        let mut offset = 0;
-        let mut walk = Vec::new();
-        loop {
-            let (range, finished) = next_incr_slice(offset, chunk, total);
-            walk.push((range.clone(), finished));
-            if finished {
-                return walk;
-            }
-            offset = range.end;
-        }
-    }
-
-    #[test]
-    fn incr_walk_chunks_remainder_then_terminates() {
-        assert_eq!(
-            incr_walk(10, 4),
-            [(0..4, false), (4..8, false), (8..10, false), (0..0, true)]
-        );
-    }
-
-    #[test]
-    fn incr_walk_exact_multiple_still_terminates_empty() {
-        assert_eq!(
-            incr_walk(8, 4),
-            [(0..4, false), (4..8, false), (0..0, true)]
-        );
-    }
-
-    #[test]
-    fn incr_walk_single_chunk_payload() {
-        assert_eq!(incr_walk(3, 4), [(0..3, false), (0..0, true)]);
-    }
-
-    #[test]
-    fn atom_pairs_parses_target_property_tuples() {
-        let mut value = Vec::new();
-        for atom in [7u32, 8, 9, 10] {
-            value.extend_from_slice(&atom.to_ne_bytes());
-        }
-        assert_eq!(atom_pairs(&value), [(7, 8), (9, 10)]);
-    }
-
-    #[test]
-    fn atom_pairs_ignores_truncated_tail() {
-        assert_eq!(atom_pairs(&[0, 1, 2]), [] as [(Atom, Atom); 0]);
-        assert_eq!(atom_pairs(&[]), [] as [(Atom, Atom); 0]);
     }
 }

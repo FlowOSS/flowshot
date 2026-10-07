@@ -38,33 +38,16 @@ use flowshot_actions::{Clipboard, ExportError};
 use flowshot_core::config::SaveConfig;
 #[cfg(feature = "test-drive")]
 use flowshot_ui::pins::PinInput;
-use flowshot_ui::pins::{
-    PinActionSink, PinBehavior, PinId, PinImage, PinRuntime, PinSpec, WindowCustomizer,
-};
+use flowshot_ui::pins::{PinActionSink, PinBehavior, PinId, PinImage, PinRuntime, PinSpec};
 #[cfg(feature = "test-drive")]
 use winit::event::{MouseButton, TouchPhase};
 use winit::keyboard::KeyCode;
 #[cfg(feature = "test-drive")]
 use winit::keyboard::ModifiersState;
 
-/// Session-aware shell name - a copy of the daemon's
-/// `execute::window::session_window_customizer` (flowshot-daemon depends on
-/// flowshot-ui, so the examples cannot import it without a dependency
-/// cycle). Wayland `app_id` vs X11 `WM_CLASS`, same `(general, instance)`
-/// signature on both winit extension traits.
-fn session_window_customizer(app_id: &'static str, title: &'static str) -> WindowCustomizer {
-    use flowshot_actions::clipboard::{SessionKind, detect_session};
-    match detect_session() {
-        Ok(SessionKind::X11) => WindowCustomizer::new(move |attributes| {
-            use winit::platform::x11::WindowAttributesExtX11;
-            attributes.with_name(app_id, title)
-        }),
-        Ok(SessionKind::Wayland) | Err(_) => WindowCustomizer::new(move |attributes| {
-            use winit::platform::wayland::WindowAttributesExtWayland;
-            attributes.with_name(app_id, title)
-        }),
-    }
-}
+mod common;
+
+use common::session_window_customizer;
 
 struct NoDialog;
 
