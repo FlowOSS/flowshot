@@ -74,8 +74,10 @@ temp artifacts are transient.
 
 ### Landed bundles
 
-- **X11 Phase A headless capture** (2026-10-04, **LIVE-verified**):
-  `.omo/evidence/x11-phase-a/`. Ten checks on the live i3 session, all PASS:
+- **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
+  i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA
+  laptop's working repo - observed values inlined here per the convention
+  above). Ten checks, all PASS:
   full capture pixel-cross-checked against an independent
   `import -window root` oracle, `--region WxH+X+Y` geometry pixel-exact
   against a crop of the full frame, screen by connector name and by index,
