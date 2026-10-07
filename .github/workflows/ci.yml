@@ -11,6 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # libspa-sys (via the pipewire crate, portal ScreenCast capture) pkg-configs
+      # libpipewire-0.3 at build time; slimmed runner images no longer ship the
+      # headers. The other system-library wall (glib-sys via dead rfd) was removed
+      # from the graph instead - see commit 1301d33.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpipewire-0.3-dev
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
