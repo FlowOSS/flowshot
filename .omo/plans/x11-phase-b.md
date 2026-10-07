@@ -1,6 +1,7 @@
 # Plan: X11 Phase B — interactive UI on X11
 
-**Status**: active
+**Status**: implemented, independently reviewed, review fixes landed
+(2026-10-07, draft MR #2); F2 live re-run remains OPEN on the QA machines
 **Created**: 2026-10-04
 **Owner directive**: "do phase B or whatever, duh" — the interactive experience
 (overlay region select, editor, pins, dialogs, color picker) on X11 sessions.
@@ -113,28 +114,53 @@ per-output windows).
   parity kept — if Wayland has no equivalent signal, document the asymmetry);
   stale-daemon self-check (exe deleted/superseded → finish in-flight, exit,
   let respawn happen; issues.md 2026-10-04 entry is the spec).
-- [ ] 5. **Gates green**: fmt, `clippy --workspace --all-targets -D warnings`,
-  `cargo test --workspace` ×2, purity-gate, deny.
+- [x] 5. **Gates green**: fmt, `clippy --workspace --all-targets -D warnings`,
+  `cargo test --workspace` ×2, purity-gate, deny. — 2026-10-07 at tip
+  `faf23a0`: `just check` exit 0 (session env); second full workspace test
+  run headless (only failure: the pre-existing dev-box-only
+  `live_machine_reports_the_expected_taxonomy` env artifact —
+  `XDG_SESSION_TYPE` survives the scrub; CI runners lack it); the GitHub
+  Actions run at tip is fully green (purity, fmt, clippy, tests, deny).
 - [x] 6. **Live QA evidence bundle** at `.omo/evidence/x11-phase-b/` per
   docs/verification.md: the full interactive matrix (overlay select→save/copy,
   editor tools smoke, Esc cancel, pins, color, settings, launcher, consent if
   triggerable, last/at-cursor reroutes, riders' proofs), xdotool-driven,
   timeout-bounded, self-reversing.
-- [ ] 7. **Docs**: README X11 row loses "headless only" (interactive ships);
+- [x] 7. **Docs**: README X11 row loses "headless only" (interactive ships);
   setup-x11.md gains the interactive section (incl. picom/transparency note +
   focus behavior on i3); ADR-006 + porting-roadmap Phase-B status;
   verification.md entry; the Phase A "Phase B candidates" notes updated.
+  — 2026-10-07: landed in `ac27911` (verification.md Phase B entry),
+  `6e54e3b` (all twelve stale claims + the interactive section), `a282946`
+  (citation convention), `15e0120` (two-machine naming).
 
 ## Final Verification Wave
 
-- [ ] F1. **Independent code review** of the Phase B diff (purity gate holds —
+- [x] F1. **Independent code review** of the Phase B diff (purity gate holds —
   zero platform imports in gated crates; session routing discipline; error
-  typing; no shortcuts): APPROVE/REJECT
+  typing; no shortcuts): **REQUEST_CHANGES → addressed.** Four scoped
+  reviewers 2026-10-07 (new crate / daemon / cross-crate / shipping
+  hygiene; reports in `.omo/evidence/*code-review.md`, ledger in draft
+  MR #2): 9 merge blockers + minors found; every one fixed in a named
+  commit on the branch or explicitly deferred with reasons. A fresh
+  re-review pass remains advisable before un-drafting.
 - [ ] F2. **Independent live QA re-run** on the i3 session reproducing the
-  task-6 evidence from scratch: APPROVE/REJECT
-- [ ] F3. **Gate parity audit** (CI symmetry, Wayland regression-free by
-  construction, lockfile hygiene): APPROVE/REJECT
-- [ ] F4. **Docs accuracy review** (claims match code + evidence): APPROVE/REJECT
+  task-6 evidence from scratch: APPROVE/REJECT — **OPEN: needs the i3/X11
+  laptop (and should cover the Wayland pin-zoom live check, branch
+  notepad item 10); cannot run from the workstation.**
+- [x] F3. **Gate parity audit** (CI symmetry, Wayland regression-free by
+  construction, lockfile hygiene): **RESTORED/FIXED.** CI symmetry was
+  broken repo-wide (pre-existing walls: dead rfd→glib-sys `1301d33`,
+  libspa-sys headers `176c602`, never-installed cargo-deny + clippy
+  parity `136324a`; tip run fully green). The one real Wayland regression
+  the audit class exists for (pin zoom) was found, fixed and test-guarded
+  (`1f114a5`, `c3401a3`); lockfile hygiene: phantom/misplaced deps out
+  (`4341ddd`).
+- [x] F4. **Docs accuracy review** (claims match code + evidence):
+  **REJECT → fixed.** The hygiene review found 12 false Phase-A claims,
+  a committed temp artifact, six dangling evidence citations and the
+  two-machine conflation; all resolved (`6e54e3b`, `69061fa`, `a282946`,
+  `ac27911`, `15e0120`, `e312a4d`, `5d2f992`).
 
 ## Success criteria (commands)
 
