@@ -2,8 +2,10 @@
 //! invocations whose target resolves without a window skip the overlay
 //! child and ride the direct leg.
 
+use flowshot_actions::ClipboardError;
+use flowshot_actions::clipboard::{SessionKind, detect_session};
 use flowshot_core::config::Region;
-use flowshot_core::geometry::LogicalRect;
+use flowshot_core::geometry::{LogicalPoint, LogicalRect};
 use flowshot_ui::launcher::RegionGeometry;
 
 use super::session::region_rect_of;
@@ -21,6 +23,10 @@ use crate::request::CaptureRequest;
 /// Wayland sessions and the headless environment always get `Ok(None)` -
 /// the caller's existing path runs untouched.
 ///
+/// Thin env-reading glue: the decision itself is the injectable pure
+/// [`reroute_decision`], and the only async work (the cursor read for an
+/// offset-less token) happens exactly where the original ordering had it.
+///
 /// # Errors
 ///
 /// [`ExecuteError::Usage`] for an offset-less geometry when the cursor
@@ -29,38 +35,84 @@ pub(super) async fn x11_headless_region(
     request: &CaptureRequest,
     ctx: &ExecCtx,
 ) -> Result<Option<Target>, ExecuteError> {
-    if !request.no_edit
-        || !matches!(
-            flowshot_actions::clipboard::detect_session(),
-            Ok(flowshot_actions::clipboard::SessionKind::X11)
-        )
-    {
-        return Ok(None);
+    let session = detect_session();
+    let saved_last_region =
+        if request.no_edit && request.last_region && matches!(session, Ok(SessionKind::X11)) {
+            ctx.load_config().0.capture.last_region
+        } else {
+            None
+        };
+    match reroute_decision(request, &session, saved_last_region) {
+        Reroute::None => Ok(None),
+        Reroute::Target(target) => Ok(Some(target)),
+        Reroute::NeedsCursor(geometry) => {
+            let cursor = resolve_cursor().await;
+            Ok(Some(cursor_reroute(&geometry, cursor)?))
+        }
+    }
+}
+
+/// The outcome of the pure reroute decision.
+enum Reroute {
+    /// No reroute: the caller's existing path (the overlay child) runs.
+    None,
+    /// Reroute onto the direct leg with this target.
+    Target(Target),
+    /// An offset-less geometry token: the live cursor read decides (the
+    /// async glue resolves it, then [`cursor_reroute`] completes).
+    NeedsCursor(RegionGeometry),
+}
+
+/// The reroute decision with every environment input injectable (the
+/// `shortcut/detect.rs` and `session_from_env` precedent): pure, so the
+/// session gates protecting the Wayland overlay are unit-testable without
+/// mutating process env (parallel-test race avoidance).
+fn reroute_decision(
+    request: &CaptureRequest,
+    session: &Result<SessionKind, ClipboardError>,
+    saved_last_region: Option<Region>,
+) -> Reroute {
+    if !request.no_edit || !matches!(session, Ok(SessionKind::X11)) {
+        return Reroute::None;
     }
     if request.last_region {
-        let (config, _) = ctx.load_config();
-        return Ok(windowless_reroute(request, config.capture.last_region));
+        return match windowless_reroute(request, saved_last_region) {
+            Some(target) => Reroute::Target(target),
+            None => Reroute::None,
+        };
     }
     if let Some(target) = windowless_reroute(request, None) {
-        return Ok(Some(target));
+        return Reroute::Target(target);
     }
     let Some(token) = request.region.as_deref() else {
-        return Ok(None);
+        return Reroute::None;
     };
     let Ok(geometry) = RegionGeometry::parse(token) else {
-        return Ok(None);
+        return Reroute::None;
     };
-    let cursor = if geometry.x.is_none() || geometry.y.is_none() {
-        resolve_cursor().await
-    } else {
-        None
-    };
-    match region_rect_of(&geometry, cursor) {
-        Some(rect) => Ok(Some(Target::Region(rect))),
-        None => Err(ExecuteError::Usage(
-            "offset-less region geometry needs a resolved cursor position".to_owned(),
-        )),
+    if geometry.x.is_none() || geometry.y.is_none() {
+        return Reroute::NeedsCursor(geometry);
     }
+    match region_rect_of(&geometry, None) {
+        Some(rect) => Reroute::Target(Target::Region(rect)),
+        None => Reroute::None,
+    }
+}
+
+/// The offset-less token completion: the resolved cursor feeds
+/// [`region_rect_of`]; an unresolved cursor is the typed
+/// [`ExecuteError::Usage`] (the launcher dispatch's precedent).
+fn cursor_reroute(
+    geometry: &RegionGeometry,
+    cursor: Option<LogicalPoint>,
+) -> Result<Target, ExecuteError> {
+    region_rect_of(geometry, cursor)
+        .map(Target::Region)
+        .ok_or_else(|| {
+            ExecuteError::Usage(
+                "offset-less region geometry needs a resolved cursor position".to_owned(),
+            )
+        })
 }
 
 /// The cursor-independent reroute decision: `capture last` maps to the
@@ -167,5 +219,139 @@ mod tests {
             None
         );
         assert_eq!(windowless_reroute(&request(false, None), None), None);
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "symmetric with no_session()'s Err arm"
+    )]
+    fn x11() -> Result<SessionKind, ClipboardError> {
+        Ok(SessionKind::X11)
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "symmetric with no_session()'s Err arm"
+    )]
+    fn wayland() -> Result<SessionKind, ClipboardError> {
+        Ok(SessionKind::Wayland)
+    }
+
+    fn no_session() -> Result<SessionKind, ClipboardError> {
+        Err(ClipboardError::NoSession)
+    }
+
+    #[test]
+    fn wayland_session_never_reroutes() {
+        // The Wayland-protection gate: tokens that reroute on X11 must
+        // leave a Wayland session on the overlay path.
+        assert!(matches!(
+            reroute_decision(&request(false, Some("at-cursor")), &wayland(), None),
+            Reroute::None
+        ));
+        let saved = Region {
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+        };
+        assert!(matches!(
+            reroute_decision(&request(true, None), &wayland(), Some(saved)),
+            Reroute::None
+        ));
+    }
+
+    #[test]
+    fn no_session_never_reroutes() {
+        assert!(matches!(
+            reroute_decision(&request(false, Some("at-cursor")), &no_session(), None),
+            Reroute::None
+        ));
+    }
+
+    #[test]
+    fn edit_mode_never_reroutes_even_on_x11() {
+        let editable = CaptureRequest {
+            no_edit: false,
+            region: Some("at-cursor".to_owned()),
+            ..CaptureRequest::default()
+        };
+        assert!(matches!(
+            reroute_decision(&editable, &x11(), None),
+            Reroute::None
+        ));
+    }
+
+    #[test]
+    fn x11_at_cursor_reroutes_to_the_screen_cursor_target() {
+        assert!(matches!(
+            reroute_decision(&request(false, Some("at-cursor")), &x11(), None),
+            Reroute::Target(Target::Screen(ScreenTarget::Cursor))
+        ));
+    }
+
+    #[test]
+    fn x11_last_region_without_persistence_falls_through_to_the_overlay() {
+        assert!(matches!(
+            reroute_decision(&request(true, None), &x11(), None),
+            Reroute::None
+        ));
+    }
+
+    #[test]
+    fn x11_persisted_last_region_reroutes() {
+        let saved = Region {
+            x: 1,
+            y: 2,
+            width: 30,
+            height: 40,
+        };
+        assert!(matches!(
+            reroute_decision(&request(true, None), &x11(), Some(saved)),
+            Reroute::Target(Target::Region(_))
+        ));
+    }
+
+    #[test]
+    fn offsetless_token_needs_the_cursor() {
+        assert!(matches!(
+            reroute_decision(&request(false, Some("640x480")), &x11(), None),
+            Reroute::NeedsCursor(_)
+        ));
+    }
+
+    #[test]
+    fn offset_token_reroutes_without_a_cursor_read() {
+        assert!(matches!(
+            reroute_decision(&request(false, Some("640x480+10+20")), &x11(), None),
+            Reroute::Target(Target::Region(_))
+        ));
+    }
+
+    #[test]
+    fn malformed_token_falls_through() {
+        assert!(matches!(
+            reroute_decision(&request(false, Some("bogus")), &x11(), None),
+            Reroute::None
+        ));
+    }
+
+    #[test]
+    fn unresolved_cursor_for_an_offsetless_token_is_usage() {
+        let geometry = RegionGeometry::parse("640x480").unwrap();
+        assert!(matches!(
+            cursor_reroute(&geometry, None),
+            Err(ExecuteError::Usage(_))
+        ));
+    }
+
+    #[test]
+    fn resolved_cursor_completes_the_offsetless_token() {
+        let geometry = RegionGeometry::parse("640x480").unwrap();
+        let cursor = Some(LogicalPoint::from_raw(100.0, 100.0));
+        assert!(matches!(
+            cursor_reroute(&geometry, cursor),
+            Ok(Target::Region(_))
+        ));
     }
 }
