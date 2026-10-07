@@ -80,7 +80,9 @@ mod scale;
 mod worker;
 
 pub mod error;
-pub mod stitch;
+// The stitch algebra lives in the contract crate (shared with
+// flowshot-capture-wayland); re-exported so `crate::stitch` keeps working.
+pub use flowshot_capture::stitch;
 
 pub use backend::X11Backend;
 pub use connect::X11Connection;
