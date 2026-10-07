@@ -42,6 +42,17 @@ const POLL_INTERVAL: Duration = Duration::from_millis(2);
 const GET_LIMIT: u32 = 0x00FF_FFFF;
 const INCR_PAYLOAD_LEN: usize = 1024 * 1024;
 
+/// Truth check with the ONE failure shape: a panic would exit 101
+/// without the `x11 smoke FAILED:` line, so every assertion in this
+/// example travels through `Result`.
+fn check(condition: bool, message: &str) -> Result<(), BoxError> {
+    if condition {
+        Ok(())
+    } else {
+        Err(message.to_owned().into())
+    }
+}
+
 fn main() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.first().map(String::as_str) {
@@ -67,7 +78,10 @@ fn run() -> Result<String, BoxError> {
 
     backend.serve(text_offer("flowshot x11 smoke"))?;
     let direct = read_selection(&reader, window, "UTF8_STRING")?;
-    assert_eq!(direct, b"flowshot x11 smoke", "direct text round-trip");
+    check(
+        direct == b"flowshot x11 smoke",
+        "direct text round-trip mismatch",
+    )?;
 
     let targets = read_targets(&reader, window)?;
     for required in [
@@ -77,10 +91,10 @@ fn run() -> Result<String, BoxError> {
         "text/plain",
         "UTF8_STRING",
     ] {
-        assert!(
+        check(
             targets.iter().any(|name| name == required),
-            "target {required} missing from {targets:?}"
-        );
+            &format!("target {required} missing from {targets:?}"),
+        )?;
     }
 
     // Supersede: a second serve() replaces the first offer; the 1 MiB
@@ -88,11 +102,11 @@ fn run() -> Result<String, BoxError> {
     let big = "x".repeat(INCR_PAYLOAD_LEN);
     backend.serve(text_offer(&big))?;
     let incr = read_selection(&reader, window, MIME_TEXT_PLAIN)?;
-    assert_eq!(incr.len(), big.len(), "INCR payload length");
-    assert!(
+    check(incr.len() == big.len(), "INCR payload length mismatch")?;
+    check(
         incr.iter().all(|byte| *byte == b'x'),
-        "INCR payload content"
-    );
+        "INCR payload content mismatch",
+    )?;
 
     Ok(format!(
         "x11 smoke OK: direct text, TARGETS ({} targets), supersede, {} KiB INCR round-trip",
@@ -142,16 +156,12 @@ fn read_clipboard(save_path: Option<&str>) -> Result<String, BoxError> {
     ))
 }
 
-/// Width/height from a PNG's IHDR chunk: 8-byte signature, 4-byte chunk
-/// length, `IHDR`, then big-endian width and height (offsets 16..24).
+/// Width/height of a PNG payload, decoded by the `image` crate (already a
+/// regular dependency of this crate - no hand-rolled IHDR parsing).
 fn png_ihdr_dimensions(payload: &[u8]) -> Option<(u32, u32)> {
-    const SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
-    if payload.get(0..8)? != SIGNATURE || payload.get(12..16)? != b"IHDR" {
-        return None;
-    }
-    let width = u32::from_be_bytes(payload.get(16..20)?.try_into().ok()?);
-    let height = u32::from_be_bytes(payload.get(20..24)?.try_into().ok()?);
-    Some((width, height))
+    image::ImageReader::new(std::io::Cursor::new(payload))
+        .into_dimensions()
+        .ok()
 }
 
 /// Connection plus a 1x1 `INPUT_ONLY` requestor window that receives the
@@ -206,10 +216,10 @@ fn read_selection(
     )?;
     conn.flush()?;
     let notified = wait_selection_notify(conn, window)?;
-    assert!(
+    check(
         notified != x11rb::NONE,
-        "conversion of {target} was refused"
-    );
+        &format!("conversion of {target} was refused"),
+    )?;
 
     let first = get_delete(conn, window, property)?;
     if first.type_ != intern(conn, "INCR")? {
