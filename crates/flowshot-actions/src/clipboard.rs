@@ -151,8 +151,9 @@ pub fn detect_session() -> Result<SessionKind, ClipboardError> {
 
 /// Clipboard facade used by the post-capture pipeline.
 ///
-/// Construct via [`Clipboard::wayland`] (daemon production route) or
-/// [`Clipboard::new`] with any backend (tests).
+/// Construct via [`Clipboard::for_session`] /
+/// [`Clipboard::for_session_with_loss_hook`] (the daemon production
+/// routes) or [`Clipboard::new`] with any backend (tests).
 #[derive(Debug)]
 pub struct Clipboard {
     backend: Box<dyn ClipboardBackend>,
@@ -169,29 +170,25 @@ impl Clipboard {
 
     /// The data-control backend, for the daemon process (the offer is
     /// owned by THIS process's serving thread — see [`WaylandClipboard`]).
+    /// Crate-internal: production callers route through
+    /// [`Self::for_session`].
     #[must_use]
-    pub fn wayland() -> Self {
+    pub(crate) fn wayland() -> Self {
         Self::new(WaylandClipboard::new())
     }
 
     /// The X11 selection-owner backend, for the daemon process (the
     /// offer is owned by THIS process's serving thread — see
-    /// [`X11Clipboard`]).
+    /// [`X11Clipboard`]). Crate-internal: production callers route
+    /// through [`Self::for_session`].
     #[must_use]
-    pub fn x11() -> Self {
+    pub(crate) fn x11() -> Self {
         Self::new(X11Clipboard::new())
     }
 
     /// The backend for the current session: `WAYLAND_DISPLAY` set →
-    /// [`Self::wayland`]; else `DISPLAY` set → [`Self::x11`].
-    ///
-    /// # Phase A semantics
-    ///
-    /// X11 support covers the headless capture path only: capture plus
-    /// the post-capture actions, with the daemon owning the clipboard
-    /// offer exactly like on Wayland. The interactive overlay, editor,
-    /// pins, and dialogs remain Wayland-gated in Phase A
-    /// (`flowshot-ui`'s `require_display_server`).
+    /// the Wayland backend; else `DISPLAY` set → the X11 selection
+    /// owner. `WAYLAND_DISPLAY` wins: an `XWayland` session exports both.
     ///
     /// # Errors
     ///
