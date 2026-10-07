@@ -46,7 +46,7 @@
 // ownership, timestamp acquisition, SelectionRequest dispatch, sender-side
 // INCR, MULTIPLE) sharing one OwnerState; splitting scatters the protocol
 // flow without behavioral gain. Pure headless-testable helpers
-// (targets_for/incr math/atom_pairs) live at the bottom with the tests.
+// (target_names/incr math/atom_pairs) live at the bottom with the tests.
 // Reassess if this file grows again: extract `x11/pure.rs` first.
 
 use std::collections::HashMap;
@@ -103,6 +103,20 @@ static OWNER_EPOCH: AtomicU64 = AtomicU64::new(0);
 /// Claims the next ownership epoch (one `serve()` = one claim).
 fn next_owner_epoch() -> u64 {
     OWNER_EPOCH.fetch_add(1, Ordering::AcqRel) + 1
+}
+
+/// Rewinds a claimed-but-never-established epoch (a `serve()` whose setup
+/// failed): without the rewind, the dead claim would silence the
+/// STILL-LIVE previous owner's genuine later loss (its
+/// [`report_loss_if_latest`] check would see the newer epoch), pinning a
+/// daemon's clipboard-offer hold until killed. The compare-exchange
+/// rewinds only when no newer claim happened in between; a newer claim
+/// belongs to a `serve()` that either succeeds (genuinely superseding the
+/// previous owner, whose silence is then correct) or fails and rewinds
+/// itself.
+fn unclaim_owner_epoch(epoch: u64) {
+    let _rewound =
+        OWNER_EPOCH.compare_exchange(epoch, epoch - 1, Ordering::AcqRel, Ordering::Acquire);
 }
 
 /// Serving-thread exit report: fires `hook` iff `epoch` is still the
@@ -197,13 +211,35 @@ impl ClipboardBackend for X11Clipboard {
         let epoch = next_owner_epoch();
         let (ready_tx, ready_rx) = mpsc::channel();
         let hook = self.loss_hook.clone();
-        let thread = std::thread::Builder::new()
+        let thread = match std::thread::Builder::new()
             .name(THREAD_NAME.to_owned())
             .spawn(move || run_owner(offer, ready_tx, hook, epoch))
-            .map_err(ClipboardError::transport)?;
-        let window = ready_rx.recv().map_err(|_: RecvError| {
-            ClipboardError::X11("the serving thread exited before reporting ownership".to_owned())
-        })??;
+        {
+            Ok(thread) => thread,
+            Err(error) => {
+                unclaim_owner_epoch(epoch);
+                return Err(ClipboardError::transport(error));
+            }
+        };
+        let window = match ready_rx
+            .recv()
+            .map_err(|_: RecvError| {
+                ClipboardError::X11(
+                    "the serving thread exited before reporting ownership".to_owned(),
+                )
+            })
+            .flatten()
+        {
+            Ok(window) => window,
+            Err(error) => {
+                // The claim never became a live ownership: rewind it so a
+                // still-live previous owner's genuine later loss is not
+                // silenced by the dead claim.
+                unclaim_owner_epoch(epoch);
+                drop(thread);
+                return Err(error);
+            }
+        };
         let previous = self
             .current
             .lock()
@@ -667,25 +703,46 @@ fn intern<C: ConnectionExt>(conn: &C, name: &[u8]) -> Result<Atom, ClipboardErro
 }
 
 /// Intern every servable target of the offer (MIME atoms plus the
-/// automatic text variants), deduplicated, in offer order.
+/// automatic text variants), deduplicated, in [`target_names`] order -
+/// the composition is the single source of truth shared with the
+/// `TARGETS` answer, so the served list can never drift from it.
 fn build_offer<C: ConnectionExt>(
     conn: &C,
     offer: ClipboardOffer,
 ) -> Result<ServedOffer, ClipboardError> {
+    let mimes: Vec<String> = offer
+        .entries
+        .iter()
+        .map(|entry| entry.mime.clone())
+        .collect();
+    let mime_refs: Vec<&str> = mimes.iter().map(String::as_str).collect();
+    let datas: Vec<Arc<[u8]>> = offer
+        .entries
+        .into_iter()
+        .map(|entry| Arc::from(entry.data))
+        .collect();
     let mut targets: Vec<ServedTarget> = Vec::new();
-    for entry in offer.entries {
-        let data: Arc<[u8]> = Arc::from(entry.data);
-        for name in servable_names(&entry.mime) {
-            let atom = intern(conn, name.as_bytes())?;
-            if targets.iter().any(|t| t.target == atom) {
-                continue;
-            }
-            targets.push(ServedTarget {
-                target: atom,
-                prop_type: atom,
-                data: Arc::clone(&data),
-            });
+    for name in target_names(&mime_refs) {
+        if PROTOCOL_TARGETS.contains(&name) {
+            // Protocol targets are answered from `Atoms`, never served
+            // from offer data.
+            continue;
         }
+        let Some(index) = mime_refs
+            .iter()
+            .position(|mime| servable_names(mime).contains(&name))
+        else {
+            continue;
+        };
+        let atom = intern(conn, name.as_bytes())?;
+        if targets.iter().any(|t| t.target == atom) {
+            continue;
+        }
+        targets.push(ServedTarget {
+            target: atom,
+            prop_type: atom,
+            data: Arc::clone(&datas[index]),
+        });
     }
     Ok(ServedOffer { targets })
 }
@@ -745,12 +802,11 @@ fn servable_names(mime: &str) -> Vec<&str> {
 
 /// The full `TARGETS` list for an offer with these MIME types: protocol
 /// targets first, then every servable target, deduplicated, in offer
-/// order. Name-level mirror of [`OwnerState::write_targets`] (composed
-/// entirely of production pieces: [`PROTOCOL_TARGETS`] +
-/// [`servable_names`]); the live smoke (`examples/x11_smoke.rs`) asserts
-/// the real `TARGETS` property, covering drift.
-#[cfg(test)]
-fn targets_for<'a>(mimes: &[&'a str]) -> Vec<&'a str> {
+/// order. The single source of truth for the composition: [`build_offer`]
+/// interns exactly this list (minus the protocol names) into the served
+/// targets, and [`OwnerState::write_targets`] answers with the protocol
+/// atoms followed by those served atoms - the same order by construction.
+fn target_names<'a>(mimes: &[&'a str]) -> Vec<&'a str> {
     let mut out: Vec<&'a str> = Vec::new();
     for name in PROTOCOL_TARGETS {
         push_unique(&mut out, name);
@@ -763,7 +819,7 @@ fn targets_for<'a>(mimes: &[&'a str]) -> Vec<&'a str> {
     out
 }
 
-#[cfg(test)]
+/// Append `name` unless already present (the `TARGETS` dedup rule).
 fn push_unique<'a>(list: &mut Vec<&'a str>, name: &'a str) {
     if !list.contains(&name) {
         list.push(name);
@@ -809,8 +865,6 @@ fn atom_pairs(value: &[u8]) -> Vec<(Atom, Atom)> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
-
     use super::*;
 
     /// The epoch tests touch the process-global [`OWNER_EPOCH`]; they are
@@ -844,20 +898,38 @@ mod tests {
 
         // No hook configured: the report is a silent no-op.
         report_loss_if_latest(None, newer);
+
+        // Given: a live claim, then a newer serve() that fails its setup.
+        fired.store(false, Ordering::Release);
+        let live = next_owner_epoch();
+        let failed = next_owner_epoch();
+        // When: the failed setup unclaims its epoch.
+        unclaim_owner_epoch(failed);
+        // Then: the live claim's genuine loss still reports - the dead
+        // claim no longer silences it.
+        report_loss_if_latest(Some(&hook), live);
+        assert!(fired.load(Ordering::Acquire));
+        // And: a subsequent live claim resumes the normal silence rule.
+        fired.store(false, Ordering::Release);
+        let newest = next_owner_epoch();
+        report_loss_if_latest(Some(&hook), live);
+        assert!(!fired.load(Ordering::Acquire));
+        report_loss_if_latest(Some(&hook), newest);
+        assert!(fired.load(Ordering::Acquire));
     }
 
     #[test]
-    fn targets_for_image_offer_lists_protocol_targets_and_mime() {
+    fn target_names_image_offer_lists_protocol_targets_and_mime() {
         assert_eq!(
-            targets_for(&["image/png"]),
+            target_names(&["image/png"]),
             ["TARGETS", "TIMESTAMP", "MULTIPLE", "image/png"]
         );
     }
 
     #[test]
-    fn targets_for_text_offer_expands_automatic_variants() {
+    fn target_names_text_offer_expands_automatic_variants() {
         assert_eq!(
-            targets_for(&["text/plain"]),
+            target_names(&["text/plain"]),
             [
                 "TARGETS",
                 "TIMESTAMP",
@@ -872,9 +944,9 @@ mod tests {
     }
 
     #[test]
-    fn targets_for_combined_offer_keeps_offer_order() {
+    fn target_names_combined_offer_keeps_offer_order() {
         assert_eq!(
-            targets_for(&["image/png", "image/jpeg", "text/plain", "text/uri-list"]),
+            target_names(&["image/png", "image/jpeg", "text/plain", "text/uri-list"]),
             [
                 "TARGETS",
                 "TIMESTAMP",
@@ -892,8 +964,8 @@ mod tests {
     }
 
     #[test]
-    fn targets_for_deduplicates_explicit_alias_entries() {
-        let targets = targets_for(&["text/plain", "UTF8_STRING", "text/plain"]);
+    fn target_names_deduplicates_explicit_alias_entries() {
+        let targets = target_names(&["text/plain", "UTF8_STRING", "text/plain"]);
         assert_eq!(targets.iter().filter(|t| **t == "UTF8_STRING").count(), 1);
         assert_eq!(targets.iter().filter(|t| **t == "text/plain").count(), 1);
     }
