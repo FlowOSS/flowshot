@@ -196,7 +196,13 @@ impl InputState {
                 self.events.push(Event::ModifiersChanged(self.modifiers));
                 WindowSignal::None
             }
-            WindowEvent::KeyboardInput { event, .. } => {
+            // Synthetic keys are focus-resync artifacts (X11 replays held
+            // keycodes at focus-in; Wayland never sets the flag).
+            WindowEvent::KeyboardInput {
+                event,
+                is_synthetic: false,
+                ..
+            } => {
                 self.on_key_event(event);
                 WindowSignal::None
             }

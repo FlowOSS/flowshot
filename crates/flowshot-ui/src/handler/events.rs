@@ -89,7 +89,14 @@ impl ApplicationHandler<UiEvent> for OverlayApp {
                     },
                 );
             }
-            WindowEvent::KeyboardInput { event: key, .. } => {
+            // Synthetic keys are focus-resync artifacts: X11 replays
+            // still-held keycodes at focus-in (the pins/shell.rs filter
+            // precedent; Wayland never sets the flag).
+            WindowEvent::KeyboardInput {
+                event: key,
+                is_synthetic: false,
+                ..
+            } => {
                 let PhysicalKey::Code(code) = key.physical_key else {
                     return;
                 };
