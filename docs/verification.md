@@ -24,10 +24,12 @@ because the live run caught them).
 
 ## Live-session QA and its class labels
 
-Live QA runs on the development machine: Hyprland 0.56.2, NVIDIA GPU, two
-monitors at scale 1 (plus synthetic headless outputs for scale-2 and rotated
-fixtures), and an i3 session on X11 (single eDP-1 2880x1620, derived scale
-2.25) for the X11 capture path. Every claim in FlowShot's docs and evidence
+Live QA runs on two machines: the primary development box (Hyprland
+0.56.2, NVIDIA GPU, two monitors at scale 1, plus synthetic headless
+outputs for scale-2 and rotated fixtures) and a second i3/X11 laptop
+(single eDP-1 2880x1620, derived scale 2.25) used for the X11 capture
+path; every LIVE-verified claim names the machine its bundle ran on.
+Every claim in FlowShot's docs and evidence
 carries one of these classes:
 
 - **LIVE-verified**: exercised on the real session, with the observed values
@@ -37,8 +39,10 @@ carries one of these classes:
   the path was not run live on that desktop.
 - **Unit-level**: covered by tests only; the live path is explicitly not
   claimed.
-- **Hardware-gated**: cannot run on the QA machine at all (no KDE or GNOME
-  session, no touchscreen). Never claimed, scheduled for suitable hardware.
+- **Hardware-gated**: cannot run on the QA machine the check is scheduled
+  for at all (neither box has a KDE or GNOME session, no touchscreen; the
+  X11 laptop is single-panel, so multi-monitor checks are gated there).
+  Never claimed, scheduled for suitable hardware.
 - **Deferred**: runnable on the QA machine but queued, usually because it
   needs a visible window or an in-flight component (see the batch mechanism
   below).
@@ -70,8 +74,10 @@ temp artifacts are transient.
 
 ### Landed bundles
 
-- **X11 Phase A headless capture** (2026-10-04, **LIVE-verified**):
-  `.omo/evidence/x11-phase-a/`. Ten checks on the live i3 session, all PASS:
+- **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
+  i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA
+  laptop's working repo - observed values inlined here per the convention
+  above). Ten checks, all PASS:
   full capture pixel-cross-checked against an independent
   `import -window root` oracle, `--region WxH+X+Y` geometry pixel-exact
   against a crop of the full frame, screen by connector name and by index,

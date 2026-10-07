@@ -4,8 +4,10 @@ Status: accepted (gates SHIPPED: `scripts/purity-gate.sh` +
 `scripts/purity-allowlist.txt`, CI-enforced in `.github/workflows/ci.yml`;
 the detailed per-phase entry points live in
 [docs/porting-roadmap.md](../porting-roadmap.md)). X11 (Phase 1) is
-**SHIPPED (2026-10-04)** for the headless capture path via
-`flowshot-capture-x11` (evidence: `.omo/evidence/x11-phase-a/`). Platforms
+**SHIPPED** via `flowshot-capture-x11`: the headless capture path
+(2026-10-04) and the interactive UI (Phase B, 2026-10-06); the
+verification records with inlined observed values live in
+[docs/verification.md](../verification.md). Platforms
 beyond Wayland and the X11 capture rung are **roadmap only: no code
 exists** for them and none is planned for the first release.
 
@@ -36,10 +38,16 @@ A **purity contract**, enforced by CI audit (grep/AST over the crate graph):
 - The `CaptureBackend` trait is the porting seam: async, per-output scale
   reporting, `request_permission`, optional cursor stream, typed frame
   formats. A port is a new crate implementing the trait plus packaging;
-  core and UI ship unchanged. That is the gate's whole point, and the X11
-  port proved it: `flowshot-core`, `flowshot-capture`, and `flowshot-ui`
-  shipped the X11 rung with promotion edits (the enum/ladder promotion, the UI
-  gate-message reword, and docs) only.
+  the platform-free crates stay untouched. That is the gate's whole
+  point, and the X11 port mostly proved it: `flowshot-core` shipped with
+  test-only edits and `flowshot-capture` with the enum/ladder promotion
+  only - but `flowshot-ui` did require behavior changes (the
+  display-server gate learned `DISPLAY` through an injectable seam, and
+  winit's X11 backend needed pin fixes: client-driven
+  `request_inner_size`, synthetic-key filtering on focus resync, and
+  session-routed resize anchors). The lesson for the next port: budget
+  for windowing-backend quirks in the UI crate, not just a new platform
+  crate.
 - Consequences of the gate are real and paid: the UI crate cannot even set
   the Wayland `app_id` (a platform extension); the binary layer injects it
   through a customizer seam. Platform conveniences do not get smuggled in.
@@ -99,13 +107,13 @@ entry points, from the research ledger:
 - The roadmap names concrete crates and APIs so a future port starts from
   research, not from scratch. None of it is committed for v0.1.0.
 - The original v1 non-goal (no X11 session support on Linux, no X11 code
-  path) was amended by owner directive on 2026-10-04. X11 headless capture
-  now ships via `flowshot-capture-x11`: `capture full`, `capture screen
-  [OUTPUT]`, and `capture --region WxH+X+Y` with `--no-edit`, plus
-  copy/save/`--raw`/`--print-geometry`/delay and the daemon-owned clipboard.
-  The interactive overlay, editor, pins, and dialog windows remain
-  Wayland-only pending Phase B, and `capture last` / `--region at-cursor`
-  fail honestly on X11 in this release. The support is native X11, not
-  Xwayland: there is still no Xwayland fallback path, and a Wayland session
-  never routes to the X11 backend (the session types are mutually
-  exclusive).
+  path) was amended by owner directive on 2026-10-04. X11 ships natively
+  via `flowshot-capture-x11`: the headless capture path (`capture full`,
+  `capture screen [OUTPUT]`, and `capture --region WxH+X+Y` with
+  `--no-edit`, plus copy/save/`--raw`/`--print-geometry`/delay and the
+  daemon-owned clipboard) and, with Phase B, the interactive overlay,
+  editor, pins, and dialog windows; `capture last` and
+  `--region at-cursor` take a headless reroute on X11. The support is
+  native X11, not Xwayland: there is still no Xwayland fallback path, and
+  a Wayland session never routes to the X11 backend (the session types are
+  mutually exclusive).

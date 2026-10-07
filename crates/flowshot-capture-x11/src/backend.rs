@@ -12,12 +12,13 @@
 //! the per-capture transport decision (`MIT-SHM` fast path vs plain
 //! `GetImage`) costs no extra round-trips.
 //!
-//! # Phase A degradations (documented, never failures)
+//! # Degradations (documented, never failures)
 //!
 //! - [`cursor_events`](CaptureBackend::cursor_events) is `None`: X11 offers
-//!   no cursor *stream* to a client - only the one-shot reads
-//!   ([`X11Backend::cursor_pos`], XFIXES `GetCursorImage` per capture). Phase
-//!   B may add an XFIXES `CursorNotify` poll stream.
+//!   no client-visible cursor *stream* - only the one-shot reads
+//!   ([`X11Backend::cursor_pos`], XFIXES `GetCursorImage` per capture). A
+//!   cursor stream is out of scope by plan
+//!   (`.omo/plans/x11-phase-b.md`), not pending.
 //! - Region captures never paint the cursor (the stitched composite is
 //!   content for editors and savers - the Wayland backends' and
 //!   [`MockBackend`](flowshot_capture::MockBackend)'s contract).
