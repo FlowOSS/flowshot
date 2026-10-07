@@ -32,11 +32,18 @@ impl PinApp {
                         // path (Wayland; see the module header).
                         entry.window.set_min_inner_size(size);
                         entry.window.set_max_inner_size(size);
-                        // X11: a WM_NORMAL_HINTS update alone reconfigures
-                        // nothing - the client ConfigureRequest is what
-                        // resizes the window (a no-op for stateful Wayland
-                        // windows, e.g. Hyprland; see super::zoom).
-                        let _ = entry.window.request_inner_size(target);
+                        // X11 only (session-routed `client_resize`): a
+                        // WM_NORMAL_HINTS update alone reconfigures nothing
+                        // - the client ConfigureRequest is what resizes the
+                        // window. On Wayland this call must NOT run: winit
+                        // resizes stateless (floating) windows client-side
+                        // WITHOUT emitting `Resized`, so the wgpu surface
+                        // would keep the pre-zoom size while the window
+                        // geometry already changed; the min/max hints above
+                        // are the compositor-driven path there.
+                        if entry.state.behavior.client_resize {
+                            let _ = entry.window.request_inner_size(target);
+                        }
                     }
                 }
                 PinEffect::Reupload => {

@@ -28,7 +28,7 @@ use super::zoom::{
 };
 
 /// Behavior configuration of one pin (the `[pin]` config group plus the
-/// compositor resize-anchor policy).
+/// session-routed resize policy: anchor + client-driven flag).
 #[derive(Debug, Clone, PartialEq)]
 pub struct PinBehavior {
     /// Minimum content size per axis in physical px (`[pin].min_size`).
@@ -36,6 +36,14 @@ pub struct PinBehavior {
     /// The compositor's floating-resize anchor policy (see
     /// [`super::zoom::ResizeAnchor`] for the live probe).
     pub anchor: ResizeAnchor,
+    /// Client-driven resize (X11-only; session-routed by the daemon's
+    /// `execute/window.rs`): after pinning the min/max hints the shell
+    /// additionally issues `request_inner_size`, because on X11 a
+    /// `WM_NORMAL_HINTS` update alone reconfigures nothing - the client's
+    /// `ConfigureRequest` does. Must stay false on Wayland: winit resizes
+    /// stateless (floating) windows client-side there WITHOUT emitting
+    /// `Resized`, desyncing the render surface from the window geometry.
+    pub client_resize: bool,
     /// Design tokens (menu layout, shadow, typography).
     pub tokens: DesignTokens,
     /// Reduced-motion switch: zoom transitions snap.
@@ -47,6 +55,7 @@ impl Default for PinBehavior {
         Self {
             min_size: MIN_SIZE,
             anchor: ResizeAnchor::default(),
+            client_resize: false,
             tokens: DesignTokens::default(),
             reduced_motion: false,
         }

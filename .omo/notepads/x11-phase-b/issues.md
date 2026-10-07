@@ -104,3 +104,58 @@
     `flowshot daemon` always persists (DaemonMode docs) — QA timelines
     must use the auto-spawned shape (or --auto-spawned) for idle-exit
     proofs; a lingering manual daemon is correct behavior, not a leak.
+
+## [2026-10-06] Task 6 (evidence bundle) — observations (NO product defects)
+
+Task 6 found ZERO reproducible product failures: all 20 index rows PASS
+(overlay/editor/color/reroutes from task2-fresh, pins from task3-pins,
+settings+consent from task1, riders from task4, launcher gap-filled live).
+Two observations recorded for honesty per docs/verification.md; neither is a
+product bug, neither required a code change, neither warrants STOP.
+
+15. **TRANSIENT launcher exit=0 on a cancel-class path — NON-REPRODUCIBLE,
+    classified NOT a defect.** The first exploratory `capture --dialog
+    --no-daemon` run (task6-launcher/l1-exploratory.log) logged `CLI exit=0`
+    after a Shift+Tab -> Space (popup open) -> Esc -> Esc sequence, with NO
+    capture saved to the private out-dir. A cancel-class path should yield
+    exit 3 (cli/exit.rs: `Cancelled => CANCELLED`). It did NOT reproduce in
+    THREE clean re-runs of the same sequence:
+      - l3 (single Esc, no popup): EXIT=3, no save.
+      - l4 (popup open, Esc+Esc, no interleaved captures): EXIT=3, no save.
+      - l5 (popup open, Esc+Esc, WITH the exact interleaved `capture full
+        --raw` evidence captures that the exploratory run had): EXIT=3, no save.
+    Analysis: the only variable unique to the exploratory run was a
+    concurrent `capture full --no-edit --no-daemon --raw` evidence process
+    running DURING the open-popup state; l5 reproduced that confound exactly
+    and still returned 3. So the exit=0 is a one-off input/timing race in the
+    exploratory harness (synthetic Esc racing the popup-close + the dialog's
+    ui.rs:43 Escape check while a second X client did GetImage traffic), NOT a
+    launcher state-machine defect. The shipping cancel path is exit-3-correct
+    in every clean reproduction. F2: if you re-drive the launcher, drive it
+    cleanly (one action, then assert) — do not interleave evidence captures
+    between the popup-open and the cancel Esc if you want a deterministic
+    exit code; capture the dialog state BEFORE acting. No code change.
+
+16. **Pre-existing stale daemon (PID 9839) on the session bus — QA-env
+    debris, reaped during self-reversal.** At task-6 start a
+    `target/debug/flowshot daemon --auto-spawned` (PID 9839, PPID 1) had a
+    `(deleted)` exe (superseded by the 12:44 rebuild; started 12:38:57,
+    uptime >1h46m), alive far past its 60s idle grace because it was pinned
+    by an orphaned CLIPBOARD hold — i.e. exactly the task-4 stale-daemon
+    class (deleted-suffix branch), left over from the orchestrator's build/
+    gate cycle, NOT spawned by task 6. It never received a post-rebuild bus
+    dispatch, so the task-4 supersession gate (dispatch-time) had not yet
+    fired to retire it. Task-6 QA ran on a PRIVATE bus (unix:path=/tmp/b6/bus)
+    => 9839 was fully isolated from every run (zero interaction; it holds the
+    global X CLIPBOARD but task-6 used actions=["save"] + --raw, no clipboard
+    contention). Disposition: killed by explicit PID during self-reversal to
+    satisfy the task's "zero flowshot processes at the end" invariant; this
+    released the orphaned CLIPBOARD to owner-less (verified). This is the ONE
+    process task 6 killed that it did not start — documented in index.txt
+    HOST NEUTRALITY + learnings. NOTE for F2/orchestrator: a deleted-exe
+    daemon pinned by a stale clipboard hold is safe debris to reap; the
+    task-4 self-check only retires it at the NEXT bus dispatch, so an idle
+    stale daemon can linger indefinitely holding the clipboard until either a
+    dispatch reaches it or it is killed. Not a defect (the gate is
+    dispatch-time by design — see task-4 learnings "tray/shortcut dispatches
+    do NOT pass the bus gate").

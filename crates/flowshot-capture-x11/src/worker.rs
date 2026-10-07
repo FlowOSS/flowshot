@@ -8,20 +8,36 @@
 //! [`BackendKind::X11`]).
 
 use std::future::Future;
+use std::thread::Builder;
+use std::time::Duration;
 
 use flowshot_capture::{BackendKind, CaptureError};
-use futures::FutureExt;
+use futures::future::{Either, ready};
+use futures::{FutureExt, StreamExt};
 
 use crate::error::X11Error;
 
+/// Deadline for one bridged worker operation: a hung X server surfaces
+/// [`CaptureError::Timeout`] instead of parking the caller forever - the
+/// same 10 s bound the Wayland sibling applies to its capture thread
+/// (`thread.rs` `REPLY_TIMEOUT`).
+const WORKER_DEADLINE: Duration = Duration::from_secs(10);
+
 /// Runs one blocking X11 operation on a dedicated worker thread and bridges
-/// the result into a non-blocking future.
+/// the result into a non-blocking future bounded by [`WORKER_DEADLINE`].
 ///
 /// The worker owns the one-shot connection; if the returned future is dropped
 /// (caller cancelled), the worker still runs to completion and the connection
 /// teardown releases every server-side resource - the result is simply
-/// discarded. A worker that ends without sending (a panic) surfaces as a typed
-/// [`CaptureError::Backend`] rather than a hang.
+/// discarded. A watchdog thread races the worker over an mpsc channel: the
+/// first event wins, so a worker that hangs (an X server that accepts then
+/// stops answering) or dies without sending (a panic - its sender drops, but
+/// the watchdog's keeps the stream open) surfaces as a typed
+/// [`CaptureError::Timeout`] at the deadline rather than a hang. The watchdog
+/// is detached and lives at most one deadline of sleep; a failed watchdog
+/// spawn degrades to the unbounded bridge with a debug log. A timing test is
+/// deliberately absent: it would need a real 10 s hang (the repo bans
+/// fixed-sleep tests).
 pub(crate) fn spawn_worker<T, F>(
     name: &str,
     work: F,
@@ -30,31 +46,46 @@ where
     T: Send + 'static,
     F: FnOnce() -> Result<T, X11Error> + Send + 'static,
 {
-    let (sender, receiver) = futures::channel::oneshot::channel();
-    let spawned = std::thread::Builder::new()
-        .name(name.to_owned())
-        .spawn(move || {
-            if sender.send(work()).is_err() {
-                tracing::debug!("capture result discarded: the requesting future was cancelled");
-            }
-        });
+    let (events, winner) = futures::channel::mpsc::unbounded();
+    let watchdog_events = events.clone();
+    let spawned = Builder::new().name(name.to_owned()).spawn(move || {
+        let result = work().map_err(CaptureError::from);
+        if events.unbounded_send(result).is_err() {
+            tracing::debug!("capture result discarded: the requesting future was cancelled");
+        }
+    });
     match spawned {
-        Ok(_worker) => futures::future::Either::Left(receiver.map(|received| {
-            received
-                .map_err(|_| CaptureError::Backend {
-                    backend: BackendKind::X11,
-                    source: X11Error::Internal(
-                        "the capture worker ended without a result (panic?)",
-                    )
-                    .into(),
-                })?
-                .map_err(CaptureError::from)
-        })),
-        Err(error) => {
-            futures::future::Either::Right(futures::future::ready(Err(CaptureError::Backend {
-                backend: BackendKind::X11,
-                source: X11Error::from(error).into(),
-            })))
+        Err(error) => Either::Right(ready(Err(CaptureError::Backend {
+            backend: BackendKind::X11,
+            source: X11Error::from(error).into(),
+        }))),
+        Ok(_worker) => {
+            let watchdog = Builder::new()
+                .name("flowshot-x11-watchdog".to_owned())
+                .spawn(move || {
+                    std::thread::sleep(WORKER_DEADLINE);
+                    let timeout = CaptureError::from(X11Error::Timeout {
+                        timeout: WORKER_DEADLINE,
+                    });
+                    let _lost_race = watchdog_events.unbounded_send(Err(timeout));
+                });
+            if let Err(error) = watchdog {
+                tracing::debug!(
+                    "watchdog thread unavailable; the worker bridge runs without a deadline: {error}"
+                );
+            }
+            Either::Left(winner.into_future().map(|(received, _rest)| {
+                match received {
+                    Some(result) => result,
+                    None => Err(CaptureError::Backend {
+                        backend: BackendKind::X11,
+                        source: X11Error::Internal(
+                            "the capture worker ended without a result (panic?)",
+                        )
+                        .into(),
+                    }),
+                }
+            }))
         }
     }
 }

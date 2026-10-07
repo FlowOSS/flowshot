@@ -112,6 +112,15 @@ fn zoom_keeps_the_cursor_image_point_screen_stable() {
 }
 
 #[test]
+fn default_behavior_never_client_resizes() {
+    // The Wayland-safety contract: `client_resize` opts the shell into the
+    // X11 ConfigureRequest path; the default must stay false so a Wayland
+    // session can never hit winit's stateless-window client-side resize
+    // (no `Resized` event -> the render surface desyncs from the window).
+    assert!(!PinBehavior::default().client_resize);
+}
+
+#[test]
 fn top_left_anchor_policy_holds_too() {
     let behavior = PinBehavior {
         anchor: ResizeAnchor::TopLeft,

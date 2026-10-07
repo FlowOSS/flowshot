@@ -723,3 +723,97 @@ keys down; also `xinput query-state 4` for stuck pointer buttons.**
 - Self-reversal: zero flowshot processes/windows; private dbus 14444
   killed; XTest key state clean; shared config untouched; /tmp/b3 fixture
   retained for task 6.
+
+## [2026-10-05] Task 6: evidence bundle
+
+(Executed LIVE 2026-10-06 13:30–14:27 local; fresh session, no prior task-6
+work in the tree. Consolidation + launcher gap-fill + indexing — NO source
+edits, NO blind re-runs.)
+
+### What landed
+- `.omo/evidence/x11-phase-b/index.txt` = the bundle index (Phase-A house
+  style): re-measured environment block, a 20-row check table (every row
+  traces to artifact(s) in the bundle), deviations/findings, benign-log
+  notes, "CODE CHANGES: NONE", artifact manifest, HOST NEUTRALITY.
+- `00-environment.txt` (live dump: session vars, xrandr, the X11 probe
+  example's caps/outputs/scale, picom, tools, binary sha256, XTest state,
+  the pre-existing-daemon note) + `self-reversal.log` at the bundle root.
+- `task1-settings/` — copied /tmp/b1/2026-10-05_01-30.png (STILL EXISTED):
+  one PNG evidencing BOTH the settings window (General/Interface/Filename
+  Editor/Shortcuts tabs, i3 bar "FlowShot Settings") AND the consent dialog
+  "Help improve FlowShot?" overlaying it. So consent has a real artifact —
+  did NOT need to re-trigger (per task mandate).
+- `task4-riders/` — copied /tmp/opencode/proof{1a,1b,2,2b} (ALL STILL
+  EXISTED, timelines intact): proof1a/1b = hold-release on SelectionClear
+  (manual grace-15 + production grace-60 shapes), proof2/2b = stale-daemon
+  self-check (deleted-suffix + identity-mismatch branches). NO re-prove
+  needed.
+- `task6-launcher/` — the NEW gap-fill (RESULTS.md is its index).
+- task2-fresh/ + task3-pins/ left as-is (authoritative; task2/ is the
+  earlier interrupted session, marked SUPERSEDED in the index).
+
+### Launcher gap-fill — ALL PASS (the only matrix rows not already covered)
+Invocation = `flowshot capture --dialog --no-daemon` (one-shot; Cancel maps
+to exit-3 per cli/dispatch.rs:148). Dialog = session child, fixed 400x176
+logical (900x396 phys @2.25), i3 AUTO-FLOATS + auto-focuses it; WM_CLASS
+"Capture Launcher","flowshot-launcher" (task-1 X11 customizer arm).
+- OPENS: window in ~0.25s, combo "Manual region", geometry field
+  AUTO-FOCUSED (model.rs focus_armed), Capture DISABLED until valid.
+- LISTS eDP-1: **drive the combo by KEYBOARD, no coordinate guessing** —
+  `Shift+Tab` moves focus geometry->combo, `Space` opens the egui ComboBox
+  popup => shows "Manual region" + **"Screen 0: eDP-1"**. The entry comes
+  from probe_outputs_x11 (launcher/mod.rs:198, decision-#5 leg); X11
+  OutputInfo.name = connector = "eDP-1" (output.rs to_output_info), labelled
+  `Screen {n}: {name}` (model.rs monitor_label). The `cargo run -p
+  flowshot-capture-x11 --example probe` output independently confirms the
+  same single eDP-1 output (scale 2.25) — use it for the env block.
+- SUBMIT WORKS: geometry field is focused on open => `xdotool type
+  "400x300+100+100"` (type is LITERAL, + is not a modifier) => Capture
+  ENABLES => `Return` (Enter-in-geometry activates Capture, ui.rs:50-55) =>
+  one-shot child captures the typed region DIRECTLY in-process => post-capture
+  SAVES => EXIT=0 + 900x675 PNG (400x300 ×2.25 exact).
+- CANCEL: single Esc => EXIT=3 (l3); popup+Esc+Esc => EXIT=3 (first Esc
+  closes the popup AND fires the dialog Cancel, ui.rs:43) (l4/l5).
+
+### Launcher-driving methodology (F2: reuse this, it's coordinate-free)
+- Evidence screenshots of the dialog: `capture full --no-edit --no-daemon
+  --raw > shot.png` from a SECOND invocation while the dialog is up
+  (in-process, no bus, doesn't contend with the dialog's session). Crop the
+  dialog with `magick shot.png -crop 900x396+X+Y +repage crop.png` (NOT
+  `import file.png` — import without -window hangs waiting for an
+  interactive window select; import is for X-screen reads only).
+- Dialog position is deterministic here (990,635) but get it live via
+  `xdotool getwindowgeometry $WID`; attribute by _NET_WM_PID not WID (X
+  reuses WIDs — 44040194 appeared in every run).
+- Watchdog: `( sleep 35; W=$(xdotool search --class flowshot-launcher|head -1);
+  [ -n "$W" ] && xdotool key --window "$W" Escape ) &` then `kill $WD` after
+  `wait $CLI` — class-scoped, self-disarms when the dialog is gone.
+
+### TRANSIENT observation (NOT a defect — recorded for honesty)
+The FIRST exploratory launcher run logged `CLI exit=0` after popup+double-Esc
+with NO save (a cancel-class path that should be 3). Did NOT reproduce in
+THREE clean re-runs (l3 single-Esc, l4 popup-clean, l5 popup WITH the exact
+interleaved `--raw` capture confound) — all EXIT=3, no save. Classified a
+one-off input/timing race in the exploratory harness (a concurrent `capture
+full --raw` evidence process during the open-popup state), NOT a launcher
+bug. No code change. In issues.md + task6-launcher/RESULTS.md.
+
+### Pre-existing stale daemon (QA-env, disposition)
+At session start a `target/debug/flowshot daemon --auto-spawned` PID 9839 sat
+on the SESSION bus with a `(deleted)` exe (superseded by the 12:44 rebuild;
+started 12:38:57, uptime >1h46m), pinned by an orphaned CLIPBOARD hold — i.e.
+exactly the task-4 stale-daemon class, left over from the build cycle, NOT
+task-6-spawned. Task-6 QA used a PRIVATE bus so 9839 was fully isolated (zero
+interaction). To meet the "zero flowshot processes at the end" invariant I
+killed it by explicit PID during self-reversal (releasing the orphaned
+CLIPBOARD to owner-less). This is the ONE process killed that task 6 did not
+start; documented in index.txt HOST NEUTRALITY + issues.md. F2/orchestrator:
+a deleted-exe daemon pinned by a stale clipboard hold is safe debris to reap.
+
+### Isolation stack that worked (task-2/3 precedent, re-confirmed)
+Private dbus-daemon at unix:path=/tmp/b6/bus via DBUS_SESSION_BUS_ADDRESS +
+private XDG_CONFIG_HOME=/tmp/b6/xdg (asked_on_first_launch=true disarms
+consent; [save].actions=["save"], path /tmp/b6/out) + hash-verified binary
+snapshot /tmp/b3/flowshot-qa. Shared config mtime verified IDENTICAL before
+(12:39:53.927782785) and after. XTest state 0-down before and after. Zero
+flowshot procs/windows at the end.

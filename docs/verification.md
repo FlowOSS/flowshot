@@ -81,6 +81,43 @@ temp artifacts are transient.
   timing (38 ms vs 80 ms), the `-d` delay path, and daemon idle-exit
   lifecycle. Per-check values and environment dump: `index.txt` in the
   bundle.
+- **X11 Phase B interactive UI** (2026-10-05/06, **LIVE-verified** on the
+  second QA machine - the i3/X11 laptop, single eDP-1 2880x1620 @ derived
+  scale 2.25; binary under test hash-identical to HEAD `8961497` at bundle
+  time). Multi-monitor overlay spanning and the Wayland row of the
+  exit-code matrix are **Hardware-gated** on that single-panel machine and
+  are NOT claimed. Bundle: `.omo/evidence/x11-phase-b/` (local to the QA
+  laptop's working repo; the observed values are inlined here per the
+  convention above). Twenty interactive checks plus four rider proofs, all
+  PASS under a private dbus-daemon + private `XDG_CONFIG_HOME`,
+  timeout-bounded and self-reversing, XTest-state pre-flight: overlay
+  select→accept (drag HUD `400x266+355+177` exact logical,
+  `last_region` persisted 356,178,400,267, daemon-owned clipboard IHDR
+  900x600 outliving the child); editor rect tool with digit sizing
+  (stroke pixels exact config `#FF0000`, zero pointer→render offset);
+  transparency decision KEEP `with_transparent(true)` (backdrop
+  mean=21623/65535, decisively not black); Esc→exit 3 one-shot; color
+  picker (`#090D12` clipboard-exact); the three X11 headless reroutes
+  (`capture last` → 450x338 PNG with ZERO overlay windows,
+  `--region at-cursor` → 2880x1620 with both legs exit 0, offset-less
+  `--region 500x300` → 1125x675 cursor-centered exactly); pin lifecycle
+  (1472x842 @704,412 exact; drag +145,+95 exact; zoom click4 ⇒ 1560x891
+  = 1.03² with Position UNCHANGED proving the TopLeft anchor; opacity
+  RMSE(D,F)=0 exact restore); multi-pin with independent close (the
+  synthetic-key chain-close fix proven by bisect log); `pins_alive`
+  persistence past the idle grace; settings, consent and launcher windows
+  on X11 (launcher 900x396 @990,635 exact, X11-probe outputs listed,
+  typed-geometry submit → 900x675, cancel → exit 3 in three clean runs);
+  riders: clipboard hold-release on SelectionClear (verbatim
+  `ownership lost` → `releasing the clipboard-offer hold` → `IdleExit`
+  chain, 280 µs) and the stale-daemon self-check on both axes
+  (deleted-suffix and identity-mismatch; retry chain exit 0 in ~2.4 s,
+  io-failed=0). The run produced four code fixes: pin
+  `request_inner_size` on X11, `ResizeAnchor` session routing, the pin
+  session-gate exemption, and the synthetic-key filter. One
+  non-reproducing transient (exploratory launcher exit=0, clean in three
+  re-runs) and one QA-environment defect (stuck XTest Escape) are
+  recorded as such in the bundle.
 
 ## The deferred GUI-QA batch
 

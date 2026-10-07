@@ -47,3 +47,15 @@ pub(crate) fn session_resize_anchor() -> ResizeAnchor {
         Ok(SessionKind::Wayland) | Err(_) => ResizeAnchor::Center,
     }
 }
+
+/// Whether pin zoom resizes are client-driven for the session's display
+/// server (same routing as [`session_resize_anchor`]): X11 needs the
+/// client's `request_inner_size` `ConfigureRequest` - a `WM_NORMAL_HINTS`
+/// update alone reconfigures nothing. On Wayland the flag must stay
+/// false: winit resizes stateless (floating) windows client-side without
+/// a `Resized` event, desyncing the pin's render surface (the min/max
+/// hints in `pins/effects.rs` are the compositor-driven path there).
+#[must_use]
+pub(crate) fn session_client_resize() -> bool {
+    matches!(detect_session(), Ok(SessionKind::X11))
+}
