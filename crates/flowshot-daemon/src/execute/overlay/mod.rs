@@ -113,12 +113,16 @@ pub async fn run_interactive(
         SessionResult::Color { hex } => {
             // The PARENT owns the clipboard copy (the offer must
             // outlive the window session - in daemon mode this process is
-            // the resident daemon).
-            let clipboard = flowshot_actions::Clipboard::for_session()?;
-            clipboard.copy_text(&hex)?;
-            if let Some(state) = ctx.state.as_ref() {
-                state.set_clipboard_offer_held(true);
-            }
+            // the resident daemon). Built through the same loss-hooked
+            // seam as the capture pipeline: on X11 a takeover
+            // (SelectionClear) fires the hook and releases the
+            // `clipboard-offer` hold so the daemon can idle-exit; the
+            // latch keeps a copy raced by a takeover from re-pinning a
+            // hold nothing owns. Wayland keeps the documented
+            // conservative never-clear.
+            let hold_release = super::post::sinks::clipboard_for_run(ctx.state.as_ref());
+            hold_release.clipboard.copy_text(&hex)?;
+            super::post::sinks::hold_offer_unless_lost(ctx.state.as_ref(), &hold_release.lost);
             Ok(ExecOutcome::ColorPicked(hex))
         }
         SessionResult::Cancelled => {

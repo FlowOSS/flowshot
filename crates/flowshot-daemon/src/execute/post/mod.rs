@@ -5,7 +5,6 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 
 use std::io::Write;
 
@@ -18,7 +17,7 @@ use flowshot_core::geometry::LogicalRect;
 use flowshot_ui::{Completion, CompletionKind, ExportedImage};
 use image::DynamicImage;
 
-mod sinks;
+pub(in crate::execute) mod sinks;
 
 use super::pin;
 use super::{ExecCtx, ExecOutcome, ExecuteError};
@@ -111,8 +110,6 @@ pub async fn run_post(
     if report
         .outcomes
         .contains(&flowshot_actions::clipboard::ActionOutcome::Copied)
-        && !hold_release.lost.load(Ordering::Acquire)
-        && let Some(state) = ctx.state.as_ref()
     {
         // The daemon process now serves the offer (a persistence reason).
         // X11: the loss hook inside `hold_release` clears it when another
@@ -121,7 +118,7 @@ pub async fn run_post(
         // callback - the hold stands until process exit (conservative
         // direction, documented asymmetry). The latch skips the pin when
         // the offer was ALREADY lost during the pipeline run.
-        state.set_clipboard_offer_held(true);
+        sinks::hold_offer_unless_lost(ctx.state.as_ref(), &hold_release.lost);
     }
     if pin_requested {
         pin::spawn_pin(&completion.image, config, ctx).await?;
