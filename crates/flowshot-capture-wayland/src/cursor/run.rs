@@ -6,8 +6,8 @@
 //!
 //! # Degradation, never failure
 //!
-//! A cursor position is a convenience, never a capture requirement (draft
-//! F13). Every failure collapses to `None` with a warning: no
+//! A cursor position is a convenience, never a capture requirement.
+//! Every failure collapses to `None` with a warning: no
 //! compositor, no seat pointer, no capture manager, a `Hyprland`
 //! `PERMISSION_TYPE_CURSOR_POS` denial (which leaves the session inert), or the
 //! 500 ms wait expiring with the cursor off every output. [`cursor_pos`]

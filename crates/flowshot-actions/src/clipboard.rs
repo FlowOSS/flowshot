@@ -1,6 +1,6 @@
 //! Display-server clipboards with daemon-owned offers.
 //!
-//! # Ownership model (draft F27)
+//! # Ownership model
 //!
 //! The DAEMON process owns the clipboard offer: [`Clipboard`] hands the
 //! offer to a [`ClipboardBackend`], and the production backends

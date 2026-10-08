@@ -1,4 +1,4 @@
-//! Scale derivation for X11 outputs (x11-support plan decision #4).
+//! Scale derivation for X11 outputs.
 //!
 //! X11 has no scale concept: the screen is a pixel-exact framebuffer and
 //! `HiDPI` is a per-toolkit convention driven by `Xft.dpi`. `FlowShot`'s

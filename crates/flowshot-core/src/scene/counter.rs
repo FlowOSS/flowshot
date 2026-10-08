@@ -1,4 +1,4 @@
-//! The numbered step-counter bubble (draft F27 circlecount spec).
+//! The numbered step-counter bubble (clean-room from Flameshot's circlecount spec).
 //!
 //! Clean-room reimplementation of the Flameshot `CircleCountTool` paint
 //! geometry (`src/tools/circlecount/circlecounttool.cpp` @ 2d478061):

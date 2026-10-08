@@ -7,7 +7,7 @@
 //! composite pixel space against the enumerated layout -> per-output crops
 //! inverse-remapped into the shared [`Frame`] contract. Status 1/2
 //! (dismissed/other) map to [`PortalErrorKind::Denied`]; the request runs
-//! under the 15s portal budget (draft F27 parity).
+//! under the 15s portal budget.
 //!
 //! # Interactive variant (ladder rung 5)
 //!

@@ -180,7 +180,7 @@ impl OutputData {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
-    // Fixtures use integral-valued f64 (geometry-notepad convention), so
+    // Fixtures use integral-valued f64 (the integral-valued-f64 fixture convention), so
     // exact comparison is the intended assertion.
     #![allow(clippy::float_cmp)]
 

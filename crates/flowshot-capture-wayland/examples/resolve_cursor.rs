@@ -1,4 +1,4 @@
-//! Prints the layered cursor-position resolution (draft F13 ladder) as JSON.
+//! Prints the layered cursor-position resolution as JSON.
 //!
 //! Walks [`resolve_cursor_pos`]: the ICC pointer-cursor session one-shot
 //! (layer 1), the raw Hyprland IPC socket (layer 2 - no external process is

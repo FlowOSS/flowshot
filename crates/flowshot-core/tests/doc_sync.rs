@@ -1,7 +1,7 @@
 //! Doc-sync test: every config field in the schema appears in
 //! `docs/config-reference.md`.
 //!
-//! This is the todo-40 "doc-gen test in CI" acceptance: the config
+//! This is the "doc-gen test in CI" acceptance: the config
 //! reference must stay in sync with the Rust schema. The test serializes
 //! [`Config::default()`] to TOML, extracts every leaf key, and asserts
 //! each one appears (backtick-quoted) in the reference document.

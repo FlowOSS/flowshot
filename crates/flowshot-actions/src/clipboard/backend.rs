@@ -22,7 +22,7 @@ use crate::error::ClipboardError;
 
 /// Production backend: daemon-owned offers over `zwlr_data_control`.
 ///
-/// # Daemon ownership (draft F27)
+/// # Daemon ownership
 ///
 /// [`ClipboardBackend::serve`] runs `wl-clipboard-rs` in background mode
 /// with unlimited request serving: the library spawns its serving thread

@@ -1,7 +1,7 @@
 //! Captures the live Wayland session through `wlr-screencopy-unstable-v1` and
 //! writes the full layout to `/tmp/flowshot-screencopy.png`.
 //!
-//! This is the forced-screencopy QA harness (plan todo 9): it drives
+//! This is the forced-screencopy QA harness: it drives
 //! [`ScreencopyBackend`] directly, so it exercises the fallback path even on a
 //! compositor (like `Hyprland`) that also offers `ext-image-copy-capture-v1`.
 //! The stitched full-layout PNG is the artifact compared against the `grim`

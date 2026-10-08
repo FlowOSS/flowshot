@@ -21,7 +21,7 @@
 //! `0x00RRGGBB` words in the server's image byte order; with the negotiated
 //! `LSBFirst` order (every little-endian platform) the memory byte order is
 //! B, G, R, X - exactly the [`FrameFormat::Xrgb8888`] contract, verified
-//! against a live solid-color oracle (learnings notepad). `MSBFirst` servers
+//! against a live solid-color oracle. `MSBFirst` servers
 //! (big-endian platforms) are the typed [`X11Error::UnsupportedByteOrder`].
 //! Stride is tight: `width * 4` (`Z_PIXMAP` scanlines of 32-bit pixels need no
 //! padding).
@@ -354,7 +354,7 @@ fn expected_len(monitor: &MonitorData) -> usize {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
     // Fixture scales are exact binary fractions and fixture geometry is
-    // integral (geometry-notepad convention).
+    // integral (the integral-valued-f64 fixture convention).
     #![allow(clippy::float_cmp)]
 
     use x11rb::protocol::randr::Rotation;

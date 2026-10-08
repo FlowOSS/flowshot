@@ -1435,7 +1435,7 @@ mod tests {
     #[test]
     fn bounding_rects_are_sane() {
         // The arrow head is FILLED geometry scaling from the thickness
-        // (F27 arrowtool math), so the exact bounds cover the head corners
+        // (Flameshot arrowtool math), so the exact bounds cover the head corners
         // grown by the shaft's half-width ink - the earlier stub head (two
         // stroked lines inside the endpoint rect) is superseded.
         // Arrow (0,0)->(10,5) t=2: len ~11.18 < 18+2t, the head consumes the

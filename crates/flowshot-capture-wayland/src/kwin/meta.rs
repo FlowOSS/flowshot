@@ -309,8 +309,8 @@ fn value_at<'v>(
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
-    // Fixture scales and sizes are exact integral literals (geometry-notepad
-    // convention), so strict comparison is the intended assertion.
+    // Fixture scales and sizes are exact integral literals (the project-wide
+    // fixture convention), so strict comparison is the intended assertion.
     #![allow(clippy::float_cmp)]
 
     use super::*;

@@ -83,7 +83,7 @@
 //!
 //! # Layered cursor position
 //!
-//! [`resolve_cursor_pos`] walks the draft F13 ladder and traces which layer
+//! [`resolve_cursor_pos`] walks the cursor ladder and traces which layer
 //! answered: the ICC pointer-cursor session one-shot
 //! ([`CursorSource::IccCursorSession`]), the raw Hyprland IPC socket - never
 //! a spawned `hyprctl` ([`CursorSource::HyprlandIpc`]), and the universal
