@@ -1,6 +1,6 @@
 //! Shell completion generation (bash/zsh/fish/elvish/pwsh via
-//! `clap_complete`, nushell via `clap_complete_nushell`; wayshot precedent,
-//! draft F6). Generated scripts are the artifact: they go to stdout for
+//! `clap_complete`, nushell via `clap_complete_nushell`; wayshot precedent)
+//! Generated scripts are the artifact: they go to stdout for
 //! shell-level redirection or packaging install.
 
 use std::io::{self, Write};

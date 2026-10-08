@@ -20,11 +20,11 @@
 //! - global: `--print-bind-help` (compositor-bind snippets),
 //!   `--bus-address` (test/QA knob, mirrors `flowshot-daemon`), `-V`, `-h`.
 //!
-//! # Dispatch (Oracle r4)
+//! # Dispatch
 //!
 //! 1. STDOUT-producing flags (`--raw`, `--print-geometry`) and `--no-daemon`
 //!    FORCE the in-process one-shot path - stdout is never routed over
-//!    `D-Bus` (Oracle r4 F-5.iii). EXECUTION SEAM: the one-shot path
+//!    `D-Bus`. EXECUTION SEAM: the one-shot path
 //!    produces the fully typed request; the capture pipeline (backend ->
 //!    overlay/editor -> export actions) plugs in at this seam.
 //! 2. Otherwise the daemon path: an ATOMIC bus-name probe decides - name

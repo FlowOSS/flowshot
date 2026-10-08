@@ -1,11 +1,11 @@
-//! Man-page generation harness (plan todo 35; examples double as QA
-//! harnesses per todo 1). Writes `flowshot.1` plus one page per
+//! Man-page generation harness (examples double as QA
+//! harnesses). Writes `flowshot.1` plus one page per
 //! subcommand (rendered from the clap surface via `clap_mangen`; the
 //! top-level page cross-references them) and the hand-authored
 //! `flowshot-config.5` into a directory.
 //!
 //! Usage: `cargo run -p flowshot-cli --example man_pages -- [OUT_DIR]`
-//! (default `OUT_DIR`: `target/man`). Packaging (todo 39) installs the
+//! (default `OUT_DIR`: `target/man`). Packaging installs the
 //! output into the mandb hierarchy.
 
 use std::path::PathBuf;

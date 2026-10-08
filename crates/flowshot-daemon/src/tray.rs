@@ -6,7 +6,7 @@
 //! - [`spec`] - the SNI + `com.canonical.dbusmenu` wire vocabulary;
 //! - [`icon`] - the real `FlowShot` logo rasterized at build time
 //!   (idle/attention ARGB32 sets);
-//! - [`menu`] - the F12-parity menu model and the pure id -> action
+//! - [`menu`] - the Flameshot-parity menu model and the pure id -> action
 //!   dispatch table;
 //! - [`outputs`] - the live output probe behind the per-monitor submenu
 //!   (`CaptureThread`, headless-safe);

@@ -223,7 +223,7 @@ pub struct DaemonArgs {
 }
 
 /// Shells `flowshot completions` generates for (`clap_complete` family +
-/// nushell; wayshot precedent, draft F6).
+/// nushell; wayshot precedent).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum CompletionShell {
     /// GNU bash.

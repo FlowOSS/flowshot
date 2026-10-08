@@ -6,9 +6,9 @@ license.workspace = true
 repository = "https://github.com/flowoss/flowshot"
 authors = ["FlowShot Contributors"]
 
-# Library + thin binary split (Amendment #4: anyhow only at the binary top
+# Library + thin binary split (anyhow only at the binary top
 # level; the clap surface, dispatch, and wire mapping live in the lib so the
-# todo-38 daemon-side argv re-parse and the tests reuse the same types).
+# daemon-side argv re-parse and the tests reuse the same types).
 [lib]
 name = "flowshot_cli"
 path = "src/lib.rs"
@@ -19,19 +19,17 @@ path = "src/main.rs"
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
-# The todo-32 seam: CaptureRequest/CAPTURE_OPTION_KEYS (wire vocabulary),
+# The wire seam: CaptureRequest/CAPTURE_OPTION_KEYS (wire vocabulary),
 # the instance handshake primitives, the Daemon composition root, paths,
-# and the bind-help source for --print-bind-help. flowshot-capture/-ui/
-# -actions re-enter with the todo-38 execution wiring (unused until then -
-# Amendment #3 anti-bloat).
+# and the bind-help source for --print-bind-help.
 flowshot-daemon = { path = "../flowshot-daemon" }
-# Todo 38: the exit-code table downcasts the capture error chain for the
+# The exit-code table downcasts the capture error chain for the
 # protocol permission refusal (IccError::PermissionDenied -> exit 5).
 flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
-# Same executor decision as the daemon crate (todo 32, zbus 5): the CLI
+# Same executor decision as the daemon crate: the CLI
 # drives zbus futures from its own tokio runtime, so its connections ride
 # zbus-5's tokio reactor; connections are still closed explicitly (the
-# async-io reactor path has no drop-time close, todo-11 lesson).
+# async-io reactor path has no drop-time close).
 zbus = { workspace = true }
 clap = { workspace = true }
 clap_complete = { workspace = true }
@@ -40,14 +38,14 @@ tokio = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-# Binary-layer logging init (Amendment #4).
+# Binary-layer logging init.
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [dev-dependencies]
 # Man-page generation harness (examples/man_pages.rs + tests); kept out of
 # the shipped binary.
 clap_mangen = { workspace = true }
-# Todo 38 flow 15: the exit-code mapping test constructs typed capture /
+# The exit-code mapping test constructs typed capture /
 # export errors (the permission-denied class downcast chain).
 flowshot-capture = { path = "../flowshot-capture" }
 flowshot-actions = { path = "../flowshot-actions" }

@@ -1,7 +1,7 @@
-//! The capability-coverage gate (plan todo 35: replaces the Flameshot
+//! The capability-coverage gate (replaces the Flameshot
 //! parity-diff). Every row of `cli_capability_map.toml` must be either
 //! MAPPED - with argv that parses through the real clap surface - or
-//! explicitly DROPPED with a reason. Zero unmapped rows. Todo 38's parity
+//! explicitly DROPPED with a reason. Zero unmapped rows. The parity
 //! matrix references these row ids (single source of truth).
 
 use std::collections::HashSet;
@@ -36,7 +36,7 @@ fn every_capability_row_is_mapped_or_explicitly_dropped() {
     let map = load_map();
     assert!(
         map.capability.len() >= 30,
-        "the F12 CLI inventory (5 verbs + 15 flags + modes) must be fully enumerated, got {}",
+        "the Flameshot CLI inventory (5 verbs + 15 flags + modes) must be fully enumerated, got {}",
         map.capability.len()
     );
     let mut ids = HashSet::new();
@@ -94,7 +94,7 @@ fn the_plan_mandated_drops_are_present() {
         .filter(|row| row.disposition == "dropped")
         .map(|row| row.id.as_str())
         .collect();
-    // Plan todo 35: DROPPED(reason) entries for config-mutating flags, the
+    // DROPPED(reason) entries for config-mutating flags, the
     // gui verb (interface), and the -e inversion.
     for required in [
         "flag-config-autostart",

@@ -5,7 +5,7 @@
 //! Environment gate: when `dbus-daemon` is absent the tests announce a
 //! SKIP loudly and pass - the hermetic p2p coverage of the forwarding
 //! mechanics lives in `src/instance.rs` / `src/testsupport.rs`, and the
-//! live session-bus proof is in the todo-32 QA evidence.
+//! live session-bus proof is in the single-instance QA evidence.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 

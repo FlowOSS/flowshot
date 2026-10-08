@@ -10,7 +10,7 @@ authors = ["FlowShot Contributors"]
 name = "flowshot_daemon"
 path = "src/lib.rs"
 
-# Helper binary: supervised foreground daemon (`flowshot daemon` in todo 35's
+# Helper binary: supervised foreground daemon (`flowshot daemon` in the
 # CLI calls into this crate's library). Named flowshot-daemon, NOT flowshot:
 # the `flowshot` binary name belongs to flowshot-cli (fixes the pre-existing
 # output-filename collision between the two placeholder bins).
@@ -19,11 +19,11 @@ name = "flowshot-daemon"
 path = "src/main.rs"
 
 [features]
-# sd_notify(3) READY=1 handshake for systemd user units. Amendment #3: the
+# sd_notify(3) READY=1 handshake for systemd user units. The
 # daemon is INIT-AGNOSTIC - systemd is optional, never a hard dependency
-# (OpenRC/runit/s6/shepherd = packaging roadmap, todo 42).
+# (OpenRC/runit/s6/shepherd = packaging roadmap).
 systemd = []
-# Todo 38 headless execution mode: forwards to flowshot-ui's test-drive
+# Headless execution mode: forwards to flowshot-ui's test-drive
 # injector so the e2e harness drives OverlayCore through the production
 # funnel without a window (examples/e2e_headless.rs).
 test-drive = ["flowshot-ui/test-drive"]
@@ -31,33 +31,33 @@ test-drive = ["flowshot-ui/test-drive"]
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
 flowshot-actions = { path = "../flowshot-actions" }
-# Shared `DesktopEnv` vocabulary for the todo-34 shortcut-fallback selection
+# Shared `DesktopEnv` vocabulary for the shortcut-fallback selection
 # (lightweight workspace member; zero new external crates - all of its deps
 # are already in this crate's graph).
 flowshot-capture = { path = "../flowshot-capture" }
-# Todo 33: the tray's per-monitor submenu live-probes outputs through
-# `CaptureThread` (the todo-6 registry probe - no GPU, no capture session;
+# The tray's per-monitor submenu live-probes outputs through
+# `CaptureThread` (the registry probe - no GPU, no capture session;
 # a dedicated wayland connection bounded by 10 s deadlines). Workspace
 # member edge only: zero new external crates in the lock.
 flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
-# X11 Phase A (plan decision #7): the session-routed X11 capture leg
+# The session-routed X11 capture leg
 # (probe_x11 + X11Backend) in execute/backend.rs. Sibling of
 # flowshot-capture-wayland; workspace member edge only (x11rb is already
 # locked via flowshot-actions' X11 clipboard).
 flowshot-capture-x11 = { path = "../flowshot-capture-x11" }
-# Todo 38 executor: the overlay/pin/launcher/settings window runtimes, the
+# Executor: the overlay/pin/launcher/settings window runtimes, the
 # completion export boundary, and the launch vocabulary. The daemon is the
 # platform-integration layer (it already carries the wayland capture crates),
 # so the ui edge violates no purity gate (gates cover core/capture/ui only).
 flowshot-ui = { path = "../flowshot-ui" }
-# ExportedImage -> DynamicImage for the actions pipeline (todo 29 entry point).
+# ExportedImage -> DynamicImage for the actions pipeline.
 image = { workspace = true }
 # WindowCustomizer app_id hooks (pins/launcher/settings windows, todos 30/36/37).
 winit = { workspace = true }
 # The headless execution mode's GPU context (feature test-drive; already in
 # the graph via flowshot-ui).
 wgpu = { workspace = true }
-# EXECUTOR DECISION (todo 32, restated for zbus 5 - source-verified in
+# EXECUTOR DECISION (restated for zbus 5 - source-verified in
 # 5.19 abstractions/mod.rs `use_tokio`): zbus 5 compiles BOTH reactors here
 # (default async-io + tokio unified in via ashpd) and picks PER CONNECTION at
 # build time: built inside a tokio runtime -> tokio reactor (internal tasks
@@ -65,15 +65,15 @@ wgpu = { workspace = true }
 # async-executor + dedicated driver thread, futures drivable from ANY
 # executor). The daemon's own bus is built inside the daemon's tokio runtime,
 # so it rides the tokio reactor; the p2p test stubs pin the async-io reactor
-# via Builder::async_io_unix_stream. Teardown discipline UNCHANGED (todo 11):
+# via Builder::async_io_unix_stream. Teardown discipline UNCHANGED:
 # the async-io reactor has NO drop-time close - the daemon calls
 # Connection::close() explicitly on shutdown and stub harnesses close both
 # ends; on the tokio reactor close() stays the deterministic release and
 # runtime teardown is the backstop.
 zbus = { workspace = true, features = ["p2p"] }
 notify-rust = { workspace = true }
-# OpenURI portal for notification click actions (todo-29/31 pattern), the
-# GlobalShortcuts portal client (todo 34), and the Settings portal color-scheme
+# OpenURI portal for notification click actions, the
+# GlobalShortcuts portal client, and the Settings portal color-scheme
 # query. ashpd 0.13 gates every portal behind its own feature (default = tokio
 # reactor only). PINNED API REALITY (0.13.13, source-verified): GlobalShortcuts
 # has NO restore_token/persist_mode (unlike ScreenCast) and exposes neither the
@@ -84,11 +84,11 @@ notify-rust = { workspace = true }
 # test drives it through DBUS_SESSION_BUS_ADDRESS.
 ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings"] }
 # Restore-data persistence (JSON in the config dir) + `StreamExt` for the
-# portal's Activated signal stream (todo 34). Both pre-locked workspace deps.
+# portal's Activated signal stream. Both pre-locked workspace deps.
 serde = { workspace = true }
 serde_json = { workspace = true }
 futures = { workspace = true }
-# Member-manifest addition (todo-31 `url` precedent; already locked - the
+# Member-manifest addition (the url precedent; already locked - the
 # actions crate depends on it too).
 url = "2.5"
 tokio = { workspace = true }
@@ -99,7 +99,7 @@ tracing = { workspace = true }
 # [telemetry].enabled - a disabled config never constructs a client,
 # transport, or thread. DSN is a build-time constant in src/telemetry.
 sentry = { workspace = true }
-# Binary-layer only: logging init + top-level error reporting (Amendment #4).
+# Binary-layer only: logging init + top-level error reporting.
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 anyhow = { workspace = true }
 clap = { workspace = true }
@@ -115,7 +115,7 @@ resvg = { workspace = true }
 # The e2e_headless harness builds synthetic capture frames (already locked
 # via flowshot-capture).
 bytes = { workspace = true }
-# Todo 38 flow 9: the upload wiremock e2e (the todo-31 test pattern).
+# The upload wiremock e2e (the stubbed-server test pattern).
 wiremock = { workspace = true }
 # The tray-icon determinism test re-rasterizes assets/logo.svg through the
 # shared build-time function (logo_raster.rs) and compares it against the

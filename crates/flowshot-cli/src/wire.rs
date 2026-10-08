@@ -13,8 +13,8 @@
 //! | everything else (`full`/`screen` WITH modifiers, `screen` at-cursor or by connector, `pin`, `color`) | `Invoke(as)` - the lossless argv channel; the daemon re-parses it with this crate's clap surface |
 //!
 //! One-shot invocations (`--no-daemon`, `--raw`, `--print-geometry`) never
-//! reach this module: stdout is never routed over `D-Bus` (Oracle r4
-//! F-5.iii); [`crate::dispatch`] keeps them in-process.
+//! reach this module: stdout is never routed over `D-Bus`;
+//! [`crate::dispatch`] keeps them in-process.
 //!
 //! [`CAPTURE_OPTION_KEYS`]: flowshot_daemon::request::CAPTURE_OPTION_KEYS
 

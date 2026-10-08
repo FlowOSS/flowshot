@@ -39,7 +39,7 @@ pub struct ShortcutSpec {
     pub command: DaemonCommand,
 }
 
-/// The proposed defaults (F12 shortcut rows): Print -> region
+/// The proposed defaults (Flameshot shortcut rows): Print -> region
 /// capture, Shift+Print -> full, Ctrl+Print -> active monitor.
 #[must_use]
 pub fn default_shortcuts() -> Vec<ShortcutSpec> {

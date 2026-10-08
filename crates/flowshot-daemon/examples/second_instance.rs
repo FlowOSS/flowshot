@@ -1,7 +1,7 @@
-//! QA harness (todo 32 live acceptance): behaves as the SECOND `flowshot`
+//! QA harness: behaves as the SECOND `flowshot`
 //! process - runs the production client handshake against the session bus
 //! and exits 0 when the argv reached a running daemon. This is the exact
-//! composition todo 35's CLI dispatch will call.
+//! composition the CLI dispatch calls.
 //!
 //! Usage: `second_instance <argv tokens...>` (e.g. `second_instance
 //! capture --full`) while `flowshot-daemon` is running.

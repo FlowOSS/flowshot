@@ -110,7 +110,7 @@ impl Notifier for RecordingNotifier {
 
 /// Bridges the [`NotifySink`] seam (flowshot-actions) onto a
 /// [`Notifier`]: the actions pipeline toasts through the daemon's
-/// notification module (Metis #18 placement resolution).
+/// notification module.
 #[derive(Debug)]
 pub struct ActionNotifyBridge {
     notifier: Arc<dyn Notifier>,

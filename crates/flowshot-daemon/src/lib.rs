@@ -5,7 +5,7 @@
 //!
 //! Owns the `org.flowoss.FlowShot` session-bus service at
 //! `/org/flowoss/FlowShot` (org namespace = `FlowOSS`, product = `FlowShot`,
-//! Metis #10 - NEVER `org.flameshot.*` or
+//! NEVER `org.flameshot.*` or
 //! `org.flowshot.*`, so a parallel `Flameshot` install coexists).
 //!
 //! # Pieces
@@ -37,7 +37,7 @@
 //!   fresh-daemon respawn;
 //! - [`tray`] - the SNI tray: `org.kde.StatusNotifierItem` +
 //!   `com.canonical.dbusmenu` hand-rolled on the same zbus connection,
-//!   the F12-parity menu dispatching into [`CommandSink`], the
+//!   the Flameshot-parity menu dispatching into [`CommandSink`], the
 //!   `[daemon].tray` gate, the absent-watcher degrade (warn, never
 //!   crash), and the `tray` lifecycle persistence reason;
 //! - [`autostart`] - `[daemon].startup_launch` -> XDG `.desktop` autostart
@@ -67,7 +67,7 @@
 //! `notify-rust` (zbus 5, blocking `show()`) only ever runs on dedicated
 //! notification threads. The upgrade also UNIFIES the family: the direct
 //! edge and ashpd/notify-rust now share one zbus 5. Teardown discipline
-//! (todo 11, unchanged): the async-io reactor has NO drop-time close, so
+//!: the async-io reactor has NO drop-time close, so
 //! [`daemon::Daemon::run`] and [`instance::acquire_or_forward`] close
 //! connections explicitly; on the tokio reactor `close()` remains the
 //! deterministic release and runtime teardown is the backstop.

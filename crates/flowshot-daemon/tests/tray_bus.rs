@@ -1,4 +1,4 @@
-//! Tray integration on a private broker (the todo-32 dbus-daemon recipe):
+//! Tray integration on a private broker (the private-bus dbus-daemon recipe):
 //! a stub `org.kde.StatusNotifierWatcher` proves the registration
 //! handshake, the menu wire answers `GetLayout`, and `Event(clicked)`
 //! activations land on the `CommandSink` dispatch table. The watcher-absent

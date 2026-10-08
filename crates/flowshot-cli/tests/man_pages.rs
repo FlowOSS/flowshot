@@ -1,4 +1,4 @@
-//! Structural man-page checks (plan todo 35 acceptance: `flowshot.1` +
+//! Structural man-page checks (acceptance: `flowshot.1` +
 //! `flowshot-config.5` exist and carry valid roff structure; the actual
 //! `man --warnings -l` render is live QA, recorded in the evidence file).
 

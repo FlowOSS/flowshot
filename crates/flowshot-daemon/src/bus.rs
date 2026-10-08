@@ -1,6 +1,6 @@
 //! The `org.flowoss.FlowShot` session-bus interface.
 //!
-//! Naming (Metis #10): org namespace = `FlowOSS`,
+//! Naming: org namespace = `FlowOSS`,
 //! product = `FlowShot`. This service must NEVER claim `org.flameshot.*`
 //! or `org.flowshot.*` - coexistence with a parallel `Flameshot` install
 //! is a hard requirement.

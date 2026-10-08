@@ -2,8 +2,8 @@
 //! `GlobalShortcuts` portal is absent or denied (bare wlroots/sway per
 //! xdp-wlr#240, or a masked portal), `FlowShot` generates PASTE-READY
 //! compositor snippets instead of grabbing keys itself. Snippet binds invoke
-//! the `flowshot` CLI directly and need NO resident daemon (Oracle r4 F-3 -
-//! the residency difference vs the portal path is documented in the
+//! the `flowshot` CLI directly and need NO resident daemon (the
+//! residency difference vs the portal path is documented in the
 //! per-desktop guides).
 //!
 //! [`bind_help`] is the single source for every surface:
