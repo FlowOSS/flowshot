@@ -1,7 +1,7 @@
-//! The color wheel popover (draft F27 colorpicker spec).
+//! The color wheel popover (clean-room from the Flameshot colorpicker spec).
 //!
 //! The `[editor].color_palette` swatches sit at EQUAL ANGLES on a circle of
-//! `radius = 3 * count + ` [`BUTTON_BASE_SIZE`] (the F27 formula), the
+//! `radius = 3 * count + ` [`BUTTON_BASE_SIZE`] (the Flameshot formula), the
 //! swatch matching the active draw color wears the 6px accent ring
 //! ([`SELECTED_RING`]), and a rainbow slot trails the palette for the custom
 //! pick - its eyedropper flow belongs to the eyedropper tool, so the slot
@@ -23,12 +23,12 @@ use crate::widgets::{IconButton, icons::Icon};
 use flowshot_core::geometry::{LogicalPoint, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
 
-/// The `buttonBaseSize` of the F27 radius formula (the toolbar button
+/// The `buttonBaseSize` of the Flameshot radius formula (the toolbar button
 /// footprint, logical px).
 pub const BUTTON_BASE_SIZE: f32 = 32.0;
 /// The swatch diameter (logical px).
 pub const SWATCH_SIZE: f32 = 24.0;
-/// The selected-swatch ring thickness (F27: "selected = 6px ring").
+/// The selected-swatch ring thickness (Flameshot: "selected = 6px ring").
 pub const SELECTED_RING: f32 = 6.0;
 
 /// The color wheel UI.
@@ -55,7 +55,7 @@ pub struct WheelLayout {
 
 impl ColorWheel {
     /// Computes the wheel geometry: `count + 1` slots (palette + rainbow) at
-    /// equal angles starting at 12 o'clock, on the F27 radius.
+    /// equal angles starting at 12 o'clock, on the Flameshot radius.
     #[must_use]
     pub fn layout(
         &self,

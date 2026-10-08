@@ -11,7 +11,7 @@ crate-type = ["rlib"]
 
 [features]
 # Public synthetic-input seam (`OverlayCore::inject_event`, `OverlayHandle::inject_event`)
-# so mouse paths are QA-able without ydotool (plan todo 13, Metis blocker #1 fallback).
+# so mouse paths are QA-able without ydotool.
 test-drive = []
 # Live frame-timing profiler (the interactive-freeze diagnosis): per-window
 # display-list build / tessellate+shape / encode+submit / present-overhead
@@ -23,9 +23,9 @@ perf-trace = []
 
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
-# Todo 15: the UI talks ONLY to the platform-free capture contract crate
+# The UI talks ONLY to the platform-free capture contract crate
 # (Frame/CaptureBackend/CaptureOpts) - never to the platform capture crate
-# (purity gate, plan todo 13/42).
+# (purity gate).
 flowshot-capture = { path = "../flowshot-capture" }
 winit = { workspace = true }
 wgpu = { workspace = true }
@@ -35,15 +35,15 @@ wgpu = { workspace = true }
 futures = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
-# Todo 14 renderer stack: lyon tessellation + cosmic-text shaping/rasterization
+# Renderer stack: lyon tessellation + cosmic-text shaping/rasterization
 # (single text stack via cosmic-text's SwashCache; no glyphon - see the root
 # Cargo.toml note: no glyphon release pairs with the wgpu 0.20 pin).
 cosmic-text = { workspace = true }
 lyon = { workspace = true }
 bytemuck = { workspace = true }
 
-# Todo 36 settings surface: egui embedded in OUR wgpu renderer (draft D8(b),
-# the single recorded exception to the winit+wgpu+cosmic-text stack; settings
+# Settings surface: egui embedded in OUR wgpu renderer -
+# the single recorded exception to the winit+wgpu+cosmic-text stack (settings
 # window ONLY - never the overlay/editor). egui-wgpu 0.36 requires wgpu 30 =
 # the workspace pin and pairs with winit 0.30.13 (crates.io-verified).
 # egui-winit is deliberately NOT used: the hand-feed bridge (egui_host::input)
@@ -63,19 +63,19 @@ chrono = { workspace = true }
 [dev-dependencies]
 # QA-harness composition only (examples/pin_window.rs is the reference
 # PinActionSink bridge): the LIB never imports the Wayland-native actions
-# crate (purity gate) - the real bridge lands in the todo-35 binary layer.
+# crate (purity gate) - the real bridge lives in the binary layer.
 flowshot-actions = { path = "../flowshot-actions" }
 # QA-harness composition only (examples/launcher_dialog.rs executes the
-# dialog's typed request against the live session for the todo-37 acceptance:
+# dialog's typed request against the live session for the QA acceptance:
 # probe for the monitor dropdown + capture_region for the saved-image
 # assert). The LIB keeps the MonitorProbe/LaunchCallback seams instead -
-# the production wiring lands in the todo-38 binary layer (purity gate).
+# the production wiring lives in the binary layer (purity gate).
 flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 bytes = { workspace = true }
 serde_json = { workspace = true }
 # DEV-ONLY reference rasterizer for the cross-rasterizer parity harness and
-# golden fixtures (Oracle r4 F-1: never a runtime CPU fallback).
+# golden fixtures.
 tiny-skia = { workspace = true }
 # PNG encode/decode for parity evidence dumps in tests/examples only.
 image = { workspace = true }

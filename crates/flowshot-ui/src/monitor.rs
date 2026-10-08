@@ -1,6 +1,6 @@
 //! Conversion from winit monitor handles into the core [`OutputLayout`].
 //!
-//! Thin startup glue (no tests per draft D4 - correctness of the algebra
+//! Thin startup glue (no tests - correctness of the algebra
 //! lives in `flowshot_core::geometry` and the router).
 //!
 //! # Semantics of the winit monitor report

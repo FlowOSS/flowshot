@@ -263,7 +263,7 @@ fn zero_length_and_one_pixel_drags_are_noops() {
     // Click without move (the shape tools' zero-length rule).
     ed.pointer_press(&env(), MouseButton::Left, at(10.0, 10.0));
     ed.pointer_release(&env(), MouseButton::Left, at(10.0, 10.0));
-    // 1x1 region: the F27 grid collapses to zero (failure QA).
+    // 1x1 region: the Flameshot grid collapses to zero (failure QA).
     stroke(&mut ed, &env(), (10.0, 10.0), (11.0, 11.0));
     assert_eq!(ed.pixel_effects(), []);
     assert_eq!(ed.undo_stack().undo_depth(), 0);
@@ -314,7 +314,7 @@ fn pixelate_and_blur_bakes_differ_and_honor_the_size_slot() {
     assert!(ed.undo().0);
     stroke(&mut ed, &env(), (8.0, 8.0), (56.0, 40.0));
     let coarse = ed.pixel_effects()[0].pixels().to_vec();
-    assert_ne!(small, coarse, "size drives the F27 grid coarseness");
+    assert_ne!(small, coarse, "size drives the Flameshot grid coarseness");
     // Coarser blocks: bigger uniform runs along a row.
     let run_len = |pixels: &[u8]| -> usize {
         let first = &pixels[..4];

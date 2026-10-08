@@ -1,4 +1,4 @@
-//! Two-finger pinch tracking (F27 "pinch mirrors [the wheel zoom]").
+//! Two-finger pinch tracking (Flameshot "pinch mirrors [the wheel zoom]").
 //!
 //! winit 0.30 exposes no touchpad pinch gesture events on Wayland (the
 //! gesture family did not exist until later releases), so pinch zoom is

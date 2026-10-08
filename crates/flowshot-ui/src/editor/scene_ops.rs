@@ -1,8 +1,8 @@
 //! Scene operations of the editor: stroke commit, delete,
-//! undo/redo, and the object hit-test/selection behind F27 priority 5.
+//! undo/redo, and the object hit-test/selection behind Flameshot priority 5.
 //!
 //! Every mutation is ONE undo unit (a full before/after snapshot pair -
-//! the core [`UndoStack`] contract, F27 "snapshot approach kept"): the
+//! the core [`UndoStack`] contract, Flameshot "snapshot approach kept"): the
 //! draw-end commit, the Delete removal (the core renumbers counters), and
 //! the mutation-funnel additions (move-release, text-commit, property change) all
 //! push through [`EditorState::commit_object`]-style pairs. Undo/redo
@@ -117,7 +117,7 @@ impl EditorState {
         self.selected
     }
 
-    /// Selects the topmost object under `at` (F27 P5); returns the id.
+    /// Selects the topmost object under `at` (Flameshot P5); returns the id.
     /// `None` deselects (a press that hit nothing).
     pub fn select_object_at(&mut self, at: LogicalPoint) -> Option<usize> {
         let hit = self.object_at(at);

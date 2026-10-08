@@ -1,10 +1,10 @@
-//! Live QA harness for the capture launcher dialog (plan todo 37).
+//! Live QA harness for the capture launcher dialog.
 //!
 //! Spawns the real [`flowshot_ui::launcher::LauncherWindow`] on the live
-//! session with the production seams wired the way the todo-38 binary layer
+//! session with the production seams wired the way the binary layer
 //! will wire them:
 //!
-//! - [`MonitorProbe`] -> the live todo-6 output probe (`CaptureThread`),
+//! - [`MonitorProbe`] -> the live output probe (`CaptureThread`),
 //! - [`LaunchCallback`] -> executes the typed request against the session
 //!   (ICC `capture_region` / `capture_output_named`), honors the delay, and
 //!   writes the PNG for the acceptance asserts (`file` dims == grim oracle),
@@ -105,7 +105,7 @@ fn parse_save_path() -> PathBuf {
     PathBuf::from("/tmp/flowshot-launcher-capture.png")
 }
 
-/// Executes one typed request against the live session (the todo-38 binary
+/// Executes one typed request against the live session (the binary
 /// layer's job, done here so the acceptance chain is observable today).
 fn execute(request: &LauncherRequest, save: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let delay_ms = match request {
@@ -156,7 +156,7 @@ async fn capture(
 }
 
 /// The typed geometry as a capture rect; offset-less `WxH` centers at the
-/// cursor (the todo-18 executor semantics, resolved through the F13 ladder).
+/// cursor (the launch executor semantics, resolved through the cursor ladder).
 async fn region_rect(geometry: &RegionGeometry) -> Result<LogicalRect, Box<dyn std::error::Error>> {
     let (width, height) = (f64::from(geometry.width), f64::from(geometry.height));
     let (x, y) = if let (Some(offset_x), Some(offset_y)) = (geometry.x, geometry.y) {

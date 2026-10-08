@@ -4,7 +4,7 @@
 //! [`egui::RawInput`], mirroring egui-winit 0.36 semantics: logical-key-first
 //! keyboard mapping ([`super::keymap`]), line/pixel wheel units, printable
 //! text filtering, Ctrl/Cmd clipboard command translation through the
-//! optional [`ClipboardBridge`], and always-on IME forwarding (draft D7).
+//! optional [`ClipboardBridge`], and always-on IME forwarding.
 //!
 //! Pointer positions are converted to POINTS (physical / `pixels_per_point`)
 //! once, here - the single logical<->physical conversion point of this

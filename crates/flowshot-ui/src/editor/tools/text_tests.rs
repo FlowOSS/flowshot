@@ -371,7 +371,7 @@ fn commit_produces_a_styled_text_object() {
     match object.to_data() {
         ToolObjectData::Text(text) => {
             assert_eq!(text.text, "hi");
-            // F27: point size = tool_size + BASE_POINT_SIZE (12 + 8).
+            // Flameshot: point size = tool_size + BASE_POINT_SIZE (12 + 8).
             assert_eq!(text.font_size, 20.0);
             assert_eq!(text.color, DRAW_RED);
             assert_eq!(text.position, ScenePoint::new(100.0, 50.0));

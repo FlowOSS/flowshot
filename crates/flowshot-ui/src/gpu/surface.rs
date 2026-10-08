@@ -145,7 +145,7 @@ fn configure_surface(
 /// Picks the surface texture format for `kind` from the advertised formats.
 ///
 /// The overlay keeps `Bgra8UnormSrgb`: the frozen frame is sRGB content
-/// rendered through the linear-light pipeline (the todo 14/15 evidence
+/// rendered through the linear-light pipeline (the rendering evidence
 /// depends on that target). The egui host prefers a NON-sRGB 8-bit target
 /// (`Bgra8Unorm`/`Rgba8Unorm`): egui does its own gamma handling, so an
 /// sRGB surface renders colors slightly off (and `egui_wgpu` warns); sRGB is
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn overlay_format_keeps_the_srgb_target() {
         // The frozen frame is sRGB content rendered through the linear-light
-        // pipeline (todo 14/15 evidence): the overlay keeps Bgra8UnormSrgb
+        // pipeline: the overlay keeps Bgra8UnormSrgb
         // even when the surface advertises non-sRGB formats first.
         let formats = [
             TextureFormat::Bgra8Unorm,

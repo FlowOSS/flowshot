@@ -1,6 +1,6 @@
 //! The shape-tool suite: per-tool stroke lifecycle through the real
 //! [`EditorState`] event surface (press/move/release + the test-drive funnel),
-//! committed scene-object geometry, the F27 Ctrl drag conventions, the
+//! committed scene-object geometry, the Flameshot Ctrl drag conventions, the
 //! marker blend constant, the size-slot dispatch, and the zero-length rule.
 
 #![allow(
@@ -327,7 +327,7 @@ fn invert_commits_the_normalized_region() {
 }
 
 // ---------------------------------------------------------------------------
-// C. F27 modifier conventions (Ctrl drag)
+// C. Flameshot modifier conventions (Ctrl drag)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -517,7 +517,10 @@ fn hover_previews_paint_the_f27_dot_except_invert() {
         ed.activate_tool(kind);
         let commands = paint_commands(&ed, Some(at(400.0, 300.0)));
         if kind == ToolKind::Invert {
-            assert!(commands.is_empty(), "invert has no mouse preview (F27)");
+            assert!(
+                commands.is_empty(),
+                "invert has no mouse preview (Flameshot)"
+            );
         } else {
             assert!(
                 matches!(
@@ -673,7 +676,7 @@ fn funnel_drags_commit_real_tool_objects() {
         ]
     );
     assert_eq!(core.editor().undo_stack().undo_depth(), 7);
-    // The tool drags never reached the selection engine (F27 P3 > region).
+    // The tool drags never reached the selection engine (Flameshot P3 > region).
     assert_eq!(core.selection().rect(), None);
 }
 

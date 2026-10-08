@@ -1,4 +1,4 @@
-//! Visual QA bundle renderer (plan todo 41, no-visible-windows policy).
+//! Visual QA bundle renderer.
 //!
 //! Renders the polished overlay/pin/launcher surfaces OFFSCREEN through the
 //! PRODUCTION paint path ([`flowshot_ui::build_overlay_frame`] - the same

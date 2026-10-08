@@ -5,7 +5,7 @@
 //! as `selection/events.rs` - and split again at the 250-LOC ceiling into
 //! this key/wheel half and the [`pointer`] child (press/move/release).
 //!
-//! Routing follows the exact F27 priority chain via [`super::routing`];
+//! Routing follows the exact Flameshot priority chain via [`super::routing`];
 //! these files execute the decisions: draw-session lifecycle, edit-widget
 //! commits, object selection and its atomic move drag, the
 //! digit/wheel size adjusters, and the undo/redo/delete scene ops.

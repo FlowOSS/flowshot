@@ -1,4 +1,4 @@
-//! The editor key map: tool activation keys per the F12 shortcut
+//! The editor key map: tool activation keys per the Flameshot shortcut
 //! map (P/D/A/S/R/C/M/T/B/I + configurable).
 //!
 //! Defaults are the Flameshot `recognizedShortcuts` table
@@ -28,7 +28,7 @@ pub enum ZOrderAction {
 /// read the SAME slots, so a rebind is reflected everywhere).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AidToggle {
-    /// The pixel magnifier (ships on `L`, lens - F12 binds no magnifier
+    /// The pixel magnifier (ships on `L`, lens - Flameshot binds no magnifier
     /// key, so `L` is the documented unbound-key choice).
     Magnifier,
     /// The snapping grid overlay (ships on `F`, the grid-F precedent).

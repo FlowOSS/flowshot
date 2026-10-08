@@ -4,7 +4,7 @@
 //! the editor tool framework, and the input-derived state every
 //! window shares (cursor track, IME status, exit request). It contains no
 //! windowing or GPU handles, so the full input path - coordinate mapping,
-//! the F27 event-routing priority, Esc teardown, IME plumbing - is
+//! the Flameshot event-routing priority, Esc teardown, IME plumbing - is
 //! unit-testable headlessly through the `test-drive` seam
 //! [`OverlayCore::inject_event`]. The route funnel itself lives in
 //! [`route`](mod@route) (the `selection/events.rs` split discipline).
@@ -295,7 +295,7 @@ impl OverlayCore {
     }
 
     /// Routes one normalized event: maps coordinates into global logical
-    /// space, walks the F27 routing priority (editor first, selection
+    /// space, walks the Flameshot routing priority (editor first, selection
     /// engine for what the editor passes through), and returns the effects
     /// for the shell.
     ///
@@ -307,7 +307,7 @@ impl OverlayCore {
         route::route(self, slot, event)
     }
 
-    /// TEST SEAM (Metis blocker #1 fallback): injects a
+    /// TEST SEAM (the recorded design-review fallback): injects a
     /// synthetic event through the exact production routing path, so mouse
     /// paths are QA-able without external injection tools.
     // By value for seam symmetry: the live injector (`OverlayHandle`) must

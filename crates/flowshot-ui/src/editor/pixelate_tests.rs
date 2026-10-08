@@ -1,5 +1,5 @@
 //! The secure-pixelate algorithm suite (the acceptance bar:
-//! determinism, irreversibility, the F27 constants, the 1x1 no-op failure
+//! determinism, irreversibility, the Flameshot constants, the 1x1 no-op failure
 //! path, the 4K perf gate).
 //!
 //! The "SIMD path == scalar path byte-identical" acceptance is
@@ -74,7 +74,7 @@ impl Lcg {
 }
 
 // ---------------------------------------------------------------------------
-// A. The F27 grid formula and the no-op failure paths
+// A. The Flameshot grid formula and the no-op failure paths
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -128,7 +128,7 @@ fn noise_canonical_order_is_x_outer_y_inner_and_seed_stable() {
         }
     }
     assert_ne!(a.color(0, 0), a.color(1, 1), "deviates vary per pixel");
-    assert_eq!(sampling_sigma(2), 11.0, "F27: N(0, 5*size+1)");
+    assert_eq!(sampling_sigma(2), 11.0, "Flameshot: N(0, 5*size+1)");
 }
 
 #[test]
@@ -214,7 +214,7 @@ fn bicubic_reconstruction_of_the_mosaic_stays_below_20db_psnr() {
     // 20 dB PSNR - the redaction holds. Fixture: pseudo-random interior
     // (maximum reconstructive surprise), uniform fringe.
     let mut lcg = Lcg(4242);
-    // Uniform gray fringe ring at 7/56 (the rows/cols the F27 offsets
+    // Uniform gray fringe ring at 7/56 (the rows/cols the Flameshot offsets
     // sample for the region 8..56), pseudo-random interior.
     let frame = frame_with(64, 64, |x, y| {
         if x == 7 || x == 56 || y == 7 || y == 56 {
@@ -291,7 +291,7 @@ fn psnr_against_region(reconstruction: &[u8], frame: &FramePixels, at: BakeRegio
 }
 
 // ---------------------------------------------------------------------------
-// D. Fringe extraction (the F27 offset rules) and the upscale structure
+// D. Fringe extraction (the Flameshot offset rules) and the upscale structure
 // ---------------------------------------------------------------------------
 
 #[test]

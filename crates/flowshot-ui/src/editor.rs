@@ -1,8 +1,8 @@
-//! The editor tool framework and event routing (draft F27).
+//! The editor tool framework and event routing.
 //!
 //! The layer bridging the scene graph (`flowshot_core::scene`) to
 //! the overlay input funnel: a [`Tool`] registry every
-//! annotation tool plugs into, the F27 event-routing priority
+//! annotation tool plugs into, the Flameshot event-routing priority
 //! chain (picker > right-click > active tool > edit commit > object select >
 //! selection engine), the per-tool size dispatch with the digit/wheel
 //! adjusters, scene commits as single undo units, and the real producers of
@@ -12,7 +12,7 @@
 //!
 //! The selection engine owns selection GEOMETRY; the editor owns
 //! the annotation scene and the active tool. `OverlayCore` feeds both from
-//! one funnel: the editor sees every pointer/key/wheel event FIRST (the F27
+//! one funnel: the editor sees every pointer/key/wheel event FIRST (the Flameshot
 //! priority) and passes through what it does not consume; the Esc cascade
 //! stays in the selection engine (its six-stage order is the final contract)
 //! and the editor reacts to the popped step through
@@ -112,7 +112,7 @@ pub use zorder::LayerEntry;
 
 /// The editor state machine: tool registry + active tool, the annotation
 /// scene with its undo history, the object selection, the size dispatch
-/// with both adjusters, and the F27 seams (frame, shortcuts, config).
+/// with both adjusters, and the Flameshot seams (frame, shortcuts, config).
 // The visibility flags are independent user-facing overlay settings
 // (drawing session, edit widget, grid, magnifier - the `[editor]` config
 // surface); grouping them would obscure the TOML projection.
@@ -269,7 +269,7 @@ impl EditorState {
         self.color
     }
 
-    /// Sets the draw color (the color-wheel seam; F27 `onColorChanged`).
+    /// Sets the draw color (the color-wheel seam; Flameshot `onColorChanged`).
     pub fn set_color(&mut self, color: SceneColor) {
         self.color = color;
         if let Some(tool) = self.tool.as_mut() {
@@ -313,7 +313,7 @@ impl EditorState {
     }
 
     /// The active tool's edit-widget geometry (the text tool produces it;
-    /// drives the F27 right-click exception, click-outside commit, and the
+    /// drives the Flameshot right-click exception, click-outside commit, and the
     /// Esc cascade tool-widget stage).
     #[must_use]
     pub fn edit_rect(&self) -> Option<LogicalRect> {
@@ -328,7 +328,7 @@ impl EditorState {
     }
 
     /// Sets the detached edit-widget presence (the text tool's edit
-    /// producer; drives the F27 right-click exception, the click-outside
+    /// producer; drives the Flameshot right-click exception, the click-outside
     /// commit routing, and the Esc cascade's tool-widget stage).
     pub fn set_edit_widget_present(&mut self, present: bool) {
         self.widget_present = present;

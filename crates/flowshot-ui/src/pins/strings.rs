@@ -1,7 +1,7 @@
 //! Pin user-facing strings (message-key constants, no
 //! inline literals in logic). English-only v1; the i18n catalog replaces the
 //! values behind these keys on the roadmap. Labels mirror the Flameshot pin
-//! context menu (F27 BORROW) so migrating users see familiar wording.
+//! context menu (Flameshot BORROW) so migrating users see familiar wording.
 
 /// Context-menu item: copy the pin to the clipboard.
 pub const MENU_COPY: &str = "Copy to clipboard";

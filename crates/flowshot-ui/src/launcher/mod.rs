@@ -1,5 +1,5 @@
 //! The capture launcher dialog: a small egui window on the
-//! embedded stack (`crate::egui_host`) - the F12 mode-9
+//! embedded stack (`crate::egui_host`) - the Flameshot mode-9
 //! manual-coordinate capability, reached via `flowshot capture --dialog` or
 //! the tray's `Capture Launcher` item (both dispatch the
 //! daemon's `Launcher` method).

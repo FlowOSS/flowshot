@@ -27,7 +27,7 @@ pub struct EditorView {
     pub mouse: Option<LogicalPoint>,
     /// The current selection (tool clamping context at paint time).
     pub selection: Option<LogicalRect>,
-    /// The modifier snapshot (the painted preview honors the same F27
+    /// The modifier snapshot (the painted preview honors the same Flameshot
     /// constrain conventions as the committed shape).
     pub modifiers: ModifiersState,
 }

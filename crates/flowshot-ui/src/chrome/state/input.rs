@@ -21,7 +21,7 @@ use super::ChromeState;
 
 impl ChromeState {
     /// A pointer press in global logical coordinates. `true` when a chrome
-    /// widget consumed it (the funnel then skips the F27 editor chain and
+    /// widget consumed it (the funnel then skips the Flameshot editor chain and
     /// the selection engine, and the release belongs to the chrome too).
     pub fn press(
         &mut self,
@@ -36,7 +36,7 @@ impl ChromeState {
         let local_pt = Point::new(local_x(output, at.x.0), local_y(output, at.y.0));
         let left = button == MouseButton::Left;
 
-        // F27 P1: a visible wheel consumes EVERY press - a swatch picks,
+        // Flameshot P1: a visible wheel consumes EVERY press - a swatch picks,
         // the rainbow slot is the eyedropper seam, anywhere else
         // hides (and the press dies with it).
         if self.color_wheel.visible {
@@ -131,7 +131,7 @@ impl ChromeState {
 
 impl OverlayCore {
     /// The funnel's chrome-first press (widget parity: the chrome sees the
-    /// press before the F27 editor chain).
+    /// press before the Flameshot editor chain).
     pub(crate) fn chrome_press(
         &mut self,
         slot: WindowSlot,

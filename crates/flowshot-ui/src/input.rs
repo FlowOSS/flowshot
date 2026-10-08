@@ -218,7 +218,7 @@ pub struct RouteReport {
     pub actions: Vec<Action>,
 }
 
-/// The plumbed IME session state (always-on model, draft D7).
+/// The plumbed IME session state (always-on model).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ImeStatus {
     /// No IME session is active.

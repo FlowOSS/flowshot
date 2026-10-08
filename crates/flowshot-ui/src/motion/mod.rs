@@ -1,4 +1,4 @@
-//! Token-driven motion (draft D8(d)).
+//! Token-driven motion.
 //!
 //! The animation layer every animated surface shares: cubic-bezier easing
 //! evaluated from the `flowshot_core::tokens` curves (NEVER hardcoded
@@ -42,7 +42,7 @@ pub use tween::{MotionSpec, StaggerSpec, Tween, stagger_progress};
 /// schedule NOTHING (the idle zero-CPU contract).
 pub const FRAME_INTERVAL: Duration = Duration::from_millis(16);
 
-/// Selection-handle hover-grow duration (D8(d) "handle hover").
+/// Selection-handle hover-grow duration (the "handle hover" slot).
 pub const HANDLE_GROW_MS: u64 = 120;
 /// Toolbar-button hover/press wash duration (small, quick = `sharp`).
 pub const BUTTON_WASH_MS: u64 = 100;
@@ -54,7 +54,7 @@ pub const PANEL_EXIT_MS: u64 = 140;
 pub const WHEEL_ENTER_MS: u64 = 150;
 /// Color-wheel popover close duration (leaving = `accelerate`).
 pub const WHEEL_EXIT_MS: u64 = 100;
-/// Pin zoom easing duration (D8(d) "pin zoom").
+/// Pin zoom easing duration (the "pin zoom" slot).
 pub const PIN_ZOOM_MS: u64 = 150;
 /// One toolbar button's fade+slide duration (the 120-180ms band).
 pub const REVEAL_ELEMENT_MS: u64 = 120;

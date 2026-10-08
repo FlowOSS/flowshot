@@ -91,7 +91,7 @@ impl OverlayCore {
         if let Some(cursor) = self.cursor {
             let at = cursor.clamped;
             // Chrome FIRST (Qt child-widget parity): a press on the
-            // toolbar / color wheel / side panel never reaches the F27 chain,
+            // toolbar / color wheel / side panel never reaches the Flameshot chain,
             // and a chrome-consumed press grabs its release (the layer
             // drag-reorder lands even when the cursor drifts).
             let chrome_ate = if pressed {

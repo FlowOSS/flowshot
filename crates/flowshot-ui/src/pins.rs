@@ -1,8 +1,8 @@
-//! Pin-to-screen windows with zoom-to-cursor (draft F27 pin
+//! Pin-to-screen windows with zoom-to-cursor (draft Flameshot pin
 //! spec - clean-room reimplementation of the Flameshot `pinwidget` behavior
 //! constants).
 //!
-//! # Behavior spec (F27 BORROW / MODIFIED / AVOID)
+//! # Behavior spec (Flameshot BORROW / MODIFIED / AVOID)
 //!
 //! - Frameless translucent always-on-top window per pin; drag delegates to
 //!   the compositor (`drag_window()` = the `startSystemMove` BORROW,
@@ -17,7 +17,7 @@
 //! - Rotate 90 degrees: BUFFER transform (core `Transform` remap), menu +
 //!   bindable keys (`R` / `Shift+R` defaults; the settings surface makes
 //!   them configurable).
-//! - Opacity: keys `0-9` map to `1.0..0.1` ABSOLUTE (F27 table), context
+//! - Opacity: keys `0-9` map to `1.0..0.1` ABSOLUTE (Flameshot table), context
 //!   menu moves `+/-0.1`; stored as integer tenths (no float drift).
 //! - Right-click context menu via the widget layer: copy / save /
 //!   rotate right / rotate left / increase opacity / decrease opacity /
@@ -26,7 +26,7 @@
 //!   and export modules.
 //! - Pin zoom is ALWAYS antialiased (linear texture sampling; the
 //!   `antialiasingPinZoom` toggle was deliberately DROPPED).
-//! - Geometry is PHYSICAL-FIRST (the #4920 root-cause fix, F27 AVOID of
+//! - Geometry is PHYSICAL-FIRST (the #4920 root-cause fix, Flameshot AVOID of
 //!   Flameshot's fractional-DPR math in pinwidget L62-84): the image
 //!   buffer is physical pixels, zoom multiplies it directly, and the
 //!   window's device scale factor converts exactly once - into the logical

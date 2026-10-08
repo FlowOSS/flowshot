@@ -1,6 +1,6 @@
 //! The bounded-shape two-point tools: rectangle and ellipse.
 //!
-//! Both use the F27 diagonal-only adjustment (`rectangletool.cpp` /
+//! Both use the Flameshot diagonal-only adjustment (`rectangletool.cpp` /
 //! `circletool.cpp` set ONLY `m_supportsDiagonalAdj`): Ctrl snaps the drag
 //! vector to 45deg, which locks the rectangle to a square aspect and the
 //! ellipse to a circle - the "Ctrl = aspect lock" / "circle lock" convention.
@@ -9,7 +9,7 @@
 //! shared `draw_thickness` slot (its `tool_size`); the rectangle's
 //! `tool_size` IS the corner radius (`[tools.rectangle].corner_radius`,
 //! digits/wheel-adjustable), so its stroke width comes from the persisted
-//! `[editor].draw_thickness` config value. F27 wheel-on-rect decision:
+//! `[editor].draw_thickness` config value. Flameshot wheel-on-rect decision:
 //! Flameshot's `drawRectangleSize` is documented as the "size for Rectangle
 //! rounded corners" (`flameshot.example.ini`) and its FILLED rect reads
 //! that one value for the path radius (the pen it also sets is vestigial

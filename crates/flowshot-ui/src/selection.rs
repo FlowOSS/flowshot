@@ -1,4 +1,4 @@
-//! The selection interaction engine (draft F27).
+//! The selection interaction engine.
 //!
 //! The complete Flameshot selection behavior spec, clean-room reimplemented
 //! on the shell's input seam and expressed in GLOBAL LOGICAL space so one
@@ -12,7 +12,7 @@
 //! - Shift mirrors a resize around the start center, Ctrl constrains the
 //!   aspect ratio (the exact per-handle formulas of `selectionwidget.cpp`),
 //! - arrows move 1px, Shift+arrows resize one edge 1px, Ctrl+Shift+arrows
-//!   resize symmetrically 1px (CODE values per F27 - the README's 2px is
+//!   resize symmetrically 1px (CODE values per Flameshot - the README's 2px is
 //!   rejected),
 //! - every rect clamps to the layout and holds the 10x10 minimum
 //!   (BORROW-MODIFIED from Flameshot's 1x1),

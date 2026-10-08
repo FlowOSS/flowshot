@@ -1,4 +1,4 @@
-//! Renderer smoke QA harness (plan todo 14).
+//! Renderer smoke QA harness.
 //!
 //! One borderless-fullscreen transparent window on the primary monitor,
 //! rendering the acceptance scene through [`flowshot_ui::render::Renderer`]:
@@ -11,11 +11,11 @@
 //! scale phase renders 300 frames, then holds the presented frame on screen
 //! for a grim oracle window, then exits 0. The current phase is mirrored to
 //! `/tmp/flowshot-smoke-phase.txt` so the QA script can grim at the right
-//! moment; stdin EOF also exits early (the todo-13 injector pattern).
+//! moment; stdin EOF also exits early (the injector pattern).
 //!
 //! All scene colors/radii/shadow/typography come from
 //! `flowshot_core::tokens::DesignTokens`; geometry derives from token values
-//! (the toolbar height uses the F27 `buttonBaseSize = font_line * 2.2`
+//! (the toolbar height uses the Flameshot `buttonBaseSize = font_line * 2.2`
 //! formula). The frame-texture stand-in is a checkerboard of the token
 //! accent/contrast colors.
 
@@ -434,7 +434,7 @@ fn smoke_scene(tokens: &DesignTokens, size: (u32, u32), scale: f32) -> DisplayLi
         base,
         accent,
     );
-    // Toolbar: token shadow, rounded rect (radii.large), height from the F27
+    // Toolbar: token shadow, rounded rect (radii.large), height from the Flameshot
     // buttonBaseSize formula (font line * 2.2).
     let font_size = tokens.typography.base_size as f32 * scale;
     let line_height = font_size * 1.2;

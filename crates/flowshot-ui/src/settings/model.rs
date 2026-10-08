@@ -21,7 +21,7 @@ use crate::editor::{ToolKind, ToolShortcuts};
 use super::strings;
 use crate::egui_host::theme::{ThemeMode, parse_hex_rgb};
 
-/// The window's four tabs (F12 parity).
+/// The window's four tabs (Flameshot parity).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Tab {
     /// Every config key, grouped.
@@ -123,7 +123,7 @@ pub enum RecorderTarget {
     Lower,
 }
 
-/// The highest undo steps Flameshot's handler accepts (F27: limit 100,
+/// The highest undo steps Flameshot's handler accepts (Flameshot: limit 100,
 /// range 0..999).
 pub const UNDO_LIMIT_MAX: u32 = 999;
 
@@ -330,7 +330,7 @@ impl SettingsModel {
     }
 
     /// Every validation issue in the current edit state (empty = Apply is
-    /// allowed). Ranges per F27 and the config schema: undo limit 0..=999, JPEG quality
+    /// allowed). Ranges per Flameshot and the config schema: undo limit 0..=999, JPEG quality
     /// 1..=100, colors `#RRGGBB`.
     #[must_use]
     pub fn validate(&self) -> Vec<FieldIssue> {

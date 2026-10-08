@@ -204,7 +204,7 @@ impl Toolbar {
             icon_btn.draw(list, tokens, scale, atlas);
         }
 
-        // The 400ms tooltip (F27): anchored to the hovered button's FINAL
+        // The 400ms tooltip (Flameshot): anchored to the hovered button's FINAL
         // cell (hit geometry == paint geometry), text from the ACTIVE
         // bindings. Drawn last so it tops the plate and every cell.
         if let Some(hovered) = motion.tooltip_button(now)

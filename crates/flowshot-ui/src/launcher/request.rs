@@ -2,7 +2,7 @@
 //! (parsed once at the input boundary) and the request the Capture button
 //! emits.
 //!
-//! The grammar mirrors the CLI's `--region <WxH[+X+Y]>` token (Oracle r4):
+//! The grammar mirrors the CLI's `--region <WxH[+X+Y]>` token:
 //! unsigned non-zero dimensions, optional independently signed offsets in
 //! global logical pixels. The parser is a dialog-local copy because the
 //! CLI's lives in `flowshot-cli` (which depends on this crate - the shared

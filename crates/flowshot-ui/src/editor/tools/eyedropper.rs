@@ -1,8 +1,8 @@
-//! The eyedropper tool (draft F12 `TYPE_GRAB_COLOR`).
+//! The eyedropper tool.
 //!
 //! The eyedropper samples the frozen-frame pixel at the click position and
 //! sets the draw color to the sampled value. Activated by `G` (the default
-//! F12 binding for `TYPE_GRAB_COLOR`).
+//! Flameshot binding for `TYPE_GRAB_COLOR`).
 //!
 //! Flameshot parity: the picker follows the cursor (magnifier-follows mode),
 //! and a click samples the frozen-frame pixel. The sampled color is set as
@@ -21,7 +21,7 @@ use flowshot_core::scene::{Color as SceneColor, PaintSink, ToolObject};
 use super::super::kind::ToolKind;
 use super::super::tool::{EditorContext, FramePixels, Tool};
 
-/// The eyedropper tool (F12 `TYPE_GRAB_COLOR` parity).
+/// The eyedropper tool (Flameshot `TYPE_GRAB_COLOR` parity).
 ///
 /// Samples the frozen-frame pixel at the click position and sets the draw
 /// color. Activated by `G` key.

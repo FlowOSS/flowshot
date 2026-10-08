@@ -1,4 +1,4 @@
-//! Cross-rasterizer parity harness (plan todo 14, Oracle r4 F-1 policy).
+//! Cross-rasterizer parity harness.
 //!
 //! Renders the same [`DisplayList`] fixtures through the wgpu renderer
 //! (offscreen, headless - no window) and through a DEV-ONLY tiny-skia
@@ -1279,9 +1279,9 @@ fn count_ink(image: &[u8], x0: u32, y0: u32, width: u32, height: u32, color: &Co
 }
 
 // ---------------------------------------------------------------------------
-// Todo 21: per-tool golden fixtures (plan acceptance: three per tool -
+// Per-tool golden fixtures (three per tool -
 // default size, max size, constrained modifier; the pencil and invert third
-// fixtures carry documented deviations: the pencil has no F27 adjustment
+// fixtures carry documented deviations: the pencil has no Flameshot adjustment
 // flags and the invert tool no constrain, so theirs exercise the dense
 // freehand arc under Ctrl and the z-order filter over committed objects).
 // ---------------------------------------------------------------------------
@@ -1636,7 +1636,7 @@ fn invert_goldens() {
 }
 
 // ---------------------------------------------------------------------------
-// Todo 22: text-tool golden (the committed text object through the REAL
+// Text-tool golden (the committed text object through the REAL
 // editor -> scene -> ListSink -> wgpu chain vs the swash-mask reference;
 // the CJK fixture doubles as the font-fallback render proof).
 // ---------------------------------------------------------------------------

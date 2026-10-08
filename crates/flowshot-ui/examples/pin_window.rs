@@ -1,14 +1,14 @@
-//! Pin window QA harness (plan todo 30).
+//! Pin window QA harness.
 //!
 //! Spawns real pin windows from PNG files or a synthetic marker fixture and
 //! idles for the grim/hyprctl oracle. This example is the REFERENCE
 //! COMPOSITION of the pin action seam: it plays the binary layer's role
-//! (todo 35/32) by implementing `PinActionSink` over
-//! `flowshot_actions::pin` (todo-28 clipboard + todo-29 export) and
+//! by implementing `PinActionSink` over
+//! `flowshot_actions::pin` and
 //! mirroring pin lifecycle into `flowshot_actions::pin::PinRegistry` (the
-//! todo-32 "pins alive" persistence reason). The Wayland `app_id`
+//! "pins alive" persistence reason). The Wayland `app_id`
 //! (`flowshot-pin`) is applied through the `WindowCustomizer` seam - the
-//! lib crate stays platform-pure (the todo-13 `app_id` deferral pattern).
+//! lib crate stays platform-pure (the `app_id` deferral pattern).
 //!
 //! Usage (self-terminating via the stdin injector, user-away QA rules):
 //!
@@ -17,7 +17,7 @@
 //! ```
 //!
 //! With `--features test-drive`, stdin lines inject synthetic events
-//! through the production routing path (the todo-13 injector protocol):
+//! through the production routing path (the injector protocol):
 //! `move <pin> <x> <y>`, `wheel <pin> <units>`, `btn <pin> <left|right>
 //! <down|up>`, `key <pin> <escape|q|r|0..9>`, `mods <pin>
 //! <none|shift|ctrl[+...]>`, `touch <pin> <tid> <started|moved|ended> <x>
@@ -117,7 +117,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// Headless ground-truth render (the todo-15 verify-offscreen pattern):
+/// Headless ground-truth render (the verify-offscreen pattern):
 /// drives the PRODUCTION state machine (key injections), builds the frame
 /// with the production `frame_list`, renders through the production
 /// `Renderer` into an offscreen target, and reads the surface pixels back.

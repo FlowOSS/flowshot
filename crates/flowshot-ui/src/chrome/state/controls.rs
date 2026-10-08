@@ -16,7 +16,7 @@ use super::ChromeState;
 impl ChromeState {
     /// The color pick: the draw color (an editor seam), the selected object's
     /// color (the property funnel, ONE undo unit, invert excluded),
-    /// the persistence sink (F27 TOML write - the binary layer's seam), and
+    /// the persistence sink (Flameshot TOML write - the binary layer's seam), and
     /// the wheel hides.
     pub(super) fn pick_color(&mut self, hex: &str, editor: &mut EditorState) {
         let Some(color) = crate::editor::scene_color_from_hex(hex) else {

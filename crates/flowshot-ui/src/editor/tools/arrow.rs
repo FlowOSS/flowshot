@@ -1,6 +1,6 @@
-//! The arrow tool (draft F27 arrow spec).
+//! The arrow tool (clean-room from the Flameshot arrow spec).
 //!
-//! A two-point stroke (Ctrl snaps H/V/45deg - the F27 marker/arrow
+//! A two-point stroke (Ctrl snaps H/V/45deg - the Flameshot marker/arrow
 //! adjustment flags) committing an [`ArrowObject`]: the head geometry scales
 //! from the thickness, `[tools.arrow].style` selects the straight or curved
 //! (quadratic-notch) head, and `[tools.arrow].reverse` flips the head to the

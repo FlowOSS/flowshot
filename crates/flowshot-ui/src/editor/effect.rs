@@ -48,7 +48,7 @@ const EFFECT_TEXTURE_BASE: u64 = 1 << 40;
 /// Which destructive op baked an effect (the stable tracing token).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EffectKind {
-    /// The F27 secure fringe pseudo-pixelation.
+    /// The Flameshot secure fringe pseudo-pixelation.
     Pixelate,
     /// The two-pass gaussian blur variant.
     Blur,

@@ -1,4 +1,4 @@
-//! General tab: every config key, grouped by its TOML table (F12 parity -
+//! General tab: every config key, grouped by its TOML table (Flameshot parity -
 //! `[capture]`, `[save]`, `[editor]`, `[tools.*]`, `[pin]`, `[upload]`,
 //! `[daemon]`, `[telemetry]`; the `[ui]` group lives in the Interface tab
 //! and `[editor].color_palette` in its palette editor). One section card

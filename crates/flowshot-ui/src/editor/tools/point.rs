@@ -1,6 +1,6 @@
 //! The plain two-point tools: line and invert.
 //!
-//! The line is the F27 `TYPE_DRAWER` stroke (Ctrl snaps H/V/45deg via the
+//! The line is the Flameshot `TYPE_DRAWER` stroke (Ctrl snaps H/V/45deg via the
 //! shared [`TwoPoint`] constrain). The invert tool is the region-filter
 //! tool: it commits an [`InvertObject`] whose paint inverts everything
 //! below it non-destructively (the frame pixels are never modified - undo
@@ -151,7 +151,7 @@ impl Tool for InvertTool {
         self.stroke.drawing()
     }
 
-    /// The inverted region is never a cursor preview (F27 `InvertTool`
+    /// The inverted region is never a cursor preview (Flameshot `InvertTool`
     /// `paintMousePreview` is a no-op).
     fn show_mouse_preview(&self) -> bool {
         false

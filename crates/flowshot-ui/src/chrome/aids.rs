@@ -176,11 +176,11 @@ impl ChromeState {
     }
 
     /// A press on the chip cluster: `true` when a chip consumed it - the
-    /// funnel then skips the F27 editor chain and the selection engine (a
+    /// funnel then skips the Flameshot editor chain and the selection engine (a
     /// chip click never starts a selection drag) and the release belongs to
     /// the chrome (the grab). A left click toggles the aid through the same
     /// editor seam the key dispatch uses. A visible color wheel wins: this
-    /// defers to [`ChromeState::press`], whose F27 P1 branch consumes
+    /// defers to [`ChromeState::press`], whose Flameshot P1 branch consumes
     /// EVERY press while the picker is open.
     pub(crate) fn aids_press(
         &mut self,

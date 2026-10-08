@@ -1,6 +1,6 @@
 //! The freehand path tools: pencil and marker.
 //!
-//! Both follow the F27 path-stroke lifecycle (`abstractpathtool.cpp`):
+//! Both follow the Flameshot path-stroke lifecycle (`abstractpathtool.cpp`):
 //! points accumulate per motion, the stroke is valid from the second point
 //! on, and a click without motion commits NOTHING (the plan's zero-length
 //! failure case). The pencil simplifies with Ramer-Douglas-Peucker at
@@ -24,7 +24,7 @@ use super::geometry::{
 use crate::render::f32_from_u32;
 
 /// The marker's translucent blend alpha ("alpha ~0.5";
-/// 128/255 = 0.502 - the F27 marker opacity constant).
+/// 128/255 = 0.502 - the Flameshot marker opacity constant).
 pub const MARKER_ALPHA: u8 = 128;
 
 /// The freehand pencil stroke (shared `draw_thickness` size slot).
@@ -102,7 +102,7 @@ impl Tool for PencilTool {
 }
 
 /// The translucent highlighter stroke (`[tools.marker].size` slot; Ctrl
-/// snaps H/V/45deg like the F27 marker's adjustment flags).
+/// snaps H/V/45deg like the Flameshot marker's adjustment flags).
 #[derive(Debug, Default)]
 pub struct MarkerTool {
     stroke: TwoPoint,

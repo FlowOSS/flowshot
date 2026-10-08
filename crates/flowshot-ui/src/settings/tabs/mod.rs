@@ -1,4 +1,4 @@
-//! The four settings tabs (F12 parity: General / Interface / Filename
+//! The four settings tabs (Flameshot parity: General / Interface / Filename
 //! Editor / Shortcuts) over the shared form primitives
 //! ([`super::form`] / [`super::fields`]) every egui panel builds on.
 //!

@@ -1,5 +1,5 @@
 //! The chrome state: the floating-widget owner the route
-//! funnel consults BEFORE the F27 editor chain (Qt child-widget parity - a
+//! funnel consults BEFORE the Flameshot editor chain (Qt child-widget parity - a
 //! press on the toolbar / color wheel / side panel never reaches the scene)
 //! and the shell paints after the selection chrome.
 //!
@@ -15,7 +15,7 @@
 //!   the layer drag-reorder completes even when the cursor drifts, and an
 //!   Esc cascade step cancels the grab ([`ChromeState::cancel_grab`]).
 //!
-//! The draw-color sink is the F27 "drawColor persists to TOML on change"
+//! The draw-color sink is the Flameshot "drawColor persists to TOML on change"
 //! seam: the binary layer installs a writer; the lib stays pure.
 
 mod controls;
@@ -35,7 +35,7 @@ use super::aids::AidsInput;
 use super::motion::ChromeMotion;
 use super::{ColorWheel, SizeHud, Toolbar, side_panel, toolbar::ToolbarButton};
 
-/// The draw-color persistence callback (F27: a wheel pick writes
+/// The draw-color persistence callback (Flameshot: a wheel pick writes
 /// `[editor].draw_color` back to the TOML; the binary layer owns the path).
 pub type DrawColorSink = Box<dyn Fn(&str) + Send + 'static>;
 
@@ -122,7 +122,7 @@ impl ChromeState {
         &self.tokens
     }
 
-    /// Installs the draw-color persistence sink (`None` clears; F27
+    /// Installs the draw-color persistence sink (`None` clears; Flameshot
     /// "drawColor persists to TOML on change" - the binary layer's seam).
     pub fn set_draw_color_sink(&mut self, sink: Option<DrawColorSink>) {
         self.draw_color_sink = sink;
@@ -135,7 +135,7 @@ impl ChromeState {
     }
 
     /// Hides the color wheel (Esc cascade stage 5 reaction / pick /
-    /// click-away - the F27 P1 "the picker consumes" rule).
+    /// click-away - the Flameshot P1 "the picker consumes" rule).
     pub fn hide_color_wheel(&mut self) {
         self.color_wheel.visible = false;
     }

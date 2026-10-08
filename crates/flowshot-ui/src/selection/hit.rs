@@ -1,10 +1,10 @@
-//! Handle geometry and hit-testing (draft F27).
+//! Handle geometry and hit-testing.
 //!
 //! Eight handles: four corners and four edges. Hit priority is
-//! corners > edges > center (F27: `selectionwidget.cpp` `getMouseSide`
+//! corners > edges > center (Flameshot: `selectionwidget.cpp` `getMouseSide`
 //! checks the four corner areas, then the four edge strips, then the rect
 //! interior). The corner areas are squares of side `handle_area` centered on
-//! the corners; the edge strips run BETWEEN the corner areas (F27:
+//! the corners; the edge strips run BETWEEN the corner areas (Flameshot:
 //! `updateAreas` - `m_LArea = QRect(m_TLArea.bottomLeft(), m_BLArea.topRight())`
 //! etc.), so on a small selection the edge strips degenerate to empty and
 //! only corners + interior remain hittable - Flameshot parity.
@@ -96,7 +96,7 @@ impl Handle {
     }
 
     /// The handle after the rect flipped through an edge, mirroring the
-    /// active side so the drag keeps feeling natural (F27: `getProperSide`
+    /// active side so the drag keeps feeling natural (Flameshot: `getProperSide`
     /// XORs the LEFT/RIGHT bits when `right < left` and the TOP/BOTTOM bits
     /// when `bottom < top`).
     #[must_use]
@@ -141,7 +141,7 @@ impl Handle {
         LogicalPoint::new(x, y)
     }
 
-    /// The square/strip hit area of this handle on `rect` (F27
+    /// The square/strip hit area of this handle on `rect` (Flameshot
     /// `updateAreas`: corner squares of side `handle_area` centered on the
     /// corners; edge strips of the same width running between them).
     #[must_use]
@@ -173,7 +173,7 @@ pub enum HitZone {
     Outside,
 }
 
-/// Resolves `point` against `rect`: corners > edges > center (F27
+/// Resolves `point` against `rect`: corners > edges > center (Flameshot
 /// `getMouseSide` order: TL, TR, BL, BR, L, T, R, B, CENTER).
 #[must_use]
 pub fn hit_zone(rect: LogicalRect, point: LogicalPoint, metrics: &SelectionMetrics) -> HitZone {

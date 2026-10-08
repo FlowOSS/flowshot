@@ -1,4 +1,4 @@
-//! The tool registry (the F27 factory-switch equivalent).
+//! The tool registry (the Flameshot factory-switch equivalent).
 //!
 //! Flameshot's `ToolFactory` is a compile-time switch over the type enum;
 //! `FlowShot` inverts it: the binary layer and the QA harnesses

@@ -1,10 +1,10 @@
-//! The tool contract (draft F27 tool model).
+//! The tool contract.
 //!
 //! [`Tool`] is the clean-room equivalent of Flameshot's `CaptureTool`
 //! pure-virtual contract (`isValid`/`copy`/`process`/`paintMousePreview`/
 //! `drawStart`/`drawMove`/`drawEnd`/`pressed`/`boundingRect`/`count`/
 //! `onColor|SizeChanged`): every annotation tool implements it,
-//! receives the per-event [`EditorContext`] (the F27 `CaptureContext`
+//! receives the per-event [`EditorContext`] (the Flameshot `CaptureContext`
 //! equivalent), paints through the renderer-agnostic
 //! [`PaintSink`](flowshot_core::scene::PaintSink) - the SAME sink the scene
 //! objects paint through, bridged to the render [`DisplayList`] by
@@ -29,7 +29,7 @@ use winit::keyboard::{KeyCode, ModifiersState};
 use super::effect::PixelEffect;
 use super::kind::ToolKind;
 
-/// The frozen-frame pixel view tools sample from (F27 `CaptureContext`
+/// The frozen-frame pixel view tools sample from (Flameshot `CaptureContext`
 /// `screenshot`/`origScreenshot` equivalent - the secure pixelate
 /// reads the ORIGINAL frame through this, never a GPU texture).
 ///
@@ -49,15 +49,15 @@ pub struct FramePixels {
     pub origin: LogicalPoint,
 }
 
-/// The config projection tools receive by reference (F27 `CaptureContext`
+/// The config projection tools receive by reference (Flameshot `CaptureContext`
 /// config access; the grouped `[editor]` + `[tools.*]` config schema).
 ///
 /// `mouse_preview` carries the `showMousePreview` behavior (default on).
 /// ORPHAN NOTE: the config's authoritative-naming rule lists
 /// `showMousePreview -> [editor].mouse_preview` as an ADDED key, but the
 /// landed core config does not carry it yet - until it does, this flag is
-/// editor-side state seeded to the spec default (`true`), recorded in the
-/// notepad for the config write-back.
+/// editor-side state seeded to the spec default (`true`), the config write-back
+/// config write-back is a recorded follow-up.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EditorTools {
     /// The `[editor]` group.
@@ -86,7 +86,7 @@ impl EditorTools {
     }
 }
 
-/// The per-event context handed to every [`Tool`] call - the F27
+/// The per-event context handed to every [`Tool`] call - the Flameshot
 /// `CaptureContext` equivalent (`{screenshot, selection, color, toolSize,
 /// mousePos, circleCount, config}`).
 #[derive(Debug, Clone, Copy)]
@@ -103,7 +103,7 @@ pub struct EditorContext<'a> {
     /// The pointer position, global logical (press position during a stroke,
     /// live cursor for the preview).
     pub mouse: LogicalPoint,
-    /// The keyboard modifier snapshot - the F27 drag conventions read it:
+    /// The keyboard modifier snapshot - the Flameshot drag conventions read it:
     /// Ctrl constrains the shape (line H/V/45deg, rect aspect lock, ellipse
     /// circle lock - the shape tools' semantics), Shift applies the per-tool mirror/
     /// square rules. Selection-engine modifiers (Shift mirror resize, Ctrl
@@ -143,7 +143,7 @@ pub struct EditKey<'a> {
     pub repeat: bool,
 }
 
-/// The annotation-tool contract (F27 `CaptureTool` clean-room equivalent).
+/// The annotation-tool contract (Flameshot `CaptureTool` clean-room equivalent).
 ///
 /// Only [`Tool::kind`] is mandatory; every lifecycle method has a no-op
 /// default so action-style and edit-style tools implement just their slice
@@ -166,7 +166,7 @@ pub trait Tool: std::fmt::Debug + Send {
     /// A routed press with the active tool: called BEFORE
     /// [`Tool::draw_start`]; returning `true` consumes the press without
     /// opening a draw session (single-click placement, edit-widget entry -
-    /// the F27 `pressed` slot).
+    /// the Flameshot `pressed` slot).
     fn pressed(
         &mut self,
         _ctx: &EditorContext<'_>,
@@ -176,14 +176,14 @@ pub trait Tool: std::fmt::Debug + Send {
         false
     }
 
-    /// Opens a draw session at `at` (F27 `drawStart`).
+    /// Opens a draw session at `at` (Flameshot `drawStart`).
     fn draw_start(&mut self, _ctx: &EditorContext<'_>, _at: LogicalPoint) {}
 
-    /// Extends the active draw session to `at` (F27 `drawMove`).
+    /// Extends the active draw session to `at` (Flameshot `drawMove`).
     fn draw_move(&mut self, _ctx: &EditorContext<'_>, _at: LogicalPoint) {}
 
     /// Ends the draw session at `at`; the returned object (when any) is
-    /// committed to the scene as one undo unit (F27 `drawEnd` + `process`).
+    /// committed to the scene as one undo unit (Flameshot `drawEnd` + `process`).
     fn draw_end(
         &mut self,
         _ctx: &EditorContext<'_>,
@@ -205,51 +205,51 @@ pub trait Tool: std::fmt::Debug + Send {
     }
 
     /// Paints the in-progress shape and/or the cursor-following mouse
-    /// preview into `sink` (scene space; F27 `paintMousePreview` + the
+    /// preview into `sink` (scene space; Flameshot `paintMousePreview` + the
     /// live half of `paint`). Called only while drawing or while the
     /// preview is enabled.
     fn paint(&self, _ctx: &EditorContext<'_>, _sink: &mut dyn PaintSink) {}
 
-    /// The in-progress shape's bounds, when a session is open (F27
+    /// The in-progress shape's bounds, when a session is open (Flameshot
     /// `boundingRect`; damage tracking for repaints).
     fn bounding_rect(&self) -> Option<LogicalRect> {
         None
     }
 
-    /// Whether the in-progress shape is committable (F27 `isValid`).
+    /// Whether the in-progress shape is committable (Flameshot `isValid`).
     fn is_valid(&self) -> bool {
         true
     }
 
-    /// The draw color changed (picker/config; F27 `onColorChanged`).
+    /// The draw color changed (picker/config; Flameshot `onColorChanged`).
     fn on_color_changed(&mut self, _color: Color) {}
 
-    /// The dispatched tool size changed (digits/wheel/panel; F27
+    /// The dispatched tool size changed (digits/wheel/panel; Flameshot
     /// `onSizeChanged`).
     fn on_size_changed(&mut self, _size: u32) {}
 
-    /// Whether this tool paints a cursor-following preview at all (F27
+    /// Whether this tool paints a cursor-following preview at all (Flameshot
     /// `showMousePreview` per-tool half; the config half gates globally).
     fn show_mouse_preview(&self) -> bool {
         true
     }
 
     /// A thresholded wheel step (±1) with the tool active: returning `true`
-    /// consumes it (the counter tool's bubble increment - F27
+    /// consumes it (the counter tool's bubble increment - Flameshot
     /// `handleMouseWheelEvent`), `false` lets it adjust the tool size.
     fn wheel(&mut self, _ctx: &EditorContext<'_>, _step: i32) -> bool {
         false
     }
 
     /// The geometry of this tool's in-scene edit widget while editing (the
-    /// text box); `None` when not editing. Drives the F27
+    /// text box); `None` when not editing. Drives the Flameshot
     /// right-click exception, the click-outside commit, and the Esc
     /// cascade's tool-widget stage.
     fn edit_rect(&self) -> Option<LogicalRect> {
         None
     }
 
-    /// Commits the active edit widget (click-outside / Ctrl+Return, F27
+    /// Commits the active edit widget (click-outside / Ctrl+Return, Flameshot
     /// text lifecycle); the returned object becomes one undo unit.
     fn commit_edit(&mut self, _ctx: &EditorContext<'_>) -> Option<Box<dyn ToolObject>> {
         None
@@ -267,7 +267,7 @@ pub trait Tool: std::fmt::Debug + Send {
     }
 
     /// A winit IME event routed to the active edit session (the
-    /// always-on model of draft D7); returning `true` consumes it.
+    /// always-on model); returning `true` consumes it.
     fn ime(&mut self, _ctx: &EditorContext<'_>, _ime: &Ime) -> bool {
         false
     }

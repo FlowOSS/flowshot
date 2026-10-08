@@ -1,4 +1,4 @@
-//! Offscreen settings-render QA (plan todo 36, no-visible-windows policy):
+//! Offscreen settings-render QA:
 //! drives the embedded egui surface headlessly through
 //! [`flowshot_ui::settings::render_offscreen`] and asserts on the readback
 //! pixels - the Ruffle-pattern embed proves it renders WITHOUT a window,

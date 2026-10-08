@@ -1,4 +1,4 @@
-//! Resize and bounds math for the drag machine (draft F27).
+//! Resize and bounds math for the drag machine.
 //!
 //! The resize mirrors Flameshot's `parentMouseMoveEvent` exactly: Ctrl
 //! constrains the aspect ratio with the per-handle formulas (edge drags move
@@ -42,7 +42,7 @@ pub(super) fn resize_rect(
         (nl, nt, nr, nb) = naive_edges(handle, start_edges, input.at);
     }
     if input.shift {
-        // Mirror resize (F27 L370-376): topLeft += dTL - dBR and
+        // Mirror resize (Flameshot L370-376): topLeft += dTL - dBR and
         // bottomRight += dBR - dTL, symmetric around the start center.
         let (dtl_x, dtl_y) = (nl - left, nt - top);
         let (dbr_x, dbr_y) = (nr - right, nb - bottom);
@@ -52,7 +52,7 @@ pub(super) fn resize_rect(
         nb = bottom + dbr_y - dtl_y;
     }
     // Flip the active handle when the drag crossed through the opposite
-    // edge (F27 `getProperSide`), then normalize.
+    // edge (Flameshot `getProperSide`), then normalize.
     let handle = handle.flipped(nr < nl, nb < nt);
     let (x0, x1) = ordered(nl, nr);
     let (y0, y1) = ordered(nt, nb);
@@ -122,7 +122,7 @@ fn naive_edges(handle: Handle, start: Edges, at: LogicalPoint) -> Edges {
     (nl, nt, nr, nb)
 }
 
-/// The Ctrl aspect-constrain override (F27 `parentMouseMoveEvent` formulas
+/// The Ctrl aspect-constrain override (Flameshot `parentMouseMoveEvent` formulas
 /// verbatim): corners pick the dominant axis, edge drags move the bottom or
 /// right companion edge to compensate. The naive tuple carries the START
 /// edges the formulas need: a handle never modifies the edges its own

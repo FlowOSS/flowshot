@@ -28,7 +28,7 @@ use super::size::BASE_POINT_SIZE;
 /// Writes the dispatched tool size into the object's own size field;
 /// [`None`] for kinds without size semantics (invert, counter). Text stores
 /// the RENDERED point size (`slot + ` [`BASE_POINT_SIZE`], the text
-/// tool's commit value), rectangle stores the corner radius (the F27
+/// tool's commit value), rectangle stores the corner radius (the Flameshot
 /// `drawRectangleSize` dispatch).
 #[must_use]
 fn sized(data: ToolObjectData, size: u32) -> Option<ToolObjectData> {

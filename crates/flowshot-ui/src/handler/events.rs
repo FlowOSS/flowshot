@@ -22,7 +22,7 @@ use crate::router::WindowSlot;
 use crate::runtime::UiEvent;
 
 /// Converts a winit scroll delta into Qt-style wheel-angle units (a
-/// standard 3-line notch = 120 units, the space the F27
+/// standard 3-line notch = 120 units, the space the Flameshot
 /// `MOUSE_WHEEL_TRESHOLD = 60` constant is defined in). Pixel deltas
 /// (touchpads) pass through: their magnitude order matches the angle units
 /// (Flameshot's touchpad comment - "value 2 or more, usually 2-8").

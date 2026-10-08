@@ -3,12 +3,12 @@
 //! [`PinState`] holds everything a pin window knows - zoom scale, image
 //! offset (the zoom-to-cursor anchor), rotation, opacity tenths, wheel
 //! accumulator, menu and pinch state - and turns [`PinInput`]s into
-//! [`PinEffect`]s. No windowing, no GPU: the whole F27 pin behavior spec is
+//! [`PinEffect`]s. No windowing, no GPU: the whole Flameshot pin behavior spec is
 //! unit-testable headlessly through [`PinState::on_input`] (the
 //! inject-seam architecture), and the `test-drive` feature feeds the same
 //! path on a live window.
 //!
-//! Geometry is PHYSICAL-FIRST (F27 AVOID of Flameshot's fractional-DPR math,
+//! Geometry is PHYSICAL-FIRST (Flameshot AVOID of Flameshot's fractional-DPR math,
 //! the #4920 root cause): the image buffer is in physical pixels, the scale
 //! factor multiplies it directly, and the window's device scale factor is
 //! converted exactly once - into the logical [`super::spec::MARGIN`] frame.
@@ -184,7 +184,7 @@ impl PinState {
         self.image_size
     }
 
-    /// Window opacity in tenths (0..=10; keys 0-9 map per F27).
+    /// Window opacity in tenths (0..=10; keys 0-9 map per Flameshot).
     #[must_use]
     pub const fn opacity_tenths(&self) -> u8 {
         self.opacity_tenths
