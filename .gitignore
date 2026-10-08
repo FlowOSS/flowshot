@@ -1,8 +1,9 @@
 target/
-.omo/evidence/
+.omo/
 # Python tooling (stray pytest/uv runs)
 .pytest_cache/
 __pycache__/
 *.pyc
 .venv/
 uv.lock
+.worktrees/
