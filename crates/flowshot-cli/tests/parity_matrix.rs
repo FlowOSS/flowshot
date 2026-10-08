@@ -229,11 +229,25 @@ fn the_full_type_enum_is_enumerated() {
 fn verified_by_paths_exist_and_meta_points_at_real_files() {
     let matrix = load_matrix();
     let root = repo_root();
-    for relative in [
-        &matrix.meta.plan,
-        &matrix.meta.draft,
-        &matrix.meta.cli_capability_map,
-    ] {
+    // The tracked meta file must exist everywhere (fresh clones included).
+    assert!(
+        root.join(&matrix.meta.cli_capability_map).exists(),
+        "meta path does not exist: {}",
+        matrix.meta.cli_capability_map
+    );
+    // The plan/draft meta live under `.omo/` - untracked agent workspace
+    // state (local archive only), so a fresh clone or CI never carries
+    // them. Same honesty rule as the evidence trail below: enforced on
+    // machines that have the archive, skipped with an explicit note where
+    // it is absent - never fabricated, never a silent permanent ignore.
+    let archive_present = root.join(".omo").exists();
+    for relative in [&matrix.meta.plan, &matrix.meta.draft] {
+        if !archive_present {
+            eprintln!(
+                "SKIP: meta path {relative} - the untracked .omo/ workspace archive is absent on this machine"
+            );
+            continue;
+        }
         assert!(
             root.join(relative).exists(),
             "meta path does not exist: {relative}"
