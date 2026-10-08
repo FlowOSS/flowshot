@@ -15,7 +15,7 @@ reach the bus.
 | Interface name | `org.flowoss.FlowShot` |
 | Bus type | Session bus |
 
-The service name is in the `org.flowoss.*` namespace (User Amendment #2).
+The service name is in the `org.flowoss.*` namespace.
 FlowShot must NEVER claim `org.flameshot.*` or `org.flowshot.*` — coexistence
 with a parallel Flameshot install is a hard requirement.
 

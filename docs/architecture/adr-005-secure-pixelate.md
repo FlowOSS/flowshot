@@ -19,8 +19,8 @@ interpolation weights that always evaluate to 0.5).
 
 FlowShot's pixelate is **secure-only**; there is no insecure mode and no
 config key for one (the `insecurePixelate` concept was dropped deliberately,
-see [../config-reference.md](../config-reference.md#deliberate-omissions-amendment-3)).
-The algorithm, clean-roomed from the F27 spec:
+see [../config-reference.md](../config-reference.md#deliberate-omissions)).
+The algorithm, clean-roomed from the Flameshot spec:
 
 - **Zero interior reads.** The mosaic is derived exclusively from the four
   1-px fringe lines just outside the redacted region (falling back to the

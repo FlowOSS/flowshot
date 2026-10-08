@@ -45,11 +45,11 @@ fast_image_resize = "2.0.0"
 winit = "0.30.10"
 wgpu = "30.0.1"
 # Single text stack: cosmic-text shaping + its SwashCache rasterizer, rendered
-# through flowshot-ui's own texture atlas. glyphon was REMOVED (todo 14 dep
+# through flowshot-ui's own texture atlas. glyphon was REMOVED (a dep
 # reality check, crates.io-verified): no glyphon release pairs with wgpu 0.20
 # (0.4.1->wgpu 0.18, 0.5.0->0.19, 0.6.0->22, 0.7.0->23), and wgpu must not
-# move (todo 13 runtime blast radius). The in-crate atlas uses the same swash
-# rasterizer glyphon wraps, honoring the atlas-not-SDF policy (Metis #17).
+# move. The in-crate atlas uses the same swash
+# rasterizer glyphon wraps, honoring the atlas-not-SDF policy.
 cosmic-text = "0.19.0"
 lyon = "1.0.19"
 # Safe f32-slice -> byte views for GPU staging (already in the lock via wgpu;

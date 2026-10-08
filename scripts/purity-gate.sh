@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Platform purity gate (plan todo 42a, ADR-006, draft D2/D5/F20).
+# Platform purity gate.
 #
 # Asserts the platform-free crates carry ZERO platform coupling in lib code:
 #
@@ -11,7 +11,7 @@
 #   out of scope:  flowshot-cli / flowshot-daemon / flowshot-actions are the
 #                  binary/wiring layer and the platform-native clipboard
 #                  owner by design (Wayland via wl-clipboard-rs, X11 via
-#                  x11rb ICCCM; plan todo 1, Oracle r2 F-5, ADR-004/006)
+#                  x11rb ICCCM; ADR-004/006)
 #
 # Checks per gated crate:
 #   1. Cargo.toml: no platform crate in ANY *dependencies section, except
@@ -36,7 +36,7 @@
 #      not imports.
 #
 # winit itself is NOT banned: it is the cross-platform windowing seam the UI
-# is built on (draft D1, ADR-003). The plan's gate list is "wayland/x11
+# is built on. The plan's gate list is "wayland/x11
 # imports or cfg(target_os)"; the winit vector that matters is its
 # platform-extension modules, which ARE banned.
 #

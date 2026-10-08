@@ -48,10 +48,10 @@ layer.
   mutter APIs are not stable across GNOME versions (shell-version keying,
   API churn); the extension adds its own failure modes (absent, disabled,
   version mismatch), each of which must degrade quietly to layer 3.
-- Scope: shipping a shell extension is exactly what the v1 plan forbids
-  (the plan's Must-NOT line: "NO GNOME shell extension (documented
-  degradation instead, draft F13)", `.omo/plans/flowshot.md`; the README
-  repeats it). Read that line as a v1 scope guard, not a technical verdict:
+- Scope: shipping a shell extension is exactly what the v1 scope forbids
+  (the README's platform-support wording records the degradation-only
+  decision for GNOME cursor position). Read that as a v1 scope guard, not
+  a technical verdict:
   v1 ships the documented degradation, and this note is the record for the
   post-release evaluation that may revisit it.
 
@@ -130,7 +130,7 @@ semantics (`wl_pointer` enter/motion only over client surfaces), Mutter/GJS
 internals (`global.get_pointer()`, the monitor-index lookup on
 `global.display`), the XDG portal specifications (ScreenCast `cursor_mode`,
 InputCapture, RemoteDesktop), and PipeWire's SPA metadata documentation
-(`SPA_META_Cursor`). They were cross-checked against FlowShot's own todo-12
+(`SPA_META_Cursor`). They were cross-checked against FlowShot's own cursor-ladder
 capability table (now `cursor_capabilities` in
 `crates/flowshot-capture-wayland/src/resolve.rs`) and the portal-screencast
 implementation under `crates/flowshot-capture-wayland/src/portal/`.
