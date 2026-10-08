@@ -10,8 +10,9 @@
 //! a TTY, a foreign systemd service) detects as `Other` regardless of the
 //! desktop name: there is no Wayland session for these backends to serve,
 //! and claiming e.g. `Gnome` from an X11 GNOME session would misrepresent
-//! that. The shared [`DesktopEnv`] vocabulary itself is session-agnostic; an
-//! X11 platform crate (roadmap) grows its own detector.
+//! that. The shared [`DesktopEnv`] vocabulary itself is session-agnostic; the
+//! X11 platform crate (`flowshot-capture-x11`) runs its own session probe
+//! instead of this detector.
 
 use flowshot_capture::DesktopEnv;
 

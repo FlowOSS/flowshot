@@ -41,8 +41,6 @@ use flowshot_ui::consent::{
     ConsentCallback, ConsentWindow, ConsentWindowOptions, PromptSurface, WINDOW_TITLE,
     should_prompt,
 };
-use flowshot_ui::pins::WindowCustomizer;
-use winit::platform::wayland::WindowAttributesExtWayland;
 
 use super::ExecuteError;
 use super::session::{self, SessionKind, SessionResult, SessionSpec};
@@ -178,9 +176,10 @@ pub fn consent_child(spec: &SessionSpec) -> SessionResult {
         on_choice: Some(ConsentCallback::new(move |choice| {
             record_choice(&config_path, *choice);
         })),
-        window_customizer: Some(WindowCustomizer::new(|attributes| {
-            attributes.with_name("flowshot-consent", WINDOW_TITLE)
-        })),
+        window_customizer: Some(super::window::session_window_customizer(
+            "flowshot-consent",
+            WINDOW_TITLE,
+        )),
     };
     let window = match ConsentWindow::new(options) {
         Ok(window) => window,

@@ -1,0 +1,44 @@
+[package]
+name = "flowshot-capture-x11"
+version = "0.1.0"
+edition = "2024"
+license.workspace = true
+repository = "https://github.com/flowoss/flowshot"
+authors = ["FlowShot Contributors"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+flowshot-core = { path = "../flowshot-core" }
+flowshot-capture = { path = "../flowshot-capture" }
+# X11 platform stack (x11-support plan decision #1/#3): x11rb is the
+# safe-Rust XCB binding (request/reply layer, RustConnection); the wire
+# types (RANDR Rotation bitmask, reply structs) arrive through
+# `x11rb::protocol` - x11rb forwards each extension feature to its own
+# x11rb-protocol dependency, so the separate direct x11rb-protocol dep
+# this crate briefly carried was a phantom (no source file imported it).
+# MIT OR Apache-2.0 (deny.toml clean).
+# `randr` = output enumeration, `xfixes` = cursor image (task 3), `shm` =
+# MIT-SHM fd-passing fast path (task 3, memfd + attach_fd, no SysV shmat).
+x11rb = { workspace = true, features = ["randr", "xfixes", "shm"] }
+# Capture-path dependencies wired up by task 3 (CaptureBackend impl):
+# nix = memfd_create + ftruncate for the MIT-SHM fd-passing fast path (the
+# workspace "fs" feature already gates nix::sys::memfd - no workspace change
+# needed); futures = the runtime-agnostic worker bridge (the deadline
+# watchdog's mpsc race + Either), already a workspace dep through
+# flowshot-capture's CursorStream contract.
+async-trait = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+nix = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+# examples/capture.rs PNG encoding only - no src/ file references image.
+image = { workspace = true }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

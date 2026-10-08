@@ -3,7 +3,8 @@
 
 //! Platform-agnostic screen capture contracts for `FlowShot`.
 //!
-//! This crate owns the cross-crate capture vocabulary and nothing else:
+//! This crate owns the cross-crate capture vocabulary and the shared
+//! platform-free capture algebra:
 //!
 //! - [`CaptureBackend`]: the async trait every platform implementation
 //!   satisfies (frames, outputs, cursor stream, permission).
@@ -12,9 +13,11 @@
 //!   transform, never an averaged scale).
 //! - [`CapabilityProbe`] + [`negotiate()`]: the backend ladder
 //!   (`ext-image-copy-capture` -> `wlr-screencopy` -> `KWin ScreenShot2` ->
-//!   portal `ScreenCast` -> portal `Screenshot`), filtered by what the session
-//!   actually offers, with a config `force_backend` override.
+//!   portal `ScreenCast` -> portal `Screenshot` -> `X11`), filtered by what
+//!   the session actually offers, with a config `force_backend` override.
 //! - [`MockBackend`]: a fixture-driven implementation for downstream tests.
+//! - [`stitch`]: the region-stitch algebra both platform crates consume
+//!   (the executable form of the shared region-capture contract).
 //!
 //! Geometry types ([`flowshot_core::geometry::OutputInfo`], rectangles, transforms) are reused from
 //! [`flowshot_core::geometry`], never duplicated.
@@ -32,6 +35,7 @@ pub mod frame;
 pub mod kind;
 pub mod mock;
 pub mod negotiate;
+pub mod stitch;
 
 pub use backend::{CaptureBackend, CaptureOpts, PermissionResult};
 pub use cursor::{CursorEvent, CursorStream};

@@ -196,10 +196,13 @@ impl InputState {
                 self.events.push(Event::ModifiersChanged(self.modifiers));
                 WindowSignal::None
             }
-            WindowEvent::KeyboardInput { event, .. } => {
-                self.on_key_event(event);
-                WindowSignal::None
-            }
+            // Synthetic keys are focus-resync artifacts (X11 replays held
+            // keycodes at focus-in; Wayland never sets the flag).
+            WindowEvent::KeyboardInput {
+                event,
+                is_synthetic: false,
+                ..
+            } => self.keyboard_signal(event),
             WindowEvent::Ime(ime) => {
                 match ime {
                     // egui 0.36 deprecated the Enabled/Disabled notifications
@@ -219,6 +222,14 @@ impl InputState {
             }
             _ => WindowSignal::None,
         }
+    }
+
+    /// Feeds one real (non-synthetic) key event to egui; synthetic X11
+    /// focus-resync replays never reach here (the `on_window_event` match
+    /// arm filters them).
+    fn keyboard_signal(&mut self, event: &winit::event::KeyEvent) -> WindowSignal {
+        self.on_key_event(event);
+        WindowSignal::None
     }
 
     fn on_key_event(&mut self, event: &winit::event::KeyEvent) {

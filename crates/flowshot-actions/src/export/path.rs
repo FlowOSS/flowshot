@@ -88,6 +88,7 @@ pub fn next_available_path(target: &Path) -> PathBuf {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     struct MockDialog {
         response: Result<Option<PathBuf>, ExportError>,
@@ -104,12 +105,15 @@ mod tests {
     }
 
     fn unique_tempdir() -> PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
         let dir = std::env::temp_dir().join(format!(
-            "flowshot-actions-test-{}-{}",
+            "flowshot-actions-test-{}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_nanos())
+                .map_or(0, |d| d.as_nanos()),
+            counter
         ));
         let _ = fs::create_dir_all(&dir);
         dir

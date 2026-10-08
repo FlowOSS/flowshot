@@ -11,10 +11,16 @@
 //! 4. clipboard offer held - the daemon-owned data-control offer
 //!    dies with the process, so holding one pins it.
 //!
-//! Clipboard-release detection caveat: `wl-clipboard-rs` gives no
-//! "selection replaced" callback, so the offer flag is set when the daemon
-//! serves a capture copy and cleared through [`DaemonState::set_clipboard_offer_held`]
-//! by whoever observes the release (the CLI/executor wiring).
+//! Clipboard-release detection: on X11 the release IS observable - the
+//! backend's serving thread sees `SelectionClear` when another client
+//! takes the clipboard and fires its offer-loss hook, and the executor's
+//! post-capture wiring clears the flag through
+//! [`DaemonState::set_clipboard_offer_held`] (the hold-release bridge in
+//! `execute/post/sinks.rs`). On Wayland `wl-clipboard-rs` gives no
+//! "selection replaced" callback, so the flag is only ever SET there and
+//! the daemon stays pinned by an offer another client may already own -
+//! the conservative direction (never kills a live offer), a documented
+//! cross-session asymmetry.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -245,7 +251,7 @@ mod tests {
         state.set_shortcuts_registered(false);
         state.set_clipboard_offer_held(false);
         assert!(!state.reasons().any());
-        assert!(state.reasons().names().is_empty());
+        assert_eq!(state.reasons().names(), [] as [&str; 0]);
     }
 
     #[test]

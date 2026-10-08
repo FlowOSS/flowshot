@@ -10,14 +10,12 @@ use thiserror::Error;
 /// Errors produced by the `FlowShot` UI runtime.
 #[derive(Debug, Error)]
 pub enum UiError {
-    /// No display-server session was detected before startup.
-    ///
-    /// `FlowShot` is Wayland-native and never falls back to X11 (draft F9), so
-    /// the runtime refuses to start without a compositor session.
+    /// No display-server session was detected before startup: neither
+    /// `WAYLAND_DISPLAY` (Wayland) nor `DISPLAY` (X11) is set. Emitted by
+    /// the runtime gate before any window is created.
     #[error(
-        "no display server session detected: WAYLAND_DISPLAY is unset or empty. \
-         Start FlowShot from inside a running Wayland compositor session \
-         (FlowShot is Wayland-native and never falls back to X11)."
+        "no display server detected: neither WAYLAND_DISPLAY nor DISPLAY is set (or both are empty); \
+         the interactive UI needs a Wayland or X11 session"
     )]
     NoDisplayServer,
 
@@ -268,6 +266,14 @@ fn format_adapter_reports(reports: &[GpuAdapterReport]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn no_display_server_message_names_both_session_variables() {
+        let message = UiError::NoDisplayServer.to_string();
+        for token in ["WAYLAND_DISPLAY", "DISPLAY"] {
+            assert!(message.contains(token), "missing {token:?} in: {message}");
+        }
+    }
 
     #[test]
     fn no_qualified_adapter_message_lists_every_adapter_name_and_cap() {

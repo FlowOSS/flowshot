@@ -405,7 +405,10 @@ mod tests {
         // nothing persists, and no nudge fires.
         assert!(!state.reasons().shortcuts);
         assert!(!restore_path_in(&dir).exists());
-        assert!(notifier.records().is_empty());
+        assert_eq!(
+            notifier.records(),
+            [] as [crate::notify::NotificationRecord; 0]
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
