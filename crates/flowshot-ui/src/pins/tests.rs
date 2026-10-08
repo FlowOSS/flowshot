@@ -1,5 +1,5 @@
 //! Pin state-machine tests: the zoom-to-cursor anchor
-//! invariant, the `screen`/`MIN_SIZE` clamps, the F27 opacity table, rotation
+//! invariant, the `screen`/`MIN_SIZE` clamps, the Flameshot opacity table, rotation
 //! dimension swaps, the menu action map, and the close/drag behaviors -
 //! all headless through [`PinState::on_input`] (no GPU, no window).
 

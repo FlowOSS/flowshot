@@ -70,7 +70,7 @@ Every capture phase below is the same shape:
    the purity gate by design — they are the composition layer).
 5. Packaging delta for the platform (installer, permissions, manifest).
 
-### Trait-conformance checklist vs draft F20
+### Trait-conformance checklist (recorded research)
 
 The F20 leak-list — the platform behaviors the trait had to absorb — and
 where each lives in the shipped contract:
@@ -228,7 +228,7 @@ APIs and the F24 red flags:
 
 ## Phase 4 — Init systems (packaging only, ZERO code change)
 
-User directive 2026-09-24 (Amendment #3): the daemon is a plain
+User directive 2026-09-24: the daemon is a plain
 foreground process, init-agnostic by design; `sd_notify(3)` READY=1 sits
 behind the optional `systemd` cargo feature (shipped:
 `crates/flowshot-daemon` feature `systemd`). Each of these is a service
@@ -265,7 +265,7 @@ and the packaging validators for the target platform.
 |---|---|---|---|
 | xcap | 0.9.8 | 2026-08-01 | 2,153,076 |
 | windows-capture | 2.0.1 | 2026-08-08 | 1,672,751 |
-| screencapturekit (repo screencapturekit-rs) | 11.0.0 | 2026-09-24 | — (draft F19 recorded 10.0.3) |
+| screencapturekit (repo screencapturekit-rs) | 11.0.0 | 2026-09-24 | — |
 | x11rb | 0.14.0 | 2026-07-16 | 66,110,239 |
 | windows | 0.62.2 | 2025-10-06 | 339,589,315 |
 | objc2-app-kit | 0.3.2 | 2025-10-04 | 61,923,342 |

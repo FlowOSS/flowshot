@@ -1,7 +1,7 @@
 //! The destructive region tools: secure pixelate + blur.
 //!
 //! One two-point drag tool type in the Flameshot `pixelatetool.cpp` mold
-//! with the two F27 modes (blur is Flameshot's size-driven pixelate
+//! with the two Flameshot modes (blur is Flameshot's size-driven pixelate
 //! variant, so both share the `[tools.pixelate].size` slot): the live
 //! preview paints the drag region BLACK (the `drawSearchArea` parity - the
 //! effect is only revealed on release), there is no cursor preview dot
@@ -13,7 +13,7 @@
 //!
 //! Region rules: the drag rect is clamped to the selection
 //! bounds (when a selection exists) and to the frame; a zero-length drag,
-//! an empty intersection, or a region whose F27 output grid collapses to
+//! an empty intersection, or a region whose Flameshot output grid collapses to
 //! zero commits NOTHING (the 1x1 no-op failure path, no panic).
 
 use flowshot_core::geometry::{LogicalPoint, LogicalRect};
@@ -32,8 +32,8 @@ use super::geometry::{Constrain, TwoPoint, logical};
 /// black).
 const PREVIEW_BLACK: SceneColor = SceneColor::new(0, 0, 0, 255);
 
-/// The destructive region tool: the F27 secure pseudo-pixelation (default
-/// mode, F12 key B - the ONLY pixelate mode; the insecure reversible mosaic
+/// The destructive region tool: the Flameshot secure pseudo-pixelation (default
+/// mode, Flameshot key B - the ONLY pixelate mode; the insecure reversible mosaic
 /// was deliberately dropped) or its gaussian blur variant (unbound by
 /// default like counter/move; the side panel exposes the mode switch,
 /// QA harnesses rebind the key).

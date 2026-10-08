@@ -1,8 +1,8 @@
-//! The selection tool (draft F12 `TYPE_SELECTION`).
+//! The selection tool.
 //!
 //! The selection tool is a PARITY tool: it does NOT draw annotations. Its
 //! sole purpose is to re-enter selection mode when the user presses `S`
-//! (the default F12 binding). The selection engine owns the
+//! (the default Flameshot binding). The selection engine owns the
 //! selection geometry; this tool is a no-op placeholder that signals
 //! "selection mode active" to the routing funnel.
 //!
@@ -17,7 +17,7 @@ use flowshot_core::geometry::{LogicalPoint, LogicalRect};
 use super::super::kind::ToolKind;
 use super::super::tool::{EditorContext, Tool};
 
-/// The selection tool (F12 `TYPE_SELECTION` parity).
+/// The selection tool (Flameshot `TYPE_SELECTION` parity).
 ///
 /// A no-op tool that signals "selection mode active" to the routing funnel.
 /// The selection engine owns the selection geometry; this tool

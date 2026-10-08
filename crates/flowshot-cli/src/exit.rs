@@ -8,7 +8,7 @@
 //! | 3 | user-cancelled | capture aborted in the overlay/editor (executor seam) |
 //! | 4 | capture-backend | `flowshot_capture::CaptureError` (executor seam) |
 //! | 5 | permission denied | portal/protocol permission refusal (executor seam) |
-//! | 6 | action-export | `flowshot_actions` export failures incl. the unwritable-dir class (Oracle r4 F-5.ii; executor seam) |
+//! | 6 | action-export | `flowshot_actions` export failures incl. the unwritable-dir class (executor seam) |
 //!
 //! Codes 3-6 are produced by the execution wiring:
 //! [`exec_exit_code`] maps the executor's outcome/error onto this table.

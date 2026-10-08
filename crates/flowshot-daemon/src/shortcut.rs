@@ -6,7 +6,7 @@
 //! 1. [`PortalMode::Auto`] (default): register the configured actions
 //!    through [`portal`] (`ashpd` `GlobalShortcuts`). On success the daemon
 //!    holds the `shortcuts` persistence reason (portal triggers need a
-//!    RESIDENT daemon - Oracle r4 F-3), persists the re-registration set
+//!    RESIDENT daemon), persists the re-registration set
 //!    ([`persist`]), and emits the ONE-TIME autostart-recommendation
 //!    notification on the first successful registration.
 //! 2. Portal absent/denied/masked (bare wlroots per F14/xdp-wlr#240, or
@@ -16,7 +16,7 @@
 //!    feeds the settings tab, the docs, and
 //!    `flowshot --print-bind-help`.
 //!
-//! # Shortcut defaults (F12, rebindable in the settings tab)
+//! # Shortcut defaults (Flameshot, rebindable in the settings tab)
 //!
 //! `Print` -> region capture, `Shift+Print` -> full, `Ctrl+Print` ->
 //! active monitor ([`spec::ACTIVE_SCREEN`] sentinel; the executor

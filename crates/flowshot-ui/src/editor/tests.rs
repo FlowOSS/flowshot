@@ -174,7 +174,7 @@ impl Tool for StubLineTool {
     }
 }
 
-/// Counter stand-in: consumes the press (single-click placement, the F27
+/// Counter stand-in: consumes the press (single-click placement, the Flameshot
 /// `pressed` slot) - no draw session opens.
 #[derive(Debug)]
 struct StubClickTool;
@@ -517,7 +517,7 @@ fn delete_removes_selected_and_core_renumbers_counters() {
 }
 
 // ---------------------------------------------------------------------------
-// C. Object selection (F27 P5)
+// C. Object selection (Flameshot P5)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -742,7 +742,7 @@ fn modifier_snapshot_reaches_the_tool_context() {
 fn right_click_opens_the_wheel_except_during_an_edit() {
     let mut ed = editor();
     let env = env_at(Instant::now());
-    // No tool: F27 P2 -> ColorWheel effect.
+    // No tool: Flameshot P2 -> ColorWheel effect.
     let update = press(&mut ed, &env, MouseButton::Right, 500.0, 500.0);
     assert!(update.consumed);
     assert_eq!(update.effects, vec![EditorEffect::ColorWheel]);
@@ -1005,7 +1005,7 @@ fn funnel_tool_drag_commits_a_stroke_and_leaves_the_region_alone() {
     click(&mut core, MouseButton::Left, false);
     assert_eq!(core.editor().scene().object_count(), 1);
     assert_eq!(core.editor().undo_stack().undo_depth(), 1);
-    // The tool drag never reached the selection engine (F27 P3 > region).
+    // The tool drag never reached the selection engine (Flameshot P3 > region).
     assert_eq!(core.selection().rect(), None);
 }
 
@@ -1125,7 +1125,7 @@ fn funnel_object_press_selects_and_blocks_the_region_drag() {
     assert_eq!(
         core.selection().rect(),
         None,
-        "F27 P5 beats the region move"
+        "Flameshot P5 beats the region move"
     );
 }
 

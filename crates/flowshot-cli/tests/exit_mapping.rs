@@ -1,5 +1,5 @@
-//! Todo 38 flow 15: the permission-denied / failure-class exit-code
-//! mapping (Metis #13b) - the executor's typed errors land on the todo-35
+//! The permission-denied / failure-class exit-code
+//! mapping - the executor's typed errors land on the
 //! table exactly, including the protocol permission-refusal chain
 //! (`IccError::PermissionDenied` inside `CaptureError::Backend` -> 5).
 

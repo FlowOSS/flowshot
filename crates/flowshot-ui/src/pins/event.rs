@@ -93,7 +93,7 @@ pub enum PinEffect {
     /// changed the pixel buffer).
     Reupload,
     /// Begin a compositor-driven window drag (`drag_window()`, the
-    /// `startSystemMove` equivalent - F27 BORROW).
+    /// `startSystemMove` equivalent - Flameshot BORROW).
     StartDrag,
     /// Close this pin window.
     Close,

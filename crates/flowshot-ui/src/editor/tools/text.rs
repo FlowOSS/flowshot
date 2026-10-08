@@ -1,11 +1,11 @@
-//! The text annotation tool (F27 text spec).
+//! The text annotation tool (Flameshot text spec).
 //!
 //! Click places an edit session anchored at the press; typing flows through
 //! the [`TextSession`] state machine (direct keyboard text AND winit `Ime`
-//! events - the always-on model, draft D7); Ctrl+Return or a click outside
+//! events - the always-on model); Ctrl+Return or a click outside
 //! commits a [`TextObject`] (one undo unit via the editor funnel); Esc
 //! cancels through the cascade's tool-widget stage. Point size = the
-//! dispatched `[editor].font_size` slot + [`BASE_POINT_SIZE`] (F27
+//! dispatched `[editor].font_size` slot + [`BASE_POINT_SIZE`] (Flameshot
 //! `m_font.setPointSize(m_size + BASE_POINT_SIZE)`), color = draw color,
 //! family = `[editor].font_family`, and the bounding box carries the
 //! Flameshot 5px padding (`texttool.cpp` `process()` `const int val = 5`).
@@ -41,7 +41,7 @@ use super::super::tool::{EditKey, EditorContext, Tool, ToolCursor};
 use super::text_session::TextSession;
 use crate::render::{f32_from_f64, f32_from_u32};
 
-/// The bounding-box padding around the laid-out text (F27 parity:
+/// The bounding-box padding around the laid-out text (Flameshot parity:
 /// `texttool.cpp` `process()` expands the text area by `val = 5` per side).
 pub const TEXT_PADDING: f32 = 5.0;
 /// The caret bar width in logical px.
@@ -86,7 +86,7 @@ impl Default for TextTool {
 }
 
 impl TextTool {
-    /// The rendered point size (F27 `m_size + BASE_POINT_SIZE`).
+    /// The rendered point size (Flameshot `m_size + BASE_POINT_SIZE`).
     fn point_size(&self) -> f32 {
         f32_from_u32(self.tool_size.saturating_add(BASE_POINT_SIZE))
     }
@@ -106,7 +106,7 @@ impl Tool for TextTool {
     }
 
     fn pressed(&mut self, _ctx: &EditorContext<'_>, button: MouseButton, at: LogicalPoint) -> bool {
-        // A press inside the edit box (the F27 P4/P2-exception route) moves
+        // A press inside the edit box (the Flameshot P4/P2-exception route) moves
         // the caret; anything else falls through to `draw_start`.
         if button != MouseButton::Left {
             return false;
@@ -142,7 +142,7 @@ impl Tool for TextTool {
         }
     }
 
-    /// Release never commits text (the F27 lifecycle commits on
+    /// Release never commits text (the Flameshot lifecycle commits on
     /// Ctrl+Return or a click outside); it only closes the wrap-box drag.
     fn draw_end(
         &mut self,

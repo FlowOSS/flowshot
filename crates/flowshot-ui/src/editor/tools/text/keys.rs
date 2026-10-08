@@ -67,7 +67,7 @@ impl TextTool {
         true
     }
 
-    /// Handles one winit IME event (the always-on model, draft D7); `true`
+    /// Handles one winit IME event (the always-on model); `true`
     /// consumes it. The composition lives outside the buffer, so only
     /// `Commit` mutates text (the iced 0.14 reference semantics).
     pub(super) fn handle_ime(&mut self, ime: &Ime) -> bool {

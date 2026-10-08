@@ -46,7 +46,7 @@ pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<
 
 /// Expands a strftime-style pattern against `now` and sanitizes it for the
 /// filesystem: a trailing bare `%` is stripped, `/` becomes U+2044 and `:`
-/// becomes `-` (the F27 filename rules).
+/// becomes `-` (the Flameshot filename rules).
 #[must_use]
 pub fn preview_filename(pattern: &str, now: DateTime<Local>) -> String {
     let trimmed = if pattern.ends_with('%') && !pattern.ends_with("%%") {

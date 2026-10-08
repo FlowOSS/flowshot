@@ -34,7 +34,7 @@ use crate::error::{BackendError, socket_connect_error};
 use crate::icc::wait::collect_deadline_with;
 use crate::session::CaptureState;
 
-/// Per-phase portal deadline (draft F27 parity with the other backends'
+/// Per-phase portal deadline (parity with the other backends'
 /// per-phase budgets): a non-interactive Screenshot request, the `PipeWire`
 /// first-frame wait, and the availability probe each get this budget.
 pub(crate) const PORTAL_TIMEOUT: Duration = Duration::from_secs(15);

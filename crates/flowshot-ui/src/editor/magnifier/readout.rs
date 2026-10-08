@@ -16,7 +16,7 @@ use crate::render::{
 /// metrics need the shaper which the list builder does not run).
 const TEXT_ADVANCE_ESTIMATE: f32 = 0.62;
 
-/// The readout box opacity (0-255): the size-HUD box alpha (F27
+/// The readout box opacity (0-255): the size-HUD box alpha (Flameshot
 /// `capturewidget.cpp` paints its geometry box at 200).
 const READOUT_BOX_ALPHA: u8 = 200;
 

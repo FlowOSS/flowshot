@@ -20,7 +20,7 @@
 //!   the winit/Wayland window leg itself is covered by the per-module live
 //!   evidence and the deferred GUI-QA batch.
 //!
-//! Perf budget instrumentation (Metis #12): every stage emits
+//! Perf budget instrumentation: every stage emits
 //! `target: "flowshot_perf"` events with monotonic `elapsed_us` from the
 //! command-received instant (`perf.command`, `perf.capture_ready`,
 //! `perf.frame_ready`, `perf.done`), so hotkey->frame-ready budgets are

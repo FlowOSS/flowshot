@@ -1,6 +1,6 @@
 //! Command dispatch: the local surfaces (completions, bind help), the
 //! in-process one-shot seam, and the `D-Bus` handshake with the daemon
-//! (Oracle r4).
+//!.
 //!
 //! # Handshake
 //!

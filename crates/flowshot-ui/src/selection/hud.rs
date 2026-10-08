@@ -1,5 +1,4 @@
-//! The geometry HUD: `WxH+X+Y` readout with position and hide-time
-//! (draft F27).
+//! The geometry HUD: `WxH+X+Y` readout with position and hide-time.
 //!
 //! Flameshot parity (`capturewidget.cpp` `showxywh`/`xywhTick`/`paintEvent`):
 //! every selection geometry change shows the HUD and restarts the hide

@@ -1,4 +1,4 @@
-//! QA harness (todo 32 live acceptance): dispatches the post-save desktop
+//! QA harness: dispatches the post-save desktop
 //! notification through the PRODUCTION notifier path (`show_blocking` =
 //! exactly what [`DesktopNotifier`] runs on its notification thread) -
 //! the test seam the task brief mandates instead of a real capture.

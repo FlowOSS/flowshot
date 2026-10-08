@@ -3,11 +3,11 @@
 //! [`register_shape_tools`] (the composition roots: the binary and
 //! the QA harnesses).
 //!
-//! Shared mechanics live in [`geometry`]: the F27 two-point stroke with the
+//! Shared mechanics live in [`geometry`]: the Flameshot two-point stroke with the
 //! Ctrl drag conventions (`adjustedVector` clean-room: H/V/45deg for
 //! line/arrow/marker, diagonal-only square/circle lock for rect/ellipse),
 //! the freehand path stroke with Ramer-Douglas-Peucker simplification
-//! (epsilon 0.5px at commit), and the F27 `mousePreviewRect` cursor dot.
+//! (epsilon 0.5px at commit), and the Flameshot `mousePreviewRect` cursor dot.
 //!
 //! Every tool: press/drag/release lifecycle with a live preview painting
 //! the EXACT committed geometry, commit as one scene object (one undo unit

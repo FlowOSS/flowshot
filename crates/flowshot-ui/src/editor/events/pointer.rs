@@ -1,5 +1,5 @@
 //! The pointer-event execution half of the funnel (split
-//! from [`super`] at the 250-LOC ceiling): the F27 press/move/release
+//! from [`super`] at the 250-LOC ceiling): the Flameshot press/move/release
 //! decisions from [`crate::editor::routing`] applied to the draw-session
 //! lifecycle, the object-select press with its armed drag, and
 //! the two commit channels.

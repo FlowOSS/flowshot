@@ -36,7 +36,7 @@ What is winnable:
 
 Honest floor: tests + QA harnesses measure 31,470 pure LOC (12,719 inline +
 18,751 dedicated test/example files) and mostly **should stay** — they are the
-project's QA story (draft D4: "test the core, QA the edges"; 1,218 green
+project's QA story ("test the core, QA the edges"; 1,218 green
 tests). The winnable delta lives in the 38,254 production lines, and it is
 ~700 LOC, not thousands.
 
@@ -110,8 +110,8 @@ Risk: macro-generated variants are harder to grep and jump-to-definition;
 per-backend `Display` strings must stay distinct (they name the protocol);
 `thiserror` inside `macro_rules!` needs hygiene care. All of this is already
 solved by the portal macro — this is extending a proven pattern, not
-inventing one. The per-crate typed-error boundary itself stays (Amendment #4:
-thiserror in libs, no stringly errors across crate boundaries).
+inventing one. The per-crate typed-error boundary itself stays (the workspace
+error policy: thiserror in libs, no stringly errors across crate boundaries).
 
 ### R2. Merge the settings + launcher egui window shells (~250 LOC, low-med risk) — REFACTOR
 
@@ -299,7 +299,7 @@ local regardless (do-NOT-merge #7).
   `portal/*` — but permission semantics (denial frames vs portal response
   status vs name-owner checks) and cursor support genuinely differ per
   backend, and the trait is the cross-platform gate for the X11/Win/mac
-  roadmap (draft D2/D5, plan todo 5). A generic skeleton helper would fight
+  roadmap. A generic skeleton helper would fight
   the next platform's impl, not help it.
 - **Protocol state machines** (`icc/protocol.rs` 561, `screencopy/protocol.rs`
   616, `cursor/protocol.rs` 503 + the three `dispatch.rs`): different wire
@@ -370,10 +370,10 @@ decision records mandate.
 
 | Trait | Where | Prod impls | Test impls | Verdict |
 |---|---|---|---|---|
-| `CaptureBackend` | capture/backend.rs:100 | 6 (icc, screencopy, kwin, portal×2, mock) | — | KEEP — the architecture + cross-platform gate (D2/D5) |
+| `CaptureBackend` | capture/backend.rs:100 | 6 (icc, screencopy, kwin, portal×2, mock) | — | KEEP — the architecture + cross-platform gate |
 | `Tool` | ui/editor/tool.rs:156 | 14 | 10 | KEEP |
 | `ToolObject`(+Clone) | core/scene.rs:231 | 9 | — | KEEP |
-| `PaintSink` | core/scene.rs:165 | **1** (ListSink) | 3 | KEEP — crate-purity seam: core must paint without depending on ui's DisplayList (plan todo 4 "renderer-agnostic sink trait"; purity gate todo 42) |
+| `PaintSink` | core/scene.rs:165 | **1** (ListSink) | 3 | KEEP — crate-purity seam: core must paint without depending on ui's DisplayList |
 | `PinActionSink` | ui/pins/sink.rs:52 | **1** (daemon ActionBridge) | 1 (example) | KEEP — dependency inversion: ui-lib may not depend on daemon/actions (`ui/Cargo.toml:57-60` dev-dep comment); the bridge lands in the binary layer |
 | `Uploader` | actions/upload/mod.rs:47 | **1** (Imgur) | — | KEEP — user-mandated plugin point: "Imgur behind a pluggable provider trait" (plan Scope; draft C4) |
 | `ClipboardBackend` | actions/clipboard.rs:64 | 1 + 1 mock | — | KEEP — test seam |
@@ -401,15 +401,15 @@ duplication and isn't.
    (`icc/protocol.rs`+`dispatch.rs`, `screencopy/…`, `cursor/…`, and the
    per-backend `assemble_frame`s). Different wire protocols with different
    event semantics; each backend is a per-compositor quirk domain pinned by
-   the stub-contract-fidelity rule (Verification strategy, plan: stubs pin
-   upstream URL+commit) and plan todo 11's MUST-NOT ("no KDE-only code paths
+   the stub-contract-fidelity rule (stubs pin
+   upstream URL+commit) and the project's MUST-NOT ("no KDE-only code paths
    leaking into other backends"). They are *expected* to diverge.
 2. **The `CaptureBackend` impl skeleton per backend** (~60 LOC × 4). The seam
-   is the architecture (draft D3 ladder, D5 crate topology); permission
+   is the architecture; permission
    semantics and cursor support differ per rung, and the same trait must
-   accept future X11/WGC/ScreenCaptureKit backends (F19/F20) whose skeletons
+   accept future X11/WGC/ScreenCaptureKit backends whose skeletons
    will look different again.
-3. **Per-crate typed error enums.** Amendment #4: thiserror in all lib crates,
+3. **Per-crate typed error enums.** The workspace error policy: thiserror in all lib crates,
    anyhow only at binary edges, no stringly errors across crate boundaries.
    The From-chains between crates are the typed-boundary tax, paid
    deliberately. (R1 merges *within* capture-wayland's backend family only.)
@@ -418,15 +418,15 @@ duplication and isn't.
    (`core/scene.rs:50-135` — the on-disk/undo-snapshot format depends on
    their exact shape); geometry's are scale-safe typed-newtype screen algebra
    (`geometry.rs:253+`, half-open contains vs scene's closed). The
-   physical-pixels-first rule (#4871, draft F27) exists precisely to keep
+   physical-pixels-first rule (Flameshot #4871) exists precisely to keep
    these spaces from conflating. The ~30 LOC of op-surface overlap is the
    price of the boundary.
 5. **Per-domain timeout/policy constants.** Defined once per site with role
    names (`CAPTURE_TIMEOUT` vs `KWIN_TIMEOUT` vs `CURSOR_POS_TIMEOUT`); equal
    values are coincidence, not shared policy. No central module (see REJECTED).
 6. **Per-surface `strings.rs` modules** (cli, daemon, settings, launcher,
-   pins). The i18n-ready message-catalog architecture (Amendment #4
-   conventions) wants per-surface catalogs; merging them creates one
+   pins). The i18n-ready message-catalog architecture (the per-surface
+   strings convention) wants per-surface catalogs; merging them creates one
    god-module and breaks the future extraction story.
 7. **Domain-specific test stubs.** `kwin/stub.rs` (pins the fetched KWin
    source URL+commit per the stub-contract-fidelity rule),
@@ -435,15 +435,15 @@ duplication and isn't.
    pinned upstream behavior. (R11 covers only generic geometry/frame
    builders.)
 8. **Overlay and pins window lifecycles vs the egui shells.** Overlay =
-   per-monitor fullscreen transparent multi-window with frozen backdrop (D1,
-   D3: capture-before-overlay); pins = long-lived multi-window
+   per-monitor fullscreen transparent multi-window with frozen backdrop
+   (capture-before-overlay); pins = long-lived multi-window
    custom-rendered with compositor-delegated drag; settings/launcher =
-   single opaque egui dialogs (D8b exception). Only the last two share a
+   single opaque egui dialogs (the egui-dialog exception). Only the last two share a
    lifecycle (R2). Merging pins/overlay into any shared "window shell" would
    force one event model onto three genuinely different ones.
 9. **Two widget systems: egui (settings/launcher) vs the token-driven custom
-   micro-widget layer (`widgets/`, overlay/pins/editor).** D8 records this as
-   the accepted tradeoff of the egui-settings exception ("full widget kit,
+   micro-widget layer (`widgets/`, overlay/pins/editor).** The design record
+   notes this as the accepted tradeoff of the egui-settings exception ("full widget kit,
    themeable, no second windowing stack" — the stack is shared, the widget
    kits are not). Unifying them was already rejected at plan review; do not
    relitigate via a "dedup" refactor.
@@ -461,8 +461,8 @@ duplication and isn't.
   small mechanical merges. There is no thousands-of-lines win hiding here —
   the shared layers (capture infra, render/, widgets/, form.rs, the route
   funnel) were built during initial execution, not retrofitted.
-- Tests + QA harnesses: 31,470 pure LOC. Per the project's own strategy (D4
-  "test the core, QA the edges"; 1,218 green tests; examples are the live-QA
+- Tests + QA harnesses: 31,470 pure LOC. Per the project's own strategy ("test
+  the core, QA the edges"; 1,218 green tests; examples are the live-QA
   harnesses), these mostly stay. R11's ~200 LOC is the only defensible test
   delta, and it is optional.
 - Ceiling compliance: 11 files to split, LOC-neutral. If the goal is "less

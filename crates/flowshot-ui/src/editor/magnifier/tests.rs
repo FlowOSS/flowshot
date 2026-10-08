@@ -393,7 +393,7 @@ fn paint_square_variant_matches_the_f27_layout() {
         32
     );
     // Four crosshair arms (zero offset: all non-degenerate), at the exact
-    // F27 rects: one zoomed pixel wide, centered on the cursor's column/
+    // Flameshot rects: one zoomed pixel wide, centered on the cursor's column/
     // row, reaching 8 cells (80px) to each window edge.
     let arm = crate::render::Color::from_hex_token("#6366F1")
         .unwrap()
@@ -438,7 +438,7 @@ fn paint_square_variant_matches_the_f27_layout() {
 fn paint_arms_shift_and_shrink_under_the_edge_clamp() {
     // Cursor at frame physical (2, 2): the window clamps to (0, 0), the
     // offset is (-6, -6), the top/left arms shrink to 2 cells and sit on
-    // the cursor's true column/row (F27 offsetX-shifted arm parity).
+    // the cursor's true column/row (Flameshot offsetX-shifted arm parity).
     let editor = editor_shaped(MagnifierShape::Square);
     let mut list = DisplayList::new();
     editor

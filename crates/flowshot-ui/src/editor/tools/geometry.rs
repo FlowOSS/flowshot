@@ -1,4 +1,4 @@
-//! Shared stroke geometry for the shape tools (draft F27).
+//! Shared stroke geometry for the shape tools.
 //!
 //! Two clean-room Flameshot patterns power all seven tools:
 //!
@@ -25,11 +25,11 @@ use super::super::tool::EditorContext;
 /// simplification on drawEnd - Ramer-Douglas-Peucker epsilon = 0.5px").
 pub const RDP_EPSILON: f32 = 0.5;
 
-/// The mouse-preview dot padding (F27 `mousePreviewRect`: a `toolSize + 2`
+/// The mouse-preview dot padding (Flameshot `mousePreviewRect`: a `toolSize + 2`
 /// square centered on the cursor).
 const PREVIEW_PADDING: f32 = 2.0;
 
-/// The Ctrl drag convention a two-point tool applies (F27
+/// The Ctrl drag convention a two-point tool applies (Flameshot
 /// `m_supportsOrthogonalAdj` / `m_supportsDiagonalAdj`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Constrain {
@@ -55,14 +55,14 @@ pub(super) struct TwoPoint {
 }
 
 impl TwoPoint {
-    /// Opens the stroke at `at` (F27 `drawStart`: both points at the press).
+    /// Opens the stroke at `at` (Flameshot `drawStart`: both points at the press).
     pub(super) fn start(&mut self, at: LogicalPoint) {
         let point = scene_point(at);
         self.from = Some(point);
         self.to = Some(point);
     }
 
-    /// Extends the stroke (F27 `drawMove`; the release point finalizes).
+    /// Extends the stroke (Flameshot `drawMove`; the release point finalizes).
     pub(super) fn extend(&mut self, at: LogicalPoint) {
         self.to = Some(scene_point(at));
     }
@@ -117,7 +117,7 @@ impl TwoPoint {
     }
 }
 
-/// The F27 `adjustedVector` snap (clean-room from `abstracttwopointtool.cpp`
+/// The Flameshot `adjustedVector` snap (clean-room from `abstracttwopointtool.cpp`
 /// @ 2d478061): the delta snapped to the nearest 45deg increment
 /// (`OrthogonalDiagonal`: axis snaps zero the off-axis component, diagonals
 /// average) or to the nearest diagonal (`DiagonalOnly`).
@@ -127,7 +127,7 @@ fn adjusted(dx: f32, dy: f32, mode: Constrain) -> (f32, f32) {
         return (dx, dy);
     }
     // Screen y grows downward; the snap angle measures against -dy (the
-    // mathematical convention), exactly like the F27 source.
+    // mathematical convention), exactly like the Flameshot source.
     let angle = (-dy).atan2(dx);
     let diagonal = |dx: f32, dy: f32, up: bool| {
         let n = if up {
@@ -213,7 +213,7 @@ fn perpendicular_distance(point: ScenePoint, a: ScenePoint, b: ScenePoint) -> f3
     ((point.x - a.x) * dy - (point.y - a.y) * dx).abs() / length_sq.sqrt()
 }
 
-/// The F27 mouse preview: a dot of `size + 2` scene px centered on the
+/// The Flameshot mouse preview: a dot of `size + 2` scene px centered on the
 /// cursor (`mousePreviewRect` parity), painted in `color`.
 pub(super) fn paint_preview_dot(
     sink: &mut dyn PaintSink,
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn orthogonal_diagonal_snap_covers_the_four_directions() {
-        // Nearest 45deg increment, F27 adjustedVector math (screen y down).
+        // Nearest 45deg increment, Flameshot adjustedVector math (screen y down).
         assert_eq!(
             adjusted(10.0, 1.0, Constrain::OrthogonalDiagonal),
             (10.0, 0.0)

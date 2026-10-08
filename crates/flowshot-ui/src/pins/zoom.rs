@@ -1,6 +1,6 @@
 //! Zoom-to-cursor and size-clamp math (pure functions).
 //!
-//! # The anchor invariant (F27 "zoom-from-center AVOID")
+//! # The anchor invariant (Flameshot "zoom-from-center AVOID")
 //!
 //! Zooming must keep the image point under the cursor under the cursor. In
 //! window-local physical px, with the image drawn at `offset` inside the
@@ -69,7 +69,7 @@ impl ResizeAnchor {
 }
 
 /// Zoom-factor clamp bounds derived from the screen fit and the `MIN_SIZE`
-/// floor (F27 `qBound(MIN_SIZE, ..., maximum)` parity, uniform-scale:
+/// floor (Flameshot `qBound(MIN_SIZE, ..., maximum)` parity, uniform-scale:
 /// Flameshot's per-axis `qBound` with `KeepAspectRatio` can distort aspect
 /// ratios - `FlowShot` clamps the single scale factor instead).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -232,7 +232,7 @@ pub fn anchored_offset(change: &ZoomChange) -> (f64, f64) {
 /// Feeds `units` into the wheel accumulator and returns the number of
 /// committed zoom steps (signed). One discrete notch (120 units) commits
 /// one step; high-resolution deltas accumulate until they cross notch
-/// boundaries (F27 accumulate-then-commit; the remainder is retained).
+/// boundaries (Flameshot accumulate-then-commit; the remainder is retained).
 #[must_use]
 pub fn commit_wheel(accumulator: &mut f64, units: f64) -> i32 {
     if !units.is_finite() {

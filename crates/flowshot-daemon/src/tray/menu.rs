@@ -1,4 +1,4 @@
-//! The tray menu model: stable ids, the F12-parity entry list with the
+//! The tray menu model: stable ids, the Flameshot-parity entry list with the
 //! live-probed per-monitor submenu, and the pure id -> action dispatch
 //! table.
 //!
@@ -121,7 +121,7 @@ impl MenuNode {
     }
 }
 
-/// Builds the root-level menu for the given live-probed outputs (F12
+/// Builds the root-level menu for the given live-probed outputs (Flameshot
 /// parity: Take Screenshot / Capture Launcher / per-monitor submenu /
 /// Configure / About / Quit, plus the per-mode full-screen entry).
 #[must_use]

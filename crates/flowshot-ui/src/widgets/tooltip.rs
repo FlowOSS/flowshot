@@ -1,4 +1,4 @@
-//! Tooltip widget + the 400ms show-delay clock (F27 parity constant).
+//! Tooltip widget + the 400ms show-delay clock (Flameshot parity constant).
 //!
 //! [`TooltipClock`] is pure state: the chrome motion owner feeds it hover
 //! retargets and reads `ready`/`deadline` at the frame's `now`, so the
@@ -14,7 +14,7 @@ use crate::render::{
 use crate::selection::AVG_GLYPH_ADVANCE;
 use flowshot_core::tokens::DesignTokens;
 
-/// The hover-to-show delay (F27: Qt's tooltip delay, 400ms).
+/// The hover-to-show delay (Flameshot: Qt's tooltip delay, 400ms).
 pub const TOOLTIP_DELAY: Duration = Duration::from_millis(400);
 
 /// Tooltip background opacity (0-255): near-solid contrast ink (the HUD's

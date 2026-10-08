@@ -1,4 +1,4 @@
-//! The route funnel: coordinate mapping plus the F27
+//! The route funnel: coordinate mapping plus the Flameshot
 //! event-routing priority - the editor sees every pointer/key/wheel event
 //! FIRST and consumes per the priority chain (picker > right-click > active
 //! tool > edit commit > object select); whatever it passes through belongs
@@ -125,7 +125,7 @@ impl OverlayCore {
     }
 
     /// The IME funnel: the shared status tracking first, then the
-    /// editor's active edit session (the always-on model of draft D7 -
+    /// editor's active edit session (the always-on model -
     /// winit `Ime` events route here from every window).
     fn route_ime(&mut self, ime: &Ime) -> RouteReport {
         self.apply_ime(ime);

@@ -5,7 +5,7 @@
 //!
 //! Headless at the [`EditorState`] surface (the production funnel path is
 //! pinned by [`super::tests`] and the routing table by [`super::routing`]).
-//! The collision table's selection-engine rows are DATA from the F12 map;
+//! The collision table's selection-engine rows are DATA from the Flameshot map;
 //! their live bindings are pinned by `selection/keys.rs` and
 //! `selection/tests.rs` (Ctrl+A/C/Q, arrows) - this table validates the
 //! CROSS-SURFACE uniqueness the funnel's pass-through order relies on.
@@ -115,7 +115,7 @@ fn effect(rect: LogicalRect) -> PixelEffect {
 }
 
 // ---------------------------------------------------------------------------
-// A. Object move = ONE undo unit (F27 backup-at-first-move, push-at-release)
+// A. Object move = ONE undo unit (Flameshot backup-at-first-move, push-at-release)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -606,7 +606,7 @@ fn tool_keys_win_over_duplicate_z_bindings() {
     assert_eq!(ed.active_tool(), Some(ToolKind::Pencil));
 }
 
-/// The F12 default map as data: every simultaneously-live binding across
+/// The Flameshot default map as data: every simultaneously-live binding across
 /// the editor and the selection engine (the Flameshot
 /// Return=accept+upload collision class): no two actions share a
 /// (modifier, key) pair.
@@ -621,7 +621,7 @@ fn shortcut_collision_table_has_no_duplicate_bindings() {
             table.push((kind.id(), NONE, key));
         }
     }
-    // Digit size adjusters (F12: digits = tool size).
+    // Digit size adjusters (Flameshot: digits = tool size).
     for digit in 0..10 {
         table.push(("tool-size", NONE, digit_key(digit)));
     }
@@ -636,7 +636,7 @@ fn shortcut_collision_table_has_no_duplicate_bindings() {
     ));
     table.push(("delete-object", NONE, KeyCode::Delete));
     table.push(("edit-commit", ModifiersState::CONTROL, KeyCode::Enter));
-    // Selection engine (F12 rows pinned live by selection/keys.rs tests).
+    // Selection engine (Flameshot rows pinned live by selection/keys.rs tests).
     table.push(("accept", NONE, KeyCode::Enter));
     table.push(("cancel", NONE, KeyCode::Escape));
     table.push(("select-all", ModifiersState::CONTROL, KeyCode::KeyA));

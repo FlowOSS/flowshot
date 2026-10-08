@@ -194,7 +194,7 @@ pub(crate) fn hyprland_version_from(output: &str) -> Option<String> {
 /// in the module header). Polls `try_wait` so a hung child is killed at the
 /// budget instead of blocking init forever. The invocation is the
 /// `version` SUBCOMMAND: Hyprland 0.56's hyprctl answers `--version` with
-/// the usage text (the legacy-flag removal class from the notepad).
+/// the usage text (the legacy-flag removal class).
 fn probe_hyprland_version() -> Option<String> {
     use std::process::Stdio;
     let mut child = std::process::Command::new("hyprctl")

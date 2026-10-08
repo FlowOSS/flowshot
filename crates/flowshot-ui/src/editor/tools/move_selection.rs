@@ -1,4 +1,4 @@
-//! The move-selection tool (draft F12 `TYPE_MOVESELECTION`).
+//! The move-selection tool.
 //!
 //! The move-selection tool drags the entire selection contents-aware: it
 //! moves the selection rect AND every annotation whose bounding box lies
@@ -21,7 +21,7 @@ use flowshot_core::scene::{PaintSink, ToolObject};
 use super::super::kind::ToolKind;
 use super::super::tool::{EditorContext, Tool};
 
-/// The move-selection tool (F12 `TYPE_MOVESELECTION` parity).
+/// The move-selection tool (Flameshot `TYPE_MOVESELECTION` parity).
 ///
 /// Drags the selection rect and all contained annotations. Activated by
 /// Ctrl+M (the plan's default binding).

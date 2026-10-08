@@ -12,7 +12,7 @@
 //!   flat premultiplied-color triangle mesh; antialiasing comes from the 4x
 //!   multisampled frame target. Stroke widths are physical px.
 //! - **Text** ([`TextCommand`]): cosmic-text shaping + swash rasterization
-//!   through an in-crate texture atlas (atlas-first per Metis #17; no glyphon
+//!   through an in-crate texture atlas (atlas-first; no glyphon
 //!   release pairs with the wgpu 0.20 pin - see the root manifest note).
 //! - **Images** ([`super::render::TextureStore`]): frozen-frame textures,
 //!   linear filtering, no mips, pixel sub-region sampling for the magnifier.

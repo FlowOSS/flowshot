@@ -21,9 +21,9 @@
 use super::pixelate::BakeRegion;
 use super::tool::FramePixels;
 
-/// The F27 radius clamp lower bound (`qBound(10, size, 12)`).
+/// The Flameshot radius clamp lower bound (`qBound(10, size, 12)`).
 pub(super) const BLUR_RADIUS_MIN: u32 = 10;
-/// The F27 radius clamp upper bound.
+/// The Flameshot radius clamp upper bound.
 pub(super) const BLUR_RADIUS_MAX: u32 = 12;
 /// Flameshot's "rendered twice" repeat count.
 pub(super) const BLUR_PASSES: u32 = 2;

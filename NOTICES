@@ -206,7 +206,8 @@ Reading this inventory:
 - Duplicate entries at different versions (e.g. "syn 1.0.109 / 2.0.119 /
   3.0.6") reflect transitive version drift in the dependency graph; the
   drift is tracked by `cargo deny check` (bans.multiple-versions = warn)
-  and audited in .omo/evidence/task-42-flowshot.txt.
+  and was audited via `cargo tree -d` at dependency-policy time (the
+  duplicates are pre-existing transitive drift from the pinned stacks).
 
 Crates grouped by license expression:
 

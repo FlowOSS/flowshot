@@ -1,4 +1,4 @@
-//! The embedded egui stack (draft D8(b), the Ruffle pattern): an
+//! The embedded egui stack (the Ruffle guest-renderer pattern): an
 //! [`egui::Context`] + [`egui_wgpu::Renderer`] pair driven by OUR winit/wgpu
 //! runtime - egui is a guest in this crate's renderer, never a second
 //! windowing stack (a MUST-NOT).
@@ -14,7 +14,7 @@
 //! split keeps [`EguiSurface`] renderable WITHOUT any window (the offscreen
 //! QA paths).
 //!
-//! # Version constraint (recorded decision, plan D8(b) fallback)
+//! # Version constraint (recorded decision)
 //!
 //! egui 0.36 + egui-wgpu 0.36 pair with the workspace wgpu 30 pin and with
 //! winit 0.30.13 (crates.io-verified; winit 0.31 is still beta and stays

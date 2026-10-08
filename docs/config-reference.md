@@ -190,7 +190,7 @@ back to this group.
 The per-install UUID lives at `~/.local/share/flowshot/telemetry-id` (XDG
 data home respected); deleting the file regenerates it.
 
-## Deliberate omissions (Amendment #3)
+## Deliberate omissions
 
 FlowShot is capability-compatible with Flameshot, not configuration-compatible.
 The following Flameshot config keys were dropped by design and have no
@@ -225,7 +225,7 @@ behavior:
 
 - `[editor] mouse_preview` (spec default true; currently editor-side state
   only).
-- A `[shortcuts]` group for rebinding editor/overlay keys (F12 defaults are
+- A `[shortcuts]` group for rebinding editor/overlay keys (Flameshot defaults are
   currently compiled in).
 - `[ui] show_side_panel_button` (toolbar panel-toggle button gate).
 

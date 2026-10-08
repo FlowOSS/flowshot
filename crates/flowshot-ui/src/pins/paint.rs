@@ -1,6 +1,6 @@
 //! Pin frame painting: shadow -> image -> context menu.
 //!
-//! The drop shadow is the F27 pin shadow (blur `2 * MARGIN`, zero offset,
+//! The drop shadow is the Flameshot pin shadow (blur `2 * MARGIN`, zero offset,
 //! accent color - contrast on hover, Flameshot's `m_baseColor`/
 //! `m_hoverColor` swap), faded by the pin opacity exactly like Qt's
 //! `setWindowOpacity` fades the whole translucent window. The image quad

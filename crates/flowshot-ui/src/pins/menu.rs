@@ -1,4 +1,4 @@
-//! The pin context menu model: the Flameshot-parity item set (F27 BORROW:
+//! The pin context menu model: the Flameshot-parity item set (Flameshot BORROW:
 //! copy / save / rotate right / rotate left / increase opacity / decrease
 //! opacity / close, in that order with the two original separators), built
 //! on the [`ContextMenu`] widget. The widget owns layout metrics;
@@ -12,7 +12,7 @@ use crate::widgets::{ContextMenu, ContextMenuEntry};
 use super::strings;
 
 /// Menu width in logical px (layout constant of the pin surface, like the
-/// F27 `MARGIN`; the label column derives from the longest parity label at
+/// Flameshot `MARGIN`; the label column derives from the longest parity label at
 /// the token base font size).
 const MENU_WIDTH: f32 = 170.0;
 

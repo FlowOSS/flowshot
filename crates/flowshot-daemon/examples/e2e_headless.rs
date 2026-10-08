@@ -1,11 +1,11 @@
-//! Headless end-to-end execution harness (plan todo 38).
+//! Headless end-to-end execution harness.
 //!
 //! Drives the PRODUCTION executor wiring ([`flowshot_daemon::execute`])
 //! without a window: the same [`configure_core`] the live overlay session
 //! runs, the same input funnel (test-drive injections), the same export
 //! implementation ([`flowshot_ui::render_export`] -> `composite_selection`),
 //! and the same post-capture pipeline ([`run_post`]: real save files, real
-//! `wl-clipboard` offers). This is the todo-38 "headless execution mode":
+//! `wl-clipboard` offers). This is the "headless execution mode":
 //! the minimal honest stand-in for the visible overlay leg (a virtual seat
 //! would need a nested compositor, which the plan forbids).
 //!

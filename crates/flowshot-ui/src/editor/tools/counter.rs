@@ -1,10 +1,10 @@
-//! The circle-count tool (draft F27 circlecount spec).
+//! The circle-count tool (clean-room from Flameshot's circlecount spec).
 //!
 //! Numbered step bubbles: click places the next count (the scene's max+1
 //! rule in the core scene), diameter from `[tools.counter].size`, outline
 //! toggle from `[tools.counter].outline`, fill = current draw color, number
 //! centered contrasting. Wheel while hovering a bubble increments/decrements
-//! ITS number (F12 row 10); delete triggers the core renumber op
+//! ITS number (Flameshot row 10); delete triggers the core renumber op
 //! (subsequent bubbles decrement); undo restores via max+1 rule.
 //!
 //! Press-DRAG aims the pointer (Flameshot `circlecounttool.cpp` @ 2d478061
@@ -45,7 +45,7 @@ impl CounterTool {
     /// Computes the bubble radius from the dispatched size.
     ///
     /// The size slot is a small integer (default 1, max 50); the radius is
-    /// `size * 8 + 8` (F27 `drawCircleCounterSize` semantics: a base radius
+    /// `size * 8 + 8` (Flameshot `drawCircleCounterSize` semantics: a base radius
     /// of 8px plus 8px per size unit, so size=1 -> 16px diameter, size=2 ->
     /// 24px diameter, etc.).
     fn radius_from_size(size: u32) -> f32 {
@@ -142,7 +142,7 @@ impl Tool for CounterTool {
         self.radius = Self::radius_from_size(size);
     }
 
-    /// Wheel while hovering a bubble increments/decrements ITS number (F12
+    /// Wheel while hovering a bubble increments/decrements ITS number (Flameshot
     /// row 10). The framework routes wheel events to the active tool; the
     /// tool returns `true` to consume it (otherwise the wheel adjusts the
     /// tool size).

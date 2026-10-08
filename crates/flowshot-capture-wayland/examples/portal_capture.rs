@@ -1,7 +1,7 @@
 //! Captures the live session through the `org.freedesktop.portal` backends
 //! and writes the full layout to `/tmp/flowshot-portal-<mode>.png`.
 //!
-//! This is the plan todo 10 QA harness: it drives [`PortalScreenshotBackend`]
+//! This is the portal QA harness: it drives [`PortalScreenshotBackend`]
 //! (`--mode screenshot`) and [`PortalScreenCastBackend`] (`--mode screencast`)
 //! directly. The stitched full-layout PNG is the artifact compared against
 //! the `grim` oracle (`XDPH` itself uses `grim` for screenshots and

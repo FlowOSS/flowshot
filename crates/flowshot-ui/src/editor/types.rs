@@ -29,7 +29,7 @@ pub struct EditorEnv {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EditorEffect {
     /// Right-click: open the color wheel at the cursor (a chrome seam - the
-    /// F27 P2 priority, emitted by the editor).
+    /// Flameshot P2 priority, emitted by the editor).
     ColorWheel,
     /// The eyedropper sampled a color (the funnel delivers it
     /// to the standalone color-pick sink - a binary-layer seam).

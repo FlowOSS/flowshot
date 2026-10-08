@@ -1,4 +1,4 @@
-//! Stub-portal e2e for the todo-34 shortcut ladder (the plan's "stub
+//! Stub-portal e2e for the shortcut-fallback ladder (the "stub
 //! portal (private bus) for the portal path" requirement).
 //!
 //! The REAL production code path runs against a REAL `dbus-daemon` broker
@@ -110,7 +110,7 @@ impl Drop for SessionBusEnv {
 }
 
 // ---------------------------------------------------------------------------
-// Private broker (the todo-32 tests/broker.rs recipe, self-contained per
+// Private broker (the tests/broker.rs recipe, self-contained per
 // the throwaway-QA-harness convention)
 // ---------------------------------------------------------------------------
 
@@ -452,7 +452,7 @@ fn portal_ladder_end_to_end() {
     let _env = SessionBusEnv::point_at(&bus.address);
 
     // A private current-thread runtime mirrors the daemon's ownership
-    // model (ashpd's zbus-5-tokio tasks live and die with it - todo-10).
+    // model (ashpd's zbus-5-tokio tasks live and die with it).
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

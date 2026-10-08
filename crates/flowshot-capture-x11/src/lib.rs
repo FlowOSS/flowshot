@@ -32,8 +32,8 @@
 //! - [`outputs`]: RANDR output enumeration (`GetMonitors` with a lit-CRTC
 //!   fallback) mapped onto [`OutputInfo`](flowshot_core::geometry::OutputInfo)
 //!   with per-output scale derivation and transform mapping.
-//! - [`derive_scale`] and friends: the scale-derivation rules (plan decision
-//!   #4) as pure functions.
+//! - [`derive_scale`] and friends: the scale-derivation rules as pure
+//!   functions.
 //! - [`X11Backend`]: the [`CaptureBackend`](flowshot_capture::CaptureBackend)
 //!   implementation - per-output root-window `GetImage` captures (MIT-SHM
 //!   fd-passing fast path, plain-socket fallback), `OutputLayout` region

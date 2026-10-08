@@ -367,7 +367,7 @@ mod tests {
     #[test]
     fn pin_sessions_are_exempt_from_the_single_window_gate() {
         // The multi-pin architecture: pins coexist with each other and
-        // with new captures (review M-2's untested behavior change).
+        // with new captures.
         assert!(!takes_session_gate(&SessionKind::Pin));
     }
 

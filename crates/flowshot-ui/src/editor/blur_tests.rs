@@ -1,5 +1,5 @@
 //! The blur-variant suite: kernel normalization (the acceptance bar),
-//! the F27 radius clamp, spread, determinism, and the no-op paths.
+//! the Flameshot radius clamp, spread, determinism, and the no-op paths.
 
 #![allow(
     clippy::float_cmp,

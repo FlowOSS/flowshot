@@ -2,8 +2,8 @@
 //! `zwlr_data_control`).
 //!
 //! Clean-room equivalent of Flameshot's `screenshotsaver.cpp` L253-270
-//! (`ClipboardWatcherMimeData` + `saveToClipboardGnomeWorkaround`,
-//! draft F27 daemon spec): register a LAZY mime offer, notify the owner
+//! (`ClipboardWatcherMimeData` + `saveToClipboardGnomeWorkaround`):
+//! register a LAZY mime offer, notify the owner
 //! on FIRST data access (the compositor fetching the bytes is what lets
 //! it take over the offer), and force-close after a 500 ms safety window
 //! if the compositor never fetches.

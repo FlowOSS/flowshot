@@ -1,7 +1,7 @@
 //! Shelf packer for the glyph texture atlas (pure, GPU-free).
 //!
 //! The text stack rasterizes glyphs once into a fixed-size atlas texture and
-//! draws instances by UV (the atlas-first policy, Metis #17 - no SDF). The
+//! draws instances by UV (the atlas-first policy - no SDF). The
 //! allocator is a shelf packer: glyphs fill a row until the next one does not
 //! fit, then a new shelf starts below. Callers add their own padding to the
 //! requested size so linear filtering never bleeds across glyphs. When the

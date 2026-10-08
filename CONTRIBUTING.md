@@ -68,7 +68,7 @@ This runs (in order):
 
 All must pass. CI (`.github/workflows/ci.yml`) runs the same gates.
 
-## Engineering standards (Amendment #4)
+## Engineering standards
 
 - **Lints**: Every crate inherits `[workspace.lints]` via `lints.workspace = true`
 - **Safety**: `#![forbid(unsafe_code)]` in all lib crates except `flowshot-capture-wayland`

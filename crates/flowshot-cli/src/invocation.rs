@@ -64,7 +64,7 @@ pub struct CaptureInvocation {
     pub request: CaptureRequest,
     /// In-process one-shot: `--no-daemon`, or a stdout-producing flag
     /// (`--raw`/`--print-geometry` FORCE one-shot - stdout never routes
-    /// over D-Bus, Oracle r4 F-5.iii).
+    /// over D-Bus).
     pub one_shot: bool,
 }
 
@@ -103,7 +103,7 @@ pub struct DaemonRun {
     pub config: Option<PathBuf>,
 }
 
-/// The parsed `--region` grammar (`WxH[+X+Y]|at-cursor`, Oracle r4). The
+/// The parsed `--region` grammar (`WxH[+X+Y]|at-cursor`). The
 /// WIRE carries the raw token ([`CaptureRequest::region`]); the executor
 /// re-parses it against the output layout. This typed form is
 /// the CLI-side validation: malformed tokens exit 2 before anything is

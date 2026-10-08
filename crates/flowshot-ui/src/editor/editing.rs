@@ -1,5 +1,5 @@
-//! Tool activation lifecycle and edit-session event routing (plan todo
-//! 20/22; split from the facade at the LOC ceiling).
+//! Tool activation lifecycle and edit-session event routing
+//! (split from the facade at the LOC ceiling).
 //!
 //! Activation/deactivation cancel the tool's own edit widget AND any
 //! pending re-edit (the checkable-button parity: unchecking never leaves a
@@ -94,7 +94,7 @@ impl EditorState {
     }
 
     /// Key routing while an edit widget is active; `None` when not editing
-    /// (the caller runs the normal key map). Ctrl+Return commits (the F27
+    /// (the caller runs the normal key map). Ctrl+Return commits (the Flameshot
     /// text lifecycle); everything else goes to the tool's session; keys the
     /// session rejects (Ctrl+C, ...) pass through to the funnel - the
     /// selection engine's own map still applies to those.
@@ -130,7 +130,7 @@ impl EditorState {
     }
 
     /// An IME event: routed to the active edit session (the always-on model
-    /// of draft D7 - the shell plumbs every `WindowEvent::Ime` here).
+    /// of the always-on model - the shell plumbs every `WindowEvent::Ime` here).
     pub fn ime_event(&mut self, env: &EditorEnv, ime: &Ime) -> EditorUpdate {
         if !self.editing() {
             return EditorUpdate::pass();

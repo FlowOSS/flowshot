@@ -1,4 +1,4 @@
-//! The F27 SECURE pixelate bake (`pixelatetool.cpp`
+//! The Flameshot SECURE pixelate bake (`pixelatetool.cpp`
 //! clean-room).
 //!
 //! # Why fringe pseudo-pixelation, not block averaging
@@ -14,7 +14,7 @@
 //! downscale-upscale mosaic is dropped entirely - no
 //! reversible pixelate code path exists anywhere in the crate.
 //!
-//! # Algorithm (F27 constants, all pinned by tests)
+//! # Algorithm (Flameshot constants, all pinned by tests)
 //!
 //! 1. Output grid = `trunc(region_dim * 0.5 / (size + 1))` per axis; a zero
 //!    on either axis is a NO-OP (the plan's 1x1-region failure path -
@@ -62,7 +62,7 @@ pub(super) struct BakeRegion {
     pub h: u32,
 }
 
-/// The F27 output-grid formula: `trunc(dim * 0.5 / (size + 1))` per axis.
+/// The Flameshot output-grid formula: `trunc(dim * 0.5 / (size + 1))` per axis.
 /// `None` when either axis collapses to zero (the 1x1-region no-op rule).
 #[expect(
     clippy::cast_possible_truncation,
@@ -108,7 +108,7 @@ struct GridPosition {
 
 #[expect(
     clippy::cast_precision_loss,
-    reason = "grid axes stay far below 2^24 for any real capture; the f32 math is the F27 parity form"
+    reason = "grid axes stay far below 2^24 for any real capture; the f32 math is the Flameshot parity form"
 )]
 pub(super) fn pixelate_grid(
     frame: &FramePixels,
@@ -131,7 +131,7 @@ pub(super) fn pixelate_grid(
             let color_noise = noise.color(x, y);
             let out = &mut grid[out_index(x, y, grid_h)..][..4];
             for channel in 0..3 {
-                // weight_h = weight_v = 0.5 (the degenerate F27 weights).
+                // weight_h = weight_v = 0.5 (the degenerate Flameshot weights).
                 let horizontal_mix = (1.0 - at.horizontal) * samples[2][channel]
                     + at.horizontal * samples[3][channel];
                 let vertical_mix =
@@ -141,7 +141,7 @@ pub(super) fn pixelate_grid(
                 // differently by 1 ulp on carry - parity wins.
                 #[expect(
                     clippy::manual_midpoint,
-                    reason = "the F27 exact form: 0.5 * (h + v), not midpoint rounding"
+                    reason = "the Flameshot exact form: 0.5 * (h + v), not midpoint rounding"
                 )]
                 let blended = 0.5 * (horizontal_mix + vertical_mix) + color_noise;
                 out[channel] = channel_byte(blended);
@@ -161,7 +161,7 @@ fn out_index(x: u32, y: u32, grid_h: u32) -> usize {
 /// NaN path C++ leaves UB).
 #[expect(
     clippy::cast_possible_truncation,
-    reason = "truncation toward zero then clamp is the F27 quantizer"
+    reason = "truncation toward zero then clamp is the Flameshot quantizer"
 )]
 fn channel_byte(value: f32) -> u8 {
     let quantized = (255.0 * value) as i32;
@@ -194,7 +194,7 @@ fn upscale_nearest(grid: &[u8], grid_w: u32, grid_h: u32, w: u32, h: u32) -> Vec
     out
 }
 
-/// The four 1px fringe lines around the region (F27 `offset_*` rules: the
+/// The four 1px fringe lines around the region (Flameshot `offset_*` rules: the
 /// line just outside each side, or the region's own edge line when the side
 /// sits on the frame border).
 #[derive(Debug, Clone, Copy)]

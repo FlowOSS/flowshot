@@ -1,4 +1,4 @@
-//! Backdrop composition on the real GPU pipeline (plan todo 15).
+//! Backdrop composition on the real GPU pipeline.
 //!
 //! Renders planned [`Backdrop`] scenes offscreen (headless - no window) and
 //! reads the pixels back: per-window frozen crops, the dim layer with its

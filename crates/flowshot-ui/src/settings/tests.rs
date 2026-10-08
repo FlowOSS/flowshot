@@ -104,7 +104,7 @@ fn corrupt_load_enables_apply_so_the_banner_repair_is_possible() {
 
 #[test]
 fn validation_rejects_out_of_range_numbers() {
-    // Given: undo_limit above the F27 ceiling and jpeg_quality below 1
+    // Given: undo_limit above the Flameshot ceiling and jpeg_quality below 1
     let mut model = SettingsModel::default();
     model.config_mut().editor.undo_limit = 1000;
     model.config_mut().save.jpeg_quality = 0;
@@ -333,7 +333,7 @@ fn hex_parser_is_strict() {
 fn filename_preview_expands_and_sanitizes() {
     let now = fixed_time();
     assert_eq!(super::preview_filename("%F_%H-%M", now), "2026-09-27_14-30");
-    // Trailing bare % is stripped (F27 rule)
+    // Trailing bare % is stripped (Flameshot rule)
     assert_eq!(super::preview_filename("shot%", now), "shot");
     assert_eq!(super::preview_filename("100%%", now), "100%");
     // Sanitization: / -> U+2044, : -> -

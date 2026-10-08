@@ -1,4 +1,4 @@
-//! Todo 38 flow 9: the upload wiremock e2e through the REAL executor
+//! The upload wiremock e2e through the REAL executor
 //! post-capture stage (`run_post`), plus the unconfigured-provider
 //! degradation (the CLI-side exit-2 hint path is asserted live in the
 //! flow-09 script; this covers the daemon-side `Deferred` mapping).
@@ -146,7 +146,7 @@ async fn upload_runs_through_the_executor_against_the_stub() {
 
 #[tokio::test]
 async fn unconfigured_provider_defers_with_a_warning() {
-    // Given an EMPTY client id (the Amendment-#3 no-freeloading default),
+    // Given an EMPTY client id (the no-freeloading default),
     let server = MockServer::start().await;
     let home = TempHome::new("upload-unconfigured");
     home.write_config("");

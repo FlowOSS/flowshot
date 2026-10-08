@@ -1,4 +1,4 @@
-//! The clap parse matrix (plan todo 35 QA: every subcommand + flag, the
+//! The clap parse matrix (every subcommand + flag, the
 //! grammar rejections, and the conflict rules). Structural assertions on
 //! the typed resolution - no prose pinning.
 

@@ -1,6 +1,6 @@
-//! Keyboard selection adjustments (draft F27).
+//! Keyboard selection adjustments.
 //!
-//! CODE values win over the README (F27): every step is 1 logical px.
+//! CODE values win over the README (Flameshot): every step is 1 logical px.
 //! The edge semantics are Flameshot's verbatim (`selectionwidget.cpp`
 //! `moveLeft`/`resizeLeft`/`symResizeLeft` slots, default bindings
 //! `Left` / `Shift+Left` / `Ctrl+Shift+Left`):

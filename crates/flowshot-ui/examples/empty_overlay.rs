@@ -1,4 +1,4 @@
-//! Empty overlay QA harness (plan todo 13).
+//! Empty overlay QA harness.
 //!
 //! Spawns one borderless-fullscreen transparent window per monitor, hides
 //! the system cursor, draws the custom crosshair, and idles at zero CPU

@@ -18,7 +18,7 @@ use crate::render::{
 };
 use crate::selection::AVG_GLYPH_ADVANCE;
 
-/// The HUD box opacity (0-255): the selection HUD's alpha (F27
+/// The HUD box opacity (0-255): the selection HUD's alpha (Flameshot
 /// `capturewidget.cpp` paints the geometry box at 200).
 const HUD_BOX_ALPHA: u8 = 200;
 /// Text line height ratio (the render stack's standard, shared with the

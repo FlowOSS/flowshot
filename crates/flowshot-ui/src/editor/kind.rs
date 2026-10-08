@@ -1,10 +1,10 @@
-//! The tool taxonomy (draft F27/F12).
+//! The tool taxonomy (clean-room from the Flameshot tool specs).
 //!
 //! [`ToolKind`] is the stable type enum every annotation tool
-//! registers under. The string ids are the config-compat surface (F27:
+//! registers under. The string ids are the config-compat surface (Flameshot:
 //! "type-enum stability = config compat"): they match the `[ui]`
 //! `toolbar_buttons` entries and the scene's `ToolObject::type_id` family.
-//! The default activation keys are the Flameshot F12 shortcut map
+//! The default activation keys are the Flameshot shortcut map
 //! (`confighandler.cpp` `recognizedShortcuts`): P/D/A/S/R/C/M/T/B/I -
 //! counter and move ship unbound (Flameshot binds move to Ctrl+M; the
 //! shipped key list omits both), rebindable via
@@ -44,7 +44,7 @@ pub enum ToolKind {
     /// the selection engine per the Flameshot `startDrawObjectTool`
     /// exclusion).
     Move,
-    /// Eyedropper / color picker (F12 `TYPE_GRAB_COLOR`).
+    /// Eyedropper / color picker (Flameshot `TYPE_GRAB_COLOR`).
     Eyedropper,
 }
 
@@ -69,7 +69,7 @@ impl ToolKind {
         Self::Eyedropper,
     ];
 
-    /// The stable config/serde id (F27 type-enum stability).
+    /// The stable config/serde id (Flameshot type-enum stability).
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
@@ -97,7 +97,7 @@ impl ToolKind {
         Self::ALL.into_iter().find(|kind| kind.id() == id)
     }
 
-    /// The default F12 activation key; `None` ships unbound (counter, move).
+    /// The default Flameshot activation key; `None` ships unbound (counter, move).
     #[must_use]
     pub const fn default_key(self) -> Option<KeyCode> {
         match self {
@@ -117,7 +117,7 @@ impl ToolKind {
     }
 
     /// Whether this kind dispatches to the shared `draw_thickness` size
-    /// slot (the others own independent `[tools.*]` slots - F27 per-tool
+    /// slot (the others own independent `[tools.*]` slots - Flameshot per-tool
     /// size dispatch, see [`super::size::ToolSizes`]; blur shares the
     /// pixelate slot - Flameshot's blur is the pixelate tool's size-driven
     /// variant).

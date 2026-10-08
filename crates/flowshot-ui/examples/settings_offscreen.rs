@@ -1,4 +1,4 @@
-//! Offscreen settings-render evidence dump (plan todo 36 QA, no-visible-
+//! Offscreen settings-render evidence dump (QA, no-visible-
 //! windows policy): renders each of the four tabs headlessly through
 //! [`flowshot_ui::settings::render_offscreen`] and writes PNGs.
 //!

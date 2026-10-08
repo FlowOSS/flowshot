@@ -1,6 +1,6 @@
-//! The F27 event-routing priority table as a pure decision function.
+//! The Flameshot event-routing priority table as a pure decision function.
 //!
-//! Draft F27 (Flameshot `capturewidget.cpp` `mousePressEvent` L876-918 @
+//! Draft Flameshot (Flameshot `capturewidget.cpp` `mousePressEvent` L876-918 @
 //! 2d478061): event priority is
 //!
 //! 1. color-picker visible -> the picker consumes,
@@ -26,11 +26,11 @@ use winit::event::MouseButton;
 
 /// Everything the press routing decision needs (flags the editor precomputes
 /// from its own state + the hit-test).
-// The flags are independent routing inputs mirroring the F27 priority
+// The flags are independent routing inputs mirroring the Flameshot priority
 // chain's own conditions; grouping them would obscure the table.
 #[expect(
     clippy::struct_excessive_bools,
-    reason = "each bool is one independent F27 priority condition"
+    reason = "each bool is one independent Flameshot priority condition"
 )]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PressRoute {
@@ -70,7 +70,7 @@ pub enum PressTarget {
     Selection,
 }
 
-/// Routes one pointer press through the exact F27 priority chain.
+/// Routes one pointer press through the exact Flameshot priority chain.
 #[must_use]
 pub fn route_press(route: &PressRoute) -> PressTarget {
     if route.picker_visible {
@@ -124,7 +124,7 @@ fn route_left(route: &PressRoute) -> PressTarget {
 }
 
 /// The drag-session flags shared by the motion and release routing (the
-/// [`PressRoute`] pattern: independent F27 priority conditions as data).
+/// [`PressRoute`] pattern: independent Flameshot priority conditions as data).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SessionRoute {
     /// The color picker (wheel) is visible - cascade stage 5.
@@ -144,7 +144,7 @@ pub enum MoveTarget {
     /// P3: the open draw session extends (`drawMove`).
     ToolDraw,
     /// P5 drag: the armed object move translates live (one undo
-    /// unit lands at release, F27 "backup at first move, push at release").
+    /// unit lands at release, Flameshot "backup at first move, push at release").
     Object,
     /// P6: the selection engine (region drag; no-op without one).
     Selection,
@@ -262,7 +262,7 @@ mod tests {
                 },
                 PressTarget::ColorWheel,
             ),
-            // ...EXCEPT during a text edit (the F27 exception).
+            // ...EXCEPT during a text edit (the Flameshot exception).
             (
                 PressRoute {
                     button: RIGHT,

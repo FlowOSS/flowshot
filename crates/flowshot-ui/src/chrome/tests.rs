@@ -334,7 +334,7 @@ fn toolbar_tooltip_waits_the_delay_then_shows_the_active_binding() {
 
 #[test]
 fn toolbar_tool_button_activates_and_blocks_the_draw_underneath() {
-    // Widget parity: a press on the toolbar never reaches the F27 chain -
+    // Widget parity: a press on the toolbar never reaches the Flameshot chain -
     // the pencil (active!) starts no stroke and the button's tool activates.
     let mut core = fixture();
     tap(&mut core, KeyCode::KeyP);
@@ -417,7 +417,7 @@ fn wheel_geometry_follows_the_f27_formula() {
 
 #[test]
 fn right_click_opens_the_wheel_and_a_swatch_pick_writes_every_seam() {
-    // Plan acceptance: pick color -> draw color changes; F27: the pick
+    // Plan acceptance: pick color -> draw color changes; Flameshot: the pick
     // persists (sink) and the selected object recolors as ONE undo unit.
     let mut core = fixture();
     let picked: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -529,7 +529,7 @@ fn panel_config_gate_hides_everything() {
         std::time::Instant::now(),
     );
     assert!(hidden.len() < shown.len(), "the panel paints nothing");
-    // A press where the panel row sat falls through to the F27 chain.
+    // A press where the panel row sat falls through to the Flameshot chain.
     let row = panel_layout(&core).layer_rows[0].1;
     let (x, y) = center(row);
     left_click_at(&mut core, x, y);

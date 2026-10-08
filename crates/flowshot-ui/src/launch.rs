@@ -21,7 +21,7 @@
 //! (capture timing and export wiring in the binary layer); they seed no overlay
 //! state.
 //!
-//! # Coordinate space (Oracle r1 #8iii)
+//! # Coordinate space
 //!
 //! `--region` coordinates are GLOBAL LOGICAL pixels - the selection
 //! engine's space, where one rect spans every monitor. The

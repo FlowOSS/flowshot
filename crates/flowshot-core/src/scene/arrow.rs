@@ -1,4 +1,4 @@
-//! The arrow annotation object (draft F27 arrow math).
+//! The arrow annotation object.
 //!
 //! Clean-room reimplementation of the Flameshot `ArrowTool` geometry
 //! (`arrowtool.cpp` @ 2d478061): a shaft from the tail stopping at the head's
@@ -176,7 +176,7 @@ impl ToolObject for ArrowObject {
 
     fn bounding_rect(&self) -> Rect {
         // Exact ink bounds: the shaft endpoints and the filled head corners,
-        // grown by the shaft's half-width stroke ink (the F27
+        // grown by the shaft's half-width stroke ink (the Flameshot
         // `ArrowTool::boundingRect` walks the head path the same way).
         let Some((_, head)) = self.shaft_and_head() else {
             return Rect::from_points(self.from, self.to);
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn straight_head_is_a_thickness_scaled_triangle_at_the_tip() {
-        // F27 math: head height 18 + 2t, half base width 5 + t.
+        // Flameshot math: head height 18 + 2t, half base width 5 + t.
         let arrow = arrow((0.0, 0.0), (100.0, 0.0), 2.0);
         let (shaft_end, head) = arrow.shaft_and_head().expect("non-degenerate");
         assert_eq!(shaft_end, Point::new(78.0, 0.0), "100 - (18 + 4)");

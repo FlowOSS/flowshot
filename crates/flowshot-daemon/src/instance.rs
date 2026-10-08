@@ -1,5 +1,5 @@
 //! Single-instance handshake: atomic bus-name acquisition + argv
-//! forwarding (Oracle r4 race-free-by-construction).
+//! forwarding.
 //!
 //! The well-known name is the single-instance token: `RequestName` with
 //! `DoNotQueue` is ATOMIC on the bus, so exactly one process ever receives

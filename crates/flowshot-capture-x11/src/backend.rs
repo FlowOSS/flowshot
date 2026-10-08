@@ -17,14 +17,13 @@
 //! - [`cursor_events`](CaptureBackend::cursor_events) is `None`: X11 offers
 //!   no client-visible cursor *stream* - only the one-shot reads
 //!   ([`X11Backend::cursor_pos`], XFIXES `GetCursorImage` per capture). A
-//!   cursor stream is out of scope by plan
-//!   (`.omo/plans/x11-phase-b.md`), not pending.
+//!   cursor stream is out of scope (a recorded product decision), not
+//!   pending.
 //! - Region captures never paint the cursor (the stitched composite is
 //!   content for editors and savers - the Wayland backends' and
 //!   [`MockBackend`](flowshot_capture::MockBackend)'s contract).
 //! - [`request_permission`](CaptureBackend::request_permission) is
-//!   [`PermissionResult::NotRequired`]: X11 has no capture permission model
-//!   (plan decision #9).
+//!   [`PermissionResult::NotRequired`]: X11 has no capture permission model.
 //!
 //! # Consistency
 //!
@@ -174,7 +173,7 @@ impl CaptureBackend for X11Backend {
 
     async fn request_permission(&self) -> PermissionResult {
         // X11 has no capture permission model: any client that can connect
-        // can read the root window (plan decision #9).
+        // can read the root window.
         PermissionResult::NotRequired
     }
 }

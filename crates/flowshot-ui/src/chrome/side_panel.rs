@@ -71,7 +71,7 @@ pub(super) fn toggle_track_width(tokens: &DesignTokens) -> f32 {
 /// "per-tool options (size sliders ...)" rule: `None` hides the slider (the
 /// selection/move/invert/eyedropper kinds have no size semantics; invert is
 /// a region effect). Rectangle's dispatched slot IS the corner radius (the
-/// F27 `drawRectangleSize` naming), text's IS the font size.
+/// Flameshot `drawRectangleSize` naming), text's IS the font size.
 #[must_use]
 pub fn size_label(kind: ToolKind) -> Option<&'static str> {
     match kind {

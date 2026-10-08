@@ -2,7 +2,7 @@
 //! texture atlas.
 //!
 //! This is the crate's single text stack (atlas-first per
-//! Metis #17 - no custom SDF). glyphon could not be used: no glyphon release
+//! no custom SDF). glyphon could not be used: no glyphon release
 //! pairs with the workspace's wgpu 0.20 pin (crates.io-verified in the root
 //! manifest note), so the atlas lives here - the same architecture glyphon
 //! implements, on the same swash rasterizer cosmic-text's [`SwashCache`]

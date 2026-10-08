@@ -1,6 +1,6 @@
-//! Per-tool size dispatch and the two size adjusters (F27).
+//! Per-tool size dispatch and the two size adjusters (Flameshot).
 //!
-//! F27 size model (`confighandler.cpp` `setToolSize`/`toolSize`): text uses
+//! Flameshot size model (`confighandler.cpp` `setToolSize`/`toolSize`): text uses
 //! the font size (rendered at `size + ` [`BASE_POINT_SIZE`]),
 //! rectangle/marker/pixelate/counter own independent `[tools.*]` slots, and
 //! every other tool shares `[editor].draw_thickness` (default 3). Digit keys
@@ -23,11 +23,11 @@ use std::time::{Duration, Instant};
 use super::kind::ToolKind;
 use super::tool::EditorTools;
 
-/// `maxToolSize` (F27): the hard clip for every tool size.
+/// `maxToolSize` (Flameshot): the hard clip for every tool size.
 pub const MAX_TOOL_SIZE: u32 = 50;
 /// The minimum tool size (`qBound(1, ..)` parity).
 pub const MIN_TOOL_SIZE: u32 = 1;
-/// `MOUSE_WHEEL_TRESHOLD` (F27, `capturewidget.cpp` L46): angle-delta units
+/// `MOUSE_WHEEL_TRESHOLD` (Flameshot, `capturewidget.cpp` L46): angle-delta units
 /// per ±1 size step.
 pub const WHEEL_THRESHOLD: i32 = 60;
 /// Qt wheel-angle units per line (a standard notch = 120 units = 3 lines;
@@ -37,11 +37,11 @@ pub const WHEEL_ANGLE_PER_LINE: f32 = 40.0;
 /// after the last size change (`notifierbox.cpp` `setInterval(600)`) and its
 /// `hidden` signal zeroes `m_toolSizeByKeyboard`.
 pub const DIGIT_RESET_DELAY: Duration = Duration::from_millis(600);
-/// Text tools render at `tool_size + BASE_POINT_SIZE` points (F27 text spec;
+/// Text tools render at `tool_size + BASE_POINT_SIZE` points (Flameshot text spec;
 /// consumed by the text tool).
 pub const BASE_POINT_SIZE: u32 = 8;
 
-/// The per-tool size slots (F27 dispatch table), projected from the config
+/// The per-tool size slots (Flameshot dispatch table), projected from the config
 /// and adjusted at runtime by digits/wheel/panel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ToolSizes {
@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn dispatch_table_matches_the_config_defaults() {
         let s = sizes();
-        // F27: text = fontSize, rect/marker/pixelate/counter independent,
+        // Flameshot: text = fontSize, rect/marker/pixelate/counter independent,
         // others shared drawThickness (default 3).
         assert_eq!(s.get(Some(ToolKind::Text)), 8);
         assert_eq!(

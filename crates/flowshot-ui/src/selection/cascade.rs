@@ -1,4 +1,4 @@
-//! The Esc cascade (draft F27).
+//! The Esc cascade.
 //!
 //! Flameshot `deleteToolWidgetOrClose` (`capturewidget.cpp` L561-589) walks
 //! SIX stages in an exact order, popping the topmost occupied one per Esc

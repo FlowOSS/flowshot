@@ -77,7 +77,7 @@ other crate and no exemption was needed.
 Each phase is a new capture-crate implementation plus its packaging delta.
 The full entry-point map — concrete crates with spot-checked versions, the
 platform APIs, the F24 red flags, the `CaptureBackend` conformance checklist
-against draft F20, and the init-systems packaging phase — lives in
+against the recorded research, and the init-systems packaging phase — lives in
 [docs/porting-roadmap.md](../porting-roadmap.md). Summary of the named
 entry points, from the research ledger:
 

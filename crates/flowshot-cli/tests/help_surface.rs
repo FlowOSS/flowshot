@@ -1,4 +1,4 @@
-//! Structural help-surface checks (plan todo 35 acceptance: `flowshot
+//! Structural help-surface checks (acceptance: `flowshot
 //! --help` + every subcommand help renders). Token-presence assertions on
 //! the machine-consumed surface (subcommand names, flag spellings) - never
 //! prose pinning.
@@ -37,7 +37,7 @@ fn top_level_help_lists_the_whole_authoritative_surface() {
 }
 
 #[test]
-fn capture_help_lists_every_amendment_2_modifier() {
+fn capture_help_lists_every_flameshot_modifier() {
     let help = render_help(&["capture", "--help"]);
     for token in [
         "--full",
@@ -109,6 +109,6 @@ fn the_derived_command_carries_the_binary_name_for_generators() {
         .unwrap_or_else(|| panic!("the capture subcommand must exist"));
     assert!(
         capture.get_arguments().count() > 15,
-        "the Amendment-#2 modifier set must be complete"
+        "the Flameshot modifier set must be complete"
     );
 }

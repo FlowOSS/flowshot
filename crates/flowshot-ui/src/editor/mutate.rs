@@ -1,7 +1,6 @@
-//! Object mutation: the atomic move drag and the property-change seam
-//! (draft F27 undo spec).
+//! Object mutation: the atomic move drag and the property-change seam.
 //!
-//! F27: "object-move = one atomic unit (backup at first move, push at
+//! Flameshot spec: "object-move = one atomic unit (backup at first move, push at
 //! release)" - a press on an object arms the drag, the FIRST motion with a
 //! non-zero delta takes the before-snapshot and every motion translates the
 //! object live (no journal traffic), and the release pushes exactly ONE
@@ -25,7 +24,7 @@ use super::EditorState;
 use super::undo::Snapshot;
 
 /// The armed object-drag state (press routed to object select; release
-/// pending). `before` is `None` until the first non-zero motion (F27).
+/// pending). `before` is `None` until the first non-zero motion (Flameshot).
 #[derive(Debug)]
 pub(super) struct ObjectMove {
     id: usize,
@@ -144,7 +143,7 @@ impl EditorState {
         true
     }
 
-    /// Arms the object drag after a select-object press (the F27
+    /// Arms the object drag after a select-object press (the Flameshot
     /// `TYPE_MOVESELECTION` fall-through; no snapshot yet - a click
     /// without motion must not create a journal entry).
     pub(super) fn begin_object_move(&mut self, id: usize, at: LogicalPoint) {
@@ -182,7 +181,7 @@ impl EditorState {
     }
 
     /// Ends the armed drag: pushes the single (before, after) move unit
-    /// when any motion happened (F27 push-at-release). `true` when a unit
+    /// when any motion happened (Flameshot push-at-release). `true` when a unit
     /// was recorded.
     pub(super) fn finish_object_move(&mut self) -> bool {
         let Some(drag) = self.object_move.take() else {

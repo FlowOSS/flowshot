@@ -16,7 +16,7 @@
 //!   cursor is logically over another monitor, so mapping is linear and
 //!   *unclamped* - positions beyond the surface extend across the layout,
 //!   and clamping is an explicit operation. The core also owns the shared
-//!   cursor track, IME plumbing (always-on model, draft D7), and the
+//!   cursor track, IME plumbing (always-on model), and the
 //!   Esc-closes-all teardown flag.
 //! - **Window shell** ([`OverlayRuntime`]): winit 0.30 `ApplicationHandler`
 //!   spawning one borderless-fullscreen, transparent, undecorated,
@@ -30,7 +30,7 @@
 //!   lyon vector tessellation, cosmic-text glyph atlas, image quads, dim /
 //!   shadow / rounded-clip effects, all token-driven.
 //! - **Selection engine** ([`SelectionState`]): the full
-//!   Flameshot selection behavior spec (draft F27) as a pure state machine -
+//!   Flameshot selection behavior spec as a pure state machine -
 //!   drag-create behind a 3px manhattan threshold, 8 token-derived handles,
 //!   Shift mirror / Ctrl aspect resize, 1px keyboard nudges, the 10x10
 //!   minimum, layout clamping, the geometry HUD, and the six-stage Esc
@@ -39,8 +39,8 @@
 //!   [`OverlayCore`] and paints it per window.
 //! - **Editor tool framework** ([`EditorState`]): the scene
 //!   bridge every annotation tool plugs into - the [`Tool`]
-//!   lifecycle (drawStart/Move/End/pressed) with the F27 [`EditorContext`],
-//!   the exact F27 event-routing priority (picker > right-click > active
+//!   lifecycle (drawStart/Move/End/pressed) with the Flameshot [`EditorContext`],
+//!   the exact Flameshot event-routing priority (picker > right-click > active
 //!   tool > edit commit > object select > selection engine), per-tool size
 //!   dispatch with the digit/wheel adjusters, scene commits as single undo
 //!   units, and the real producers of the Esc cascade's tool/object stages.

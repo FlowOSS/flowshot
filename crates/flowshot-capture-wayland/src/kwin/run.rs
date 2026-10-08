@@ -34,7 +34,7 @@ use crate::session::CaptureState;
 use crate::stitch::{CapturedOutputs, round_to_i32};
 
 /// Per-phase deadline for machine-speed phases (connect, one capture call,
-/// one payload readback): draft F27 parity with the other backends.
+/// one payload readback): parity with the other backends' per-phase budgets.
 pub(crate) const KWIN_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Budget for interactive captures: the human picker lives inside the
@@ -346,8 +346,8 @@ where
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
-    // Fixture scales and sizes are exact integral literals (geometry-notepad
-    // convention), so strict comparison is the intended assertion.
+    // Fixture scales and sizes are exact integral literals (the project-wide
+    // fixture convention), so strict comparison is the intended assertion.
     #![allow(clippy::float_cmp)]
 
     use flowshot_core::geometry::{Logical, LogicalRect, PhysicalPx, PhysicalSize};

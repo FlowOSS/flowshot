@@ -2,7 +2,7 @@
 //! impl pattern the selection engine established - private fields stay in
 //! [`super::state`], the behavior lives here).
 //!
-//! Behavior map (the F27 pin spec):
+//! Behavior map (the Flameshot pin spec):
 //! - wheel: accumulate-then-commit zoom ANCHORED AT CURSOR (center-zoom
 //!   AVOIDED);
 //! - left press + move: `drag_window()` (the `startSystemMove` BORROW;
@@ -10,7 +10,7 @@
 //!   compositor drag grab, which swallows the second click);
 //! - left double-click / Esc / Ctrl+Q / menu Close: close the pin;
 //! - right release: toggle the context menu at the cursor;
-//! - keys 0-9: absolute opacity 1.0..0.1 (F27 table: `0` -> 1.0, `d` ->
+//! - keys 0-9: absolute opacity 1.0..0.1 (Flameshot table: `0` -> 1.0, `d` ->
 //!   d/10); R / Shift+R: rotate clockwise / counter-clockwise (the bindable
 //!   rotate keys; the settings surface makes them configurable);
 //! - touch: two-finger pinch preview + commit ([`super::pinch`]).
@@ -162,7 +162,7 @@ impl PinState {
         }
     }
 
-    /// The F27 opacity table: key `0` -> 1.0 (ten tenths), keys `1..=9` ->
+    /// The Flameshot opacity table: key `0` -> 1.0 (ten tenths), keys `1..=9` ->
     /// 0.1..0.9 absolute.
     fn set_opacity(&mut self, tenths: u8) -> Vec<PinEffect> {
         if self.opacity_tenths == tenths {
@@ -184,7 +184,7 @@ impl PinState {
     }
 }
 
-/// Maps a digit key (top row or numpad) to its F27 opacity tenths:
+/// Maps a digit key (top row or numpad) to its Flameshot opacity tenths:
 /// `0` -> 10 (fully opaque), `1..=9` -> 1..=9.
 fn digit_tenths(code: KeyCode) -> Option<u8> {
     let digit = match code {

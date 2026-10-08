@@ -1,4 +1,4 @@
-//! The pixel magnifier (draft F27 `magnifierwidget.h` cites).
+//! The pixel magnifier (clean-room from Flameshot's `magnifierwidget.h`).
 //!
 //! A cursor-following VIEW aid (never a color-picker - the chrome and the
 //! eyedropper tool own the palette/pick flows): it samples a 17x17 source-px window
@@ -58,20 +58,20 @@ use super::{EditorState, MagnifierShape};
 
 pub use paint::{MagnifierTexture, MagnifierView, magnifier_texture_id};
 
-/// Source-px radius around the cursor (F27 `m_magPixels = 8`).
+/// Source-px radius around the cursor (Flameshot `m_magPixels = 8`).
 pub const MAG_PIXELS: i64 = 8;
-/// Sampled window edge in source px (`2 * MAG_PIXELS + 1`, F27 `m_pixels`).
+/// Sampled window edge in source px (`2 * MAG_PIXELS + 1`, Flameshot `m_pixels`).
 pub const WINDOW_PX: i64 = 2 * MAG_PIXELS + 1;
-/// Magnification factor (F27 `magZoom = 10`).
+/// Magnification factor (Flameshot `magZoom = 10`).
 pub const ZOOM: i64 = 10;
 /// Rendered widget edge in physical px: `WINDOW_PX * ZOOM` = 170 (the
 /// relationship is pinned by a unit test, not a cast).
 pub const RENDERED_PX: f64 = 170.0;
-/// Cursor-to-widget gap in physical px (F27 `m_magOffset = 16`).
+/// Cursor-to-widget gap in physical px (Flameshot `m_magOffset = 16`).
 pub const CURSOR_OFFSET: f64 = 16.0;
 /// The pixel grid draws at zoom factors >= this (plan ADDITION).
 pub const GRID_MIN_ZOOM: i64 = 8;
-/// Crosshair-arm ink alpha (F27: `m_color.setAlpha(130)` on the uiColor).
+/// Crosshair-arm ink alpha (Flameshot: `m_color.setAlpha(130)` on the uiColor).
 pub const ARM_ALPHA: u8 = 130;
 
 /// One sampled magnifier window: the 17x17 source pixels (row-major RGBA),

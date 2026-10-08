@@ -1,4 +1,4 @@
-//! The layered cursor-position strategy (draft F13) and the per-desktop
+//! The layered cursor-position strategy and the per-desktop
 //! capability table.
 //!
 //! # The ladder
@@ -13,14 +13,14 @@
 //! 2. **Hyprland IPC** - the raw v1 socket `cursorpos` query
 //!    (`hyprland_ipc`), self-gated on the Hyprland session environment
 //!    (`XDG_RUNTIME_DIR` + `HYPRLAND_INSTANCE_SIGNATURE`). No external
-//!    process is ever spawned - `hyprctl` is not called (draft F28
-//!    no-shell-out).
+//!    process is ever spawned - `hyprctl` is not called (the no-shell-out
+//!    rule).
 //! 3. **Overlay first motion** - [`CursorSource::AwaitFirstMotion`]: the
 //!    position arrives with the first `wl_pointer.motion` after the overlay
 //!    maps. Universal: every Wayland compositor delivers
 //!    pointer motion to a mapped fullscreen window, which covers KDE
 //!    without a `KWin` script and GNOME (no public cursor-position API at
-//!    all - draft F13).
+//!    all).
 //!
 //! Every layer degrades to the next with a log entry; the ladder itself
 //! never fails and never panics - `AwaitFirstMotion` catches all desktops.
@@ -28,7 +28,7 @@
 //! # `KWin`-script bridge for KDE (roadmap, NOT v1)
 //!
 //! `workspace.cursorPos` via a `KWin` script plus a `D-Bus` bridge (the
-//! `plasma-cursor-eyes` precedent, draft F13) would give KDE a pre-map
+//! `plasma-cursor-eyes` precedent) would give KDE a pre-map
 //! position like Hyprland's IPC socket. Deliberately not v1: layer 3
 //! already covers KDE once the overlay maps, and the bridge would need a
 //! script installation with its own failure modes.
@@ -46,7 +46,7 @@ use crate::cursor::run_on_worker;
 use crate::hyprland_ipc::HyprlandIpc;
 use crate::icc::IccBackend;
 
-/// Which layer of the cursor-position ladder answered (draft F13).
+/// Which layer of the cursor-position ladder answered.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CursorSource {
     /// Layer 1: the `ext-image-copy-capture-v1` pointer-cursor session
@@ -174,7 +174,7 @@ async fn resolve_with(icc: Option<IccBackend>, hyprland: Option<HyprlandIpc>) ->
 ///
 /// Layer 3 (overlay first motion) is deliberately not a flag: it is
 /// universal - every Wayland compositor delivers `wl_pointer.motion` to a
-/// mapped fullscreen overlay (draft F13), so it applies on every desktop,
+/// mapped fullscreen overlay, so it applies on every desktop,
 /// including KDE without a `KWin` script and GNOME.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CursorCapabilities {
@@ -218,7 +218,7 @@ pub const CURSOR_CAPABILITY_DESKTOPS: [DesktopEnv; 7] = [
 ///   `ScreenShot2` `D-Bus` path). The `KWin`-script cursor bridge
 ///   is a roadmap enhancement (module docs).
 /// - `Gnome`: no ICC (mutter does not implement it, and GNOME exposes no
-///   public cursor-position API at all - draft F13).
+///   public cursor-position API at all).
 /// - `Other`: nothing assumed; layers 1-2 self-gate on the live probe and
 ///   environment, layer 3 always applies.
 #[must_use]

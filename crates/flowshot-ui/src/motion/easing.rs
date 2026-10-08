@@ -1,4 +1,4 @@
-//! Cubic-bezier easing evaluation (draft D8(d)).
+//! Cubic-bezier easing evaluation.
 //!
 //! The curves are the `flowshot_core::tokens::Easing` control points
 //! (`[x1, y1, x2, y2]`, the CSS `cubic-bezier()` convention): for a linear

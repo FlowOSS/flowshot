@@ -1,4 +1,4 @@
-//! The secure pixelate's deterministic gaussian noise (F27).
+//! The secure pixelate's deterministic gaussian noise (Flameshot).
 //!
 //! Flameshot seeds `std::mt19937 prng(42)` and pulls from two
 //! `std::normal_distribution<float>`s INSIDE the pixel loop - its own comment
@@ -8,9 +8,9 @@
 //! a clean-room reimplementation pins its OWN fully-specified generator
 //! instead of chasing libstdc++ bytes:
 //!
-//! - [`SplitMix64`] (seed [`NOISE_SEED`] = 42, the F27 constant) for the
+//! - [`SplitMix64`] (seed [`NOISE_SEED`] = 42, the Flameshot constant) for the
 //!   uniform stream,
-//! - Box-Muller for the normal deviates (f32, the F27 precision),
+//! - Box-Muller for the normal deviates (f32, the Flameshot precision),
 //! - the whole buffer PRE-GENERATED in the canonical consumption order
 //!   ("noise buffer PRE-GENERATED in canonical pixel order
 //!   from the seed (SIMD consumes the SAME buffer -> byte-identity by
@@ -25,13 +25,13 @@
 //! the buffer layout already guarantees any future SIMD path consumes the
 //! exact scalar sequence.
 
-/// The F27 PRNG seed (`pixelatetool.cpp`: `std::mt19937 prng(42)`).
+/// The Flameshot PRNG seed (`pixelatetool.cpp`: `std::mt19937 prng(42)`).
 pub(in crate::editor) const NOISE_SEED: u64 = 42;
 
 /// Normal deviates consumed per output pixel: 1 color + 4 fringes x 2 axes.
 pub(in crate::editor) const SAMPLES_PER_PIXEL: usize = 9;
 
-/// The F27 color-noise sigma (`std::normal_distribution<float> noise(0, 0.1f)`
+/// The Flameshot color-noise sigma (`std::normal_distribution<float> noise(0, 0.1f)`
 /// - applied in the [0,1] float color space).
 pub(in crate::editor) const COLOR_SIGMA: f32 = 0.1;
 
@@ -59,7 +59,7 @@ impl SplitMix64 {
     }
 }
 
-/// Box-Muller normal deviates over [`SplitMix64`] (f32, the F27 precision).
+/// Box-Muller normal deviates over [`SplitMix64`] (f32, the Flameshot precision).
 #[derive(Debug, Clone)]
 pub(in crate::editor) struct Gauss {
     rng: SplitMix64,
@@ -118,7 +118,7 @@ pub(in crate::editor) struct NoiseBuffer {
 
 impl NoiseBuffer {
     /// Generates the buffer for a `grid_w x grid_h` grid at tool `size`
-    /// (the F27 sampling sigma = `5 * size + 1`).
+    /// (the Flameshot sampling sigma = `5 * size + 1`).
     pub(in crate::editor) fn generate(grid_w: u32, grid_h: u32, size: u32) -> Self {
         let sampling_sigma = sampling_sigma(size);
         let mut gauss = Gauss::new(NOISE_SEED);
@@ -153,7 +153,7 @@ impl NoiseBuffer {
     }
 }
 
-/// The F27 sampling-noise sigma: `5 * size + 1` (saturating; the dispatch
+/// The Flameshot sampling-noise sigma: `5 * size + 1` (saturating; the dispatch
 /// clamps size to [1,50] but the bake API accepts any u32).
 #[expect(
     clippy::cast_precision_loss,

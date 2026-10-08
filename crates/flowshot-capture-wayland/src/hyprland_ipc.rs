@@ -6,7 +6,7 @@
 //! with the cursor position in global logical coordinates - the same space
 //! and value `hyprctl cursorpos` prints. `hyprctl` is itself only a client
 //! of this socket; `FlowShot` talks to the socket directly and NEVER spawns an
-//! external process (draft F28 no-shell-out).
+//! external process.
 //!
 //! # Wire protocol
 //!

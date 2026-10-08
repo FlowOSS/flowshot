@@ -31,7 +31,7 @@ pub const ACTION_OPEN_LABEL: &str = "Open";
 pub const ACTION_KEY_DEFAULT: &str = "default";
 
 /// Summary for the ONE-TIME toast after the first successful portal
-/// shortcut registration (Oracle r4 F-3: portal hotkeys need
+/// shortcut registration (portal hotkeys need
 /// daemon residency across logins, so the nudge recommends autostart and
 /// points at the settings surface - the clickable settings deep-link lands
 /// with the settings UI; recorded deviation).
@@ -57,7 +57,7 @@ pub const TRAY_ID: &str = "flowshot";
 /// Tray tooltip and `Title` property (tooltip `FlowShot`).
 pub const TRAY_TITLE: &str = "FlowShot";
 
-/// Tray menu: interactive region capture (F12 parity label).
+/// Tray menu: interactive region capture (Flameshot parity label).
 pub const MENU_TAKE_SCREENSHOT: &str = "Take Screenshot";
 
 /// Tray menu: full-desktop capture.
@@ -74,7 +74,7 @@ pub const MENU_CAPTURE_LAUNCHER: &str = "Capture Launcher";
 
 /// Tray menu: opens the configured `[save].path` (the platform pictures
 /// directory when empty) in the user's file manager via the `OpenURI`
-/// portal (F12 parity label).
+/// portal (Flameshot parity label).
 pub const MENU_OPEN_SAVE_PATH: &str = "Open Save Path";
 
 /// Tray menu: settings surface.

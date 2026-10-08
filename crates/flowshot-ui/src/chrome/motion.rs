@@ -1,4 +1,4 @@
-//! The chrome motion owner (draft D8(d)).
+//! The chrome motion owner.
 //!
 //! One place knows when the chrome animates: the toolbar's staggered
 //! fade+slide reveal (120-180ms band), the side-panel slide, the color-wheel

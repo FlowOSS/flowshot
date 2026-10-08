@@ -2,7 +2,7 @@
 //! negotiate the backend order, and construct the first backend that
 //! actually serves outputs - the negotiation ladder made executable.
 //!
-//! Session routing (plan decision #7): `WAYLAND_DISPLAY` set-and-nonempty
+//! Session routing: `WAYLAND_DISPLAY` set-and-nonempty
 //! selects the Wayland leg; else `DISPLAY` set-and-nonempty selects the X11
 //! leg; with neither variable the Wayland leg's spawn produces the existing
 //! typed connect error. The routing rule is the clipboard crate's
@@ -134,7 +134,7 @@ pub async fn open_session_excluding(
     }))
 }
 
-/// The X11 leg (plan decision #7): [`probe_x11`] feeds the same
+/// The X11 leg: [`probe_x11`] feeds the same
 /// negotiation ladder (yielding the single X11 rung); a failed probe is
 /// the existing typed no-backend error. Mirrors the Wayland leg's ladder
 /// walk deliberately - sibling platform legs stay parallel implementations

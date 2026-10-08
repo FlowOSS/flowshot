@@ -3,7 +3,7 @@
 //! Spawn policy: one borderless-fullscreen window per monitor,
 //! transparent, undecorated, always-on-top best effort (advisory on Wayland -
 //! compositor policy decides; the stale `with_always_on_top` builder does not
-//! exist in winit 0.30, Oracle r1 #2). Event dispatch lives in
+//! exist in winit 0.30). Event dispatch lives in
 //! [`super::handler::events`]; every event funnels through
 //! [`OverlayCore::route`](crate::OverlayCore), the central input router.
 
@@ -57,7 +57,7 @@ impl OverlayApp {
             // The crosshair is drawn by us; the compositor cursor would be
             // invisible over the fullscreen surface anyway (#1659-class fix).
             window.set_cursor_visible(false);
-            // Always-on IME model (draft D7): enabled from map, never toggled
+            // Always-on IME model: enabled from map, never toggled
             // per text session.
             window.set_ime_allowed(true);
             window.request_redraw();

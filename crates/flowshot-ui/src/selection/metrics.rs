@@ -1,13 +1,13 @@
-//! Token-derived selection metrics (draft F27).
+//! Token-derived selection metrics.
 //!
 //! Every size the selection engine needs derives from the design tokens via
 //! the Flameshot formulas - zero hardcoded visual constants:
 //!
 //! - `font_line_spacing = typography.base_size * ` [`LINE_SPACING_RATIO`]
 //! - `button_base_size = font_line_spacing * ` [`BUTTON_BASE_FACTOR`]
-//!   (F27: `globalvalues.cpp:14`, `buttonBaseSize = fontLineSpacing * 2.2`)
+//!   (Flameshot: `globalvalues.cpp:14`, `buttonBaseSize = fontLineSpacing * 2.2`)
 //! - `handle_area = button_base_size * ` [`HANDLE_AREA_FACTOR`] and
-//!   `grip = handle_area / ` [`GRIP_DIVISOR`] (F27: `selectionwidget.cpp`
+//!   `grip = handle_area / ` [`GRIP_DIVISOR`] (Flameshot: `selectionwidget.cpp`
 //!   constructor - `sideVal = buttonBaseSize() * 0.6`, `handleSide = sideVal / 2`)
 //!
 //! The behavior constants (drag threshold, minimum size) are spec values,
@@ -21,31 +21,31 @@ use flowshot_core::tokens::DesignTokens;
 /// metrics need an explicit line height, see the `render_smoke` precedent).
 pub const LINE_SPACING_RATIO: f64 = 1.2;
 
-/// `buttonBaseSize = fontLineSpacing * 2.2` (F27, `globalvalues.cpp:14`).
+/// `buttonBaseSize = fontLineSpacing * 2.2` (Flameshot, `globalvalues.cpp:14`).
 pub const BUTTON_BASE_FACTOR: f64 = 2.2;
 
-/// Handle hit-area side = `buttonBaseSize * 0.6` (F27, `selectionwidget.cpp`
+/// Handle hit-area side = `buttonBaseSize * 0.6` (Flameshot, `selectionwidget.cpp`
 /// constructor).
 pub const HANDLE_AREA_FACTOR: f64 = 0.6;
 
-/// Visual grip side = `area / 2` (F27, `selectionwidget.cpp` constructor).
+/// Visual grip side = `area / 2` (Flameshot, `selectionwidget.cpp` constructor).
 pub const GRIP_DIVISOR: f64 = 2.0;
 
-/// Minimum selection side in logical px. BORROW-MODIFIED (F27): Flameshot
+/// Minimum selection side in logical px. BORROW-MODIFIED (Flameshot): Flameshot
 /// enforces 1x1; `FlowShot` enforces 10x10 so a selection is always a usable
 /// capture region.
 pub const MIN_SELECTION_SIDE: f64 = 10.0;
 
 /// Drag-create threshold in logical px, manhattan distance, strictly greater
-/// (F27: `capturewidget.cpp` L46 `MOUSE_DISTANCE_TO_START_MOVING 3`, L980
+/// (Flameshot: `capturewidget.cpp` L46 `MOUSE_DISTANCE_TO_START_MOVING 3`, L980
 /// `manhattanLength() > 3`) - a click is never a selection.
 pub const DRAG_THRESHOLD: f64 = 3.0;
 
-/// Selection outline width in logical px (F27: `selectionwidget.cpp`
+/// Selection outline width in logical px (Flameshot: `selectionwidget.cpp`
 /// `paintEvent` draws with the default 1px cosmetic pen).
 pub const OUTLINE_WIDTH: f64 = 1.0;
 
-/// HUD background opacity, 0-255 (F27: `capturewidget.cpp` `paintEvent`
+/// HUD background opacity, 0-255 (Flameshot: `capturewidget.cpp` `paintEvent`
 /// fills the xywh box with `uicolor` at alpha 200).
 pub const HUD_BACKGROUND_ALPHA: u8 = 200;
 
@@ -66,7 +66,7 @@ pub struct SelectionMetrics {
     pub font_size: f64,
     /// Font line spacing (`typography.base_size * ` [`LINE_SPACING_RATIO`]).
     pub font_line_spacing: f64,
-    /// `font_line_spacing * ` [`BUTTON_BASE_FACTOR`] (F27 `buttonBaseSize`).
+    /// `font_line_spacing * ` [`BUTTON_BASE_FACTOR`] (Flameshot `buttonBaseSize`).
     pub button_base_size: f64,
     /// Side of a handle's square hit area (`button_base_size * `
     /// [`HANDLE_AREA_FACTOR`]).
@@ -81,7 +81,7 @@ pub struct SelectionMetrics {
 
 impl SelectionMetrics {
     /// Derives every metric from the design tokens (the only input - the
-    /// formulas are the F27 spec constants above).
+    /// formulas are the Flameshot spec constants above).
     #[must_use]
     pub fn from_tokens(tokens: &DesignTokens) -> Self {
         let font_size = f64::from(tokens.typography.base_size);

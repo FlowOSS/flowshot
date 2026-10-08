@@ -2,7 +2,7 @@
 //! design tokens").
 //!
 //! The settings window and the capture launcher dialog
-//! are the only egui surfaces (draft D8(b) exception), and both must still
+//! are the only egui surfaces, and both must still
 //! look like `FlowShot`: every color, radius, and spacing value projected
 //! into [`egui::Style`] comes from [`DesignTokens`] and the `[ui]`
 //! config group - accent/contrast pickers in the Interface tab re-theme the

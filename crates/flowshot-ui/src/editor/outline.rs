@@ -1,4 +1,4 @@
-//! The object-selection outline (F27 parity visual): black 3px
+//! The object-selection outline (Flameshot parity visual): black 3px
 //! solid under white 1px dotted (`capturewidget.cpp` object outline). The
 //! widths and the Qt-DotLine dash rhythm are BEHAVIOR spec constants (like
 //! the selection engine's 3px drag threshold), not theme tokens; the dot
@@ -13,7 +13,7 @@ use crate::render::{Color, DisplayList, Point, Rect, Shape};
 
 use super::paint::{local_len, local_x, local_y};
 
-/// Object-selection outline: outer black stroke width, logical px (F27).
+/// Object-selection outline: outer black stroke width, logical px (Flameshot).
 pub const OBJECT_OUTLINE_OUTER: f32 = 3.0;
 /// Object-selection outline: inner white dotted stroke width, logical px.
 pub const OBJECT_OUTLINE_INNER: f32 = 1.0;
@@ -22,7 +22,7 @@ pub const DASH_ON: f32 = 1.0;
 /// ...2px gap.
 pub const DASH_OFF: f32 = 2.0;
 
-/// Appends the F27 object-selection outline (black 3px solid + white 1px
+/// Appends the Flameshot object-selection outline (black 3px solid + white 1px
 /// dotted) around a scene-space bounding rect.
 pub(super) fn append_object_outline(list: &mut DisplayList, output: &OutputInfo, rect: SceneRect) {
     let x0 = local_x(output, f64::from(rect.x));

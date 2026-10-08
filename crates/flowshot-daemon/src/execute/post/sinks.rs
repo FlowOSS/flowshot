@@ -123,9 +123,10 @@ impl ClipboardBackend for NoSessionClipboard {
 ///
 /// Infallible by contract: a daemon with no display session gets the inert
 /// [`NoSessionClipboard`] instead of an early return, so one unavailable
-/// clipboard can never discard an already-successful capture (the review's
-/// CRITICAL finding: the hoisted `?` aborted the whole pipeline headless
-/// and turned the untouched `upload_e2e` tests red on CI).
+/// clipboard can never discard an already-successful capture (a hoisted
+/// fallible construction once aborted the whole pipeline headless,
+/// discarding successful captures and reddening the untouched
+/// `upload_e2e` tests on CI).
 pub(super) fn clipboard_for_run(state: Option<&Arc<DaemonState>>) -> ClipboardHoldRelease {
     let lost = Arc::new(AtomicBool::new(false));
     let hook = hold_release_hook(state.cloned(), Arc::clone(&lost));

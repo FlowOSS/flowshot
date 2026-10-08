@@ -262,7 +262,7 @@ fn blend_over_opaque(dst: &mut [u8], src: &[u8]) {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
     // Fixture scales are exact binary fractions and fixture geometry is
-    // integral (geometry-notepad convention).
+    // integral (the integral-valued-f64 fixture convention).
     #![allow(clippy::float_cmp)]
 
     use flowshot_core::geometry::{

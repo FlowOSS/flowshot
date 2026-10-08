@@ -1,4 +1,4 @@
-//! The X11 headless reroute (plan decision #6's seam): `--no-edit`
+//! The X11 headless reroute (the headless-verb seam): `--no-edit`
 //! invocations whose target resolves without a window skip the overlay
 //! child and ride the direct leg.
 

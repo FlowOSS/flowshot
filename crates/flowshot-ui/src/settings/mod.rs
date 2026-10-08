@@ -1,5 +1,5 @@
-//! The settings surface: egui embedded in OUR wgpu renderer
-//! (draft D8(b), the Ruffle pattern) - one of the recorded exceptions to
+//! The settings surface: egui embedded in OUR wgpu renderer (the Ruffle
+//! guest-renderer pattern) - one of the recorded exceptions to
 //! the winit+wgpu+cosmic-text stack (the others are the launcher dialog
 //! and the first-launch consent dialog); the shared embedded plumbing
 //! lives in `crate::egui_host`, and the overlay and editor never touch
@@ -22,7 +22,7 @@
 //!   right-aligned label column, gutter, control column at
 //!   [`FormMetrics::control_x`]) every row/card is laid out on - the same
 //!   numbers the offscreen pixel asserts consume.
-//! - `tabs`: the four F12 tabs (General / Interface / Filename Editor /
+//! - `tabs`: the four Flameshot tabs (General / Interface / Filename Editor /
 //!   Shortcuts) as immediate-mode projections of the model, rendered as
 //!   token-surface section cards over the grid, with a pill tab bar and a
 //!   docked bottom action bar.

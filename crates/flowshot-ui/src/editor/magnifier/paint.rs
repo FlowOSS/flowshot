@@ -25,13 +25,13 @@ use crate::render::{
 /// effects = `1 << 40 + id`).
 const MAGNIFIER_TEXTURE_RAW: u64 = 1 << 14;
 
-/// The circle variant's ring stroke width in physical px (F27: the border
+/// The circle variant's ring stroke width in physical px (Flameshot: the border
 /// pen `setWidth(4)`).
 const RING_WIDTH: f32 = 4.0;
 
 /// The pixel-grid line ink: neutral gray at 38% (the grid's `paint_grid`
 /// precedent - the palette carries no neutral token yet; the settings
-/// theming action is recorded in the notepad).
+/// theming action is a recorded follow-up).
 const GRID_COLOR: Color = Color {
     r: 128.0 / 255.0,
     g: 128.0 / 255.0,
@@ -247,7 +247,7 @@ fn paint_grid_lines(list: &mut DisplayList, rect: Rect) {
     }
 }
 
-/// The four crosshair arms marking the pixel under the cursor (F27
+/// The four crosshair arms marking the pixel under the cursor (Flameshot
 /// `crossHairTop/Right/Bottom/Left` rects, `offset`-shifted so a clamped
 /// window keeps the arms on the cursor's true row/column).
 fn paint_arms(list: &mut DisplayList, rect: Rect, offset: (i32, i32), zoom: f32, color: Color) {
@@ -255,7 +255,7 @@ fn paint_arms(list: &mut DisplayList, rect: Rect, offset: (i32, i32), zoom: f32,
     let (ox, oy) = (f32_from_i32(offset.0), f32_from_i32(offset.1));
     let half = zoom / 2.0;
     let mag = f32_from_i32(i32::try_from(MAG_PIXELS).unwrap_or(8));
-    // F27 crossHair rects, term by term: the arm band is one zoomed pixel
+    // Flameshot crossHair rects, term by term: the arm band is one zoomed pixel
     // wide, centered on the cursor's window column/row (center + zoom *
     // offset, shifted half a cell onto the pixel), reaching MAG_PIXELS
     // cells to each window edge (shrinking under the edge clamp).

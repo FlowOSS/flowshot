@@ -1,4 +1,4 @@
-//! Frozen-frame backdrop QA harness (plan todo 15).
+//! Frozen-frame backdrop QA harness.
 //!
 //! Spawns the multi-monitor overlay around a PRE-CAPTURED frozen session and
 //! composes it live: each window renders its output's frozen frame 1:1, the
@@ -32,14 +32,13 @@
 //!     [--magnifier square|circle]
 //! ```
 //!
-//! Todo 26: `--toolbar` re-projects the chrome button order (the config
+//! `--toolbar` re-projects the chrome button order (the config
 //! `buttons` list acceptance) and `--draw-color-toml` installs the draw-color
 //! persistence sink - every wheel pick rewrites `[editor].draw_color` in
-//! that TOML file (the F27 persistence acceptance, file-asserted).
+//! that TOML file (the Flameshot persistence acceptance, file-asserted).
 //!
 //! With `--features test-drive`, stdin lines inject synthetic events through
-//! the production routing path (the todo-13 injector protocol, extended by
-//! todos 16/20/22): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
+//! the production routing path (the injector protocol): `move <slot> <x> <y>`, `btn <slot> <left|right|middle>
 //! <down|up>`, `wheel <slot> <angle-delta>`, `mods <slot>
 //! <none|shift|ctrl|...[+...]>`, `press/release <slot>
 //! <escape|enter|left|right|up|down|home|end|backspace|a|c|q|p|d|s|r|m|t|b|i|z|delete|0..9|...>`,
@@ -47,16 +46,16 @@
 //! non-ASCII through `Ime::Commit` - the real platform split), and
 //! `ime <slot> <enabled|disabled|preedit|commit> [text]`.
 //!
-//! Todo 21: the REAL shape tools (pencil/line/arrow/rect/ellipse/marker/
-//! invert) are registered - the todo-20 line stub is gone; every F12 tool
-//! key now draws its production shape. Todo 22: the text tool (IME editing)
-//! is registered too. Todo 23: the secure pixelate (key `b`) and its blur
+//! The REAL shape tools (pencil/line/arrow/rect/ellipse/marker/
+//! invert) are registered; every Flameshot tool
+//! key now draws its production shape. The text tool (IME editing)
+//! is registered too. The secure pixelate (key `b`) and its blur
 //! variant (rebound to `v` for QA - blur ships unbound) are registered, and
 //! the FIRST `--frame` output's pixels are installed as the editor frame
 //! the destructive tools bake from.
 //!
-//! Todo 18: the launch-flow flags drive the production
-//! [`flowshot_ui::LaunchRequest`] seam (the binary layer's todo-38 shape):
+//! The launch-flow flags drive the production
+//! [`flowshot_ui::LaunchRequest`] seam (the binary layer's shape):
 //!
 //! - `--launch-region WxH[+X+Y]`: offset-less centers at the cursor
 //! - `--launch-at-cursor`: the output under the cursor
@@ -147,25 +146,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         selection: args.selection,
     };
     if let Some((index, path)) = &args.verify_offscreen {
-        // The launch seam (todo 18) supersedes the legacy --selection seed:
+        // The launch seam supersedes the legacy --selection seed:
         // the resolved rect flows through the REAL OverlayCore::launch path.
         let selection = resolve_launch_selection(&args, &capture.outputs)?.or(args.selection);
         return verify_offscreen(capture, *index, path, selection);
     }
     let runtime: Result<OverlayRuntime, UiError> = OverlayRuntime::with_capture(capture, options);
     let mut runtime = runtime?;
-    // Todo 21/22/23/24: the production tools (the todo-35 binary layer will do
-    // the same registration).
+    // The production tools (the binary layer does the same registration).
     flowshot_ui::register_shape_tools(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_text_tool(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_pixelate_tools(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_counter_tool(runtime.core_mut().editor_mut().registry_mut());
     flowshot_ui::register_selection_tools(runtime.core_mut().editor_mut().registry_mut());
-    // Todo 23: the destructive tools bake from the installed editor frame
-    // (the pristine read side); the blur variant ships unbound (no F12 key)
-    // so QA rebinds it to `v`. Todo 24: the counter tool ships unbound so QA
-    // rebinds it to `n`. Todo 27: the move-selection tool ships unbound so QA
-    // rebinds it to `x` (the plan's Ctrl+M is a modified key, which the
+    // The destructive tools bake from the installed editor frame
+    // (the pristine read side); the blur variant ships unbound (no Flameshot key)
+    // so QA rebinds it to `v`. The counter tool ships unbound so QA
+    // rebinds it to `n`. The move-selection tool ships unbound so QA
+    // rebinds it to `x` (Flameshot's Ctrl+M is a modified key, which the
     // shortcut system doesn't support; simple key binding follows the
     // blur/counter precedent).
     runtime.core_mut().install_frame(editor_frame);
@@ -184,8 +182,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .editor_mut()
         .shortcuts_mut()
         .rebind(ToolKind::Move, Some(winit::keyboard::KeyCode::KeyX));
-    // Todo 25: z-order ships panel-driven with NO default keys (plan); QA
-    // rebinds raise/lower to k/j (both off the F12 map) - the blur-rebind
+    // Z-order ships panel-driven with NO default keys; QA
+    // rebinds raise/lower to k/j (both off the Flameshot map) - the blur-rebind
     // precedent. Object move needs no binding: press-drag-release on a
     // selected object with no draw tool active.
     runtime
@@ -196,8 +194,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             Some(winit::keyboard::KeyCode::KeyK),
             Some(winit::keyboard::KeyCode::KeyJ),
         );
-    // Todo 26: the chrome config projection (button-order acceptance) and
-    // the draw-color persistence sink (F27 TOML write; the example owns the
+    // The chrome config projection (button-order acceptance) and
+    // the draw-color persistence sink (Flameshot TOML write; the example owns the
     // file path - the lib seam is the pure callback).
     if let Some(toolbar) = &args.toolbar {
         let buttons = toolbar
@@ -226,9 +224,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             })));
     }
     apply_launch_args(&mut runtime, &args)?;
-    // Todo 17: `--magnifier <square|circle>` projects the `[editor]`
+    // `--magnifier <square|circle>` projects the `[editor]`
     // magnifier config (visible from launch); the in-session toggle key is
-    // `l` either way (F12 binds no magnifier key - the grid-F precedent).
+    // `l` either way (Flameshot binds no magnifier key - the grid-F precedent).
     if let Some(shape) = &args.magnifier {
         let shape = match shape.as_str() {
             "circle" => MagnifierShape::Circle,
@@ -247,8 +245,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Builds the editor's frozen-frame view from the FIRST loaded frame:
 /// upright RGBA (remapped through the output transform when rotated), the
-/// output's scale, and its global logical origin (todo 23's read side;
-/// todo 35 decides the production stitched-vs-per-output policy).
+/// output's scale, and its global logical origin (the pixelate read side;
+/// the binary layer decides the production stitched-vs-per-output policy).
 fn editor_frame(frames: &[Frame], outputs: &[OutputInfo]) -> Option<FramePixels> {
     let frame = frames.first()?;
     let OutputRef::Connector(connector) = &frame.output else {
@@ -287,7 +285,7 @@ fn editor_frame(frames: &[Frame], outputs: &[OutputInfo]) -> Option<FramePixels>
     })
 }
 
-/// The todo-18 live-path wiring in the binary layer's shape: the request
+/// The launch-path live wiring in the binary layer's shape: the request
 /// seeds the core through the production seam, and the region sink persists
 /// `[capture].last_region` into the `--launch-config` TOML (the
 /// `DrawColorSink` pattern - the example owns the file path).
@@ -314,9 +312,9 @@ fn apply_launch_args(
 }
 
 /// Builds the typed launch request from the `--launch-*` flags (the binary
-/// layer's todo-38 mapping stand-in: the LIB never parses - the harness
+/// layer's mapping stand-in: the LIB never parses - the harness
 /// plays the CLI's already-typed `RegionToken` side). `None` when no
-/// launch flag is present (the pre-todo-18 behavior stays byte-identical).
+/// launch flag is present (the no-launch-flag behavior stays byte-identical).
 fn launch_request(args: &Args) -> Result<Option<LaunchRequest>, Box<dyn std::error::Error>> {
     let selectors = [
         args.launch_region.is_some(),
@@ -363,7 +361,7 @@ fn launch_request(args: &Args) -> Result<Option<LaunchRequest>, Box<dyn std::err
 }
 
 /// The harness-side `WxH[+X+Y]` reader (positive offsets; the signed
-/// grammar belongs to the CLI, todo 35 - the lib takes parsed rects).
+/// grammar belongs to the CLI - the lib takes parsed rects).
 fn parse_preselect(token: &str) -> Result<Preselect, Box<dyn std::error::Error>> {
     let invalid = || format!("--launch-region wants WxH[+X+Y] (got {token:?})");
     let (size_part, offsets) = match token.find('+') {
@@ -422,11 +420,11 @@ fn resolve_launch_selection(
     Ok(core.selection().rect())
 }
 
-/// Headless orientation/scale verification (Metis #16 edge case): plans the
+/// Headless orientation/scale verification: plans the
 /// backdrop, renders output `index`'s window scene through the REAL
 /// upload+commands+render path into an offscreen texture, and writes the
 /// readback as a PNG - no window, no GUI disturbance. A resolved launch
-/// `selection` (todo 18) renders through the same path the live overlay
+/// `selection` renders through the same path the live overlay
 /// uses: the dim cutout plus the selection engine's outline/grips.
 fn verify_offscreen(
     capture: FrozenCapture,
@@ -553,7 +551,7 @@ fn parse_pair(text: &str, flag: &str) -> Result<(f64, f64), Box<dyn std::error::
 }
 
 fn parse_selection(text: &str) -> Result<LogicalRect, Box<dyn std::error::Error>> {
-    // WxH+X+Y, global logical px (the todo-18 --region grammar).
+    // WxH+X+Y, global logical px (the launch --region grammar).
     let (size, origin) = text.split_once('+').ok_or("--selection wants WxH+X+Y")?;
     let (width, height) = size.split_once('x').ok_or("--selection wants WxH+X+Y")?;
     let (x, y) = origin.split_once('+').ok_or("--selection wants WxH+X+Y")?;
@@ -816,8 +814,8 @@ fn parse_one(line: &str) -> Option<flowshot_ui::SyntheticInput> {
     }
 }
 
-/// The injector's key-name table: navigation keys, the F12 tool activation
-/// keys (todo 20), undo/redo, delete, and the digit size adjusters.
+/// The injector's key-name table: navigation keys, the Flameshot tool activation
+/// keys, undo/redo, delete, and the digit size adjusters.
 #[cfg(feature = "test-drive")]
 fn key_code(name: &str) -> Option<winit::keyboard::KeyCode> {
     use winit::keyboard::KeyCode;
