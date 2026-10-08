@@ -30,12 +30,40 @@ pub enum ExportError {
 /// Errors produced during clipboard operations.
 #[derive(Debug, Error)]
 pub enum ClipboardError {
-    /// Wayland data-control transport failure (`wl-clipboard-rs`).
+    /// Transport failure of the underlying display-server clipboard:
+    /// Wayland `zwlr_data_control` (`wl-clipboard-rs`) or X11 (`x11rb`).
+    /// The boxed source keeps each transport's own error type and its
+    /// `Display` quality.
     #[error("clipboard transport error: {0}")]
-    Transport(#[from] wl_clipboard_rs::copy::Error),
+    Transport(#[source] Box<dyn std::error::Error + Send + Sync>),
     /// Encoding the capture for the clipboard failed.
     #[error("clipboard image encoding error: {0}")]
     Encode(#[from] ExportError),
+    /// X11-specific clipboard failure with no transport source: ICCCM
+    /// timestamp acquisition timed out, or the server refused/lost the
+    /// `CLIPBOARD` selection ownership.
+    #[error("x11 clipboard error: {0}")]
+    X11(String),
+    /// Neither a Wayland nor an X11 session is reachable from this
+    /// environment (`WAYLAND_DISPLAY` and `DISPLAY` both unset or empty).
+    #[error("no display session: neither WAYLAND_DISPLAY (Wayland) nor DISPLAY (X11) is set")]
+    NoSession,
+}
+
+impl ClipboardError {
+    /// Box a transport error from any clipboard backend.
+    pub(crate) fn transport<E>(err: E) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        Self::Transport(Box::new(err))
+    }
+}
+
+impl From<wl_clipboard_rs::copy::Error> for ClipboardError {
+    fn from(err: wl_clipboard_rs::copy::Error) -> Self {
+        Self::transport(err)
+    }
 }
 
 /// Errors produced during upload operations.
@@ -91,4 +119,41 @@ pub enum PinError {
     /// The clipboard hand-off failed.
     #[error("pin copy failed: {0}")]
     Clipboard(#[from] ClipboardError),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn transport_display_keeps_boxed_source_message() {
+        let err = ClipboardError::transport(std::io::Error::other("socket gone"));
+        assert_eq!(err.to_string(), "clipboard transport error: socket gone");
+    }
+
+    #[test]
+    fn transport_source_chain_survives_boxing() {
+        let err = ClipboardError::transport(std::io::Error::other("boom"));
+        assert!(std::error::Error::source(&err).is_some());
+    }
+
+    #[test]
+    fn wayland_error_converts_without_display_loss() {
+        let source = wl_clipboard_rs::copy::Error::NoSeats;
+        let message = source.to_string();
+        let err = ClipboardError::from(source);
+        assert_eq!(
+            err.to_string(),
+            format!("clipboard transport error: {message}")
+        );
+    }
+
+    #[test]
+    fn x11_variant_names_the_failure() {
+        let err = ClipboardError::X11("server refused CLIPBOARD ownership".to_owned());
+        assert_eq!(
+            err.to_string(),
+            "x11 clipboard error: server refused CLIPBOARD ownership"
+        );
+    }
 }

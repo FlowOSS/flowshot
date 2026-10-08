@@ -3,7 +3,7 @@
 //!
 //! Dependency inversion: the UI crate owns this INTERFACE and never sees
 //! the platform action crates (purity gate - `flowshot-actions` is
-//! Wayland-native by design). The binary layer (CLI or daemon)
+//! platform-native by design). The binary layer (CLI or daemon)
 //! implements [`PinActionSink`] by calling
 //! `flowshot_actions::pin::{copy_pin, save_pin}` (the clipboard/export
 //! modules) and mirrors window lifecycle into

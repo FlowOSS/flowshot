@@ -6,8 +6,11 @@
 //! dispositions). ZERO unmapped rows in either direction, the
 //! Amendment-#3 drop list complete (the todo-2 acceptance: "todo 38
 //! validator consumes it"), the full TYPE_* 0..24 enum present, and every
-//! path-shaped `verified_by` entry existing on disk. Runs in CI via
-//! `cargo test --workspace`.
+//! path-shaped `verified_by` entry existing on disk - except entries under
+//! the gitignored local-only `.omo/evidence/` QA trail, which are enforced
+//! exactly as before on machines that carry the trail and skipped with an
+//! explicit note where it cannot exist (fresh clone, CI; see
+//! docs/verification.md). Runs in CI via `cargo test --workspace`.
 
 #![allow(clippy::unwrap_used)]
 
@@ -53,6 +56,11 @@ struct CapabilityMap {
 struct CapabilityRow {
     id: String,
 }
+
+/// The gitignored local-only QA trail root (docs/verification.md): never
+/// committed, so `verified_by` entries under it are only enforceable on a
+/// machine that actually carries the trail.
+const EVIDENCE_ROOT: &str = ".omo/evidence/";
 
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -231,9 +239,41 @@ fn verified_by_paths_exist_and_meta_points_at_real_files() {
             "meta path does not exist: {relative}"
         );
     }
+    // `.omo/evidence/` is the gitignored local-only QA trail
+    // (docs/verification.md): never committed, so a fresh clone or CI can
+    // never carry it. The trail counts as present only when at least one
+    // matrix-referenced evidence file exists on disk - the directory merely
+    // existing is not enough, because an unrelated in-flight QA bundle can
+    // create the root on a machine that never had the historical trail.
+    // Present: every path is enforced exactly as before (a deleted or
+    // typo'd evidence file still fails here). Absent: evidence entries are
+    // skipped with an explicit note - never fabricated, never a silent
+    // permanent ignore.
+    let trail_present = matrix
+        .row
+        .iter()
+        .flat_map(|row| row.verified_by.iter())
+        .filter(|entry| entry.starts_with(EVIDENCE_ROOT))
+        .any(|entry| root.join(entry).exists());
+    if !trail_present {
+        let skipped = matrix
+            .row
+            .iter()
+            .flat_map(|row| row.verified_by.iter())
+            .filter(|entry| entry.starts_with(EVIDENCE_ROOT))
+            .count();
+        eprintln!(
+            "SKIP: the local-only .omo/evidence/ QA trail is absent on this machine \
+             (fresh clone / CI / second dev machine) - {skipped} verified_by evidence-path \
+             checks not run; see docs/verification.md"
+        );
+    }
     for row in &matrix.row {
         for entry in &row.verified_by {
             if entry.starts_with("test:") {
+                continue;
+            }
+            if !trail_present && entry.starts_with(EVIDENCE_ROOT) {
                 continue;
             }
             assert!(

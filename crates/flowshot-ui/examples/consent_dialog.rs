@@ -14,8 +14,10 @@
 use std::process::ExitCode;
 
 use flowshot_ui::consent::{ConsentCallback, ConsentWindow, ConsentWindowOptions};
-use flowshot_ui::pins::WindowCustomizer;
-use winit::platform::wayland::WindowAttributesExtWayland;
+
+mod common;
+
+use common::session_window_customizer;
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()
@@ -31,9 +33,10 @@ fn main() -> ExitCode {
                 choice.enabled, choice.include_technical_details, choice.asked_on_first_launch
             );
         })),
-        window_customizer: Some(WindowCustomizer::new(|attributes| {
-            attributes.with_name("flowshot-consent", "Help improve FlowShot?")
-        })),
+        window_customizer: Some(session_window_customizer(
+            "flowshot-consent",
+            "Help improve FlowShot?",
+        )),
         ..ConsentWindowOptions::default()
     };
     let result = ConsentWindow::new(options).and_then(ConsentWindow::run);

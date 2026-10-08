@@ -24,10 +24,13 @@ because the live run caught them).
 
 ## Live-session QA and its class labels
 
-Live QA runs on the development machine: Hyprland 0.56.2, NVIDIA GPU, two
-monitors at scale 1 (plus synthetic headless outputs for scale-2 and rotated
-fixtures). Every claim in FlowShot's docs and evidence carries one of these
-classes:
+Live QA runs on two machines: the primary development box (Hyprland
+0.56.2, NVIDIA GPU, two monitors at scale 1, plus synthetic headless
+outputs for scale-2 and rotated fixtures) and a second i3/X11 laptop
+(single eDP-1 2880x1620, derived scale 2.25) used for the X11 capture
+path; every LIVE-verified claim names the machine its bundle ran on.
+Every claim in FlowShot's docs and evidence
+carries one of these classes:
 
 - **LIVE-verified**: exercised on the real session, with the observed values
   recorded (pixel oracles via grim, `hyprctl`/`busctl` reads, logs).
@@ -36,8 +39,10 @@ classes:
   the path was not run live on that desktop.
 - **Unit-level**: covered by tests only; the live path is explicitly not
   claimed.
-- **Hardware-gated**: cannot run on the QA machine at all (no KDE or GNOME
-  session, no touchscreen). Never claimed, scheduled for suitable hardware.
+- **Hardware-gated**: cannot run on the QA machine the check is scheduled
+  for at all (neither box has a KDE or GNOME session, no touchscreen; the
+  X11 laptop is single-panel, so multi-monitor checks are gated there).
+  Never claimed, scheduled for suitable hardware.
 - **Deferred**: runnable on the QA machine but queued, usually because it
   needs a visible window or an in-flight component (see the batch mechanism
   below).
@@ -66,6 +71,59 @@ the exact commands, the observed values, the gate outputs, the verification
 class of every claim, and honest records of deviations and foreign defects
 found along the way. Evidence files record observed values inline because
 temp artifacts are transient.
+
+### Landed bundles
+
+- **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
+  i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA
+  laptop's working repo - observed values inlined here per the convention
+  above). Ten checks, all PASS:
+  full capture pixel-cross-checked against an independent
+  `import -window root` oracle, `--region WxH+X+Y` geometry pixel-exact
+  against a crop of the full frame, screen by connector name and by index,
+  `--raw` stdout PNG, `--print-geometry`, daemon-owned CLIPBOARD with INCR
+  (a 1.08 MB offer served after the CLI exited and gone after the daemon
+  was killed), the exit-code matrix (0/1/2/4), SHM fd-passing vs plain
+  timing (38 ms vs 80 ms), the `-d` delay path, and daemon idle-exit
+  lifecycle. Per-check values and environment dump: `index.txt` in the
+  bundle.
+- **X11 Phase B interactive UI** (2026-10-05/06, **LIVE-verified** on the
+  second QA machine - the i3/X11 laptop, single eDP-1 2880x1620 @ derived
+  scale 2.25; binary under test hash-identical to HEAD `8961497` at bundle
+  time). Multi-monitor overlay spanning and the Wayland row of the
+  exit-code matrix are **Hardware-gated** on that single-panel machine and
+  are NOT claimed. Bundle: `.omo/evidence/x11-phase-b/` (local to the QA
+  laptop's working repo; the observed values are inlined here per the
+  convention above). Twenty interactive checks plus four rider proofs, all
+  PASS under a private dbus-daemon + private `XDG_CONFIG_HOME`,
+  timeout-bounded and self-reversing, XTest-state pre-flight: overlay
+  select→accept (drag HUD `400x266+355+177` exact logical,
+  `last_region` persisted 356,178,400,267, daemon-owned clipboard IHDR
+  900x600 outliving the child); editor rect tool with digit sizing
+  (stroke pixels exact config `#FF0000`, zero pointer→render offset);
+  transparency decision KEEP `with_transparent(true)` (backdrop
+  mean=21623/65535, decisively not black); Esc→exit 3 one-shot; color
+  picker (`#090D12` clipboard-exact); the three X11 headless reroutes
+  (`capture last` → 450x338 PNG with ZERO overlay windows,
+  `--region at-cursor` → 2880x1620 with both legs exit 0, offset-less
+  `--region 500x300` → 1125x675 cursor-centered exactly); pin lifecycle
+  (1472x842 @704,412 exact; drag +145,+95 exact; zoom click4 ⇒ 1560x891
+  = 1.03² with Position UNCHANGED proving the TopLeft anchor; opacity
+  RMSE(D,F)=0 exact restore); multi-pin with independent close (the
+  synthetic-key chain-close fix proven by bisect log); `pins_alive`
+  persistence past the idle grace; settings, consent and launcher windows
+  on X11 (launcher 900x396 @990,635 exact, X11-probe outputs listed,
+  typed-geometry submit → 900x675, cancel → exit 3 in three clean runs);
+  riders: clipboard hold-release on SelectionClear (verbatim
+  `ownership lost` → `releasing the clipboard-offer hold` → `IdleExit`
+  chain, 280 µs) and the stale-daemon self-check on both axes
+  (deleted-suffix and identity-mismatch; retry chain exit 0 in ~2.4 s,
+  io-failed=0). The run produced four code fixes: pin
+  `request_inner_size` on X11, `ResizeAnchor` session routing, the pin
+  session-gate exemption, and the synthetic-key filter. One
+  non-reproducing transient (exploratory launcher exit=0, clean in three
+  re-runs) and one QA-environment defect (stuck XTest Escape) are
+  recorded as such in the bundle.
 
 ## The deferred GUI-QA batch
 

@@ -164,7 +164,10 @@ mod tests {
         let gated = GatedNotifier::new(Arc::new(recorder.clone()), false);
         gated.notify(NotificationRecord::Aborted);
         gated.notify(NotificationRecord::Error("boom".to_owned()));
-        assert!(recorder.records().is_empty());
+        assert_eq!(
+            recorder.records(),
+            [] as [crate::notify::NotificationRecord; 0]
+        );
     }
 
     #[test]

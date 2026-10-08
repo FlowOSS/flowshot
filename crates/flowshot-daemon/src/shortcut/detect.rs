@@ -2,8 +2,11 @@
 //!
 //! Detection mirrors `flowshot-capture-wayland`'s decision order (shared
 //! [`DesktopEnv`] vocabulary from `flowshot-capture`): the Wayland gate
-//! first (`FlowShot` v1 is Wayland-only, so an X11 session must not claim a
-//! Wayland desktop), then `HYPRLAND_INSTANCE_SIGNATURE` (exported
+//! first (the bind snippets and portal targets this ladder feeds are
+//! Wayland compositor facilities, so an X11 session must not claim a
+//! Wayland desktop - X11 shortcuts are window-manager binds, see
+//! `docs/setup-x11.md`), then
+//! `HYPRLAND_INSTANCE_SIGNATURE` (exported
 //! unconditionally by Hyprland, spoofable `XDG_CURRENT_DESKTOP` second),
 //! then the colon-separated `XDG_CURRENT_DESKTOP` preference list.
 //!

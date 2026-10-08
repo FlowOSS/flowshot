@@ -41,6 +41,7 @@ pub mod post;
 pub mod session;
 pub mod settings;
 mod sink;
+mod window;
 
 use std::path::PathBuf;
 use std::sync::Arc;

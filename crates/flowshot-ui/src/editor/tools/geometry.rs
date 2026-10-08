@@ -350,7 +350,10 @@ mod tests {
             simplify(&line[..2], RDP_EPSILON),
             vec![point(0.0, 0.0), point(1.0, 0.0)]
         );
-        assert!(simplify(&[], RDP_EPSILON).is_empty());
+        assert_eq!(
+            simplify(&[], RDP_EPSILON),
+            [] as [flowshot_core::scene::Point; 0]
+        );
     }
 
     #[test]

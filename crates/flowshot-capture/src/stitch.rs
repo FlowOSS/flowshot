@@ -2,7 +2,8 @@
 //! through the physical-first [`OutputLayout`] algebra of `flowshot-core`.
 //!
 //! The stitched frame follows the shared region-capture contract (identical
-//! to [`MockBackend`]): destination scale 1.0 - one pixel per logical unit -
+//! to [`MockBackend`](crate::MockBackend)): destination scale 1.0 - one
+//! pixel per logical unit -
 //! [`OutputRef::Composite`], and [`Transform::Normal`]. Each output
 //! contributes its physical crop (computed with THAT output's scale, never
 //! an averaged factor), resampled nearest-neighbour into its logical
@@ -10,11 +11,15 @@
 //! first. Sequential per-output captures mean fast-moving content can skew
 //! between outputs (`grim`-equivalent, documented in the runner).
 //!
-//! [`MockBackend`]: flowshot_capture::MockBackend
+//! This module is the shared, platform-free stitch algebra BOTH platform
+//! crates consume (each re-exports it as its own `stitch`): the executable
+//! form of the shared region-capture contract. `kind` tags every error
+//! with the calling backend.
 
 use bytes::BytesMut;
-use flowshot_capture::{BackendKind, CaptureError, Frame, FrameBuffer, FrameFormat, OutputRef};
 use flowshot_core::geometry::{LogicalRect, OutputInfo, OutputLayout, PhysicalRect, Transform};
+
+use crate::{BackendKind, CaptureError, Frame, FrameBuffer, FrameFormat, OutputRef};
 
 /// The outputs of one capture run paired with their frames.
 ///
@@ -129,9 +134,11 @@ fn stitched_size(clamped: &LogicalRect) -> Option<(u32, u32)> {
 /// Rounds a logical edge to an integer pixel edge (half away from zero),
 /// saturating at the `i32` bounds; non-finite input rounds to `0`.
 ///
-/// Shared with the portal composite geometry ([`crate::portal`]), which
-/// rounds logical output origins into physical composite space the same way.
-pub(crate) fn round_to_i32(value: f64) -> i32 {
+/// Shared with the Wayland portal composite geometry
+/// (`flowshot-capture-wayland`'s `portal` module), which rounds logical
+/// output origins into physical composite space the same way.
+#[must_use]
+pub fn round_to_i32(value: f64) -> i32 {
     if !value.is_finite() {
         return 0;
     }

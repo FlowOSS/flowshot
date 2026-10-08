@@ -31,6 +31,17 @@
 //! Hyprland reconfigure the floating window to exactly that size (growth
 //! AND shrink verified), and winit reports the real extent via
 //! `WindowEvent::Resized`.
+//!
+//! # Resize mechanics on X11 (live-probed 2026-10-06, i3)
+//!
+//! The mirror image: a `WM_NORMAL_HINTS` update alone reconfigures nothing
+//! (the WM applies hints on map/user-resize, never spontaneously), so the
+//! shell ALSO issues `request_inner_size` - winit's X11 leg re-pins the
+//! hints to the target and sends the client `ConfigureRequest` the WM
+//! honors. A size-only `ConfigureRequest` keeps the window's TOP-LEFT
+//! stationary, so X11 sessions want [`ResizeAnchor::TopLeft`] (the daemon
+//! routes the anchor per session; `Center` would mispredict the offset by
+//! `(old - new) / 2`).
 
 use super::spec::{WHEEL_UNITS_PER_STEP, ZOOM_STEP};
 
