@@ -97,7 +97,7 @@ impl NotifySink for NotifyBridge {
 /// pipeline run (the hook can fire before the pipeline reports
 /// `Copied`): the post-run `held(true)` must not re-pin an already-lost
 /// offer.
-pub(super) struct ClipboardHoldRelease {
+pub(in crate::execute) struct ClipboardHoldRelease {
     /// The session clipboard, wired with the loss hook.
     pub clipboard: Clipboard,
     /// Set once the served offer was lost to another client.
@@ -127,7 +127,9 @@ impl ClipboardBackend for NoSessionClipboard {
 /// fallible construction once aborted the whole pipeline headless,
 /// discarding successful captures and reddening the untouched
 /// `upload_e2e` tests on CI).
-pub(super) fn clipboard_for_run(state: Option<&Arc<DaemonState>>) -> ClipboardHoldRelease {
+pub(in crate::execute) fn clipboard_for_run(
+    state: Option<&Arc<DaemonState>>,
+) -> ClipboardHoldRelease {
     let lost = Arc::new(AtomicBool::new(false));
     let hook = hold_release_hook(state.cloned(), Arc::clone(&lost));
     let clipboard = match Clipboard::for_session_with_loss_hook(hook) {
@@ -152,6 +154,25 @@ fn hold_release_hook(state: Option<Arc<DaemonState>>, lost: Arc<AtomicBool>) -> 
             state.set_clipboard_offer_held(false);
         }
     })
+}
+
+/// Pins the daemon's `clipboard-offer` persistence reason after a
+/// successfully served offer - unless the loss latch says the offer was
+/// already superseded during the copy: the hook released the reason, and
+/// re-pinning would resurrect a hold nothing owns. Shared by the capture
+/// pipeline and the color pick so both clipboard owners age out the same
+/// way (X11: the hook fires on `SelectionClear`; Wayland: no replaced
+/// callback, the documented conservative never-clear stands).
+pub(in crate::execute) fn hold_offer_unless_lost(
+    state: Option<&Arc<DaemonState>>,
+    lost: &AtomicBool,
+) {
+    if lost.load(Ordering::Acquire) {
+        return;
+    }
+    if let Some(state) = state {
+        state.set_clipboard_offer_held(true);
+    }
 }
 
 #[cfg(test)]
@@ -184,6 +205,22 @@ mod tests {
         let hook = hold_release_hook(None, Arc::clone(&lost));
         hook();
         assert!(lost.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn hold_offer_unless_lost_pins_only_a_surviving_offer() {
+        // A served offer with no takeover pins the daemon (the reason the
+        // color pick and the capture pipeline both hold for).
+        let state = Arc::new(DaemonState::new(false, Instant::now()));
+        hold_offer_unless_lost(Some(&state), &AtomicBool::new(false));
+        assert!(state.reasons().clipboard_offer);
+        // Superseded DURING the copy: the hook already released, so the
+        // pin must NOT resurrect the hold (the color-path regression).
+        let raced = Arc::new(DaemonState::new(false, Instant::now()));
+        hold_offer_unless_lost(Some(&raced), &AtomicBool::new(true));
+        assert!(!raced.reasons().clipboard_offer);
+        // One-shot CLI (no daemon state): never panics, nothing to pin.
+        hold_offer_unless_lost(None, &AtomicBool::new(false));
     }
 
     #[test]
