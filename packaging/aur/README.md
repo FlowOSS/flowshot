@@ -1,12 +1,17 @@
 # AUR packaging for FlowShot
 
-Package family (owner decision 2026-10-09: ship `-git` and `-bin` only):
+AUR packages (owner decision 2026-10-09: ship `-git` and `-bin` only):
 
-| Directory | AUR pkgbase | Role | Published? |
-|---|---|---|---|
-| `flowshot-git/` | `flowshot-git` | VCS package: builds the tip of `main` on the user's machine | yes |
-| `flowshot-bin/` | `flowshot-bin` | repackages the CI-built `flowoss-flowshot-<ver>-1-x86_64.pkg.tar.zst` release asset | yes |
-| `flowoss-flowshot/` | (not on the AUR) | INTERNAL: the recipe `.github/workflows/release.yml` uses to build that asset in a clean `archlinux:base-devel` container | no |
+| Directory | AUR pkgbase | Role |
+|---|---|---|
+| `flowshot-git/` | `flowshot-git` | VCS package: builds the tip of `main` on the user's machine |
+| `flowshot-bin/` | `flowshot-bin` | repackages the CI-built `flowoss-flowshot-<ver>-1-x86_64.pkg.tar.zst` release asset |
+
+The recipe that BUILDS that release asset is **not an AUR package** and lives
+outside this directory: [`packaging/arch/PKGBUILD`](../arch/PKGBUILD)
+(pkgname `flowoss-flowshot`, consumed only by `.github/workflows/release.yml`
+in a clean Arch container; kept ready so publishing a stable source package
+later is a one-step aur.yml change).
 
 `packaging/` files are 0BSD ([LICENSE](LICENSE)) per the Arch package-source
 convention; the packaged software stays GPL-3.0-or-later.

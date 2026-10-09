@@ -34,9 +34,6 @@ concurrency:
   group: aur-publish
   cancel-in-progress: false
 
-env:
-  ARCH_IMAGE: archlinux:base-devel
-
 jobs:
   publish-bin:
     if: >-
@@ -45,7 +42,7 @@ jobs:
        (inputs.package == 'bin' || inputs.package == 'both'))
     runs-on: ubuntu-24.04
     container:
-      image: ${{ env.ARCH_IMAGE }}
+      image: archlinux:base-devel
     steps:
       - name: Base deps
         run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap github-cli
@@ -94,6 +91,8 @@ jobs:
       - name: Repackage + namcap (the gate)
         run: |
           set -euo pipefail
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chmod 440 /etc/sudoers.d/builder
           sudo -u builder bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm'
           cd /work-pkg
           namcap PKGBUILD
@@ -116,7 +115,7 @@ jobs:
        (inputs.package == 'git' || inputs.package == 'both'))
     runs-on: ubuntu-24.04
     container:
-      image: ${{ env.ARCH_IMAGE }}
+      image: archlinux:base-devel
     steps:
       - name: Base deps
         run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap
@@ -136,6 +135,13 @@ jobs:
         run: |
           set -euo pipefail
           useradd -m builder
+          # makepkg --syncdeps shells out to `sudo pacman` to resolve the
+          # declared depends/makedepends/checkdepends - without NOPASSWD the
+          # gate dies on a password prompt. Keeping syncdeps (instead of
+          # pre-installing deps as root) is deliberate: it proves the
+          # declared dependency set installs from a clean base.
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chmod 440 /etc/sudoers.d/builder
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cp -a packaging/aur/flowshot-git /work-pkg
           chown -R builder:builder /work-pkg "$GITHUB_WORKSPACE"

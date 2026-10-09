@@ -2,8 +2,9 @@
 #
 # FlowShot - screenshot + annotation for Linux (Wayland and X11).
 # STABLE recipe - INTERNAL RELEASE ASSET FACTORY (owner decision 2026-10-09):
-# this PKGBUILD is consumed by .github/workflows/release.yml (package-arch
-# job) to build the `flowoss-flowshot-<ver>-1-x86_64.pkg.tar.zst` GitHub
+# NOT an AUR submission - it lives in packaging/arch/ (not packaging/aur/)
+# because its only consumer is .github/workflows/release.yml (package-arch
+# job), which builds the `flowoss-flowshot-<ver>-1-x86_64.pkg.tar.zst` GitHub
 # release asset that the AUR `flowshot-bin` package ships. It is NOT published
 # to the AUR itself right now (the family is flowshot-git + flowshot-bin);
 # publishing it later is a one-step aur.yml change. pkgrel MUST stay 1 unless

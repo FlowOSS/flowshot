@@ -16,6 +16,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
+/// Load-sensitive budget (the AGENTS.md rule: raise budgets, never weaken
+/// assertions). The former 15 s acquisition/exit waits timed out on loaded
+/// 4-vCPU CI containers while passing on 16-core dev machines; green-path
+/// speed is unchanged because the deadline only bounds polling. Same 45 s
+/// budget as `testsupport::CALL_TIMEOUT`.
+const TEST_BUDGET: Duration = Duration::from_secs(45);
+
 use flowshot_core::Config;
 use flowshot_daemon::bus::SERVICE;
 use flowshot_daemon::command::{DaemonCommand, RecordingSink};
@@ -95,7 +102,7 @@ impl Drop for PrivateBus {
 
 /// Polls the broker until `SERVICE` has an owner (bounded).
 async fn wait_for_name(address: &str) {
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + TEST_BUDGET;
     loop {
         if let Ok(connection) = flowshot_daemon::instance::connect(Some(address)).await {
             let owned = match zbus::fdo::DBusProxy::new(&connection).await {
@@ -120,7 +127,7 @@ async fn wait_for_name(address: &str) {
 
 /// Polls the recorder until `expected` appears (bounded).
 async fn wait_for_command(recorder: &RecordingSink, expected: &DaemonCommand) {
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + TEST_BUDGET;
     loop {
         if recorder.commands().contains(expected) {
             return;
@@ -183,7 +190,7 @@ async fn name_contention_forwards_argv_to_the_winner() {
     // And releasing the last persistence reason lets the idle grace exit
     // the winner (real clock, short grace - bounded).
     state.set_shortcuts_registered(false);
-    let reason = tokio::time::timeout(Duration::from_secs(15), winner)
+    let reason = tokio::time::timeout(TEST_BUDGET, winner)
         .await
         .unwrap()
         .unwrap();
@@ -225,7 +232,7 @@ async fn second_daemon_start_reports_already_running() {
 
     // Cleanup: releasing the tray lets the first daemon idle-exit.
     state.set_tray(false);
-    let reason = tokio::time::timeout(Duration::from_secs(15), first)
+    let reason = tokio::time::timeout(TEST_BUDGET, first)
         .await
         .unwrap()
         .unwrap();

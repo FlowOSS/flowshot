@@ -23,10 +23,6 @@ permissions: {}
 
 env:
   CARGO_TERM_COLOR: always
-  # Pin by digest once the images are chosen for the release; tags kept
-  # readable here, digests recorded in the run log.
-  JAMMY_IMAGE: ubuntu:22.04
-  ARCH_IMAGE: archlinux:base-devel
 
 jobs:
   meta:
@@ -93,7 +89,7 @@ jobs:
     needs: meta
     runs-on: ubuntu-24.04
     container:
-      image: ${{ env.JAMMY_IMAGE }}
+      image: ubuntu:22.04
     permissions:
       contents: read
     steps:
@@ -122,7 +118,7 @@ jobs:
     needs: meta
     runs-on: ubuntu-24.04
     container:
-      image: ${{ env.JAMMY_IMAGE }}
+      image: ubuntu:22.04
     permissions:
       contents: read
       id-token: write
@@ -220,7 +216,7 @@ jobs:
     needs: meta
     runs-on: ubuntu-24.04
     container:
-      image: ${{ env.ARCH_IMAGE }}
+      image: archlinux:base-devel
     permissions:
       contents: read
       id-token: write
@@ -233,6 +229,11 @@ jobs:
             base-devel cargo clang desktop-file-utils git librsvg pipewire \
             pkgconf ttf-dejavu pacman-contrib namcap
           useradd -m builder
+          # makepkg --syncdeps shells out to `sudo pacman`; NOPASSWD keeps the
+          # container build unattended (the deps are pre-installed above, so
+          # syncdeps is a verification pass here, not the installer).
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chmod 440 /etc/sudoers.d/builder
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -241,7 +242,7 @@ jobs:
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           VER="${{ needs.meta.outputs.version }}"
-          cp -a packaging/aur/flowoss-flowshot /work-pkg
+          cp -a packaging/arch /work-pkg
           chown -R builder:builder /work-pkg "$GITHUB_WORKSPACE"
           cd /work-pkg
           sed -i "s/^pkgver=.*/pkgver=$VER/" PKGBUILD
