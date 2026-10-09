@@ -1,0 +1,152 @@
+# AUR publishing (design: ship-readiness research run 2026-10-09).
+# Separate workflow so release.yml never needs AUR credentials and this one
+# never needs contents:write. Two flows:
+#   - flowshot-bin on release:published: the release asset IS the source;
+#     repackage + publish (no compilation).
+#   - flowshot-git on paths changes to its PKGBUILD: rebuild-gated republish.
+#     Deliberately NOT per-release: AUR guidelines forbid pkgver-only commits
+#     for VCS packages (their pkgver() runs on the user's machine).
+# The build jobs are the gate: the AUR never receives a PKGBUILD that has not
+# been proven to build with exactly the makedepends it declares (hand-rolled
+# archlinux container instead of a third-party publish action - see
+# packaging/aur/README.md for the candidate-by-candidate rejection evidence).
+name: aur
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths: ['packaging/aur/flowshot-git/**']
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Which package to publish'
+        required: true
+        default: 'bin'
+        type: choice
+        options: [bin, git, both]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aur-publish
+  cancel-in-progress: false
+
+env:
+  ARCH_IMAGE: archlinux:base-devel
+
+jobs:
+  publish-bin:
+    if: >-
+      (github.event_name == 'release' && !github.event.release.prerelease) ||
+      (github.event_name == 'workflow_dispatch' &&
+       (inputs.package == 'bin' || inputs.package == 'both'))
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ env.ARCH_IMAGE }}
+    steps:
+      - name: Base deps
+        run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap github-cli
+      - uses: actions/checkout@v4
+      - name: Check the AUR credential
+        id: key
+        env:
+          KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -n "$KEY" ]]; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AUR_SSH_PRIVATE_KEY not set - build gate runs, publish skipped (see packaging/aur/README.md)"
+          fi
+      - name: Resolve version + fetch the release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)"
+          fi
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a stable tag: $tag" >&2; exit 1; }
+          echo "tag=$tag" >> /tmp/aur-env
+          echo "pkgver=${tag#v}" >> /tmp/aur-env
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+            --pattern "flowoss-flowshot-${tag#v}-1-x86_64.pkg.tar.zst" --dir /tmp/asset
+      - name: Render the -bin PKGBUILD (pkgver + real b2sum)
+        run: |
+          set -euo pipefail
+          . /tmp/aur-env
+          useradd -m builder
+          cp -a packaging/aur/flowshot-bin /work-pkg
+          cd /work-pkg
+          sed -i "s/^pkgver=.*/pkgver=$pkgver/" PKGBUILD
+          b2="$(b2sum "/tmp/asset/flowoss-flowshot-$pkgver-1-x86_64.pkg.tar.zst" | cut -d' ' -f1)"
+          sed -i "s/^b2sums=.*/b2sums=('$b2')/" PKGBUILD
+          grep -q "SKIP" PKGBUILD && { echo "checksum still SKIP" >&2; exit 1; }
+          chown -R builder:builder /work-pkg
+          # makepkg refuses to run as root - even --printsrcinfo.
+          sudo -u builder makepkg --printsrcinfo > .SRCINFO
+      - name: Repackage + namcap (the gate)
+        run: |
+          set -euo pipefail
+          sudo -u builder bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm'
+          cd /work-pkg
+          namcap PKGBUILD
+          namcap ./flowshot-bin-*.pkg.tar.zst
+      - name: Publish
+        if: steps.key.outputs.have == 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_GIT_NAME: ${{ secrets.AUR_GIT_NAME }}
+          AUR_GIT_EMAIL: ${{ secrets.AUR_GIT_EMAIL }}
+        run: |
+          set -euo pipefail
+          . /tmp/aur-env
+          packaging/aur/publish.sh flowshot-bin /work-pkg "Update to $pkgver"
+
+  publish-git:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (inputs.package == 'git' || inputs.package == 'both'))
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ env.ARCH_IMAGE }}
+    steps:
+      - name: Base deps
+        run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap
+      - uses: actions/checkout@v4
+      - name: Check the AUR credential
+        id: key
+        env:
+          KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -n "$KEY" ]]; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AUR_SSH_PRIVATE_KEY not set - build gate runs, publish skipped (see packaging/aur/README.md)"
+          fi
+      - name: Build gate (full makepkg incl. check())
+        run: |
+          set -euo pipefail
+          useradd -m builder
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cp -a packaging/aur/flowshot-git /work-pkg
+          chown -R builder:builder /work-pkg "$GITHUB_WORKSPACE"
+          sudo -u builder bash -c 'cd /work-pkg && makepkg --printsrcinfo > .SRCINFO && makepkg --syncdeps --noconfirm'
+          cd /work-pkg
+          namcap PKGBUILD
+          namcap ./flowshot-git-*.pkg.tar.zst
+      - name: Publish
+        if: steps.key.outputs.have == 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_GIT_NAME: ${{ secrets.AUR_GIT_NAME }}
+          AUR_GIT_EMAIL: ${{ secrets.AUR_GIT_EMAIL }}
+        run: packaging/aur/publish.sh flowshot-git /work-pkg "Update flowshot-git"

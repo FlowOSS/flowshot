@@ -1,0 +1,78 @@
+# Maintainer: FlowOSS <aur at flowoss dot org>
+#
+# FlowShot - screenshot + annotation for Linux (Wayland and X11).
+# PREBUILT variant: ships the .pkg.tar.zst that the project's own release
+# workflow builds in a clean archlinux:base-devel container (makepkg, full
+# check() suite, namcap-gated) and publishes as a GitHub release asset. This
+# PKGBUILD only repackages that artifact, so an install is a download instead
+# of a 10-25 minute aws-lc + wgpu compile. rustdesk-bin is the precedent.
+#
+# AUR rules shaping this file:
+#   - prebuilt deliverables while sources are available => mandatory `-bin`
+#     suffix (AUR_submission_guidelines#Rules_of_submission).
+#   - nothing is compiled, so options=('!strip' '!lto' '!debug') keeps makepkg
+#     from re-processing the binaries.
+#   - no .install hook: pacman's own gtk-update-icon-cache and
+#     update-desktop-database hooks (owned by the `gtk-update-icon-cache` and
+#     `desktop-file-utils` packages, verified with pacman -Qo) fire on the
+#     installed file paths.
+#
+# CI CONTRACT: the asset NAME and its b2sum are public. The name embeds
+# pkgver and pkgrel of the internal flowoss-flowshot recipe; if that recipe's
+# pkgrel ever moves off 1, this source URL must change in lockstep or every
+# user build 404s. The publish workflow rewrites pkgver + b2sums per release.
+#
+# NAME NOTE: the AUR pkgbase `flowshot` belongs to an unrelated project which
+# also installs /usr/bin/flowshot; pacman's file-conflict check prevents
+# co-installation. The family therefore provides/conflicts ONLY its own
+# hardcoded names - never `flowshot` (that would make `pacman -S flowshot` a
+# coin flip between two different programs).
+pkgname=flowshot-bin
+_pkgname=flowshot
+_stablepkg=flowoss-flowshot
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Screenshot and annotation tool for Wayland and X11 with mixed-DPI support (prebuilt binary)'
+arch=('x86_64')
+url='https://github.com/FlowOSS/flowshot'
+license=('GPL-3.0-or-later')
+depends=(
+  'glibc'
+  'libgcc'
+  'libpipewire-0.3.so'   # pipewire: the only system library in DT_NEEDED
+  # dlopen'd or data-only, hence invisible to ldd/namcap - keep them:
+  'wayland'              # wayland-sys/dlib dlopens libwayland-client.so.0
+  'vulkan-icd-loader'    # ash ("loaded" default) dlopens libvulkan.so.1
+  'fontconfig'           # cosmic-text/fontdb parses /etc/fonts/fonts.conf
+  'ttf-font'             # virtual provide: zero installed fonts panics cosmic-text
+  'hicolor-icon-theme'
+)
+optdepends=(
+  'xdg-desktop-portal: portal capture, global shortcuts and OpenURI'
+  'xdg-desktop-portal-gnome: portal backend for GNOME'
+  'xdg-desktop-portal-kde: portal backend for KDE Plasma (KWin ScreenShot2)'
+  'xdg-desktop-portal-hyprland: portal backend for Hyprland'
+  'xdg-desktop-portal-wlr: portal backend for wlroots compositors (Sway)'
+  'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
+  'gnome-shell-extension-appindicator: system tray icon under GNOME'
+)
+provides=("$_stablepkg=$pkgver")
+conflicts=("$_stablepkg" 'flowshot-git')
+source=("$url/releases/download/v$pkgver/$_stablepkg-$pkgver-1-x86_64.pkg.tar.zst")
+# Filled by the publish workflow (b2sum of the published release asset).
+b2sums=('SKIP')
+options=('!strip' '!lto' '!debug')
+
+package() {
+  # The asset IS an Arch package: unpack its payload tree, dropping the
+  # package metadata members (they belong to the flowoss-flowshot pkgname;
+  # makepkg regenerates flowshot-bin's own).
+  bsdtar -xf "$srcdir/$_stablepkg-$pkgver-1-x86_64.pkg.tar.zst" \
+    -C "$pkgdir" \
+    --exclude .PKGINFO --exclude .MTREE --exclude .BUILDINFO --exclude .INSTALL
+
+  # Licenses must live under /usr/share/licenses/$pkgname for THIS package.
+  if [[ -d "$pkgdir/usr/share/licenses/$_stablepkg" ]]; then
+    mv "$pkgdir/usr/share/licenses/$_stablepkg" "$pkgdir/usr/share/licenses/$pkgname"
+  fi
+}

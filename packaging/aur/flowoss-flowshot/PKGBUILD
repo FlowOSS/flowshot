@@ -1,0 +1,155 @@
+# Maintainer: FlowOSS <aur at flowoss dot org>
+#
+# FlowShot - screenshot + annotation for Linux (Wayland and X11).
+# STABLE recipe - INTERNAL RELEASE ASSET FACTORY (owner decision 2026-10-09):
+# this PKGBUILD is consumed by .github/workflows/release.yml (package-arch
+# job) to build the `flowoss-flowshot-<ver>-1-x86_64.pkg.tar.zst` GitHub
+# release asset that the AUR `flowshot-bin` package ships. It is NOT published
+# to the AUR itself right now (the family is flowshot-git + flowshot-bin);
+# publishing it later is a one-step aur.yml change. pkgrel MUST stay 1 unless
+# flowshot-bin's source URL is updated in lockstep - the asset name embeds it.
+#
+# NAME NOTE: the AUR pkgbase `flowshot` is taken by an unrelated project
+# (Troplo's Spectacle upload wrapper, a flameshot fork, which also installs
+# /usr/bin/flowshot), so this package is org-qualified. Everything in the
+# flowshot family must therefore hardcode its sibling names instead of using
+# the usual ${pkgname%-git} idiom, which would resolve to `flowshot`.
+#
+# Build-dependency rationale is identical to flowshot-git; see that PKGBUILD
+# for the per-entry evidence (clang for bindgen/libspa-sys, pipewire+pkgconf
+# for the libpipewire-0.3 probe, librsvg for the hicolor PNGs, no cmake
+# because aws-lc-sys uses its cc builder, and options=('!lto') because slim
+# LTO objects break the aws-lc link under ld.lld).
+pkgname=flowoss-flowshot
+_pkgname=flowshot
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Screenshot and annotation tool for Wayland and X11 with mixed-DPI support'
+arch=('x86_64')
+url='https://github.com/FlowOSS/flowshot'
+license=('GPL-3.0-or-later')
+depends=(
+  'glibc'
+  'libgcc'
+  'libpipewire-0.3.so'
+  'wayland'
+  'vulkan-icd-loader'
+  'fontconfig'
+  'ttf-font'
+  'hicolor-icon-theme'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'desktop-file-utils'
+  'git'          # namcap: a git source (even tag-pinned) is a VCS source
+  'librsvg'
+  'pipewire'
+  'pkgconf'
+)
+checkdepends=('ttf-dejavu')
+optdepends=(
+  'xdg-desktop-portal: portal capture, global shortcuts and OpenURI'
+  'xdg-desktop-portal-gnome: portal backend for GNOME'
+  'xdg-desktop-portal-kde: portal backend for KDE Plasma (KWin ScreenShot2)'
+  'xdg-desktop-portal-hyprland: portal backend for Hyprland'
+  'xdg-desktop-portal-wlr: portal backend for wlroots compositors (Sway)'
+  'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
+  'gnome-shell-extension-appindicator: system tray icon under GNOME'
+)
+# Hardcoded, NOT ${pkgname%-git}: see the NAME NOTE above.
+conflicts=('flowshot-git')
+# Arch_package_guidelines#Package_sources: pin the tag OBJECT hash rather than
+# the tag name (tags can be force-pushed), and append `?signed` +
+# validpgpkeys= once the project signs its tags.
+_tag=0000000000000000000000000000000000000000   # git rev-parse "v$pkgver"
+source=("$_pkgname::git+$url.git#tag=$_tag")
+# Placeholder: the publish job runs `updpkgsums`, which fills a real checksum
+# for git sources too (VCS_package_guidelines#Git_checksums), and refuses to
+# push while this still says SKIP.
+b2sums=('SKIP')
+options=('!lto')
+
+prepare() {
+  cd "$_pkgname"
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+  cd "$_pkgname"
+  export CARGO_TARGET_DIR=target
+  export CARGO_PROFILE_RELEASE_LTO=thin
+  export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+  # See flowshot-git/PKGBUILD: keep user/CI builds light; the workspace
+  # profile's line-tables-only debug info is for the tarball job's
+  # objcopy split, not for pacman packages (makepkg strips anyway).
+  export CARGO_PROFILE_RELEASE_DEBUG=false
+  cargo build --release --frozen --bin flowshot --bin flowshot-daemon
+  cargo build --release --frozen -p flowshot-cli --example man_pages
+}
+
+check() {
+  cd "$_pkgname"
+  export CARGO_TARGET_DIR=target
+  cargo test --frozen --workspace
+}
+
+package() {
+  cd "$_pkgname"
+
+  install -Dm0755 target/release/flowshot "$pkgdir/usr/bin/flowshot"
+  install -Dm0755 target/release/flowshot-daemon "$pkgdir/usr/bin/flowshot-daemon"
+
+  install -Dm0644 packaging/flowshot.desktop.in \
+    "$pkgdir/usr/share/applications/org.flowoss.FlowShot.desktop"
+  desktop-file-validate "$pkgdir/usr/share/applications/org.flowoss.FlowShot.desktop"
+
+  install -Dm0644 assets/logo.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/org.flowoss.FlowShot.svg"
+  local size
+  for size in 48 64 128 256 512; do
+    install -dm0755 "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps"
+    rsvg-convert -w "$size" -h "$size" assets/logo.svg \
+      -o "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/org.flowoss.FlowShot.png"
+  done
+
+  ./target/release/examples/man_pages "$srcdir/man"
+  install -dm0755 "$pkgdir/usr/share/man/man1" "$pkgdir/usr/share/man/man5"
+  install -m0644 "$srcdir"/man/*.1 -t "$pkgdir/usr/share/man/man1/"
+  install -m0644 "$srcdir"/man/*.5 -t "$pkgdir/usr/share/man/man5/"
+
+  install -dm0755 \
+    "$pkgdir/usr/share/bash-completion/completions" \
+    "$pkgdir/usr/share/zsh/site-functions" \
+    "$pkgdir/usr/share/fish/vendor_completions.d" \
+    "$pkgdir/usr/share/elvish/lib"
+  ./target/release/flowshot completions bash \
+    > "$pkgdir/usr/share/bash-completion/completions/flowshot"
+  ./target/release/flowshot completions zsh \
+    > "$pkgdir/usr/share/zsh/site-functions/_flowshot"
+  ./target/release/flowshot completions fish \
+    > "$pkgdir/usr/share/fish/vendor_completions.d/flowshot.fish"
+  ./target/release/flowshot completions elvish \
+    > "$pkgdir/usr/share/elvish/lib/flowshot.elv"
+
+  install -Dm0644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm0644 NOTICES "$pkgdir/usr/share/licenses/$pkgname/NOTICES"
+  install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" \
+    README.md docs/config-reference.md docs/dbus-api.md
+}
+
+# ---------------------------------------------------------------------------
+# VARIANT (pipeline-axis decision): if the release workflow publishes a
+# CI-generated tarball asset that already contains man/, completions/ and the
+# rendered hicolor PNGs, swap the two blocks below and drop `librsvg` from
+# makedepends plus the whole --example man_pages phase from build(). That cuts
+# the dev-dependency compile out of every user's build.
+#
+#   source=("$pkgname-$pkgver.tar.zst::$url/releases/download/v$pkgver/flowshot-$pkgver-src.tar.zst")
+#   package() { tar -xf ... man/ completions/ icons/ ; install them directly }
+#
+# The tradeoff: a CI-built asset cannot be verified against a signed git tag,
+# so if this route is taken, sign the asset (or publish a detached .asc and add
+# validpgpkeys=) to keep Arch's "sources should be verified wherever possible"
+# rule satisfied.
+# ---------------------------------------------------------------------------

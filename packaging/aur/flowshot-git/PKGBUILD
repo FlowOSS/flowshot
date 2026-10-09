@@ -1,0 +1,193 @@
+# Maintainer: FlowOSS <aur at flowoss dot org>
+#
+# FlowShot - screenshot + annotation for Linux (Wayland and X11).
+# VCS package: builds the tip of `main`. The stable sibling package builds a
+# tagged GitHub tarball instead.
+#
+# Build-dependency notes (all verified against the crate graph, not guessed):
+#   clang    - bindgen 0.72 is a build-dependency of libspa-sys 0.10.1
+#              (pipewire crate); it dlopens libclang.so, which on Arch is owned
+#              by `clang` (not `llvm-libs`).
+#   pipewire - libspa-sys/pipewire-sys pkg-config probe libpipewire-0.3 and
+#              libspa-0.2 at build time; the Arch `pipewire` package ships the
+#              headers and .pc files (there is no separate -dev package).
+#   pkgconf  - that probe is pkg-config(1).
+#   librsvg  - rsvg-convert renders the hicolor PNG sizes from assets/logo.svg
+#              at package time (packaging/ICONS.md forbids shipping the 2048px
+#              logo.png as a hicolor size).
+#   cmake is deliberately NOT listed: aws-lc-sys (via rustls <- reqwest/sentry)
+#   logs "Building with: CC" on x86_64-linux and only takes the CMake path when
+#   AWS_LC_SYS_CMAKE_BUILDER=1 or the `fips` feature is on.
+#
+# --all-features must NEVER be used here: the daemon's `test-drive` feature
+# wires a headless event-injection seam into the shipped binary.
+pkgname=flowshot-git
+_pkgname=flowshot
+pkgver=0.1.0.r0.g0000000
+pkgrel=1
+pkgdesc='Screenshot and annotation tool for Wayland and X11 with mixed-DPI support'
+arch=('x86_64')
+url='https://github.com/FlowOSS/flowshot'
+license=('GPL-3.0-or-later')
+depends=(
+  'glibc'
+  'libgcc'
+  'libpipewire-0.3.so'   # pipewire: the only system library in DT_NEEDED
+  # The next three are invisible to ldd/namcap on purpose: they are dlopen'd
+  # or data-only, so namcap reports "Dependency included, but may not be
+  # needed" for each. They are real runtime requirements - keep them:
+  'wayland'              # wayland-sys/dlib dlopens libwayland-client.so.0
+  'vulkan-icd-loader'    # ash ("loaded" default) dlopens libvulkan.so.1
+  'fontconfig'           # cosmic-text/fontdb parses /etc/fonts/fonts.conf
+  'ttf-font'             # virtual provide: zero installed fonts panics cosmic-text
+  'hicolor-icon-theme'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'desktop-file-utils'
+  'git'
+  'librsvg'
+  'pipewire'
+  'pkgconf'
+)
+optdepends=(
+  'xdg-desktop-portal: portal capture, global shortcuts and OpenURI'
+  'xdg-desktop-portal-gnome: portal backend for GNOME'
+  'xdg-desktop-portal-kde: portal backend for KDE Plasma (KWin ScreenShot2)'
+  'xdg-desktop-portal-hyprland: portal backend for Hyprland'
+  'xdg-desktop-portal-wlr: portal backend for wlroots compositors (Sway)'
+  'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
+  'gnome-shell-extension-appindicator: system tray icon under GNOME'
+)
+# The test suite renders text through cosmic-text; a clean chroot has no fonts
+# and the editor text tests panic in cosmic-text shape.rs. Same fix as the
+# official alacritty package (checkdepends=('ttf-dejavu')).
+checkdepends=('ttf-dejavu')
+# The family's stable pkgbase. Hardcoded on purpose: the usual
+# ${pkgname%-git} idiom resolves to `flowshot`, which is an UNRELATED project's
+# pkgbase on the AUR (Troplo's Spectacle upload wrapper, a flameshot fork that
+# also installs /usr/bin/flowshot). Claiming it in provides= would make
+# `pacman -S flowshot` a coin flip between two different programs, and
+# conflicts= against it would make our install demand removing an unrelated
+# app - pacman's own file-conflict check on /usr/bin/flowshot already prevents
+# co-installation, so the collision is documented rather than declared.
+_stablepkg=flowoss-flowshot
+provides=("$_stablepkg=$pkgver")
+conflicts=("$_stablepkg")
+source=("$_pkgname::git+$url.git")
+b2sums=('SKIP')
+# Arch's default makepkg.conf enables `lto`, which exports -flto=auto to every
+# C compilation. aws-lc-sys (vendored C/C++ crypto, pulled in by rustls <-
+# reqwest/sentry) is built by the `cc` crate and then linked into the Rust
+# binary by rustc: with slim LTO objects the link dies with hundreds of
+# `undefined symbol: aws_lc_0_45_0_*` errors (reproduced in a clean
+# archlinux:base-devel container). The Rust package guidelines say to disable
+# `lto` for packages that bundle C/C++ libraries; zellij and lapce-git do the
+# same. Rust's own LTO is unaffected and is set in build().
+options=('!lto')
+
+pkgver() {
+  cd "$_pkgname"
+  (
+    set -o pipefail
+    git describe --long --tags --abbrev=7 2>/dev/null |
+      sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' ||
+      printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  )
+}
+
+prepare() {
+  cd "$_pkgname"
+  # No RUSTUP_TOOLCHAIN export: rust-toolchain.toml already pins stable.
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+  cd "$_pkgname"
+  export CARGO_TARGET_DIR=target
+  export CARGO_PROFILE_RELEASE_LTO=thin
+  export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+  # The workspace profile sets debug=line-tables-only so the CI release job
+  # can objcopy-split debug companions for Sentry; user builds gain nothing
+  # from it (makepkg strips and splits on its own), so keep them light.
+  export CARGO_PROFILE_RELEASE_DEBUG=false
+  # Default features only (see the --all-features warning above).
+  cargo build --release --frozen --bin flowshot --bin flowshot-daemon
+  # Man pages come from a dev-dependency example (clap_mangen), so they are
+  # built separately from the shipped binaries.
+  cargo build --release --frozen -p flowshot-cli --example man_pages
+}
+
+check() {
+  cd "$_pkgname"
+  export CARGO_TARGET_DIR=target
+  cargo test --frozen --workspace
+}
+
+package() {
+  cd "$_pkgname"
+
+  # The CLI logs a config-load WARN to stderr when run without a user config,
+  # which is the case inside fakeroot; keep the build log clean.
+  export RUST_LOG=error
+
+  install -Dm0755 target/release/flowshot "$pkgdir/usr/bin/flowshot"
+  # The daemon binary is optional at runtime (the CLI self-spawns itself as
+  # the daemon via current_exe), but shipped anyway: supervised foreground
+  # use and systemd user units reference it, and /usr/bin is the Arch norm.
+  install -Dm0755 target/release/flowshot-daemon "$pkgdir/usr/bin/flowshot-daemon"
+
+  install -Dm0644 packaging/flowshot.desktop.in \
+    "$pkgdir/usr/share/applications/org.flowoss.FlowShot.desktop"
+  desktop-file-validate "$pkgdir/usr/share/applications/org.flowoss.FlowShot.desktop"
+
+  install -Dm0644 assets/logo.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/org.flowoss.FlowShot.svg"
+  local size
+  for size in 48 64 128 256 512; do
+    install -dm0755 "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps"
+    rsvg-convert -w "$size" -h "$size" assets/logo.svg \
+      -o "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/org.flowoss.FlowShot.png"
+  done
+
+  ./target/release/examples/man_pages "$srcdir/man"
+  install -dm0755 "$pkgdir/usr/share/man/man1" "$pkgdir/usr/share/man/man5"
+  install -m0644 "$srcdir"/man/*.1 -t "$pkgdir/usr/share/man/man1/"
+  install -m0644 "$srcdir"/man/*.5 -t "$pkgdir/usr/share/man/man5/"
+
+  install -dm0755 \
+    "$pkgdir/usr/share/bash-completion/completions" \
+    "$pkgdir/usr/share/zsh/site-functions" \
+    "$pkgdir/usr/share/fish/vendor_completions.d" \
+    "$pkgdir/usr/share/elvish/lib"
+  # Arch completion paths follow the starship/just/zellij convention:
+  # bash without extension, zsh prefixed with _, fish .fish, elvish .elv.
+  # pwsh and nushell are generated too but no Arch package ships them
+  # (no vendor directory convention), so they are left out.
+  ./target/release/flowshot completions bash \
+    > "$pkgdir/usr/share/bash-completion/completions/flowshot"
+  ./target/release/flowshot completions zsh \
+    > "$pkgdir/usr/share/zsh/site-functions/_flowshot"
+  ./target/release/flowshot completions fish \
+    > "$pkgdir/usr/share/fish/vendor_completions.d/flowshot.fish"
+  ./target/release/flowshot completions elvish \
+    > "$pkgdir/usr/share/elvish/lib/flowshot.elv"
+
+  install -Dm0644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm0644 NOTICES "$pkgdir/usr/share/licenses/$pkgname/NOTICES"
+  install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" \
+    README.md docs/config-reference.md docs/dbus-api.md
+}
+
+# Verified end to end in a clean archlinux:base-devel container (makepkg 7.1.0,
+# gcc 16, rust 1:1.99.0): `makepkg --syncdeps --noconfirm` produced
+# flowshot-git-r117.a85cb19-1-x86_64.pkg.tar.zst (32 MB) containing both
+# binaries, org.flowoss.FlowShot.desktop, the scalable SVG + 5 hicolor PNGs,
+# 7 man1 pages + flowshot-config.5 (zipman'd), 4 shell completions, LICENSE +
+# NOTICES and 3 docs. namcap on the package: 0 errors; warnings are the three
+# dlopen/data deps justified above plus namcap's usual ld-linux "unused shared
+# library" note. A local `debug` OPTIONS also yields a flowshot-git-debug split
+# whose .build-id symlinks namcap flags as dangling - that is expected for a
+# split debug package (the target lives in the main package) and the AUR only
+# hosts this PKGBUILD, never the artifacts.
