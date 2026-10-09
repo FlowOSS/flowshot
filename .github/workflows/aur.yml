@@ -1,4 +1,4 @@
-# AUR publishing (design: ship-readiness research run 2026-10-09).
+# AUR publishing.
 # Separate workflow so release.yml never needs AUR credentials and this one
 # never needs contents:write. Two flows:
 #   - flowshot-bin on release:published: the release asset IS the source;
@@ -8,8 +8,8 @@
 #     for VCS packages (their pkgver() runs on the user's machine).
 # The build jobs are the gate: the AUR never receives a PKGBUILD that has not
 # been proven to build with exactly the makedepends it declares (hand-rolled
-# archlinux container instead of a third-party publish action - see
-# packaging/aur/README.md for the candidate-by-candidate rejection evidence).
+# archlinux container; the rationale for avoiding third-party publish actions
+# is in packaging/aur/README.md).
 name: aur
 
 on:

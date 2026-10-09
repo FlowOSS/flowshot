@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Publish one FlowShot AUR package. One script for hand AND CI runs
-# (gianlucamazza/uwp-crossbuild pattern): same steps, same guards.
+# Publish one FlowShot AUR package. One script for hand AND CI runs:
+# same steps, same guards.
 #
 # Usage: publish.sh <pkgname> <prepared-dir> "<commit message>"
 #   <prepared-dir> must contain the final PKGBUILD and .SRCINFO.

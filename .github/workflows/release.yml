@@ -1,6 +1,4 @@
-# Tag-triggered release pipeline (design: ship-readiness research run
-# 2026-10-09; precedents: zed draft->validate->publish, lapce container
-# builds, flameshot asset matrix, rustdesk pkg.tar.zst).
+# Tag-triggered release pipeline.
 #
 # Shape: meta (version guard) -> changelog + gate + build-linux + package-arch
 # -> release (draft, attest, validate, publish) -> sentry-release (gated).
@@ -11,7 +9,7 @@
 # glibc 2.35) despite the wider reach: libspa 0.10.1 bindgens against the
 # host SPA headers and jammy's pipewire 0.3.48 lacks the fields/symbols the
 # crate requires (spa_video_info_raw.flags, u64 modifier,
-# spa_meta_region_is_valid) - proven by the first rehearsal's gate failure;
+# spa_meta_region_is_valid) - verified by CI builds;
 # noble's pipewire 1.0.5 compiles clean (ci.yml proves it daily). A
 # jammy+backported-headers build could reclaim the 2.35 floor later with a
 # symbol audit; not worth the risk for v0.1.0.
@@ -310,8 +308,8 @@ jobs:
           set -euo pipefail
           # Explicit name (never a glob): a debug split package must not leak
           # into the release assets even if one is ever produced. The `-Arch`
-          # distro marker is added at collection time (owner request; the
-          # filename is free-form - pacman reads metadata from .PKGINFO).
+          # distro marker is added at collection time (the filename is
+          # free-form - pacman reads metadata from .PKGINFO).
           cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst" \
              "flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst"
       - uses: actions/attest-build-provenance@v4
@@ -381,7 +379,7 @@ jobs:
   sentry-release:
     needs: [meta, release]
     # Never announce a rehearsal version: real tags only, and only when the
-    # owner has enabled the integration (vars + token).
+    # integration is enabled (vars + token).
     if: github.event_name == 'push' && vars.SENTRY_RELEASE_ENABLED == 'true'
     runs-on: ubuntu-24.04
     permissions:

@@ -1,26 +1,20 @@
-# Maintainer: FlowOSS <aur at flowoss dot org>
+# Maintainer: FlowOSS <https://github.com/FlowOSS>
 #
 # FlowShot - screenshot + annotation for Linux (Wayland and X11).
-# STABLE recipe - INTERNAL RELEASE ASSET FACTORY (owner decision 2026-10-09):
-# NOT an AUR submission - it lives in packaging/arch/ (not packaging/aur/)
-# because its only consumer is .github/workflows/release.yml (package-arch
-# job), which builds the `flowoss-flowshot-<ver>-1-x86_64.pkg.tar.zst` GitHub
-# release asset that the AUR `flowshot-bin` package ships. It is NOT published
-# to the AUR itself right now (the family is flowshot-git + flowshot-bin);
-# publishing it later is a one-step aur.yml change. pkgrel MUST stay 1 unless
+# Internal release recipe: NOT an AUR submission. Its only consumer is the
+# release workflow (.github/workflows/release.yml, package-arch job), which
+# builds the `flowoss-flowshot-<ver>-1-x86_64-Arch.pkg.tar.zst` release asset
+# that the AUR `flowshot-bin` package repackages. pkgrel MUST stay 1 unless
 # flowshot-bin's source URL is updated in lockstep - the asset name embeds it.
 #
-# NAME NOTE: the AUR pkgbase `flowshot` is taken by an unrelated project
-# (Troplo's Spectacle upload wrapper, a flameshot fork, which also installs
-# /usr/bin/flowshot), so this package is org-qualified. Everything in the
-# flowshot family must therefore hardcode its sibling names instead of using
-# the usual ${pkgname%-git} idiom, which would resolve to `flowshot`.
+# The `flowshot` pkgbase on the AUR belongs to a different project (which also
+# installs /usr/bin/flowshot), so this package is org-qualified and family
+# names are hardcoded instead of using the ${pkgname%-git} idiom.
 #
 # Build-dependency rationale is identical to flowshot-git; see that PKGBUILD
-# for the per-entry evidence (clang for bindgen/libspa-sys, pipewire+pkgconf
-# for the libpipewire-0.3 probe, librsvg for the hicolor PNGs, no cmake
-# because aws-lc-sys uses its cc builder, and options=('!lto') because slim
-# LTO objects break the aws-lc link under ld.lld).
+# (clang for bindgen, pipewire+pkgconf for the libpipewire probe, librsvg for
+# the hicolor PNGs, no cmake because aws-lc-sys uses its cc builder, and
+# options=('!lto') because slim C LTO objects break the aws-lc link).
 pkgname=flowoss-flowshot
 _pkgname=flowshot
 pkgver=0.1.0
@@ -43,7 +37,7 @@ makedepends=(
   'cargo'
   'clang'
   'desktop-file-utils'
-  'git'          # namcap: a git source (even tag-pinned) is a VCS source
+  'git'          # a git source (even tag-pinned) is a VCS source per namcap
   'librsvg'
   'pipewire'
   'pkgconf'
@@ -58,24 +52,21 @@ optdepends=(
   'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
   'gnome-shell-extension-appindicator: system tray icon under GNOME'
 )
-# Hardcoded family name + bare `flowshot` provide (OWNER DECISION 2026-10-10:
-# provide the bare name for discoverability; pacman's file-conflict check on
-# /usr/bin/flowshot still prevents co-installation with the unrelated
-# `flowshot` pkgbase). See flowshot-git/PKGBUILD for the full rationale.
+# The bare `flowshot` name is provided for discoverability; pacman's
+# file-conflict check on /usr/bin/flowshot prevents co-installation with the
+# other project. See flowshot-git/PKGBUILD.
 provides=('flowshot')
 conflicts=('flowshot-git')
-# Arch_package_guidelines#Package_sources: pin the tag OBJECT hash rather than
-# the tag name (tags can be force-pushed), and append `?signed` +
-# validpgpkeys= once the project signs its tags.
-_tag=0000000000000000000000000000000000000000   # git rev-parse "v$pkgver"
+# Pin the tag OBJECT hash rather than the tag name (tags can be force-pushed);
+# append `?signed` + validpgpkeys= once tags are signed. The release workflow
+# fills this in per tag.
+_tag=0000000000000000000000000000000000000000
 source=("$_pkgname::git+$url.git#tag=$_tag")
-# Placeholder: the publish job runs `updpkgsums`, which fills a real checksum
-# for git sources too (VCS_package_guidelines#Git_checksums), and refuses to
-# push while this still says SKIP.
+# Filled by the release workflow via updpkgsums (which computes real checksums
+# for git sources); it refuses to proceed while this says SKIP.
 b2sums=('SKIP')
-# '!debug': the CI asset needs no Arch debug split package (the Sentry debug
-# companions come from the release workflow's objcopy split of the tarball
-# binaries); the split's dangling .build-id symlinks also trip namcap -E.
+# '!debug': the CI asset needs no Arch debug split package; the split's
+# dangling .build-id symlinks also trip namcap.
 options=('!lto' '!debug')
 
 prepare() {
@@ -88,9 +79,9 @@ build() {
   export CARGO_TARGET_DIR=target
   export CARGO_PROFILE_RELEASE_LTO=thin
   export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
-  # See flowshot-git/PKGBUILD: keep user/CI builds light; the workspace
-  # profile's line-tables-only debug info is for the tarball job's
-  # objcopy split, not for pacman packages (makepkg strips anyway).
+  # Keep package builds light; the workspace profile's line-table debug info
+  # is for the release pipeline's companion split, not for pacman packages
+  # (makepkg strips anyway).
   export CARGO_PROFILE_RELEASE_DEBUG=false
   cargo build --release --frozen --bin flowshot --bin flowshot-daemon
   cargo build --release --frozen -p flowshot-cli --example man_pages
@@ -145,19 +136,3 @@ package() {
   install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" \
     README.md docs/config-reference.md docs/dbus-api.md
 }
-
-# ---------------------------------------------------------------------------
-# VARIANT (pipeline-axis decision): if the release workflow publishes a
-# CI-generated tarball asset that already contains man/, completions/ and the
-# rendered hicolor PNGs, swap the two blocks below and drop `librsvg` from
-# makedepends plus the whole --example man_pages phase from build(). That cuts
-# the dev-dependency compile out of every user's build.
-#
-#   source=("$pkgname-$pkgver.tar.zst::$url/releases/download/v$pkgver/flowshot-$pkgver-src.tar.zst")
-#   package() { tar -xf ... man/ completions/ icons/ ; install them directly }
-#
-# The tradeoff: a CI-built asset cannot be verified against a signed git tag,
-# so if this route is taken, sign the asset (or publish a detached .asc and add
-# validpgpkeys=) to keep Arch's "sources should be verified wherever possible"
-# rule satisfied.
-# ---------------------------------------------------------------------------
