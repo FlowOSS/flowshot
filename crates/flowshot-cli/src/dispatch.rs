@@ -27,7 +27,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use flowshot_daemon::autostart::exec_value;
+use flowshot_daemon::autostart::{exec_value, launch_target};
 use flowshot_daemon::daemon::{Daemon, DaemonOptions, Startup};
 use flowshot_daemon::execute::direct::{ScreenTarget, Target};
 use flowshot_daemon::execute::{self, ExecCtx, ExecutingSink};
@@ -292,7 +292,12 @@ async fn run_daemon(run: &DaemonRun, bus_address: Option<&str>) -> Result<ExitCo
     };
     options.idle_grace = Duration::from_secs(run.idle_grace_secs);
     options.bus_address = bus_address.map(ToOwned::to_owned);
-    options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
+    // The entry must launch the DAEMON at next login: this process may be
+    // the `flowshot` CLI (in-process or auto-spawned daemon), and the bare
+    // CLI invocation is an interactive capture - hence the explicit
+    // subcommand. `launch_target` keeps the path stable inside an AppImage
+    // ($APPIMAGE) where current_exe is the ephemeral FUSE mount.
+    options.autostart_exec = launch_target().map(|exe| format!("{} daemon", exec_value(&exe)));
     options.shortcuts = ShortcutOptions::production();
     // The first-launch consent prompt (the daemon is the single prompt
     // owner; the child loads/writes the same config this daemon loaded).

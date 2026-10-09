@@ -7,6 +7,7 @@
 //! directly (the crate's Linux backend does exactly this). Zero new
 //! dependencies, injectable directory, fully unit-testable.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use crate::error::DaemonError;
@@ -129,12 +130,76 @@ pub fn exec_value(exe: &Path) -> String {
     }
 }
 
+/// The stable path daemon-related launches should reference: `$APPIMAGE`
+/// when running inside an `AppImage`, else the current executable.
+///
+/// Inside an `AppImage` `current_exe` is the ephemeral FUSE mount
+/// (`/tmp/.mount_*`) that disappears at unmount, while the runtime's
+/// `$APPIMAGE` variable holds the stable file path (documented contract:
+/// "shall be used every time the full path of the `AppImage` is needed").
+/// Split from the env reads so tests never mutate the process env (the
+/// [`crate::paths`] convention).
+#[must_use]
+pub fn launch_target_from(appimage: Option<OsString>, exe: Option<PathBuf>) -> Option<PathBuf> {
+    appimage
+        .map(PathBuf::from)
+        .filter(|path| !path.as_os_str().is_empty())
+        .or(exe)
+}
+
+/// Live-env form of [`launch_target_from`].
+#[must_use]
+pub fn launch_target() -> Option<PathBuf> {
+    launch_target_from(std::env::var_os("APPIMAGE"), std::env::current_exe().ok())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn launch_target_prefers_the_stable_appimage_path() {
+        // Inside an AppImage the current exe is the ephemeral FUSE mount;
+        // $APPIMAGE is the stable file path and must win.
+        let mounted = PathBuf::from("/tmp/.mount_FlowSh1a2b3c/usr/bin/flowshot");
+        let appimage = PathBuf::from("/home/user/Apps/FlowShot-0.1.0-x86_64.AppImage");
+        assert_eq!(
+            launch_target_from(Some(appimage.clone().into_os_string()), Some(mounted)),
+            Some(appimage)
+        );
+        // An empty $APPIMAGE is ignored: the current exe is the target.
+        let exe = PathBuf::from("/usr/bin/flowshot");
+        assert_eq!(
+            launch_target_from(Some(OsString::new()), Some(exe.clone())),
+            Some(exe.clone())
+        );
+        assert_eq!(launch_target_from(None, Some(exe.clone())), Some(exe));
+        assert_eq!(launch_target_from(None, None), None);
+    }
+
+    #[test]
+    fn cli_path_autostart_entries_launch_the_daemon_not_a_capture() {
+        // Regression: a daemon started through the `flowshot` CLI must
+        // write an Exec carrying the `daemon` subcommand - the bare CLI
+        // invocation is an interactive capture, which would pop a
+        // selection overlay at next login instead of starting the daemon.
+        let exec = format!("{} daemon", exec_value(Path::new("/usr/bin/flowshot")));
+        assert!(entry_contents(&exec).contains("Exec=/usr/bin/flowshot daemon\n"));
+        // Paths with spaces keep the desktop-entry quoting rule.
+        let quoted = format!("{} daemon", exec_value(Path::new("/opt/my apps/flowshot")));
+        assert!(entry_contents(&quoted).contains("Exec=\"/opt/my apps/flowshot\" daemon\n"));
+        // An AppImage target resolves to the stable path + subcommand.
+        let target = launch_target_from(
+            Some(OsString::from("/home/user/FlowShot.AppImage")),
+            Some(PathBuf::from("/tmp/.mount_x/usr/bin/flowshot")),
+        )
+        .unwrap_or_else(|| panic!("launch target must resolve"));
+        let exec = format!("{} daemon", exec_value(&target));
+        assert!(entry_contents(&exec).contains("Exec=/home/user/FlowShot.AppImage daemon\n"));
+    }
 
     fn temp_dir(tag: &str) -> PathBuf {
         let unique = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
