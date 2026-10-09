@@ -103,7 +103,6 @@ reqwest = { version = "0.13.5", features = ["json"] }
 # File dialogs
 
 # Font
-fontconfig = "0.6.0"
 
 # System
 nix = { version = "0.29.0", features = ["fs", "poll"] }
@@ -123,3 +122,17 @@ all = "deny"
 pedantic = { level = "warn", priority = -1 }
 unwrap_used = "deny"
 expect_used = "deny"
+
+[profile.release]
+# The shipped-binary profile (prebuilt packages): LTO + one codegen unit for
+# size and speed; `line-tables-only` keeps just enough DWARF for the release
+# workflow's objcopy split (ship stripped, archive the .d companion so Sentry
+# file:line symbolication can be enabled retroactively). Stripping itself is
+# per-artifact (makepkg strips Arch packages; the CI release job objcopy-
+# splits), never here, so the debug companion stays extractable. `panic`
+# stays `unwind` deliberately: the sentry panic integration and session
+# Drop-close semantics rely on it.
+lto = true
+codegen-units = 1
+debug = "line-tables-only"
+strip = false
