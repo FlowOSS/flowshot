@@ -10,7 +10,7 @@ use std::time::Duration;
 use anyhow::Context;
 use clap::Parser;
 use flowshot_core::Config;
-use flowshot_daemon::autostart::exec_value;
+use flowshot_daemon::autostart::{exec_value, launch_target};
 use flowshot_daemon::daemon::{Daemon, DaemonOptions, Startup};
 use flowshot_daemon::paths;
 
@@ -92,7 +92,10 @@ fn main() -> anyhow::Result<()> {
     };
     options.idle_grace = Duration::from_secs(args.idle_grace);
     options.bus_address = args.bus_address;
-    options.autostart_exec = std::env::current_exe().ok().map(|exe| exec_value(&exe));
+    // The launch target survives the process ($APPIMAGE inside an
+    // AppImage, else this binary); a bare invocation of this helper IS
+    // the daemon, so no subcommand is appended.
+    options.autostart_exec = launch_target().map(|exe| exec_value(&exe));
     options.shortcuts = flowshot_daemon::shortcut::ShortcutOptions::production();
     // The first-launch consent prompt (the daemon is the single prompt
     // owner; the child loads/writes the same config this binary loaded).

@@ -14,6 +14,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use flowshot_daemon::autostart::launch_target;
+
 use crate::exit::CliError;
 
 /// The systemd-presence facts the wrap decision needs (injected in tests;
@@ -159,7 +161,16 @@ fn plan_command(plan: &HelperPlan) -> Command {
 /// [`CliError::Spawn`] when the current exe cannot be resolved or the
 /// direct spawn fails (a failed scope wrap falls back to the direct spawn).
 pub fn helper(bus_address: Option<&str>) -> Result<(), CliError> {
-    let exe = std::env::current_exe().map_err(CliError::Spawn)?;
+    // The helper is spawned DETACHED and this process then exits: inside an
+    // AppImage, current_exe is the ephemeral FUSE mount that dies at
+    // unmount, so the spawn must reference the stable $APPIMAGE path - the
+    // spawned daemon then performs its own mount and owns its lifecycle.
+    let exe = launch_target().ok_or_else(|| {
+        CliError::Spawn(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "could not resolve the daemon launch target (neither $APPIMAGE nor the current exe)",
+        ))
+    })?;
     let systemd = Systemd::detect();
     let plan = helper_plan(&exe, &systemd, unique_nonce(), bus_address);
     match plan_command(&plan).spawn() {
