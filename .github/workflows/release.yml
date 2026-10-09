@@ -4,10 +4,17 @@
 #
 # Shape: meta (version guard) -> changelog + gate + build-linux + package-arch
 # -> release (draft, attest, validate, publish) -> sentry-release (gated).
-# Every distributed artifact is built in an ubuntu:22.04 (glibc 2.35) or
-# archlinux container - never on ubuntu-latest, whose glibc floor keeps
-# moving (26.04 = glibc 2.43 lands Nov 2026) and whose 22.04 image is on the
-# deprecation clock (unsupported 2027-04-17).
+# Every distributed artifact is built in a pinned container - never on
+# ubuntu-latest directly, whose floor keeps moving (26.04 = glibc 2.43 lands
+# Nov 2026). The build container is ubuntu:24.04 (noble): glibc 2.39 floor
+# (Ubuntu 24.04+, Debian 13+, Fedora 40+, Arch). It CANNOT be jammy (22.04,
+# glibc 2.35) despite the wider reach: libspa 0.10.1 bindgens against the
+# host SPA headers and jammy's pipewire 0.3.48 lacks the fields/symbols the
+# crate requires (spa_video_info_raw.flags, u64 modifier,
+# spa_meta_region_is_valid) - proven by the first rehearsal's gate failure;
+# noble's pipewire 1.0.5 compiles clean (ci.yml proves it daily). A
+# jammy+backported-headers build could reclaim the 2.35 floor later with a
+# symbol audit; not worth the risk for v0.1.0.
 name: Release
 
 on:
@@ -31,6 +38,7 @@ jobs:
       contents: read
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      arch_version: ${{ steps.meta.outputs.arch_version }}
       is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v4
@@ -39,25 +47,27 @@ jobs:
           set -euo pipefail
           if [[ "${{ github.event_name }}" != "push" ]]; then
             # Rehearsal via workflow_dispatch: prerelease-shaped version.
-            echo "version=0.0.0-$(date +%s)" >> "$GITHUB_OUTPUT"
-            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          tag="${GITHUB_REF_NAME}"
-          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?$ ]] || {
-            echo "bad tag shape: $tag" >&2; exit 1; }
-          version="${tag#v}"
-          toml_version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
-          if [[ "$toml_version" != "$version" ]]; then
-            echo "tag/version drift: tag=$version workspace Cargo.toml=$toml_version" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [[ "$tag" == *-* ]]; then
-            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+            version="0.0.0-$(date +%s)"
           else
-            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+            tag="${GITHUB_REF_NAME}"
+            [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?$ ]] || {
+              echo "bad tag shape: $tag" >&2; exit 1; }
+            version="${tag#v}"
+            toml_version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+            if [[ "$toml_version" != "$version" ]]; then
+              echo "tag/version drift: tag=$version workspace Cargo.toml=$toml_version" >&2
+              exit 1
+            fi
           fi
+          # Arch pkgver forbids hyphens (prerelease/rehearsal shapes carry
+          # one): the Arch package and its asset name use the dotted form.
+          # Identical to version for stable tags.
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "arch_version=${version//-/.}" >> "$GITHUB_OUTPUT"
+          case "$version" in
+            *-*) echo "is_prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "is_prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
 
   changelog:
     needs: meta
@@ -89,7 +99,10 @@ jobs:
     needs: meta
     runs-on: ubuntu-24.04
     container:
-      image: ubuntu:22.04
+      image: ubuntu:24.04
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
     steps:
@@ -118,7 +131,10 @@ jobs:
     needs: meta
     runs-on: ubuntu-24.04
     container:
-      image: ubuntu:22.04
+      image: ubuntu:24.04
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
       id-token: write
@@ -144,9 +160,12 @@ jobs:
         run: |
           set -euo pipefail
           for b in target/release/flowshot target/release/flowshot-daemon; do
-            readelf -d "$b" | grep -qE 'libssl|libcrypto' && {
+            # if/then, not `grep && {}`: a non-matching grep as the script's
+            # last command would make the good path exit 1.
+            if readelf -d "$b" | grep -qE 'libssl|libcrypto'; then
               echo "$b links OpenSSL - the graph is rustls-only; refusing to ship" >&2
-              exit 1; }
+              exit 1
+            fi
           done
       - name: Split debug companions (ship stripped, archive the .d files)
         run: |
@@ -178,8 +197,15 @@ jobs:
           install -m755 dist/flowshot dist/flowshot-daemon "$STAGE/usr/bin/"
           cp packaging/flowshot.desktop.in "$STAGE/usr/share/applications/org.flowoss.FlowShot.desktop"
           desktop-file-validate "$STAGE/usr/share/applications/org.flowoss.FlowShot.desktop"
-          cargo run --release --locked -p flowshot-cli --example man_pages -- "$STAGE/usr/share/man"
-          find "$STAGE/usr/share/man" \( -name '*.1' -o -name '*.5' \) -print0 | xargs -0 -r gzip -9
+          # The example writes pages FLAT into the given dir; sort them into
+          # the FHS man1/man5 sections (same split the Arch recipe does).
+          MANTMP="$(mktemp -d)"
+          cargo run --release --locked -p flowshot-cli --example man_pages -- "$MANTMP"
+          mkdir -p "$STAGE/usr/share/man/man1" "$STAGE/usr/share/man/man5"
+          install -m644 "$MANTMP"/*.1 -t "$STAGE/usr/share/man/man1/"
+          install -m644 "$MANTMP"/*.5 -t "$STAGE/usr/share/man/man5/"
+          rm -rf "$MANTMP"
+          gzip -9 "$STAGE"/usr/share/man/man1/*.1 "$STAGE"/usr/share/man/man5/*.5
           mkdir -p "$STAGE/usr/share/bash-completion/completions" \
                    "$STAGE/usr/share/zsh/site-functions" \
                    "$STAGE/usr/share/fish/vendor_completions.d" \
@@ -191,7 +217,8 @@ jobs:
           "$STAGE/usr/bin/flowshot" completions zsh        > "$STAGE/usr/share/zsh/site-functions/_flowshot"
           "$STAGE/usr/bin/flowshot" completions fish       > "$STAGE/usr/share/fish/vendor_completions.d/flowshot.fish"
           "$STAGE/usr/bin/flowshot" completions elvish     > "$STAGE/usr/share/elvish/lib/flowshot.elv"
-          "$STAGE/usr/bin/flowshot" completions powershell > "$STAGE/usr/share/powershell/flowshot.ps1"
+          # The clap enum value is `pwsh`, not `powershell`.
+          "$STAGE/usr/bin/flowshot" completions pwsh       > "$STAGE/usr/share/powershell/flowshot.ps1"
           "$STAGE/usr/bin/flowshot" completions nushell    > "$STAGE/completions/nushell/flowshot.nu"
           cp LICENSE NOTICES README.md "$STAGE/usr/share/doc/flowshot/"
           tar -C stage -cJf "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" "flowshot-$VER"
@@ -217,6 +244,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
       id-token: write
@@ -242,13 +272,22 @@ jobs:
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           VER="${{ needs.meta.outputs.version }}"
+          ARCH_VER="${{ needs.meta.outputs.arch_version }}"
           cp -a packaging/arch /work-pkg
           chown -R builder:builder /work-pkg "$GITHUB_WORKSPACE"
           cd /work-pkg
-          sed -i "s/^pkgver=.*/pkgver=$VER/" PKGBUILD
-          sed -i "s|^_tag=.*|_tag=$(git -C "$GITHUB_WORKSPACE" rev-parse "v$VER^{commit}")|" PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=$ARCH_VER/" PKGBUILD
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            tag_ref="$(git -C "$GITHUB_WORKSPACE" rev-parse "v$VER^{commit}")"
+          else
+            # Rehearsal (workflow_dispatch): no tag exists; build the checked-out HEAD.
+            tag_ref="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          fi
+          sed -i "s|^_tag=.*|_tag=$tag_ref|" PKGBUILD
           sudo -u builder updpkgsums
-          grep -q "b2sums=('SKIP')" PKGBUILD && { echo "checksums still SKIP" >&2; exit 1; }
+          if grep -q "b2sums=('SKIP')" PKGBUILD; then
+            echo "checksums still SKIP" >&2; exit 1
+          fi
           sudo -u builder makepkg --printsrcinfo > .SRCINFO
       - name: Build the Arch package (full makepkg incl. check())
         run: sudo -u builder bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm'
@@ -256,16 +295,22 @@ jobs:
         run: |
           set -euo pipefail
           cd /work-pkg
+          PKG="flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst"
           namcap PKGBUILD
-          namcap ./*.pkg.tar.zst
+          namcap "$PKG"
           # The official archlinux image NoExtracts usr/share/{man,doc}: assert
-          # package CONTENTS, never the installed filesystem.
-          pacman -Qpl ./*.pkg.tar.zst | grep -q 'usr/bin/flowshot$'
-          pacman -Qpl ./*.pkg.tar.zst | grep -q 'usr/share/man/man1/flowshot.1'
+          # package CONTENTS, never the installed filesystem. File-based grep:
+          # `pacman -Qpl | grep -q` SIGPIPEs under pipefail (exit 141) when
+          # grep exits on first match.
+          pacman -Qpl "$PKG" > /tmp/pkglist
+          grep -q 'usr/bin/flowshot$' /tmp/pkglist
+          grep -q 'usr/share/man/man1/flowshot.1' /tmp/pkglist
       - name: Collect asset
         run: |
           set -euo pipefail
-          cp /work-pkg/flowoss-flowshot-*.pkg.tar.zst .
+          # Explicit name (never a glob): a debug split package must not leak
+          # into the release assets even if one is ever produced.
+          cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst" .
       - uses: actions/attest-build-provenance@v4
         with:
           subject-path: flowoss-flowshot-*.pkg.tar.zst
@@ -287,7 +332,21 @@ jobs:
           set -euo pipefail
           sha256sum tarball/*.tar.xz arch-package/*.pkg.tar.zst > sha256sums.txt
           sha256sum -c sha256sums.txt
+      # Rehearsal mode (workflow_dispatch): publish NOTHING - no draft release,
+      # no tag - just expose every built artifact for inspection.
+      - name: Rehearsal - upload all artifacts, skip publishing
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rehearsal-artifacts
+          path: |
+            tarball/
+            arch-package/
+            changelog/
+            sha256sums.txt
+          if-no-files-found: error
       - uses: softprops/action-gh-release@v2
+        if: github.event_name == 'push'
         with:
           tag_name: v${{ needs.meta.outputs.version }}
           body_path: changelog/release-notes.md
@@ -300,12 +359,14 @@ jobs:
             sha256sums.txt
             changelog/CHANGELOG.md
       - name: Validate the published asset list, then undraft
+        if: github.event_name == 'push'
         run: |
           set -euo pipefail
           VER="${{ needs.meta.outputs.version }}"
+          ARCH_VER="${{ needs.meta.outputs.arch_version }}"
           assets="$(gh release view "v$VER" --json assets -q '.assets[].name')"
           for want in "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" \
-                      "flowoss-flowshot-$VER-1-x86_64.pkg.tar.zst" \
+                      "flowoss-flowshot-$ARCH_VER-1-x86_64.pkg.tar.zst" \
                       "sha256sums.txt" "CHANGELOG.md"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }
@@ -316,7 +377,9 @@ jobs:
 
   sentry-release:
     needs: [meta, release]
-    if: vars.SENTRY_RELEASE_ENABLED == 'true'
+    # Never announce a rehearsal version: real tags only, and only when the
+    # owner has enabled the integration (vars + token).
+    if: github.event_name == 'push' && vars.SENTRY_RELEASE_ENABLED == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read

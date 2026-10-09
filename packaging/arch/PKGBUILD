@@ -69,7 +69,10 @@ source=("$_pkgname::git+$url.git#tag=$_tag")
 # for git sources too (VCS_package_guidelines#Git_checksums), and refuses to
 # push while this still says SKIP.
 b2sums=('SKIP')
-options=('!lto')
+# '!debug': the CI asset needs no Arch debug split package (the Sentry debug
+# companions come from the release workflow's objcopy split of the tarball
+# binaries); the split's dangling .build-id symlinks also trip namcap -E.
+options=('!lto' '!debug')
 
 prepare() {
   cd "$_pkgname"

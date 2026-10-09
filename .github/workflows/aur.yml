@@ -43,6 +43,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Base deps
         run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap github-cli
@@ -116,6 +119,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Base deps
         run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap
@@ -148,7 +154,13 @@ jobs:
           sudo -u builder bash -c 'cd /work-pkg && makepkg --printsrcinfo > .SRCINFO && makepkg --syncdeps --noconfirm'
           cd /work-pkg
           namcap PKGBUILD
-          namcap ./flowshot-git-*.pkg.tar.zst
+          # namcap the main artifact only: a makepkg debug split's .build-id
+          # symlinks dangle BY DESIGN (namcap flags them E:) and namcap exits 0
+          # regardless - skip splits explicitly instead of globbing blindly.
+          for f in flowshot-git-*.pkg.tar.zst; do
+            case "$f" in *-debug-*) continue ;; esac
+            namcap "$f"
+          done
       - name: Publish
         if: steps.key.outputs.have == 'true'
         env:
