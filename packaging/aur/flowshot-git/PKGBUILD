@@ -64,16 +64,16 @@ optdepends=(
 # and the editor text tests panic in cosmic-text shape.rs. Same fix as the
 # official alacritty package (checkdepends=('ttf-dejavu')).
 checkdepends=('ttf-dejavu')
-# The family's stable pkgbase. Hardcoded on purpose: the usual
-# ${pkgname%-git} idiom resolves to `flowshot`, which is an UNRELATED project's
-# pkgbase on the AUR (Troplo's Spectacle upload wrapper, a flameshot fork that
-# also installs /usr/bin/flowshot). Claiming it in provides= would make
-# `pacman -S flowshot` a coin flip between two different programs, and
-# conflicts= against it would make our install demand removing an unrelated
-# app - pacman's own file-conflict check on /usr/bin/flowshot already prevents
-# co-installation, so the collision is documented rather than declared.
+# The family's stable pkgbase, hardcoded (the usual ${pkgname%-git} idiom
+# resolves to `flowshot`, an UNRELATED project's pkgbase on the AUR - Troplo's
+# Spectacle upload wrapper, which also installs /usr/bin/flowshot).
+# OWNER DECISION 2026-10-10: provide the bare `flowshot` name anyway for
+# discoverability - `pacman -S flowshot` then offers a provider choice between
+# the two projects, and co-installation stays impossible through pacman's
+# file-conflict check on /usr/bin/flowshot. Deliberately NO
+# conflicts=('flowshot'): that would demand removing an unrelated app.
 _stablepkg=flowoss-flowshot
-provides=("$_stablepkg=$pkgver")
+provides=("$_stablepkg=$pkgver" 'flowshot')
 conflicts=("$_stablepkg")
 source=("$_pkgname::git+$url.git")
 b2sums=('SKIP')

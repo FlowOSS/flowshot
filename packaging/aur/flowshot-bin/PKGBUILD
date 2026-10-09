@@ -18,8 +18,10 @@
 #     installed file paths.
 #
 # CI CONTRACT: the asset NAME and its b2sum are public. The name embeds
-# pkgver and pkgrel of the internal flowoss-flowshot recipe; if that recipe's
-# pkgrel ever moves off 1, this source URL must change in lockstep or every
+# pkgver and pkgrel of the internal flowoss-flowshot recipe plus the `-Arch`
+# distro marker (owner request 2026-10-10; legal - pacman reads metadata from
+# .PKGINFO, the filename is free-form); if the recipe's pkgrel ever moves off
+# 1 or the marker changes, this source URL must change in lockstep or every
 # user build 404s. The publish workflow rewrites pkgver + b2sums per release.
 #
 # NAME NOTE: the AUR pkgbase `flowshot` belongs to an unrelated project which
@@ -56,9 +58,12 @@ optdepends=(
   'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
   'gnome-shell-extension-appindicator: system tray icon under GNOME'
 )
-provides=("$_stablepkg=$pkgver")
+# OWNER DECISION 2026-10-10: provide the bare `flowshot` name for
+# discoverability (see flowshot-git/PKGBUILD for the rationale); pacman's
+# file-conflict check still prevents co-installation.
+provides=("$_stablepkg=$pkgver" 'flowshot')
 conflicts=("$_stablepkg" 'flowshot-git')
-source=("$url/releases/download/v$pkgver/$_stablepkg-$pkgver-1-x86_64.pkg.tar.zst")
+source=("$url/releases/download/v$pkgver/$_stablepkg-$pkgver-1-x86_64-Arch.pkg.tar.zst")
 # Filled by the publish workflow (b2sum of the published release asset).
 b2sums=('SKIP')
 options=('!strip' '!lto' '!debug')
@@ -67,7 +72,7 @@ package() {
   # The asset IS an Arch package: unpack its payload tree, dropping the
   # package metadata members (they belong to the flowoss-flowshot pkgname;
   # makepkg regenerates flowshot-bin's own).
-  bsdtar -xf "$srcdir/$_stablepkg-$pkgver-1-x86_64.pkg.tar.zst" \
+  bsdtar -xf "$srcdir/$_stablepkg-$pkgver-1-x86_64-Arch.pkg.tar.zst" \
     -C "$pkgdir" \
     --exclude .PKGINFO --exclude .MTREE --exclude .BUILDINFO --exclude .INSTALL
 

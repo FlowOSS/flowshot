@@ -290,12 +290,12 @@ jobs:
           fi
           sudo -u builder makepkg --printsrcinfo > .SRCINFO
       - name: Build the Arch package (full makepkg incl. check())
-        run: sudo -u builder bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm'
+        run: sudo -u builder PACKAGER='FlowOSS <https://github.com/FlowOSS>' bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm'
       - name: namcap + content assertions
         run: |
           set -euo pipefail
           cd /work-pkg
-          PKG="flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst"
+          PKG="flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst"
           namcap PKGBUILD
           namcap "$PKG"
           # The official archlinux image NoExtracts usr/share/{man,doc}: assert
@@ -309,8 +309,11 @@ jobs:
         run: |
           set -euo pipefail
           # Explicit name (never a glob): a debug split package must not leak
-          # into the release assets even if one is ever produced.
-          cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst" .
+          # into the release assets even if one is ever produced. The `-Arch`
+          # distro marker is added at collection time (owner request; the
+          # filename is free-form - pacman reads metadata from .PKGINFO).
+          cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst" \
+             "flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst"
       - uses: actions/attest-build-provenance@v4
         with:
           subject-path: flowoss-flowshot-*.pkg.tar.zst
@@ -366,7 +369,7 @@ jobs:
           ARCH_VER="${{ needs.meta.outputs.arch_version }}"
           assets="$(gh release view "v$VER" --json assets -q '.assets[].name')"
           for want in "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" \
-                      "flowoss-flowshot-$ARCH_VER-1-x86_64.pkg.tar.zst" \
+                      "flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
                       "sha256sums.txt" "CHANGELOG.md"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }

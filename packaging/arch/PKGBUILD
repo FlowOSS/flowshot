@@ -58,7 +58,11 @@ optdepends=(
   'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
   'gnome-shell-extension-appindicator: system tray icon under GNOME'
 )
-# Hardcoded, NOT ${pkgname%-git}: see the NAME NOTE above.
+# Hardcoded family name + bare `flowshot` provide (OWNER DECISION 2026-10-10:
+# provide the bare name for discoverability; pacman's file-conflict check on
+# /usr/bin/flowshot still prevents co-installation with the unrelated
+# `flowshot` pkgbase). See flowshot-git/PKGBUILD for the full rationale.
+provides=('flowshot')
 conflicts=('flowshot-git')
 # Arch_package_guidelines#Package_sources: pin the tag OBJECT hash rather than
 # the tag name (tags can be force-pushed), and append `?signed` +
