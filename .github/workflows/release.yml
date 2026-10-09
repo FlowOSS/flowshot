@@ -293,7 +293,13 @@ jobs:
         run: |
           set -euo pipefail
           cd /work-pkg
-          PKG="flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst"
+          # Rename FIRST (makepkg's own naming cannot carry the -Arch distro
+          # marker): every later step - namcap, assertions, collection,
+          # attestation - works on the published asset name.
+          ARCH_VER="${{ needs.meta.outputs.arch_version }}"
+          mv "flowoss-flowshot-$ARCH_VER-1-x86_64.pkg.tar.zst" \
+             "flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
+          PKG="flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
           namcap PKGBUILD
           namcap "$PKG"
           # The official archlinux image NoExtracts usr/share/{man,doc}: assert
@@ -307,11 +313,8 @@ jobs:
         run: |
           set -euo pipefail
           # Explicit name (never a glob): a debug split package must not leak
-          # into the release assets even if one is ever produced. The `-Arch`
-          # distro marker is added at collection time (the filename is
-          # free-form - pacman reads metadata from .PKGINFO).
-          cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64.pkg.tar.zst" \
-             "flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst"
+          # into the release assets even if one is ever produced.
+          cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst" .
       - uses: actions/attest-build-provenance@v4
         with:
           subject-path: flowoss-flowshot-*.pkg.tar.zst
