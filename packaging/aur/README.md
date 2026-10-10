@@ -59,7 +59,10 @@ makepkg --printsrcinfo > .SRCINFO
 - **flowshot-bin**: published on `release: types [published]` — the workflow
   downloads the release's `.pkg.tar.zst`, writes its b2sum into the PKGBUILD,
   renders `.SRCINFO`, repackages once (no compilation), namcaps, and pushes.
-  Asset name stability is a public contract (see the PKGBUILD's note).
+  Asset name stability is a public contract: the asset name embeds
+pkgver/pkgrel plus the `-Arch` marker, and the publish workflow rewrites
+pkgver + b2sums per release — renaming the asset without updating the
+`-bin` source URL breaks every user build.
 
 Publishing is hand-rolled (`publish.sh`: pinned host keys, staged-diff no-op
 guard, master-only push, SKIP-checksum refusal) rather than a third-party
@@ -87,6 +90,10 @@ regenerating it.
   injection seam into user installs.
 - `check()` passes headless (no GPU, Wayland, or session bus needed): GPU
   tests skip, the rest run normally.
+- `flowshot-bin` carries no `.install` hook: pacman's own
+  `gtk-update-icon-cache` and `update-desktop-database` hooks fire on the
+  installed file paths; `options=('!strip' '!lto' '!debug')` because the
+  asset is already a compiled Arch package and must not be re-processed.
 - The official `archlinux` Docker image sets `NoExtract` for
   `usr/share/{man,doc,info}` — container validation must assert package
   CONTENTS (`pacman -Qpl`), never the installed filesystem.
