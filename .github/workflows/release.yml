@@ -334,8 +334,12 @@ jobs:
       - name: Checksums
         run: |
           set -euo pipefail
-          sha256sum tarball/*.tar.xz arch-package/*.pkg.tar.zst > sha256sums.txt
-          sha256sum -c sha256sums.txt
+          # Flat filenames in the sums file: users download assets side by
+          # side, so `sha256sum -c` must work in a flat directory.
+          (cd tarball && sha256sum *.tar.xz) > sha256sums.txt
+          (cd arch-package && sha256sum *.pkg.tar.zst) >> sha256sums.txt
+          (cd tarball && sha256sum -c ../sha256sums.txt --ignore-missing)
+          (cd arch-package && sha256sum -c ../sha256sums.txt --ignore-missing)
       # Rehearsal mode (workflow_dispatch): publish NOTHING - no draft release,
       # no tag - just expose every built artifact for inspection.
       - name: Rehearsal - upload all artifacts, skip publishing
@@ -368,14 +372,16 @@ jobs:
           set -euo pipefail
           VER="${{ needs.meta.outputs.version }}"
           ARCH_VER="${{ needs.meta.outputs.arch_version }}"
-          assets="$(gh release view "v$VER" --json assets -q '.assets[].name')"
+          # -R is required: this job never checks the repo out, and gh cannot
+          # resolve the repository from a non-git working directory.
+          assets="$(gh release view "v$VER" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')"
           for want in "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" \
                       "flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
                       "sha256sums.txt" "CHANGELOG.md"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }
           done
-          gh release edit "v$VER" --draft=false
+          gh release edit "v$VER" -R "$GITHUB_REPOSITORY" --draft=false
         env:
           GH_TOKEN: ${{ github.token }}
 
