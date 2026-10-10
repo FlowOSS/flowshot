@@ -19,12 +19,14 @@
 # publish workflow rewrites pkgver + b2sums per release. Renaming the asset
 # without updating this source URL breaks every user build.
 #
-# The `flowshot` pkgbase on the AUR belongs to a different project that also
-# installs /usr/bin/flowshot; the bare name is provided (not conflicted) for
-# discoverability - pacman's file-conflict check prevents co-installation.
+# AUR submission naming: the `flowshot` pkgbase on the AUR is squatted by an
+# unrelated install script; the -bin suffix (required by AUR rules for
+# prebuilt packages anyway) is a submission-level workaround only. The
+# software's package name is `flowshot` - this package provides+conflicts it
+# (the standard takeover pattern), so installing it replaces anything else
+# claiming the name. See flowshot-git/PKGBUILD.
 pkgname=flowshot-bin
 _pkgname=flowshot
-_stablepkg=flowoss-flowshot
 pkgver=0.1.0
 pkgrel=1
 pkgdesc='Screenshot and annotation tool for Wayland and X11 with mixed-DPI support (prebuilt binary)'
@@ -52,9 +54,9 @@ optdepends=(
   'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
   'gnome-shell-extension-appindicator: system tray icon under GNOME'
 )
-provides=("$_stablepkg=$pkgver" 'flowshot')
-conflicts=("$_stablepkg" 'flowshot-git')
-source=("$url/releases/download/v$pkgver/$_stablepkg-$pkgver-1-x86_64-Arch.pkg.tar.zst")
+provides=("flowshot=$pkgver")
+conflicts=('flowshot' 'flowshot-git')
+source=("$url/releases/download/v$pkgver/$_pkgname-$pkgver-1-x86_64-Arch.pkg.tar.zst")
 # Filled with the real b2sum of the published asset by the publish workflow.
 b2sums=('SKIP')
 options=('!strip' '!lto' '!debug')
@@ -62,12 +64,12 @@ options=('!strip' '!lto' '!debug')
 package() {
   # The asset IS an Arch package: unpack its payload tree, dropping the
   # package metadata members (makepkg regenerates this package's own).
-  bsdtar -xf "$srcdir/$_stablepkg-$pkgver-1-x86_64-Arch.pkg.tar.zst" \
+  bsdtar -xf "$srcdir/$_pkgname-$pkgver-1-x86_64-Arch.pkg.tar.zst" \
     -C "$pkgdir" \
     --exclude .PKGINFO --exclude .MTREE --exclude .BUILDINFO --exclude .INSTALL
 
   # Licenses must live under /usr/share/licenses/$pkgname for THIS package.
-  if [[ -d "$pkgdir/usr/share/licenses/$_stablepkg" ]]; then
-    mv "$pkgdir/usr/share/licenses/$_stablepkg" "$pkgdir/usr/share/licenses/$pkgname"
+  if [[ -d "$pkgdir/usr/share/licenses/$_pkgname" ]]; then
+    mv "$pkgdir/usr/share/licenses/$_pkgname" "$pkgdir/usr/share/licenses/$pkgname"
   fi
 }

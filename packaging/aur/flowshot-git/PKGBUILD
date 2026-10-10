@@ -57,14 +57,13 @@ optdepends=(
 # The test suite renders text through cosmic-text, which panics without any
 # installed fonts; same fix as the official alacritty package.
 checkdepends=('ttf-dejavu')
-# The `flowshot` pkgbase on the AUR belongs to a different project that also
-# installs /usr/bin/flowshot, so the ${pkgname%-git} idiom is unusable and
-# family names are hardcoded. The bare name is still provided (not conflicted)
-# for discoverability: pacman offers a provider choice, and its file-conflict
-# check keeps the two packages from being co-installed.
-_stablepkg=flowoss-flowshot
-provides=("$_stablepkg=$pkgver" 'flowshot')
-conflicts=("$_stablepkg")
+# AUR submission naming: the `flowshot` pkgbase on the AUR is squatted by an
+# unrelated install script. The suffixes (-git/-bin) are a submission-level
+# workaround only - the software's package name is `flowshot`, and every
+# family member provides+conflicts it (the standard takeover pattern), so
+# installing FlowShot replaces anything else claiming the name.
+provides=("flowshot=$pkgver")
+conflicts=('flowshot')
 source=("$_pkgname::git+$url.git")
 b2sums=('SKIP')
 # Arch's default makepkg.conf enables `lto`, exporting -flto=auto to C

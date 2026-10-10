@@ -3,30 +3,27 @@
 | Directory | AUR pkgbase | Role |
 |---|---|---|
 | `flowshot-git/` | `flowshot-git` | VCS package: builds the tip of `main` on the user's machine |
-| `flowshot-bin/` | `flowshot-bin` | repackages the CI-built `flowoss-flowshot-<ver>-1-x86_64-Arch.pkg.tar.zst` release asset |
+| `flowshot-bin/` | `flowshot-bin` | repackages the CI-built `flowshot-<ver>-1-x86_64-Arch.pkg.tar.zst` release asset |
 
 The recipe that BUILDS that release asset is **not an AUR package** and lives
 outside this directory: [`packaging/arch/PKGBUILD`](../arch/PKGBUILD)
-(pkgname `flowoss-flowshot`, consumed only by the release workflow's
-`package-arch` job in a clean Arch container).
+(pkgname `flowshot`, consumed only by the release workflow's `package-arch`
+job in a clean Arch container).
 
 `packaging/` metadata files are 0BSD ([LICENSE](LICENSE)) per the Arch
 package-source convention; the packaged software stays GPL-3.0-or-later.
 
-## The name collision
+## Naming
 
-The AUR pkgbase **`flowshot` belongs to an unrelated project** which also
-installs `/usr/bin/flowshot`. Consequences baked into every PKGBUILD here:
-
-- The usual `${pkgname%-git}` provides/conflicts idiom is unusable for this
-  family (`flowshot-git` minus `-git` is the other project's pkgbase) — the
-  family name `flowoss-flowshot` is hardcoded.
-- The bare `flowshot` name is `provides=`-ed for discoverability but never
-  `conflicts=`-ed: pacman offers a provider choice on `pacman -S flowshot`,
-  and its file-conflict check on `/usr/bin/flowshot` prevents co-installation
-  without demanding removal of an unrelated app.
-- The package descriptions and keywords are deliberately distinctive so the
-  two projects are tellable apart in AUR search.
+The software's package name is **`flowshot`** — the built packages (release
+asset and anything derived from it) install as `flowshot`, and every family
+member carries `provides=("flowshot=$pkgver")` + `conflicts=('flowshot')`,
+the standard takeover pattern: installing FlowShot replaces anything else
+claiming the name. The AUR **pkgbase** `flowshot` happens to be squatted by
+an unrelated install script; that only constrains AUR *submission* names, so
+the submissions use the `-git` / `-bin` suffixes (the latter required by AUR
+rules for prebuilt packages anyway). If/when FlowShot reaches the official
+repos, the name is concrete.
 
 ## First publish (once, manual)
 

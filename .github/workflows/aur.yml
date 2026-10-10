@@ -76,7 +76,7 @@ jobs:
           echo "tag=$tag" >> /tmp/aur-env
           echo "pkgver=${tag#v}" >> /tmp/aur-env
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
-            --pattern "flowoss-flowshot-${tag#v}-1-x86_64-Arch.pkg.tar.zst" --dir /tmp/asset
+            --pattern "flowshot-${tag#v}-1-x86_64-Arch.pkg.tar.zst" --dir /tmp/asset
       - name: Render the -bin PKGBUILD (pkgver + real b2sum)
         run: |
           set -euo pipefail
@@ -85,7 +85,7 @@ jobs:
           cp -a packaging/aur/flowshot-bin /work-pkg
           cd /work-pkg
           sed -i "s/^pkgver=.*/pkgver=$pkgver/" PKGBUILD
-          b2="$(b2sum "/tmp/asset/flowoss-flowshot-$pkgver-1-x86_64-Arch.pkg.tar.zst" | cut -d' ' -f1)"
+          b2="$(b2sum "/tmp/asset/flowshot-$pkgver-1-x86_64-Arch.pkg.tar.zst" | cut -d' ' -f1)"
           sed -i "s/^b2sums=.*/b2sums=('$b2')/" PKGBUILD
           grep -q "SKIP" PKGBUILD && { echo "checksum still SKIP" >&2; exit 1; }
           chown -R builder:builder /work-pkg

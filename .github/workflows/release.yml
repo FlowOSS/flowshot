@@ -297,9 +297,9 @@ jobs:
           # marker): every later step - namcap, assertions, collection,
           # attestation - works on the published asset name.
           ARCH_VER="${{ needs.meta.outputs.arch_version }}"
-          mv "flowoss-flowshot-$ARCH_VER-1-x86_64.pkg.tar.zst" \
-             "flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
-          PKG="flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
+          mv "flowshot-$ARCH_VER-1-x86_64.pkg.tar.zst" \
+             "flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
+          PKG="flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
           namcap PKGBUILD
           namcap "$PKG"
           # The official archlinux image NoExtracts usr/share/{man,doc}: assert
@@ -314,14 +314,14 @@ jobs:
           set -euo pipefail
           # Explicit name (never a glob): a debug split package must not leak
           # into the release assets even if one is ever produced.
-          cp "/work-pkg/flowoss-flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst" .
+          cp "/work-pkg/flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst" .
       - uses: actions/attest-build-provenance@v4
         with:
-          subject-path: flowoss-flowshot-*.pkg.tar.zst
+          subject-path: flowshot-*.pkg.tar.zst
       - uses: actions/upload-artifact@v4
         with:
           name: arch-package
-          path: flowoss-flowshot-*.pkg.tar.zst
+          path: flowshot-*.pkg.tar.zst
           if-no-files-found: error
 
   release:
@@ -376,7 +376,7 @@ jobs:
           # resolve the repository from a non-git working directory.
           assets="$(gh release view "v$VER" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')"
           for want in "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" \
-                      "flowoss-flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
+                      "flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
                       "sha256sums.txt" "CHANGELOG.md"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }

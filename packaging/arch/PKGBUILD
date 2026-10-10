@@ -3,19 +3,21 @@
 # FlowShot - screenshot + annotation for Linux (Wayland and X11).
 # Internal release recipe: NOT an AUR submission. Its only consumer is the
 # release workflow (.github/workflows/release.yml, package-arch job), which
-# builds the `flowoss-flowshot-<ver>-1-x86_64-Arch.pkg.tar.zst` release asset
-# that the AUR `flowshot-bin` package repackages. pkgrel MUST stay 1 unless
+# builds the `flowshot-<ver>-1-x86_64-Arch.pkg.tar.zst` release asset that the
+# AUR `flowshot-bin` package repackages. pkgrel MUST stay 1 unless
 # flowshot-bin's source URL is updated in lockstep - the asset name embeds it.
 #
-# The `flowshot` pkgbase on the AUR belongs to a different project (which also
-# installs /usr/bin/flowshot), so this package is org-qualified and family
-# names are hardcoded instead of using the ${pkgname%-git} idiom.
+# The package is named what the software is named: `flowshot`. The AUR
+# pkgbase `flowshot` is squatted by an unrelated install script, which only
+# affects AUR SUBMISSION names (worked around with the -git/-bin suffixes);
+# it has no say in what our built packages call themselves. Every family
+# member provides and conflicts `flowshot` - the standard takeover pattern.
 #
 # Build-dependency rationale is identical to flowshot-git; see that PKGBUILD
 # (clang for bindgen, pipewire+pkgconf for the libpipewire probe, librsvg for
 # the hicolor PNGs, no cmake because aws-lc-sys uses its cc builder, and
 # options=('!lto') because slim C LTO objects break the aws-lc link).
-pkgname=flowoss-flowshot
+pkgname=flowshot
 _pkgname=flowshot
 pkgver=0.1.0
 pkgrel=1
@@ -52,11 +54,12 @@ optdepends=(
   'vulkan-driver: Vulkan implementation for the GPU-accelerated overlay'
   'gnome-shell-extension-appindicator: system tray icon under GNOME'
 )
-# The bare `flowshot` name is provided for discoverability; pacman's
-# file-conflict check on /usr/bin/flowshot prevents co-installation with the
-# other project. See flowshot-git/PKGBUILD.
-provides=('flowshot')
-conflicts=('flowshot-git')
+# The software's own name, claimed via the standard takeover pattern
+# (provides + conflicts): installing any FlowShot package replaces any other
+# package claiming `flowshot`. See flowshot-git/PKGBUILD for the AUR-side
+# submission naming.
+provides=("flowshot=$pkgver")
+conflicts=('flowshot' 'flowshot-git')
 # Pin the tag OBJECT hash rather than the tag name (tags can be force-pushed);
 # append `?signed` + validpgpkeys= once tags are signed. The release workflow
 # fills this in per tag.
