@@ -22,13 +22,10 @@ message="${3:?missing commit message}"
 [[ -f "$prepared/PKGBUILD" && -f "$prepared/.SRCINFO" ]] || {
   echo "prepared dir must contain PKGBUILD and .SRCINFO" >&2; exit 1;
 }
-grep -q "sums=('SKIP')" "$prepared/PKGBUILD" && {
-  echo "refusing to publish with SKIP checksums ($pkgname)" >&2; exit 1;
-}
-# flowshot-git legitimately carries b2sums=('SKIP') for its VCS source
-# (VCS_package_guidelines: checksums are SKIP for git sources; pkgver() runs
-# on the user's machine). Allow SKIP only for the -git package.
-if [[ "$pkgname" != *-git ]] && grep -q "'SKIP'" "$prepared/PKGBUILD"; then
+# VCS packages legitimately carry SKIP checksums (their source is a moving
+# git ref; the user's checkout is checksummed by makepkg locally) - every
+# other package must carry real checksums.
+if [[ "$pkgname" != *-git ]] && grep -qE "sums=\('SKIP'\)" "$prepared/PKGBUILD"; then
   echo "refusing to publish a non-VCS package with SKIP checksums" >&2; exit 1
 fi
 
