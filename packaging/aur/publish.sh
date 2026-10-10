@@ -67,21 +67,30 @@ export GIT_SSH_COMMAND="ssh -F $SSH_DIR/config"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"; [[ -n "${AUR_SSH_PRIVATE_KEY:-}" ]] && rm -rf "$SSH_DIR"' EXIT
 
-git clone -q "ssh://aur@aur.archlinux.org/$pkgname.git" "$work/aur" || {
-  echo "clone failed: is '$pkgname' registered on the AUR account and the key uploaded?" >&2
-  exit 1
-}
-cd "$work/aur"
+first_publish=0
+if ! git clone -q "ssh://aur@aur.archlinux.org/$pkgname.git" "$work/aur" 2>/dev/null; then
+  # The pkgbase does not exist yet: AUR creates it on the first push to
+  # ssh://aur@aur.archlinux.org/<pkgbase>.git - clone cannot work, so init
+  # locally and push into the empty repository instead.
+  echo "$pkgname: not on the AUR yet - first publish"
+  first_publish=1
+  mkdir -p "$work/aur"
+  cd "$work/aur"
+  git init -q -b master .
+  git remote add origin "ssh://aur@aur.archlinux.org/$pkgname.git"
+else
+  cd "$work/aur"
+fi
 install -m644 "$prepared/PKGBUILD" "$prepared/.SRCINFO" .
 git add PKGBUILD .SRCINFO
-# Staged, not working-tree: on a FIRST publish the AUR repo is empty, so a
+# Staged, not working-tree: on a first publish the repo is empty, so a
 # working-tree diff sees nothing while the files are merely untracked.
-if git diff --cached --quiet; then
+if [[ "$first_publish" -eq 0 ]] && git diff --cached --quiet; then
   echo "$pkgname: already published, nothing to do"
   exit 0
 fi
 git -c user.name="${AUR_GIT_NAME:-FlowOSS}" \
-    -c user.email="${AUR_GIT_EMAIL:-aur@flowoss.org}" \
+    -c user.email="${AUR_GIT_EMAIL:-git@flowhost.io}" \
     commit -q -m "$message"
 git push -q origin HEAD:master
 echo "$pkgname: published"
