@@ -27,8 +27,9 @@ hands us as a surface.
 Keep one display-list vocabulary and add a second rasterizer behind it:
 
 - **`render::SoftwareRenderer`** consumes the same `DisplayList` the GPU
-  `Renderer` consumes and paints into a CPU-side premultiplied, sRGB-encoded
-  RGBA8 framebuffer. tiny-skia supplies the coverage-antialiased fills and
+  `Renderer` consumes and paints into a CPU-side premultiplied, **linear-light**
+  RGBA8 framebuffer (a registered image source is decoded into that space once
+  at upload, never per texel per frame). tiny-skia supplies the coverage-antialiased fills and
   strokes; cosmic-text shaping plus swash masks composite directly (the same
   mask source the GPU path uploads into its glyph atlas); the invert tool is a
   region filter over the same rounded-rect outline; the drop shadow is the
@@ -83,6 +84,15 @@ CLI's default `warn` filter.
 
 What the fallback buys:
 
+- measured steady-state cost on the dual-monitor storm (1920x1080 + 2560x1440,
+  16 committed objects, `perf_storm --software`): **11.9 ms per both-window frame**, down
+  from 298 ms before the color and addressing work. The three costs that made
+  the difference, in measured order: decoding the capture bytes once at
+  registration rather than per texel per frame (298 -> 55 ms), integer texel
+  addressing with the source window hoisted out of the blit loop (55 -> 25.6 ms),
+  and a per-row memcpy for the full-frame opaque backdrop over a still-transparent
+  framebuffer (25.6 -> 11.9 ms). The remaining cost is the chrome: fills,
+  strokes and glyph composites through tiny-skia.
 - frame cost tracks ink area rather than window extent: every operation is
   bounding-box limited and the clip mask is materialized only while a clip is
   active, so a clip-free frame pays no per-pixel mask read.

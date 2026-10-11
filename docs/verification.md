@@ -82,7 +82,7 @@ temp artifacts are transient.
   - 4480x1440 at 213 MB takes the CPU path, 2560x1440 at 116 MB keeps the GPU
   path, a software device class takes it at any extent, and the budget
   boundary flips between 4.0 M and 4.1 M pixels); the CPU renderer's own
-  contracts are pinned pixel-exact (`opaque_token_fill_is_byte_exact`,
+  contracts are pinned pixel-exact (`the_opaque_fill_lands_in_linear_light`,
   `clip_punches_only_the_clipped_region`, `invert_complements_painted_pixels`,
   `a_1_to_1_blit_copies_the_source_bytes`, `a_missing_texture_draws_the_magenta
   placeholder`, `degenerate_geometry_paints_nothing_and_never_panics`). A QA
@@ -120,6 +120,14 @@ temp artifacts are transient.
   lands at within2 99.61 % with max_masked 93/255 inside the coverage-vs-MSAA
   budget the policy already allows. The suite runs for real on this machine
   (19/19 green) and skips with a printed message where no adapter exists.
+  Perf of the CPU path is **Unit-level measured** through the repo's own
+  `perf_storm` harness, which gained a `--software` mode that renders the same
+  production scene through `SoftwareRenderer`: 11.9 ms per both-window frame at
+  1920x1080 + 2560x1440 with 16 committed objects, against 298 ms before the
+  color and addressing work - the capture decode moved to registration (298 ->
+  55 ms), the 1:1 blit got integer texel addressing (55 -> 25.6 ms), and the
+  full-frame opaque backdrop over a still-transparent framebuffer became a
+  per-row memcpy (25.6 -> 11.9 ms).
 
 - **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
   i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA

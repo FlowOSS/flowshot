@@ -51,7 +51,9 @@ use flowshot_core::scene::{
 use flowshot_core::tokens::DesignTokens;
 use flowshot_ui::backdrop::{Backdrop, BackdropOptions, FrozenCapture};
 use flowshot_ui::gpu::{GpuContext, new_instance};
-use flowshot_ui::render::{RenderTarget, Renderer, RgbaImage};
+use flowshot_ui::render::{
+    Command, DisplayList, ImageSource, RenderTarget, Renderer, RgbaImage, SoftwareRenderer,
+};
 use flowshot_ui::{
     EditorTools, FramePixels, InputRouter, OverlayCore, SyntheticInput, WindowSlot,
     build_overlay_frame,
@@ -90,6 +92,9 @@ struct Args {
     magnifier: bool,
     objects: usize,
     out: Option<PathBuf>,
+    software: bool,
+    no_dim: bool,
+    profile: bool,
 }
 
 fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
@@ -100,6 +105,9 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
         magnifier: true,
         objects: 16,
         out: None,
+        software: false,
+        no_dim: false,
+        profile: false,
     };
     let mut flags = std::env::args().skip(1);
     while let Some(flag) = flags.next() {
@@ -114,6 +122,9 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
             "--panel" => args.panel = true,
             "--no-magnifier" => args.magnifier = false,
             "--objects" => args.objects = value("--objects")?.parse()?,
+            "--profile" => args.profile = true,
+            "--no-dim" => args.no_dim = true,
+            "--software" => args.software = true,
             "--out" => args.out = Some(PathBuf::from(value("--out")?)),
             other => return Err(format!("unknown argument {other}").into()),
         }
@@ -124,6 +135,9 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
 /// One window's offscreen render rig.
 struct WindowRig {
     renderer: Renderer,
+    /// The cpu raster renderer for the same window, used only in --software
+    /// mode (the live shell pairs one of these with a Presenter per window).
+    software: SoftwareRenderer,
     /// Kept alive so `view` stays valid (dropping the texture destroys it).
     #[expect(
         dead_code,
@@ -139,6 +153,9 @@ struct Scene {
     core: OverlayCore,
     backdrop: Backdrop,
     rigs: Vec<WindowRig>,
+    software: bool,
+    no_dim: bool,
+    profile: bool,
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -266,13 +283,28 @@ fn build_scene(gpu: &GpuContext, args: &Args) -> Result<Scene, Box<dyn std::erro
         let (width, height) = (spec.2 as u32, spec.3 as u32);
         let mut renderer =
             Renderer::new(&gpu.device, &gpu.queue, wgpu::TextureFormat::Rgba8UnormSrgb);
-        upload_atlas(gpu, &mut renderer)?;
-        backdrop.upload_for(index, &mut renderer, gpu)?;
-        backdrop.upload_cursor(&mut renderer, gpu)?;
+        let mut software = SoftwareRenderer::new(width, height);
+        if args.software {
+            software.upload(
+                flowshot_ui::widgets::ICON_ATLAS_ID,
+                ImageSource {
+                    width: flowshot_ui::widgets::ATLAS_WIDTH,
+                    height: flowshot_ui::widgets::ATLAS_HEIGHT,
+                    data: flowshot_ui::widgets::ICON_ATLAS.to_vec(),
+                },
+            );
+            backdrop.upload_software_for(index, &mut software);
+            backdrop.upload_cursor_software(&mut software);
+        } else {
+            upload_atlas(gpu, &mut renderer)?;
+            backdrop.upload_for(index, &mut renderer, gpu)?;
+            backdrop.upload_cursor(&mut renderer, gpu)?;
+        }
         let target = renderer.create_offscreen_target(&gpu.device, width, height)?;
         let view = target.create_view(&wgpu::TextureViewDescriptor::default());
         rigs.push(WindowRig {
             renderer,
+            software,
             target,
             view,
             width,
@@ -283,6 +315,9 @@ fn build_scene(gpu: &GpuContext, args: &Args) -> Result<Scene, Box<dyn std::erro
         core,
         backdrop,
         rigs,
+        software: args.software,
+        no_dim: args.no_dim,
+        profile: args.profile,
     })
 }
 
@@ -374,7 +409,7 @@ fn render_window(
     now: Instant,
 ) -> Result<FrameTiming, Box<dyn std::error::Error>> {
     let options = BackdropOptions {
-        dim: true,
+        dim: !scene.no_dim,
         cursor_visible: false,
         selection: scene.core.selection().rect(),
     };
@@ -387,6 +422,55 @@ fn render_window(
         now,
     );
     let list_build_us = build_started.elapsed().as_secs_f64() * 1e6;
+    let rig = &mut scene.rigs[index];
+    if scene.software {
+        let software = &mut rig.software;
+        if let Some(texture) = frame.magnifier.as_ref() {
+            software.upload(
+                texture.id,
+                ImageSource {
+                    width: texture.width,
+                    height: texture.height,
+                    data: texture.pixels.to_vec(),
+                },
+            );
+        }
+        if scene.profile {
+            let mut totals: Vec<(&str, f64)> = Vec::new();
+            for command in frame.list.iter() {
+                let label = match command {
+                    Command::Fill { .. } => "fill",
+                    Command::Stroke { .. } => "stroke",
+                    Command::Dim { .. } => "dim",
+                    Command::Invert { .. } => "invert",
+                    Command::Image { .. } => "image",
+                    Command::Shadow { .. } => "shadow",
+                    Command::Text { .. } => "text",
+                    Command::PushClip { .. } => "clip",
+                    Command::PopClip => "pop",
+                };
+                let mut one = DisplayList::new();
+                one.push(command.clone());
+                let started = Instant::now();
+                let _ = software.render(&one);
+                let us = started.elapsed().as_secs_f64() * 1e6;
+                match totals.iter().position(|entry| entry.0 == label) {
+                    Some(at) => totals[at].1 += us,
+                    None => totals.push((label, us)),
+                }
+            }
+            totals.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            for (label, us) in totals {
+                eprintln!("profile win{index}: {label} {us:.0}us");
+            }
+        }
+        let stats = software.render(&frame.list);
+        return Ok(FrameTiming {
+            list_build: list_build_us,
+            tess_shape: stats.cpu_time.as_secs_f64() * 1e6,
+            encode_submit: 0.0,
+        });
+    }
     let rig = &mut scene.rigs[index];
     if let Some(texture) = frame.magnifier.as_ref() {
         rig.renderer.textures_mut().insert(

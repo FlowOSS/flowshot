@@ -16,7 +16,7 @@ Two layers, split so the interesting logic never touches a GPU or a display: a
 | Headless core | `state`, `state/route`, `router`, `input`, `launch` | `OverlayCore`, coordinate mapping, the route funnel, preselect math |
 | Window shell | `runtime`, `app`, `handler/`, `surface`, `gpu/`, `monitor`, `adapter`, `crosshair` | winit loop, per-monitor windows, device/surface policy |
 | Renderer | `render/` (21 files) | `Renderer`, `DisplayList`, `Command`, `Color`, `TextureStore` |
-| CPU raster fallback | `render/software` (renderer + `Presenter`) | `SoftwareRenderer`, `ImageSource`, `Presenter` — same `DisplayList`, no GPU rasterizer; the framebuffer is premultiplied LINEAR light and `surface.render_software` resizes it to the surface extent |
+| CPU raster fallback | `render/software` (renderer + `Presenter`) | `SoftwareRenderer`, `ImageSource`, `Presenter` — same `DisplayList`, no GPU rasterizer; the framebuffer is premultiplied LINEAR light, sources decode at `upload`, and `surface.render_software` resizes it to the surface extent |
 | Status pill | `chrome/status` + `widgets/chip` (`StatusChip`) | the selection-attached badge stating `GPU` (quiet) or `CPU fallback` (accent); gone when no slot fits — decoration the funnel never hit-tests |
 | Frame build | `frame`, `backdrop/`, `export`, `completion` | the ONE paint path + frozen-frame pixel prep |
 | Behavior | `selection/`, `editor/`, `editor/tools/`, `chrome/`, `pins/` | the F27 selection spec, tool framework, chrome, pin windows |

@@ -83,6 +83,37 @@ impl ImageSource {
     }
 }
 
+/// A registered image source: the decoded bytes plus the one property the
+/// blit's row-copy fast path needs (every texel opaque), computed once at
+/// registration rather than per frame.
+#[derive(Debug, Clone)]
+struct ImageEntry {
+    width: u32,
+    height: u32,
+    data: Vec<u8>,
+    opaque: bool,
+}
+
+impl ImageEntry {
+    /// The source extent in texels.
+    #[must_use]
+    pub const fn size(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+
+    /// The source pixel bytes.
+    #[must_use]
+    pub const fn bytes(&self) -> &[u8] {
+        self.data.as_slice()
+    }
+
+    /// Whether every texel is fully opaque.
+    #[must_use]
+    pub const fn opaque(&self) -> bool {
+        self.opaque
+    }
+}
+
 /// The CPU raster renderer: the same pure draw-command consumer as the GPU
 /// [`super::renderer::Renderer`], rasterizing into a CPU framebuffer.
 #[derive(Debug)]
@@ -92,7 +123,7 @@ pub struct SoftwareRenderer {
     buffer: buffer::SoftwareFramebuffer,
     clip: Vec<ClipMask>,
     fonts: (FontSystem, SwashCache),
-    images: HashMap<TextureId, ImageSource>,
+    images: HashMap<TextureId, ImageEntry>,
 }
 
 impl SoftwareRenderer {
@@ -112,8 +143,35 @@ impl SoftwareRenderer {
 
     /// Registers one image source for the [`super::list::TextureId`] handles the
     /// consumer issues. Re-registering the same handle replaces the bytes.
+    ///
+    /// The bytes arrive in the capture's space (premultiplied, sRGB-encoded) and
+    /// are decoded **once** here into the framebuffer's premultiplied linear-light
+    /// space, so a blit never crosses the transfer function per texel per frame —
+    /// that decode is what put a full-window backdrop blit at hundreds of
+    /// milliseconds rather than the copy's own few.
     pub fn upload(&mut self, texture: TextureId, source: ImageSource) {
-        self.images.insert(texture, source);
+        let mut source = source;
+        let table = crate::render::software::blit::linear_table();
+        for texel in source.data.as_chunks_mut::<4>().0 {
+            for channel in 0..3 {
+                texel[channel] = table[usize::from(texel[channel])];
+            }
+        }
+        let opaque = source
+            .data
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|texel| texel[3] == 255);
+        self.images.insert(
+            texture,
+            ImageEntry {
+                width: source.width,
+                height: source.height,
+                data: source.data,
+                opaque,
+            },
+        );
     }
 
     /// Drops every registered image source (buffer reuse across captures).

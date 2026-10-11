@@ -3,13 +3,16 @@
 //!
 //! A 1:1 quad takes the nearest-texel path, which is the backdrop's case and
 //! costs one copy per destination pixel; only scaled quads pay bilinear
-//! filtering. Filtering happens in the encoded byte space rather than in
-//! linear light, the documented deviation of the fallback's colorimetry.
+//! filtering. Registered sources are already decoded to the framebuffer's
+//! linear-light space by [`SoftwareRenderer::upload`], so filtering happens in
+//! linear light like the GPU sampler's and no texel ever crosses the transfer
+//! function per frame — the table below is applied once per registered byte.
 
 #![expect(
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
     reason = "physical-pixel and texel index math, clamped into range before each cast"
 )]
 
@@ -18,7 +21,7 @@ use std::collections::HashMap;
 use crate::render::color::srgb_to_linear;
 use crate::render::geom::Rect;
 use crate::render::list::{ImageCommand, TextureId};
-use crate::render::software::ImageSource;
+use crate::render::software::ImageEntry;
 use crate::render::software::buffer::{ClipMask, SoftwareFramebuffer, unit_to_byte};
 
 /// Draws one image quad, or the magenta placeholder when its texture is
@@ -27,7 +30,7 @@ pub(crate) fn blit(
     framebuffer: &mut SoftwareFramebuffer,
     clip: &[ClipMask],
     command: &ImageCommand,
-    images: &HashMap<TextureId, ImageSource>,
+    images: &HashMap<TextureId, ImageEntry>,
 ) {
     let destination = command.dst;
     if destination.size.width <= 0.0 || destination.size.height <= 0.0 {
@@ -73,22 +76,133 @@ pub(crate) fn blit(
         reason = "both scales derive from the same integer extents, so 1.0 is exact"
     )]
     let one_to_one = scale_x == 1.0 && scale_y == 1.0;
-    let data = source.bytes();
 
+    let (fb_w, fb_h) = framebuffer.size();
+    let (x_end, y_end) = (x_end.min(fb_w as i32), y_end.min(fb_h as i32));
+    if one_to_one {
+        blit_nearest(
+            framebuffer,
+            clip,
+            command,
+            source,
+            fade,
+            (x_start, x_end, y_start, y_end),
+        );
+        return;
+    }
+    blit_filtered(
+        framebuffer,
+        clip,
+        command,
+        source,
+        fade,
+        (x_start, x_end, y_start, y_end),
+    );
+}
+
+/// The 1:1 case: with unit scales the texel for a destination pixel is the
+/// source pixel offset by the rounded region delta, so addressing is integer
+/// stepping over a source window hoisted out of the loop - no per-texel float
+/// math and no per-texel bounds re-check. With nothing painted yet and every
+/// texel opaque the blend degenerates to a copy, which is one memcpy per row.
+pub(crate) fn blit_nearest(
+    framebuffer: &mut SoftwareFramebuffer,
+    clip: &[ClipMask],
+    command: &ImageCommand,
+    source: &ImageEntry,
+    fade: f32,
+    bounds: (i32, i32, i32, i32),
+) {
+    let (x_start, x_end, y_start, y_end) = bounds;
+    let destination = command.dst;
+    let (tex_w, tex_h) = source.size();
+    let data = source.bytes();
+    let region = command
+        .src
+        .unwrap_or(Rect::from_parts(0.0, 0.0, tex_w as f32, tex_h as f32));
+    let (fb_w, _) = framebuffer.size();
+    let shift_x = (region.origin.x - destination.origin.x + 0.5).floor() as i32;
+    let shift_y = (region.origin.y - destination.origin.y + 0.5).floor() as i32;
+    let (x_lo, x_hi) = (x_start.max(-shift_x), x_end.min(tex_w as i32 - shift_x));
+    let (y_lo, y_hi) = (y_start.max(-shift_y), y_end.min(tex_h as i32 - shift_y));
+    let clip_free = clip.is_empty();
+    let opaque_fade = fade >= 1.0;
+    if clip_free && opaque_fade && source.opaque() && framebuffer.transparent() {
+        let span = (x_hi - x_lo).max(0) as usize * 4;
+        for y in y_lo..y_hi {
+            let src = (y + shift_y) as usize * tex_w as usize * 4 + x_lo as usize * 4;
+            let dst = y as usize * fb_w as usize * 4 + x_lo as usize * 4;
+            framebuffer.copy_row(dst, &data[src..][..span]);
+        }
+        return;
+    }
+    for y in y_lo..y_hi {
+        let src_row = (y + shift_y) as usize * tex_w as usize * 4;
+        let dst_row = y as usize * fb_w as usize * 4;
+        for x in x_lo..x_hi {
+            let src = src_row + (x + shift_x) as usize * 4;
+            let at = dst_row + x as usize * 4;
+            let clip_coverage = if clip_free {
+                255
+            } else {
+                framebuffer.coverage(clip, x, y)
+            };
+            if clip_coverage == 0 {
+                continue;
+            }
+            let coverage = if opaque_fade {
+                clip_coverage
+            } else {
+                scaled(clip_coverage, fade)
+            };
+            framebuffer.blend_covered(
+                at,
+                coverage,
+                [data[src], data[src + 1], data[src + 2], data[src + 3]],
+            );
+        }
+    }
+}
+
+/// A scaled quad: bilinear filtering in linear light, the GPU sampler's shape.
+pub(crate) fn blit_filtered(
+    framebuffer: &mut SoftwareFramebuffer,
+    clip: &[ClipMask],
+    command: &ImageCommand,
+    source: &ImageEntry,
+    fade: f32,
+    bounds: (i32, i32, i32, i32),
+) {
+    let (x_start, x_end, y_start, y_end) = bounds;
+    let destination = command.dst;
+    let (tex_w, tex_h) = source.size();
+    let data = source.bytes();
+    let region = command
+        .src
+        .unwrap_or(Rect::from_parts(0.0, 0.0, tex_w as f32, tex_h as f32));
+    let scale_x = region.size.width / destination.size.width;
+    let scale_y = region.size.height / destination.size.height;
+    let clip_free = clip.is_empty();
+    let opaque_fade = fade >= 1.0;
     for y in y_start..y_end {
         for x in x_start..x_end {
-            let coverage = framebuffer.coverage(clip, x, y);
-            if coverage == 0 {
+            let clip_coverage = if clip_free {
+                255
+            } else {
+                framebuffer.coverage(clip, x, y)
+            };
+            if clip_coverage == 0 {
                 continue;
             }
             let u = region.origin.x + (x as f32 + 0.5 - destination.origin.x) * scale_x;
             let v = region.origin.y + (y as f32 + 0.5 - destination.origin.y) * scale_y;
-            let texel = to_linear(if one_to_one {
-                nearest(data, tex_w, tex_h, u, v)
+            let texel = bilinear(data, tex_w, tex_h, u - 0.5, v - 0.5);
+            let coverage = if opaque_fade {
+                clip_coverage
             } else {
-                bilinear(data, tex_w, tex_h, u - 0.5, v - 0.5)
-            });
-            framebuffer.blend_covered(framebuffer.offset(x, y), scaled(coverage, fade), texel);
+                scaled(clip_coverage, fade)
+            };
+            framebuffer.blend_covered(framebuffer.offset(x, y), coverage, texel);
         }
     }
 }
@@ -99,34 +213,15 @@ pub(crate) fn scaled(coverage: u8, fade: f32) -> u8 {
     unit_to_byte(f32::from(coverage) * fade.clamp(0.0, 1.0))
 }
 
-/// Image source bytes are premultiplied sRGB-encoded (the capture's space);
-/// the framebuffer blends in linear light, so each rgb channel crosses the
-/// transfer function before it composites. Alpha is linear by convention.
+/// The sRGB→linear byte table: the transfer function evaluated once per byte
+/// value, applied when a source is registered rather than per texel per frame.
 #[must_use]
-pub(crate) fn to_linear(texel: [u8; 4]) -> [u8; 4] {
-    let channel = |byte: u8| -> u8 { unit_to_byte(srgb_to_linear(f32::from(byte) / 255.0)) };
-    [
-        channel(texel[0]),
-        channel(texel[1]),
-        channel(texel[2]),
-        texel[3],
-    ]
-}
-
-/// The nearest texel at texel-space `(u, v)`, transparent outside the source.
-#[must_use]
-pub(crate) fn nearest(data: &[u8], width: u32, height: u32, u: f32, v: f32) -> [u8; 4] {
-    let (x, y) = (u.floor(), v.floor());
-    if x < 0.0 || y < 0.0 || x as u32 >= width || y as u32 >= height {
-        return [0, 0, 0, 0];
+pub(crate) fn linear_table() -> [u8; 256] {
+    let mut table = [0u8; 256];
+    for (index, slot) in (0..256).zip(table.iter_mut()) {
+        *slot = unit_to_byte(srgb_to_linear(index as f32 / 255.0));
     }
-    let offset = (y as usize * width as usize + x as usize) * 4;
-    [
-        data[offset],
-        data[offset + 1],
-        data[offset + 2],
-        data[offset + 3],
-    ]
+    table
 }
 
 /// The bilinear blend of the four texels around texel-space `(x, y)`.

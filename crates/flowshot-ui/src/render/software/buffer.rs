@@ -57,6 +57,9 @@ pub(crate) struct SoftwareFramebuffer {
     width: u32,
     height: u32,
     data: Vec<u8>,
+    /// Whether every texel is still fully transparent, tracked so a full-frame
+    /// opaque image can be a row copy instead of a per-pixel blend.
+    transparent: bool,
 }
 
 impl SoftwareFramebuffer {
@@ -68,6 +71,7 @@ impl SoftwareFramebuffer {
             width,
             height,
             data: vec![0; width as usize * height as usize * 4],
+            transparent: true,
         }
     }
 
@@ -86,6 +90,21 @@ impl SoftwareFramebuffer {
     /// Makes every texel fully transparent.
     pub(crate) fn clear(&mut self) {
         self.data.fill(0);
+        self.transparent = true;
+    }
+
+    /// Whether nothing has been painted yet this frame.
+    #[must_use]
+    pub(crate) fn transparent(&self) -> bool {
+        self.transparent
+    }
+
+    /// Copies one source span over the destination starting at `at`, the
+    /// full-frame opaque-image fast path (a memcpy per row instead of a blend
+    /// per pixel).
+    pub(crate) fn copy_row(&mut self, at: usize, source: &[u8]) {
+        self.data.as_mut_slice()[at..][..source.len()].copy_from_slice(source);
+        self.transparent = false;
     }
 
     /// The byte offset of `(x, y)`, or [`OUTSIDE`] when the pixel is outside
@@ -136,6 +155,7 @@ impl SoftwareFramebuffer {
             self.data[at + 1] = sg;
             self.data[at + 2] = sb;
             self.data[at + 3] = 255;
+            self.transparent = false;
             return;
         }
         let inv = 255 - src_a;
@@ -152,6 +172,7 @@ impl SoftwareFramebuffer {
         )
         .unwrap_or(255);
         self.data[at + 3] = u8::try_from(src_a + (dst_a * inv) / 255).unwrap_or(255);
+        self.transparent = false;
     }
 
     /// Fills `path` with `color` under the active clip, coverage-antialiased.
@@ -166,6 +187,7 @@ impl SoftwareFramebuffer {
         let (width, height) = self.size();
         if let Some(mut pixmap) = PixmapMut::from_bytes(self.data.as_mut_slice(), width, height) {
             pixmap.fill_path(path, &paint, rule, Transform::identity(), clip.last());
+            self.transparent = false;
         }
     }
 
@@ -187,6 +209,7 @@ impl SoftwareFramebuffer {
             PixmapMut::from_bytes(self.data.as_mut_slice(), extent_w, extent_h)
         {
             pixmap.stroke_path(path, &paint, &stroke, Transform::identity(), clip.last());
+            self.transparent = false;
         }
     }
 
@@ -230,6 +253,7 @@ impl SoftwareFramebuffer {
                 }
             }
         }
+        self.transparent = false;
     }
 }
 
