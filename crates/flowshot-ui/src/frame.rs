@@ -73,6 +73,17 @@ pub fn build_overlay_frame(
             core.chrome()
                 .paint_aids(&mut list, core.editor(), core.selection().rect(), output);
         }
+        // The CPU-raster status pill rides the outputs that present through
+        // the CPU path (adr-007): a session that lost the GPU frame target
+        // says so quietly, on the corner opposite the aid chips.
+        if core.chrome().cpu_path_for(slot) {
+            core.chrome().paint_cpu_status(
+                &mut list,
+                core.editor(),
+                core.selection().rect(),
+                output,
+            );
+        }
     }
     let magnifier = magnifier_pass(core, slot, &mut list, surface);
     OverlayFrame { list, magnifier }

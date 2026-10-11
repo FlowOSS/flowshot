@@ -145,6 +145,8 @@ impl OverlayApp {
                 Some(forced) => forced,
                 None => software_path_for(gpu.power, width, height),
             };
+            core.chrome_mut()
+                .set_cpu_path(WindowSlot::new(index), software);
             if forced.is_some_and(|forced| !forced) && software_path_for(gpu.power, width, height) {
                 tracing::warn!(
                     window = index,

@@ -26,6 +26,7 @@ use std::time::Instant;
 use crate::editor::EditorState;
 use crate::input::Action;
 use crate::render::{DisplayList, TextureId, f32_from_f64};
+use crate::router::WindowSlot;
 use crate::selection::SelectionState;
 use flowshot_core::config::UiConfig;
 use flowshot_core::geometry::OutputInfo;
@@ -59,6 +60,9 @@ pub struct ChromeState {
     layer_drag: Option<LayerDrag>,
     draw_color_sink: Option<DrawColorSink>,
     pending_actions: Vec<Action>,
+    /// The window slots that present through the CPU raster path (adr-007):
+    /// the status pill paints on exactly these.
+    cpu_slots: Vec<crate::router::WindowSlot>,
 }
 
 impl std::fmt::Debug for ChromeState {
@@ -76,6 +80,7 @@ impl std::fmt::Debug for ChromeState {
             .field("layer_drag", &self.layer_drag)
             .field("draw_color_sink", &self.draw_color_sink.is_some())
             .field("pending_actions", &self.pending_actions)
+            .field("cpu_slots", &self.cpu_slots)
             .finish()
     }
 }
@@ -86,6 +91,21 @@ impl ChromeState {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Whether one window slot presents through the CPU raster path.
+    #[must_use]
+    pub(crate) fn cpu_path_for(&self, slot: WindowSlot) -> bool {
+        self.cpu_slots.contains(&slot)
+    }
+
+    /// Records the render path for one slot (the shell sets it at renderer
+    /// init; `false` clears it).
+    pub(crate) fn set_cpu_path(&mut self, slot: WindowSlot, cpu_path: bool) {
+        self.cpu_slots.retain(|registered| *registered != slot);
+        if cpu_path {
+            self.cpu_slots.push(slot);
+        }
     }
 
     /// Applies a new config projection: the toolbar button order (plan:
@@ -342,6 +362,7 @@ impl Default for ChromeState {
             layer_drag: None,
             draw_color_sink: None,
             pending_actions: Vec::new(),
+            cpu_slots: Vec::new(),
         };
         state.configure(&UiConfig::default());
         state
