@@ -219,7 +219,7 @@ pub(crate) fn render_completion(
         };
         if let Some(software) = entry.software.as_mut() {
             sync_effect_software(software, &mut entry.effect_textures, editor.pixel_effects());
-            match render_output_export_software(
+            if let Some(output) = render_output_export_software(
                 software,
                 backdrop,
                 editor,
@@ -227,8 +227,9 @@ pub(crate) fn render_completion(
                 output_index,
                 cursor_visible,
             ) {
-                Some(output) => crops.push(output),
-                None => tracing::warn!(window = slot_index, "no frozen frame; output skipped"),
+                crops.push(output);
+            } else {
+                tracing::warn!(window = slot_index, "no frozen frame; output skipped");
             }
             continue;
         }

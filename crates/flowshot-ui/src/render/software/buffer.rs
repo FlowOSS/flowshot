@@ -87,10 +87,6 @@ impl SoftwareFramebuffer {
     /// Blends an integer-aligned solid rectangular region with `color` in linear
     /// light using skia's direct source-over integer pipeline, matching `fill_rect`
     /// byte for byte with zero allocation and zero path overhead.
-    #[expect(
-        clippy::chunks_exact_to_as_chunks,
-        reason = "color channel u16 math and row slice traversal"
-    )]
     pub(crate) fn blend_rect_direct(
         &mut self,
         x_start: usize,
@@ -182,10 +178,6 @@ impl SoftwareFramebuffer {
         self.transparent = false;
     }
 
-    #[expect(
-        clippy::chunks_exact_to_as_chunks,
-        reason = "color channel u16 math and row slice traversal"
-    )]
     fn blend_rows_range(
         data: &mut [u8],
         fb_w: usize,

@@ -363,7 +363,7 @@ impl SoftwareRenderer {
         if is_extension && !changed && scene_changed {
             // Incremental commit fast-path: backdrop and wash are identical!
             // Paint only the newly added scene commands onto self.base without full-screen re-rasterization.
-            let old_len = self.scene_key.as_ref().map_or(2, |k| k.len());
+            let old_len = self.scene_key.as_ref().map_or(2, Vec::len);
             let mut base_clip = Vec::new();
             let mut new_bounds: Option<Rect> = None;
             for cmd in &list.as_slice()[old_len..scene_end] {
@@ -445,17 +445,17 @@ impl SoftwareRenderer {
         let mut chrome_dirty: Option<Rect> = None;
 
         for (i, cmd) in curr_chrome.iter().enumerate() {
-            if prev_chrome.get(i) != Some(cmd) {
-                if let Some(b) = command_bounds(cmd) {
-                    chrome_dirty = union_rect(chrome_dirty, b);
-                }
+            if prev_chrome.get(i) != Some(cmd)
+                && let Some(b) = command_bounds(cmd)
+            {
+                chrome_dirty = union_rect(chrome_dirty, b);
             }
         }
         for (i, cmd) in prev_chrome.iter().enumerate() {
-            if curr_chrome.get(i) != Some(cmd) {
-                if let Some(b) = command_bounds(cmd) {
-                    chrome_dirty = union_rect(chrome_dirty, b);
-                }
+            if curr_chrome.get(i) != Some(cmd)
+                && let Some(b) = command_bounds(cmd)
+            {
+                chrome_dirty = union_rect(chrome_dirty, b);
             }
         }
         self.prev_chrome = Some(curr_chrome.to_vec());
@@ -509,21 +509,21 @@ impl SoftwareRenderer {
                 text(fb, clip, fonts, command);
             }
             Command::PushClip(clip_cmd) => {
-                if let Some(path) = clip_path(clip_cmd) {
-                    if let Some(mask) = full_mask(fb.size().0, fb.size().1) {
-                        let mut mask = if clip.is_empty() {
-                            mask
-                        } else {
-                            clip.last().cloned().unwrap_or(mask)
-                        };
-                        mask.intersect_path(
-                            &path,
-                            tiny_skia::FillRule::Winding,
-                            true,
-                            tiny_skia::Transform::identity(),
-                        );
-                        clip.push(mask);
-                    }
+                if let Some(path) = clip_path(clip_cmd)
+                    && let Some(mask) = full_mask(fb.size().0, fb.size().1)
+                {
+                    let mut mask = if clip.is_empty() {
+                        mask
+                    } else {
+                        clip.last().cloned().unwrap_or(mask)
+                    };
+                    mask.intersect_path(
+                        &path,
+                        tiny_skia::FillRule::Winding,
+                        true,
+                        tiny_skia::Transform::identity(),
+                    );
+                    clip.push(mask);
                 }
             }
             Command::PopClip => {
