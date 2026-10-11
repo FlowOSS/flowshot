@@ -43,7 +43,7 @@ mod pass;
 mod readback;
 mod renderer;
 mod shadow;
-mod software;
+pub mod software;
 mod staging;
 mod stats;
 mod target;
