@@ -1,6 +1,6 @@
 [package]
 name = "flowshot-capture-wayland"
-version = "0.3.0"
+version.workspace = true
 edition = "2024"
 license.workspace = true
 repository = "https://github.com/flowoss/flowshot"
