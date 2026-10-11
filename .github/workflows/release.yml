@@ -83,7 +83,7 @@ jobs:
           tool: git-cliff
       - run: |
           set -euo pipefail
-          git cliff --tag "v${{ needs.meta.outputs.version }}" --strip header -o release-notes.md
+          git cliff --tag "v${{ needs.meta.outputs.version }}" --current --strip header -o release-notes.md
           git cliff --tag "v${{ needs.meta.outputs.version }}" -o CHANGELOG.md
       - uses: actions/upload-artifact@v4
         with:
@@ -385,11 +385,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+
+  aur-publish:
+    needs: [meta, release]
+    if: github.event_name == 'push' && needs.meta.outputs.is_prerelease != 'true'
+    uses: ./.github/workflows/aur.yml
+    with:
+      package: both
+    secrets: inherit
   sentry-release:
     needs: [meta, release]
-    # Never announce a rehearsal version: real tags only, and only when the
-    # integration is enabled (vars + token).
-    if: github.event_name == 'push' && vars.SENTRY_RELEASE_ENABLED == 'true'
+    # Mandatory for real tags: fails the workflow if Sentry release integration is broken or unconfigured.
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -413,6 +420,14 @@ jobs:
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
         run: |
           set -euo pipefail
+          if [[ -z "${SENTRY_AUTH_TOKEN:-}" ]]; then
+            echo "::error::SENTRY_AUTH_TOKEN secret is missing or empty" >&2
+            exit 1
+          fi
+          if [[ -z "${SENTRY_URL:-}" ]]; then
+            echo "::error::SENTRY_URL repository variable is missing or empty" >&2
+            exit 1
+          fi
           # Byte-identical to the SDK's RELEASE const
           # (concat!("flowshot@", CARGO_PKG_VERSION) in telemetry/mod.rs) -
           # any drift silently orphans events into a second release.
