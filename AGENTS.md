@@ -134,8 +134,9 @@ cargo run -p flowshot-ui --example {e2e_headless,qa_bundle} --features test-driv
   Save Path), logo wiring, opt-in telemetry (self-hosted Sentry, off by default, two-tier consent +
   first-launch dialog), the latest-stack upgrade, comment-slop purge, palette swatch wrapping fix,
   the CPU raster fallback (adr-007: `render/software` + `Presenter`, per-window policy in
-  `adapter.rs`, QA override `FLOWSHOT_RENDER_PATH=software|gpu`, and a selection-attached
-  `chrome/status` pill stating `GPU`/`CPU fallback`, gone when no slot fits).
+  `adapter.rs`, QA override `FLOWSHOT_RENDER_PATH=software|gpu`, a selection-attached
+  `chrome/status` pill stating `GPU`/`CPU fallback` gone when no slot fits, and
+  `ui/tests/parity.rs` rows holding the CPU path to the GPU path pixel for pixel).
 - `ui/tests/parity.rs` SKIPS every test with a printed message when no GPU adapter exists (not even
   lavapipe) — a green headless CI run proves nothing about renderer pixel parity.
 - Load-sensitive, raised budgets: `daemon/tests/portal_shortcuts.rs` (30 s) and the KWin p2p stubs —

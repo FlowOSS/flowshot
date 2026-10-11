@@ -107,13 +107,19 @@ temp artifacts are transient.
   plate and no wash.
   The whole-workspace gate (`cargo fmt --check`, `cargo clippy --workspace
   --all-targets -D warnings`, `cargo test --workspace`, the purity gate, the
-  deny check) passes with 674 flowshot-ui lib tests green — run with `-j 2`
+  deny check) passes with 683 flowshot-ui lib tests green — run with `-j 2`
   on the build host because a 29 GB resident local model server had the box
   swapping at load 255, which starved the default 16-way link stage to 0 %
-  CPU for 39 minutes; the cap is a host condition, not a gate relaxation. Cross-rasterizer
-  pixel parity of the new path against the GPU renderer is **Deferred** - it
-  needs the offscreen render harness, and the AA-edge band it would compare is
-  the same band the existing parity policy masks.
+  CPU for 39 minutes; the cap is a host condition, not a gate relaxation.
+  Cross-rasterizer pixel parity of the CPU path against the GPU renderer is
+  now **Unit-level covered through a real GPU**: `ui/tests/parity.rs` renders
+  the same fixtures through wgpu offscreen and through the shipped
+  `SoftwareRenderer` and applies the existing policy - `the_cpu_rasterizer_matches_the_gpu_on_flat_fills`
+  and `the_cpu_rasterizer_matches_the_gpu_on_image_blits` are byte-exact
+  (max_diff 2/255), `the_cpu_rasterizer_matches_the_gpu_on_rounded_shapes`
+  lands at within2 99.61 % with max_masked 93/255 inside the coverage-vs-MSAA
+  budget the policy already allows. The suite runs for real on this machine
+  (19/19 green) and skips with a printed message where no adapter exists.
 
 - **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
   i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA

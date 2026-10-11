@@ -93,11 +93,13 @@ What the fallback buys:
 
 What it gives up, stated exactly:
 
-- **antialiasing is coverage-based, not multisample-based.** Translucent
-  overlaps blend in the sRGB-encoded byte space rather than in linear light.
-  The difference is confined to antialiased edges — the same band the
-  cross-rasterizer parity policy masks — and opaque token fills agree byte for
-  byte with the GPU path.
+- **antialiasing is coverage-based, not multisample-based.** The framebuffer
+  carries premultiplied LINEAR-light bytes and the presenter stores them into an
+  sRGB target, so blending happens in the same space the GPU path blends in and
+  opaque token fills agree byte for byte after that store. What remains is edge
+  coverage quantization: a coverage mask steps differently from 8x MSAA, which
+  the cross-rasterizer parity policy budgets (byte-exact on flat fills and image
+  blits, inside the coverage-vs-MSAA budget on curved edges).
 - the CPU path pays one mask composite per inked glyph rather than one atlas
   upload plus one batched draw; cost is proportional to glyph ink, which is the
   right shape for an overlay whose text is sparse.
