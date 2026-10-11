@@ -54,13 +54,15 @@ Keep one display-list vocabulary and add a second rasterizer behind it:
 
 ## What the user sees
 
-When a window presents through the CPU path, a label-only status pill
-(`chrome/status`, the `StatusChip` widget) states `CPU raster` at that
-output's trailing-bottom corner — diagonally opposite the quick-aids
-cluster's default above-leading slot, so the two never compete for the same
-corner, and the pill walks to trailing-top / leading-bottom if the aid chips
-own it. The pill is decoration, not a control: the chrome funnel never
-hit-tests it, so it never steals a click.
+Every window carries a label-only status pill (`chrome/status`, the `StatusChip`
+widget) at its trailing-bottom corner — diagonally opposite the quick-aids
+cluster's default above-leading slot, walking to trailing-top / leading-bottom
+if the aid chips own that corner. It states the rasterizer that presents that
+window: `GPU raster` quiet (dimmed contrast) when all is well, accent-tinted
+`CPU raster` when the session lost the GPU frame target and the fallback took
+over. The read is always present, so a degraded session is visible rather than
+silently rendering differently. The pill is decoration, not a control: the
+chrome funnel never hit-tests it, so it never steals a click.
 
 ## QA override
 
