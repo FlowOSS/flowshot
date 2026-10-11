@@ -15,6 +15,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::monitor::MonitorHandle;
 use winit::window::{Fullscreen, Window, WindowAttributes, WindowLevel};
 
+use crate::adapter::render_path_override;
 use crate::adapter::software_path_for;
 use crate::app::{OverlayApp, WindowEntry};
 use crate::error::UiError;
@@ -134,18 +135,40 @@ impl OverlayApp {
             core,
             ..
         } = self;
+        let forced = render_path_override();
         for (index, entry) in windows.iter_mut().enumerate() {
             let Some(surface) = entry.surface.as_ref() else {
                 continue;
             };
             let (width, height) = surface.size();
-            if software_path_for(gpu.power, width, height) {
+            let software = match forced {
+                Some(forced) => forced,
+                None => software_path_for(gpu.power, width, height),
+            };
+            if forced.is_some_and(|forced| !forced) && software_path_for(gpu.power, width, height) {
                 tracing::warn!(
                     window = index,
                     width,
                     height,
-                    "the gpu frame target is not affordable here; the cpu raster path presents this window",
+                    "FLOWSHOT_RENDER_PATH forces the gpu raster path for this window",
                 );
+            }
+            if software {
+                if forced.is_some_and(|forced| forced) {
+                    tracing::warn!(
+                        window = index,
+                        width,
+                        height,
+                        "FLOWSHOT_RENDER_PATH forces the cpu raster path for this window",
+                    );
+                } else {
+                    tracing::warn!(
+                        window = index,
+                        width,
+                        height,
+                        "the gpu frame target is not affordable here; the cpu raster path presents this window",
+                    );
+                }
                 entry.software = Some(SoftwareRenderer::new(width, height));
                 entry.presenter = Some(Presenter::new(&gpu.device, surface.format()));
                 let Some(software) = entry.software.as_mut() else {

@@ -128,6 +128,36 @@ pub(crate) fn software_path_for(power: PowerClass, width: u32, height: u32) -> b
     }
 }
 
+/// Environment variable that masks the render-path policy (the QA harness for
+/// the CPU raster fallback): `software` forces the CPU raster path at any
+/// extent and adapter class, `gpu` forces the GPU path regardless of the
+/// policy; anything else leaves the policy in charge. Byte-exact tokens, so a
+/// typo stays visible as policy-driven behavior.
+pub(crate) const RENDER_PATH_OVERRIDE_ENV: &str = "FLOWSHOT_RENDER_PATH";
+
+/// QA override rule for the render path: `software` forces the CPU raster
+/// path at any extent and adapter class, `gpu` forces the GPU path
+/// regardless of the policy, and anything else (including unset) leaves the
+/// policy in charge. Tokens are byte-exact so a typo in the environment shows
+/// up as policy-driven behavior rather than a silently forced path.
+#[must_use]
+pub(crate) fn render_path_for_override(value: Option<&std::ffi::OsStr>) -> Option<bool> {
+    if value == Some(std::ffi::OsStr::new("software")) {
+        Some(true)
+    } else if value == Some(std::ffi::OsStr::new("gpu")) {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// The `FLOWSHOT_RENDER_PATH` environment read, split from the rule so the
+/// rule stays unit-testable (this crate keeps policy pure data).
+#[must_use]
+pub(crate) fn render_path_override() -> Option<bool> {
+    render_path_for_override(std::env::var_os(RENDER_PATH_OVERRIDE_ENV).as_deref())
+}
+
 /// Whether a `width` x `height` surface extent fits a device whose
 /// `max_texture_dimension_2d` is `limit`.
 ///
@@ -206,6 +236,22 @@ mod tests {
         ];
         for (power, width, height, software) in cases {
             assert_eq!(software_path_for(power, width, height), software);
+        }
+    }
+
+    #[test]
+    fn render_path_override_names_only_the_two_tokens() {
+        let cases = [
+            (Some(std::ffi::OsStr::new("software")), Some(true)),
+            (Some(std::ffi::OsStr::new("gpu")), Some(false)),
+            (None, None),
+            (Some(std::ffi::OsStr::new("")), None),
+            (Some(std::ffi::OsStr::new("SOFTWARE")), None),
+            (Some(std::ffi::OsStr::new("software ")), None),
+            (Some(std::ffi::OsStr::new("cpu")), None),
+        ];
+        for (value, expected) in cases {
+            assert_eq!(render_path_for_override(value), expected, "token {value:?}");
         }
     }
 
