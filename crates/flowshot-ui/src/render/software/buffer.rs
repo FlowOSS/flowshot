@@ -128,7 +128,7 @@ impl SoftwareFramebuffer {
                         x_start,
                         actual_width,
                         color,
-                    )
+                    );
                 });
                 s.spawn(|| {
                     Self::blend_rows_range(
@@ -139,7 +139,7 @@ impl SoftwareFramebuffer {
                         x_start,
                         actual_width,
                         color,
-                    )
+                    );
                 });
                 s.spawn(|| {
                     Self::blend_rows_range(
@@ -150,7 +150,7 @@ impl SoftwareFramebuffer {
                         x_start,
                         actual_width,
                         color,
-                    )
+                    );
                 });
                 s.spawn(|| {
                     Self::blend_rows_range(
@@ -161,7 +161,7 @@ impl SoftwareFramebuffer {
                         x_start,
                         actual_width,
                         color,
-                    )
+                    );
                 });
             });
         } else {
