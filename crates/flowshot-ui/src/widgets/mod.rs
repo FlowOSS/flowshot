@@ -20,7 +20,7 @@ pub mod toggle;
 pub mod tooltip;
 
 pub use button::{Button, ButtonState};
-pub use chip::AidChip;
+pub use chip::{AidChip, StatusChip};
 pub use context_menu::{ContextMenu, ContextMenuEntry};
 pub use focus::{FocusRing, FocusTraversal};
 pub use icon_button::IconButton;

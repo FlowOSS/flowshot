@@ -38,6 +38,7 @@ impl EditorState {
     /// in-progress shape / mouse preview / edit session.
     pub fn paint_into(&self, list: &mut DisplayList, output: &OutputInfo, view: EditorView) {
         self.paint_export_into(list, output);
+        list.mark_scene_end();
         if let Some(object) = self.selected.and_then(|id| self.scene.get_object(id)) {
             outline::append_object_outline(list, output, object.bounding_rect());
         }

@@ -946,3 +946,26 @@ fn digit_notifier_timing() {
     assert!(!chrome.hud.visible());
     assert_eq!(chrome.hud_wake(), None);
 }
+
+#[test]
+fn the_cpu_path_record_tracks_exactly_the_recorded_slots() {
+    // Given the shell records two windows as CPU-path and one as GPU-path,
+    // when the record is read, then only the recorded slots report the CPU
+    // path — and re-recording a slot as GPU clears it.
+    let mut chrome = ChromeState::new();
+    chrome.set_cpu_path(WindowSlot::new(0), true);
+    chrome.set_cpu_path(WindowSlot::new(1), true);
+    chrome.set_cpu_path(WindowSlot::new(2), false);
+    assert!(chrome.cpu_path_for(WindowSlot::new(0)));
+    assert!(chrome.cpu_path_for(WindowSlot::new(1)));
+    assert!(!chrome.cpu_path_for(WindowSlot::new(2)));
+    assert!(
+        !chrome.cpu_path_for(WindowSlot::new(7)),
+        "an unrecorded slot"
+    );
+    chrome.set_cpu_path(WindowSlot::new(1), false);
+    assert!(
+        !chrome.cpu_path_for(WindowSlot::new(1)),
+        "re-recording clears"
+    );
+}

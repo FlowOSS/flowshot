@@ -1,6 +1,6 @@
 [package]
 name = "flowshot-ui"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license.workspace = true
 repository = "https://github.com/flowoss/flowshot"
@@ -41,6 +41,10 @@ thiserror = { workspace = true }
 cosmic-text = { workspace = true }
 lyon = { workspace = true }
 bytemuck = { workspace = true }
+# The CPU raster fallback: coverage antialiasing and the SIMD blitters the
+# software path fills with. Also the dev-only cross-rasterizer parity oracle
+# (same pin, one copy in the lock).
+tiny-skia = { workspace = true }
 
 # Settings surface: egui embedded in OUR wgpu renderer -
 # the single recorded exception to the winit+wgpu+cosmic-text stack (settings
@@ -74,9 +78,7 @@ flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 bytes = { workspace = true }
 serde_json = { workspace = true }
-# DEV-ONLY reference rasterizer for the cross-rasterizer parity harness and
 # golden fixtures.
-tiny-skia = { workspace = true }
 # PNG encode/decode for parity evidence dumps in tests/examples only.
 image = { workspace = true }
 

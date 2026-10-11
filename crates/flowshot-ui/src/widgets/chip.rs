@@ -133,6 +133,73 @@ impl AidChip<'_> {
     }
 }
 
+/// One status pill: the label-only chip for a session-wide fact the user
+/// should SEE but never click (no key plate, no wash - the chrome funnel
+/// never hit-tests it, so it stays pointer-transparent decoration).
+#[derive(Debug, Clone, PartialEq)]
+pub struct StatusChip<'a> {
+    /// The bounding rectangle (physical px).
+    pub rect: Rect,
+    /// The label (e.g. `CPU raster`).
+    pub label: &'a str,
+    /// Whether the fact is ACTIVE (accent-tinted) or quiet (dimmed contrast).
+    pub active: bool,
+}
+
+impl StatusChip<'_> {
+    /// Measures a pill's box (the width uses the HUD's estimated-advance
+    /// model - the shaped text itself is renderer-measured, the box is an
+    /// estimate).
+    #[must_use]
+    pub fn measured_size(label: &str, tokens: &DesignTokens, scale: f32) -> Size {
+        let font_size = tokens.typography.base_size as f32 * scale;
+        let line = font_size * LINE_HEIGHT_RATIO;
+        let pad = tokens.spacing.small as f32 * scale;
+        Size::new(pad * 2.0 + text_width(label, font_size), line + pad * 2.0)
+    }
+
+    /// Draws the pill into the display list (the same ink model as
+    /// [`AidChip`]: accent when active, dimmed contrast otherwise - no
+    /// wash, no key plate).
+    pub fn draw(&self, list: &mut DisplayList, tokens: &DesignTokens, scale: f32) {
+        let accent = Color::from_hex_token(&tokens.palette.accent)
+            .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
+        let contrast = Color::from_hex_token(&tokens.palette.contrast)
+            .unwrap_or(Color::from_rgba8(255, 0, 255, 255));
+
+        let (background, ink) = if self.active {
+            (accent, accent.readable_ink())
+        } else {
+            (
+                contrast.with_alpha8(OFF_BG_ALPHA),
+                contrast.readable_ink().with_alpha8(OFF_INK_ALPHA),
+            )
+        };
+        list.fill(
+            Shape::Rect {
+                rect: self.rect,
+                radius: tokens.radii.medium as f32 * scale,
+            },
+            background,
+        );
+
+        let font_size = tokens.typography.base_size as f32 * scale;
+        let line = font_size * LINE_HEIGHT_RATIO;
+        list.text(text_command(
+            Point::new(
+                self.rect.origin.x + tokens.spacing.small as f32 * scale,
+                self.rect.origin.y + (self.rect.size.height - line) / 2.0,
+            ),
+            self.label,
+            ink,
+            font_size,
+            line,
+            tokens,
+            false,
+        ));
+    }
+}
+
 fn text_width(text: &str, font_size: f32) -> f32 {
     text.chars().count() as f32 * font_size * f32_from_f64(AVG_GLYPH_ADVANCE)
 }

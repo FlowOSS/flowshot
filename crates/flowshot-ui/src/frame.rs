@@ -73,6 +73,16 @@ pub fn build_overlay_frame(
             core.chrome()
                 .paint_aids(&mut list, core.editor(), core.selection().rect(), output);
         }
+        // The raster-path status pill rides EVERY output (adr-007): the
+        // healthy GPU read is quiet, the CPU-fallback read is accent-tinted,
+        // so a degraded session is visible instead of silently different.
+        core.chrome().paint_render_status(
+            &mut list,
+            core.editor(),
+            core.selection().rect(),
+            output,
+            core.chrome().cpu_path_for(slot),
+        );
     }
     let magnifier = magnifier_pass(core, slot, &mut list, surface);
     OverlayFrame { list, magnifier }

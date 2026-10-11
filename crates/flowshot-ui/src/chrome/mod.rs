@@ -28,6 +28,7 @@ pub mod hud;
 pub mod motion;
 pub mod side_panel;
 pub mod state;
+pub mod status;
 pub mod toolbar;
 pub mod tooltips;
 

@@ -48,6 +48,7 @@ use crate::gpu::GpuContext;
 use crate::render::{
     Color, DisplayList, Rect, Renderer, RgbaImage, TextureId, f32_from_i32, f32_from_u32,
 };
+use crate::render::{ImageSource, SoftwareRenderer};
 
 use plan::{Entry, EntryState, PlannedCursor, plan_cursor, plan_entry};
 use scene::{WindowScene, local_physical_rect, window_crop};
@@ -194,6 +195,54 @@ impl Backdrop {
                 data: &data,
             },
         )
+    }
+
+    /// Registers the frozen frame's bytes with the CPU raster renderer - the
+    /// software path's answer to [`Backdrop::upload_for`]: the same bytes, kept
+    /// for direct sampling instead of uploaded as a GPU texture.
+    pub fn upload_software_for(&mut self, output_index: usize, renderer: &mut SoftwareRenderer) {
+        let Some(entry) = self.entries.get_mut(output_index) else {
+            return;
+        };
+        let EntryState::Ready {
+            width,
+            height,
+            pixels,
+        } = &mut entry.state
+        else {
+            return;
+        };
+        let Some(data) = pixels.take() else {
+            tracing::warn!(
+                output_index,
+                "frozen frame already handed to the cpu path; skipping"
+            );
+            return;
+        };
+        renderer.upload(
+            entry.texture,
+            ImageSource {
+                width: *width,
+                height: *height,
+                data,
+            },
+        );
+    }
+
+    /// Registers the cursor sprite with the CPU raster renderer.
+    pub fn upload_cursor_software(&self, renderer: &mut SoftwareRenderer) {
+        let (Some(pixels), Some((width, height))) = (self.cursor.pixels.as_ref(), self.cursor.size)
+        else {
+            return;
+        };
+        renderer.upload(
+            cursor_texture_id(),
+            ImageSource {
+                width,
+                height,
+                data: pixels.clone(),
+            },
+        );
     }
 
     /// Uploads the cursor sprite into `renderer`'s texture store (idempotent;

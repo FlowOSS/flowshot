@@ -74,6 +74,61 @@ temp artifacts are transient.
 
 ### Landed bundles
 
+- **CPU raster fallback** (2026-10-10, **Unit-level** - the live fallback path
+  is explicitly NOT claimed: neither QA box has a GPU-less or OOM-starved
+  desktop, so the policy branch never took the CPU path in a live session).
+  What IS covered, by tests that landed with the modules: the policy is pure
+  data and pinned at both measured cases (`software_path_matches_the_measured_cases`
+  - 4480x1440 at 213 MB takes the CPU path, 2560x1440 at 116 MB keeps the GPU
+  path, a software device class takes it at any extent, and the budget
+  boundary flips between 4.0 M and 4.1 M pixels); the CPU renderer's own
+  contracts are pinned pixel-exact (`the_opaque_fill_lands_in_linear_light`,
+  `clip_punches_only_the_clipped_region`, `invert_complements_painted_pixels`,
+  `a_1_to_1_blit_copies_the_source_bytes`, `a_missing_texture_draws_the_magenta
+  placeholder`, `degenerate_geometry_paints_nothing_and_never_panics`). A QA
+  override (`adapter::RENDER_PATH_OVERRIDE_ENV` = `FLOWSHOT_RENDER_PATH`,
+  `software`/`gpu` byte-exact tokens) masks the policy so the CPU path is
+  reachable on a healthy GPU desktop; its rule is pinned by
+  `render_path_override_names_only_the_two_tokens`, and activation logs a
+  `warn` line naming the window, extent, and whether the policy or the
+  override chose it. A label-only status pill (`chrome/status`, the
+  `StatusChip` widget) rides the SELECTION: it hugs one of the four slots
+  just outside the selection rect on a medium margin, preferring the slot
+  diagonally opposite the aid cluster and skipping any slot the toolbar plate
+  or the aid chips own; it states the rasterizer presenting that window —
+  `GPU` quiet when all is well, accent-tinted `CPU fallback` when the
+  fallback took over — and it is GONE (never clamped) when no slot fits or no
+  selection exists. Its seven contracts (`the_pill_hugs_the_selection_below
+  _trailing`, `the_pill_walks_to_the_next_free_slot`,
+  `the_pill_is_gone_when_no_slot_fits`, `the_pill_is_gone_without_a_selection`,
+  `the_pill_scales_with_the_output`, `the_pill_names_the_path_in_both_states`,
+  `the_pill_is_one_body_and_one_label`) pin the placement walk, both reads,
+  both gone rules, and that the pill is one fill plus one label with no key
+  plate and no wash.
+  The whole-workspace gate (`cargo fmt --check`, `cargo clippy --workspace
+  --all-targets -D warnings`, `cargo test --workspace`, the purity gate, the
+  deny check) passes with 683 flowshot-ui lib tests green — run with `-j 2`
+  on the build host because a 29 GB resident local model server had the box
+  swapping at load 255, which starved the default 16-way link stage to 0 %
+  CPU for 39 minutes; the cap is a host condition, not a gate relaxation.
+  Cross-rasterizer pixel parity of the CPU path against the GPU renderer is
+  now **Unit-level covered through a real GPU**: `ui/tests/parity.rs` renders
+  the same fixtures through wgpu offscreen and through the shipped
+  `SoftwareRenderer` and applies the existing policy - `the_cpu_rasterizer_matches_the_gpu_on_flat_fills`
+  and `the_cpu_rasterizer_matches_the_gpu_on_image_blits` are byte-exact
+  (max_diff 2/255), `the_cpu_rasterizer_matches_the_gpu_on_rounded_shapes`
+  lands at within2 99.61 % with max_masked 93/255 inside the coverage-vs-MSAA
+  budget the policy already allows. The suite runs for real on this machine
+  (19/19 green) and skips with a printed message where no adapter exists.
+  Perf of the CPU path is **Unit-level measured** through the repo's own
+  `perf_storm` harness, which gained a `--software` mode that renders the same
+  production scene through `SoftwareRenderer`: 11.9 ms per both-window frame at
+  1920x1080 + 2560x1440 with 16 committed objects, against 298 ms before the
+  color and addressing work - the capture decode moved to registration (298 ->
+  55 ms), the 1:1 blit got integer texel addressing (55 -> 25.6 ms), and the
+  full-frame opaque backdrop over a still-transparent framebuffer became a
+  per-row memcpy (25.6 -> 11.9 ms).
+
 - **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
   i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA
   laptop's working repo - observed values inlined here per the convention

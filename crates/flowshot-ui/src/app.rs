@@ -20,7 +20,7 @@ use crate::error::UiError;
 use crate::export::sync_effect_textures;
 use crate::gpu::GpuContext;
 use crate::input::Action;
-use crate::render::{Renderer, RgbaImage, TextureId};
+use crate::render::{ImageSource, Presenter, Renderer, RgbaImage, SoftwareRenderer, TextureId};
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
 use crate::surface::WindowSurface;
@@ -38,6 +38,13 @@ pub(crate) struct WindowEntry {
     /// renderer (the effect-texture sync diff base - effects are editor state,
     /// textures are per-renderer).
     pub effect_textures: Vec<TextureId>,
+    /// The CPU raster renderer for this window when the GPU path is not
+    /// affordable at this extent (the software fallback); `Some` exactly when
+    /// `renderer` is `None`.
+    pub software: Option<SoftwareRenderer>,
+    /// The software path's presenter (the one-quad upload+draw), paired with
+    /// `software`.
+    pub presenter: Option<Presenter>,
 }
 
 /// The application state driven by the winit event loop.
@@ -199,6 +206,9 @@ impl OverlayApp {
             {
                 tracing::error!(%error, window = slot.index(), "pixel effect texture sync failed");
             }
+        } else if let Some(software) = entry.software.as_mut() {
+            let effects = self.core.editor().pixel_effects();
+            crate::export::sync_effect_software(software, &mut entry.effect_textures, effects);
         }
         // The frame's display list builds through the SHARED builder (the
         // extracted frame module): the live shell and the offscreen QA
@@ -242,11 +252,29 @@ impl OverlayApp {
                 tracing::error!(%error, window = slot.index(), "magnifier texture upload failed");
             }
         }
+        // The CPU path keeps the zoom bytes rather than a texture, so the same
+        // pass registers them as an image source.
+        if let (Some(software), Some(texture)) = (entry.software.as_mut(), frame.magnifier) {
+            software.upload(
+                texture.id,
+                ImageSource {
+                    width: texture.width,
+                    height: texture.height,
+                    data: texture.pixels,
+                },
+            );
+        }
         let content = match (entry.renderer.as_mut(), list.is_empty()) {
             (Some(renderer), false) => Some((renderer, &list)),
             _ => None,
         };
-        let presented = surface.render(gpu, content, vertices);
+        let presented = if let (Some(presenter), Some(software)) =
+            (entry.presenter.as_mut(), entry.software.as_mut())
+        {
+            Ok(surface.render_software(gpu, presenter, software, &list, vertices))
+        } else {
+            surface.render(gpu, content, vertices)
+        };
         #[cfg(feature = "perf-trace")]
         let surface_total = surface_started.elapsed();
         match presented {

@@ -57,9 +57,10 @@ use flowshot_ui::editor::{
     EditorEnv, EditorState, EditorTools, EditorView, ToolKind, ToolRegistry,
 };
 use flowshot_ui::gpu::{GpuContext, new_instance};
+use flowshot_ui::render::software::{ImageSource, SoftwareRenderer};
 use flowshot_ui::render::{
     Color, Command, DisplayList, ImageCommand, Point, Rect, RenderTarget, Renderer, RgbaImage,
-    ShadowSpec, Shape, TextAnchor, TextCommand, TextureId, linear_to_srgb, read_texture_rgba,
+    ShadowSpec, Shape, Size, TextAnchor, TextCommand, TextureId, linear_to_srgb, read_texture_rgba,
     srgb_to_linear,
 };
 use flowshot_ui::{register_shape_tools, register_text_tool};
@@ -1689,4 +1690,142 @@ fn text_goldens() {
             commit_text(ed, env);
         },
     );
+}
+
+// ---------------------------------------------------------------------------
+// Runtime CPU rasterizer vs the GPU rasterizer (the shipped fallback, not the
+// dev-only reference above): the same fixtures go through both rasterizers and
+// the same two criteria decide, so the CPU path is held to the GPU path's own
+// output rather than only to the reference model.
+// ---------------------------------------------------------------------------
+
+fn render_software(list: &DisplayList, textures: &TextureRegistry) -> Vec<u8> {
+    let mut renderer = SoftwareRenderer::new(W, H);
+    for (id, (width, height, data)) in textures {
+        renderer.upload(
+            *id,
+            ImageSource {
+                width: *width,
+                height: *height,
+                data: data.clone(),
+            },
+        );
+    }
+    let _stats = renderer.render(list);
+    // The presenter stores these premultiplied linear-light texels into an sRGB
+    // target, whose store re-encodes — that encode is what reaches the scanout,
+    // so the comparison happens in the target's byte space.
+    let mut presented = renderer.pixels().to_vec();
+    for texel in 0..presented.len() / 4 {
+        let offset = texel * 4;
+        for channel in 0..3 {
+            presented[offset + channel] = unit_to_byte(linear_to_srgb(
+                f32::from(presented[offset + channel]) / 255.0,
+            ));
+        }
+    }
+    presented
+}
+
+#[test]
+fn the_cpu_rasterizer_matches_the_gpu_on_flat_fills() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    let mut list = DisplayList::new();
+    list.fill(
+        Shape::Rect {
+            rect: Rect::from_parts(40.0, 40.0, 200.0, 120.0),
+            radius: 0.0,
+        },
+        accent(),
+    );
+    list.fill(
+        Shape::Rect {
+            rect: Rect::from_parts(300.0, 100.0, 150.0, 250.0),
+            radius: 0.0,
+        },
+        contrast(),
+    );
+    list.fill(
+        Shape::Rect {
+            rect: Rect::from_parts(100.0, 300.0, 400.0, 100.0),
+            radius: 0.0,
+        },
+        accent().with_alpha8(255),
+    );
+    let textures = TextureRegistry::new();
+    let rendered = render_gpu(&gpu, &list, &textures);
+    let software = render_software(&list, &textures);
+    assert_eq!(
+        software.len(),
+        rendered.len(),
+        "both paths paint the same extent"
+    );
+    assert_flat("cpu-vs-gpu-flat", &rendered, &software);
+}
+
+#[test]
+fn the_cpu_rasterizer_matches_the_gpu_on_image_blits() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    let texture_id = TextureId::new(11);
+    let data = checkerboard(64);
+    let mut list = DisplayList::new();
+    list.image(texture_id, Rect::from_parts(100.0, 80.0, 64.0, 64.0), None);
+    let mut textures = TextureRegistry::new();
+    textures.insert(texture_id, (64, 64, data));
+    let rendered = render_gpu(&gpu, &list, &textures);
+    let software = render_software(&list, &textures);
+    assert_eq!(
+        software.len(),
+        rendered.len(),
+        "both paths paint the same extent"
+    );
+    assert_flat("cpu-vs-gpu-image", &rendered, &software);
+}
+
+#[test]
+fn the_cpu_rasterizer_matches_the_gpu_on_rounded_shapes() {
+    let Some(gpu) = gpu_or_skip() else {
+        return;
+    };
+    let mut list = DisplayList::new();
+    list.fill(
+        Shape::Rect {
+            rect: Rect::from_parts(60.0, 60.0, 300.0, 180.0),
+            radius: 24.0,
+        },
+        accent(),
+    );
+    list.fill(
+        Shape::Rect {
+            rect: Rect::from_parts(420.0, 220.0, 140.0, 140.0),
+            radius: 70.0,
+        },
+        contrast(),
+    );
+    list.fill(
+        Shape::Ellipse {
+            center: Point { x: 240.0, y: 360.0 },
+            radii: Size {
+                width: 160.0,
+                height: 90.0,
+            },
+        },
+        accent().with_alpha8(200),
+    );
+    let textures = TextureRegistry::new();
+    let rendered = render_gpu(&gpu, &list, &textures);
+    let software = render_software(&list, &textures);
+    assert_eq!(
+        software.len(),
+        rendered.len(),
+        "both paths paint the same extent"
+    );
+    // Curved edges: the CPU path's coverage antialiasing quantizes differently
+    // from the GPU's 8x MSAA — the same coverage-vs-MSAA band the repo's own
+    // policy already allows, so the wider masked-edge budget applies here.
+    assert_edge_masked_extreme_thickness("cpu-vs-gpu-rounded", &rendered, &software);
 }

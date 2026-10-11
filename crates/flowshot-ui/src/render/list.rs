@@ -246,6 +246,7 @@ pub enum Command {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct DisplayList {
     commands: Vec<Command>,
+    scene_end: usize,
 }
 
 impl DisplayList {
@@ -254,6 +255,7 @@ impl DisplayList {
     pub const fn new() -> Self {
         Self {
             commands: Vec::new(),
+            scene_end: 0,
         }
     }
 
@@ -277,6 +279,24 @@ impl DisplayList {
     /// Drops all commands (buffer reuse across frames).
     pub fn clear(&mut self) {
         self.commands.clear();
+        self.scene_end = 0;
+    }
+
+    /// Marks the end of static scene commands (backdrop + dim + committed objects).
+    pub fn mark_scene_end(&mut self) {
+        self.scene_end = self.commands.len();
+    }
+
+    /// The boundary between static scene commands and dynamic overlay chrome.
+    #[must_use]
+    pub fn scene_end(&self) -> usize {
+        self.scene_end
+    }
+
+    /// Slices the commands in draw order.
+    #[must_use]
+    pub fn as_slice(&self) -> &[Command] {
+        &self.commands
     }
 
     /// Iterates the commands in draw order.
