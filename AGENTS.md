@@ -20,12 +20,12 @@ crates/
   flowshot-capture/          the contract: CaptureBackend, Frame, NEGOTIATION_LADDER, MockBackend
   flowshot-capture-wayland/  5 backends: ICC ext-image-copy-capture, wlr-screencopy, KWin ScreenShot2, portal
   flowshot-capture-x11/      the X11 rung: x11rb GetImage + MIT-SHM fd-passing, RANDR outputs, XFixes cursor
-  flowshot-ui/               winit+wgpu overlay, lyon renderer, cosmic-text atlas, selection, editor, egui_host
+  flowshot-ui/               winit+wgpu overlay, lyon renderer + the CPU raster fallback (render/software), cosmic-text atlas, selection, editor, egui_host
   flowshot-actions/          export (save/patterns/encode), daemon-owned clipboard, upload, pins
   flowshot-daemon/           zbus service, single-instance, executor, tray (SNI), shortcuts, notify, telemetry
   flowshot-cli/              the `flowshot` leaf binary: clap, D-Bus forwarding, exit codes 0-6, completions
 assets/ logo.svg (truth) + derived logo.png (2048, never hicolor)   scripts/ purity-gate.sh
-docs/ adr-001..006, setup-{gnome,hyprland,kde,sway}, config-reference, dbus-api, research/
+docs/ adr-001..007, setup-{gnome,hyprland,kde,sway}, config-reference, dbus-api, research/
 packaging/ flowshot.desktop.in + ICONS.md   tests/ parity_matrix.toml (F12, CI-validated)
 ```
 
@@ -42,6 +42,7 @@ The daemon is the ONLY crate holding ui + capture-wayland + capture-x11 + action
 | Flameshot parity | `tests/parity_matrix.toml` (1220 L) | validated by `cli/tests/parity_matrix.rs`; CLI rows REFERENCE `cli/tests/cli_capability_map.toml`, never duplicate |
 | Icons / logo / desktop entry | `assets/logo.svg`, `ui/icons/*.svg`, `packaging/` | both `build.rs` rasterize via resvg; `ICONS.md` lists targets; `Icon=org.flowoss.FlowShot` |
 | Editor + renderer | `ui/src/editor` (53 files, ~14.6k LOC), `ui/src/render` | largest and most-referenced modules |
+| CPU raster fallback + its policy | `ui/src/render/software` (renderer + `Presenter`), `ui/src/adapter.rs` (`software_path_for`) | the second rasterizer behind the same `DisplayList`; see adr-007 |
 | History, rationale, QA evidence | `docs/architecture/` (ADRs), `docs/verification.md` | decisions + verification classes and landed-bundle records with inlined observed values |
 
 ## CODE MAP
@@ -131,7 +132,9 @@ cargo run -p flowshot-ui --example {e2e_headless,qa_bundle} --features test-driv
   `pre_present_notify`), wheel-sizing feedback, rect size-slot fix, counter drag-aim pointer,
   discoverability (tooltip hotkeys + clickable aid chips), tray model (LMB captures / RMB menu + Open
   Save Path), logo wiring, opt-in telemetry (self-hosted Sentry, off by default, two-tier consent +
-  first-launch dialog), the latest-stack upgrade, comment-slop purge, palette swatch wrapping fix.
+  first-launch dialog), the latest-stack upgrade, comment-slop purge, palette swatch wrapping fix,
+  the CPU raster fallback (adr-007: `render/software` + `Presenter`, per-window policy in
+  `adapter.rs`).
 - `ui/tests/parity.rs` SKIPS every test with a printed message when no GPU adapter exists (not even
   lavapipe) — a green headless CI run proves nothing about renderer pixel parity.
 - Load-sensitive, raised budgets: `daemon/tests/portal_shortcuts.rs` (30 s) and the KWin p2p stubs —

@@ -74,6 +74,28 @@ temp artifacts are transient.
 
 ### Landed bundles
 
+- **CPU raster fallback** (2026-10-10, **Unit-level** - the live fallback path
+  is explicitly NOT claimed: neither QA box has a GPU-less or OOM-starved
+  desktop, so the policy branch never took the CPU path in a live session).
+  What IS covered, by tests that landed with the modules: the policy is pure
+  data and pinned at both measured cases (`software_path_matches_the_measured_cases`
+  - 4480x1440 at 213 MB takes the CPU path, 2560x1440 at 116 MB keeps the GPU
+  path, a software device class takes it at any extent, and the budget
+  boundary flips between 4.0 M and 4.1 M pixels); the CPU renderer's own
+  contracts are pinned pixel-exact (`opaque_token_fill_is_byte_exact`,
+  `clip_punches_only_the_clipped_region`, `invert_complements_painted_pixels`,
+  `a_1_to_1_blit_copies_the_source_bytes`, `a_missing_texture_draws_the_magenta
+  placeholder`, `degenerate_geometry_paints_nothing_and_never_panics`).
+  The whole-workspace gate (`cargo fmt --check`, `cargo clippy --workspace
+  --all-targets -D warnings`, `cargo test --workspace`, the purity gate, the
+  deny check) passes with 674 flowshot-ui lib tests green — run with `-j 2`
+  on the build host because a 29 GB resident local model server had the box
+  swapping at load 255, which starved the default 16-way link stage to 0 %
+  CPU for 39 minutes; the cap is a host condition, not a gate relaxation. Cross-rasterizer
+  pixel parity of the new path against the GPU renderer is **Deferred** - it
+  needs the offscreen render harness, and the AA-edge band it would compare is
+  the same band the existing parity policy masks.
+
 - **X11 Phase A headless capture** (2026-10-04, **LIVE-verified** on the
   i3/X11 laptop; bundle `.omo/evidence/x11-phase-a/`, local to the QA
   laptop's working repo - observed values inlined here per the convention

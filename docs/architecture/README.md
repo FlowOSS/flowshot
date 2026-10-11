@@ -17,3 +17,6 @@ truth.
   zero interior reads, no insecure mode.
 - [ADR-006: Cross-platform gates](adr-006-cross-platform-gates.md): the
   purity contract that keeps Wayland in one crate, and the porting roadmap.
+- [ADR-007: CPU raster fallback](adr-007-cpu-raster-fallback.md): a second
+  rasterizer behind the same display list, selected per window by a memory
+  budget and the adapter's device class.
