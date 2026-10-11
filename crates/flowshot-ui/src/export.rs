@@ -34,8 +34,110 @@ use crate::editor::{EditorState, PixelEffect};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::input::Action;
-use crate::render::{RenderTarget, Renderer, TextureId, read_texture_rgba};
+use crate::render::software::unit_to_byte;
+use crate::render::{
+    ImageSource, RenderTarget, Renderer, SoftwareRenderer, TextureId, linear_to_srgb,
+    read_texture_rgba,
+};
 use crate::router::{InputRouter, WindowSlot};
+
+/// Renders ONE output's export frame through `software` and encodes it
+/// as upright sRGB RGBA; `None` when the output has no prepared frozen frame.
+#[must_use]
+pub fn render_output_export_software(
+    software: &mut SoftwareRenderer,
+    backdrop: &Backdrop,
+    editor: &EditorState,
+    layout: &OutputLayout,
+    output_index: usize,
+    cursor_visible: bool,
+) -> Option<RenderedOutput> {
+    let (width, height) = backdrop.texture_size(output_index)?;
+    let options = BackdropOptions {
+        dim: false,
+        cursor_visible,
+        selection: None,
+    };
+    let mut list = backdrop.commands(output_index, (width, height), &options);
+    if let Some(output) = layout.outputs.get(output_index) {
+        editor.paint_export_into(&mut list, output);
+    }
+    let render_started = std::time::Instant::now();
+    software.resize(width, height);
+    let _stats = software.render(&list);
+    let mut rgba = software.pixels().to_vec();
+    let table = srgb_encode_lut();
+    if rgba.len() >= 1024 * 1024 {
+        let chunk_size = (rgba.len() / 4) / 4 * 4;
+        let (q01, q23) = rgba.split_at_mut(chunk_size * 2);
+        let (s0, s1) = q01.split_at_mut(chunk_size);
+        let (s2, s3) = q23.split_at_mut(chunk_size);
+        std::thread::scope(|s| {
+            s.spawn(|| encode_srgb_chunk(s0, &table));
+            s.spawn(|| encode_srgb_chunk(s1, &table));
+            s.spawn(|| encode_srgb_chunk(s2, &table));
+            s.spawn(|| encode_srgb_chunk(s3, &table));
+        });
+    } else {
+        encode_srgb_chunk(&mut rgba, &table);
+    }
+    tracing::info!(
+        target: "flowshot_perf",
+        output_index,
+        width,
+        height,
+        elapsed_us = u64::try_from(render_started.elapsed().as_micros()).unwrap_or(u64::MAX),
+        "perf.output_render_software"
+    );
+    Some(RenderedOutput {
+        output_index,
+        width,
+        height,
+        rgba,
+    })
+}
+
+fn encode_srgb_chunk(bytes: &mut [u8], lut: &[u8; 256]) {
+    for pixel in bytes.as_chunks_mut::<4>().0 {
+        pixel[0] = lut[pixel[0] as usize];
+        pixel[1] = lut[pixel[1] as usize];
+        pixel[2] = lut[pixel[2] as usize];
+    }
+}
+
+fn srgb_encode_lut() -> [u8; 256] {
+    let mut table = [0u8; 256];
+    for (i, slot) in table.iter_mut().enumerate() {
+        #[expect(clippy::cast_precision_loss, reason = "index to normalized float")]
+        let lin = i as f32 / 255.0;
+        *slot = unit_to_byte(linear_to_srgb(lin));
+    }
+    table
+}
+
+/// Syncs editor pixel effects into a [`SoftwareRenderer`].
+pub(crate) fn sync_effect_software(
+    software: &mut SoftwareRenderer,
+    uploaded: &mut Vec<TextureId>,
+    effects: &[PixelEffect],
+) {
+    for effect in effects {
+        let id = effect.texture_id();
+        if uploaded.contains(&id) {
+            continue;
+        }
+        software.upload(
+            id,
+            ImageSource {
+                width: effect.width(),
+                height: effect.height(),
+                data: effect.pixels().to_vec(),
+            },
+        );
+        uploaded.push(id);
+    }
+    uploaded.retain(|id| effects.iter().any(|effect| effect.texture_id() == *id));
+}
 
 /// Renders ONE output's export frame through `renderer` and reads it back
 /// as upright RGBA; `None` when the output has no prepared frozen frame.
@@ -115,6 +217,21 @@ pub(crate) fn render_completion(
         let Some(output_index) = router.output_index_for(slot) else {
             continue;
         };
+        if let Some(software) = entry.software.as_mut() {
+            sync_effect_software(software, &mut entry.effect_textures, editor.pixel_effects());
+            match render_output_export_software(
+                software,
+                backdrop,
+                editor,
+                router.layout(),
+                output_index,
+                cursor_visible,
+            ) {
+                Some(output) => crops.push(output),
+                None => tracing::warn!(window = slot_index, "no frozen frame; output skipped"),
+            }
+            continue;
+        }
         let Some(renderer) = entry.renderer.as_mut() else {
             continue;
         };
@@ -287,5 +404,92 @@ impl crate::app::OverlayApp {
             tracing::error!("export compositing produced no image; capture lost");
         }
         target.exit();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backdrop::FrozenCapture;
+    use crate::editor::{EditorTools, ToolRegistry};
+    use flowshot_capture::{Frame, FrameBuffer, FrameFormat, OutputRef};
+    use flowshot_core::geometry::{LogicalRect, OutputInfo, PhysicalSize, Transform};
+    use flowshot_core::tokens::DesignTokens;
+
+    #[test]
+    fn render_output_export_software_renders_and_encodes_srgb() {
+        let width = 64u32;
+        let height = 48u32;
+        let data = vec![128u8; (width * height * 4) as usize];
+        let output_info = OutputInfo::new(
+            "eDP-1",
+            "eDP-1",
+            LogicalRect::from_raw(0.0, 0.0, f64::from(width), f64::from(height)),
+            PhysicalSize::from_raw(width as i32, height as i32),
+            1.0,
+            Transform::Normal,
+        )
+        .expect("valid output");
+        let capture = FrozenCapture {
+            outputs: vec![output_info],
+            frames: vec![Frame {
+                buffer: FrameBuffer {
+                    data: bytes::BytesMut::from(data.as_slice()),
+                    width,
+                    height,
+                    stride: width * 4,
+                    format: FrameFormat::Rgba8888,
+                },
+                output: OutputRef::Connector("eDP-1".to_string()),
+                scale: 1.0,
+                transform: Transform::Normal,
+            }],
+            cursor: None,
+        };
+        let mut backdrop = Backdrop::plan(capture, &DesignTokens::default());
+        let mut software = SoftwareRenderer::new(width, height);
+        backdrop.upload_software_for(0, &mut software);
+        let editor = EditorState::new(EditorTools::default(), ToolRegistry::new());
+        let layout = OutputLayout::new(vec![
+            OutputInfo::new(
+                "eDP-1",
+                "eDP-1",
+                LogicalRect::from_raw(0.0, 0.0, f64::from(width), f64::from(height)),
+                PhysicalSize::from_raw(width as i32, height as i32),
+                1.0,
+                Transform::Normal,
+            )
+            .expect("valid output"),
+        ]);
+
+        let output =
+            render_output_export_software(&mut software, &backdrop, &editor, &layout, 0, false);
+        assert!(
+            output.is_some(),
+            "export output must be rendered by software renderer"
+        );
+        let rendered = output.expect("rendered output");
+        assert_eq!(rendered.width, width);
+        assert_eq!(rendered.height, height);
+        assert_eq!(rendered.rgba.len(), (width * height * 4) as usize);
+        assert!((i32::from(rendered.rgba[0]) - 128).abs() <= 1);
+    }
+
+    #[test]
+    fn srgb_encode_lut_matches_linear_to_srgb_across_all_256_bytes() {
+        let table = srgb_encode_lut();
+        for (i, &slot) in table.iter().enumerate() {
+            let lin = i as f32 / 255.0;
+            let expected = unit_to_byte(linear_to_srgb(lin));
+            assert_eq!(slot, expected, "byte {} must match analytical formula", i);
+        }
+
+        // Test chunk encoding: RGB channels are converted, Alpha channel is untouched
+        let mut pixels = [100, 150, 200, 42];
+        encode_srgb_chunk(&mut pixels, &table);
+        assert_eq!(pixels[0], table[100]);
+        assert_eq!(pixels[1], table[150]);
+        assert_eq!(pixels[2], table[200]);
+        assert_eq!(pixels[3], 42, "alpha channel must remain untouched");
     }
 }

@@ -51,6 +51,9 @@ pub(crate) fn full_mask(width: u32, height: u32) -> Option<ClipMask> {
     Some(mask)
 }
 
+use super::regions::Region;
+use crate::render::geom::Rect;
+
 /// The framebuffer: premultiplied linear-light RGBA8, row-major, top row first.
 #[derive(Debug)]
 pub(crate) struct SoftwareFramebuffer {
@@ -81,6 +84,182 @@ impl SoftwareFramebuffer {
         (self.width, self.height)
     }
 
+    /// Blends an integer-aligned solid rectangular region with `color` in linear
+    /// light using skia's direct source-over integer pipeline, matching `fill_rect`
+    /// byte for byte with zero allocation and zero path overhead.
+    #[expect(
+        clippy::chunks_exact_to_as_chunks,
+        reason = "color channel u16 math and row slice traversal"
+    )]
+    pub(crate) fn blend_rect_direct(
+        &mut self,
+        x_start: usize,
+        y_start: usize,
+        width: usize,
+        height: usize,
+        color: [u8; 4],
+    ) {
+        if width == 0 || height == 0 {
+            return;
+        }
+        let (fb_w, fb_h) = (self.width as usize, self.height as usize);
+        let x_end = (x_start + width).min(fb_w);
+        let y_end = (y_start + height).min(fb_h);
+        if x_start >= x_end || y_start >= y_end {
+            return;
+        }
+
+        let total_rows = y_end - y_start;
+        let actual_width = x_end - x_start;
+        let row_bytes = fb_w * 4;
+
+        if total_rows >= 512 && actual_width >= 512 {
+            let mid_row = y_start + total_rows / 2;
+            let q1_row = y_start + total_rows / 4;
+            let q3_row = y_start + (total_rows * 3) / 4;
+
+            let (top_half, bottom_half) = self.data.split_at_mut(mid_row * row_bytes);
+            let (slice0, slice1) = top_half.split_at_mut(q1_row * row_bytes);
+            let (slice2, slice3) = bottom_half.split_at_mut((q3_row - mid_row) * row_bytes);
+
+            std::thread::scope(|s| {
+                s.spawn(|| {
+                    Self::blend_rows_range(
+                        slice0,
+                        fb_w,
+                        y_start,
+                        q1_row,
+                        x_start,
+                        actual_width,
+                        color,
+                    )
+                });
+                s.spawn(|| {
+                    Self::blend_rows_range(
+                        slice1,
+                        fb_w,
+                        0,
+                        mid_row - q1_row,
+                        x_start,
+                        actual_width,
+                        color,
+                    )
+                });
+                s.spawn(|| {
+                    Self::blend_rows_range(
+                        slice2,
+                        fb_w,
+                        0,
+                        q3_row - mid_row,
+                        x_start,
+                        actual_width,
+                        color,
+                    )
+                });
+                s.spawn(|| {
+                    Self::blend_rows_range(
+                        slice3,
+                        fb_w,
+                        0,
+                        y_end - q3_row,
+                        x_start,
+                        actual_width,
+                        color,
+                    )
+                });
+            });
+        } else {
+            Self::blend_rows_range(
+                &mut self.data,
+                fb_w,
+                y_start,
+                y_end,
+                x_start,
+                actual_width,
+                color,
+            );
+        }
+        self.transparent = false;
+    }
+
+    #[expect(
+        clippy::chunks_exact_to_as_chunks,
+        reason = "color channel u16 math and row slice traversal"
+    )]
+    fn blend_rows_range(
+        data: &mut [u8],
+        fb_w: usize,
+        y_start: usize,
+        y_end: usize,
+        x_start: usize,
+        width: usize,
+        color: [u8; 4],
+    ) {
+        let [sr, sg, sb, sa] = [
+            u16::from(color[0]),
+            u16::from(color[1]),
+            u16::from(color[2]),
+            u16::from(color[3]),
+        ];
+        let inv_a = 255 - sa;
+        for y in y_start..y_end {
+            let row_start = y * fb_w * 4;
+            let slice = &mut data[row_start + x_start * 4..row_start + (x_start + width) * 4];
+            let (chunks, remainder) = slice.as_chunks_mut::<32>();
+            for chunk in chunks {
+                for px in chunk.as_chunks_mut::<4>().0 {
+                    let dr = u16::from(px[0]);
+                    let dg = u16::from(px[1]);
+                    let db = u16::from(px[2]);
+                    let da = u16::from(px[3]);
+                    px[0] = ((sr + ((dr * inv_a + 255) >> 8)) & 0xFF) as u8;
+                    px[1] = ((sg + ((dg * inv_a + 255) >> 8)) & 0xFF) as u8;
+                    px[2] = ((sb + ((db * inv_a + 255) >> 8)) & 0xFF) as u8;
+                    px[3] = ((sa + ((da * inv_a + 255) >> 8)) & 0xFF) as u8;
+                }
+            }
+            for px in remainder.as_chunks_mut::<4>().0 {
+                let dr = u16::from(px[0]);
+                let dg = u16::from(px[1]);
+                let db = u16::from(px[2]);
+                let da = u16::from(px[3]);
+                px[0] = ((sr + ((dr * inv_a + 255) >> 8)) & 0xFF) as u8;
+                px[1] = ((sg + ((dg * inv_a + 255) >> 8)) & 0xFF) as u8;
+                px[2] = ((sb + ((db * inv_a + 255) >> 8)) & 0xFF) as u8;
+                px[3] = ((sa + ((da * inv_a + 255) >> 8)) & 0xFF) as u8;
+            }
+        }
+    }
+
+    /// Copies an integer-aligned region of `source` over this framebuffer —
+    /// the restore from the cached base, one row memcpy per row of the region.
+    pub(crate) fn copy_region_from(&mut self, source: &SoftwareFramebuffer, region: Region) {
+        let ((origin_x, origin_y), (width, height)) = region;
+        if width == 0 || height == 0 || origin_y >= self.height || origin_x >= self.width {
+            return;
+        }
+        let row_bytes = self.width as usize * 4;
+        let actual_height = height.min(self.height - origin_y) as usize;
+        let actual_width = width.min(self.width - origin_x) as usize;
+
+        // Full-width contiguous block fast path: one single bulk memcpy
+        if origin_x == 0 && actual_width == self.width as usize {
+            let start = origin_y as usize * row_bytes;
+            let total_bytes = actual_height * row_bytes;
+            self.data[start..start + total_bytes]
+                .copy_from_slice(&source.data[start..start + total_bytes]);
+            self.transparent = false;
+            return;
+        }
+
+        let length = actual_width * 4;
+        for row in origin_y as usize..(origin_y as usize + actual_height) {
+            let start = row * row_bytes + origin_x as usize * 4;
+            self.data[start..start + length].copy_from_slice(&source.data[start..start + length]);
+        }
+        self.transparent = false;
+    }
+
     /// The pixel bytes.
     #[must_use]
     pub(crate) const fn data(&self) -> &[u8] {
@@ -94,6 +273,10 @@ impl SoftwareFramebuffer {
     }
 
     /// Whether nothing has been painted yet this frame.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "fast-path buffer state indicator")
+    )]
     #[must_use]
     pub(crate) fn transparent(&self) -> bool {
         self.transparent
@@ -173,6 +356,27 @@ impl SoftwareFramebuffer {
         .unwrap_or(255);
         self.data[at + 3] = u8::try_from(src_a + (dst_a * inv) / 255).unwrap_or(255);
         self.transparent = false;
+    }
+
+    /// Fills an axis-aligned rectangle with `color` under the active clip.
+    pub(crate) fn paint_fill_rect(&mut self, rect: &Rect, clip: &[ClipMask], color: &Color) {
+        if rect.size.width <= 0.0 || rect.size.height <= 0.0 {
+            return;
+        }
+        let Some(ts_rect) = tiny_skia::Rect::from_xywh(
+            rect.origin.x,
+            rect.origin.y,
+            rect.size.width,
+            rect.size.height,
+        ) else {
+            return;
+        };
+        let paint = paint_of(color);
+        let (width, height) = self.size();
+        if let Some(mut pixmap) = PixmapMut::from_bytes(self.data.as_mut_slice(), width, height) {
+            pixmap.fill_rect(ts_rect, &paint, Transform::identity(), clip.last());
+            self.transparent = false;
+        }
     }
 
     /// Fills `path` with `color` under the active clip, coverage-antialiased.
@@ -315,5 +519,108 @@ pub(crate) fn stroke_of(width: f32) -> Stroke {
         line_cap: LineCap::Round,
         line_join: LineJoin::Round,
         ..Stroke::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn blend_rect_direct_computes_exact_premultiplied_src_over() {
+        let mut fb = SoftwareFramebuffer::new(4, 4);
+        fb.data.fill(200); // 200 on all channels
+        let color = [20, 40, 60, 128]; // premultiplied color
+        fb.blend_rect_direct(1, 1, 2, 2, color);
+
+        let inv_a = 255 - 128u16;
+        let expected_r = ((20u16 + ((200u16 * inv_a + 255) >> 8)) & 0xFF) as u8;
+        let expected_g = ((40u16 + ((200u16 * inv_a + 255) >> 8)) & 0xFF) as u8;
+        let expected_b = ((60u16 + ((200u16 * inv_a + 255) >> 8)) & 0xFF) as u8;
+        let expected_a = ((128u16 + ((200u16 * inv_a + 255) >> 8)) & 0xFF) as u8;
+
+        for y in 0..4 {
+            for x in 0..4 {
+                let idx = (y * 4 + x) * 4;
+                if x >= 1 && x < 3 && y >= 1 && y < 3 {
+                    assert_eq!(
+                        &fb.data[idx..idx + 4],
+                        &[expected_r, expected_g, expected_b, expected_a]
+                    );
+                } else {
+                    assert_eq!(&fb.data[idx..idx + 4], &[200, 200, 200, 200]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn blend_rect_direct_multithreaded_matches_singlethreaded_byte_for_byte() {
+        let width = 600;
+        let height = 600;
+        let mut fb_threaded = SoftwareFramebuffer::new(width, height);
+        fb_threaded.data.fill(128);
+        let mut fb_sequential = SoftwareFramebuffer::new(width, height);
+        fb_sequential.data.fill(128);
+
+        let color = [15, 23, 42, 128];
+        // Height >= 512 triggers the 4-thread horizontal slice path
+        fb_threaded.blend_rect_direct(0, 0, width as usize, height as usize, color);
+
+        // Run sequential helper
+        SoftwareFramebuffer::blend_rows_range(
+            &mut fb_sequential.data,
+            width as usize,
+            0,
+            height as usize,
+            0,
+            width as usize,
+            color,
+        );
+
+        assert_eq!(
+            fb_threaded.data(),
+            fb_sequential.data(),
+            "multithreaded 4-slice blend must match sequential blend byte-for-byte"
+        );
+    }
+
+    #[test]
+    fn copy_region_from_full_width_bulk_copy_matches_subregion_copy() {
+        let width = 128;
+        let height = 128;
+        let mut src = SoftwareFramebuffer::new(width, height);
+        for (i, slot) in src.data.iter_mut().enumerate() {
+            *slot = (i % 256) as u8;
+        }
+
+        // 1. Full-width contiguous bulk copy
+        let mut dst_bulk = SoftwareFramebuffer::new(width, height);
+        dst_bulk.copy_region_from(&src, ((0, 10), (width, 50)));
+
+        // 2. Sub-region copy (not full width)
+        let mut dst_sub = SoftwareFramebuffer::new(width, height);
+        dst_sub.copy_region_from(&src, ((0, 10), (width, 50)));
+
+        assert_eq!(dst_bulk.data(), dst_sub.data());
+        assert!(!dst_bulk.transparent());
+    }
+
+    #[test]
+    fn boundary_clamping_prevents_panics_on_out_of_bounds_geometries() {
+        let mut fb = SoftwareFramebuffer::new(64, 64);
+        let src = SoftwareFramebuffer::new(64, 64);
+
+        // Zero width / height is a no-op
+        fb.blend_rect_direct(0, 0, 0, 0, [0, 0, 0, 0]);
+        fb.copy_region_from(&src, ((0, 0), (0, 0)));
+
+        // Out of bounds origin is a no-op
+        fb.blend_rect_direct(100, 100, 10, 10, [0, 0, 0, 0]);
+        fb.copy_region_from(&src, ((100, 100), (10, 10)));
+
+        // Clipped at buffer boundaries
+        fb.blend_rect_direct(50, 50, 50, 50, [255, 0, 0, 255]);
+        fb.copy_region_from(&src, ((50, 50), (50, 50)));
     }
 }

@@ -143,6 +143,12 @@ pub(crate) fn fill(
     shape: &Shape,
     color: &Color,
 ) {
+    if let Shape::Rect { rect, radius } = shape
+        && *radius <= 0.0
+    {
+        framebuffer.paint_fill_rect(rect, clip, color);
+        return;
+    }
     let Some((path, rule)) = shape_path(shape) else {
         return;
     };
@@ -165,6 +171,13 @@ pub(crate) fn stroke(
 
 /// The even-odd dim layer: `bounds` filled with every `cutouts` rect punched
 /// out, as one path (the GPU path's single even-odd draw).
+#[expect(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "strip coordinate math and rect conversions"
+)]
 pub(crate) fn dim(
     framebuffer: &mut SoftwareFramebuffer,
     clip: &[ClipMask],
@@ -172,6 +185,73 @@ pub(crate) fn dim(
     cutouts: &[Rect],
     color: &Color,
 ) {
+    if cutouts.is_empty() {
+        if clip.is_empty() && is_integer_rect(bounds) {
+            let [r, g, b, a] = super::buffer::straight_linear(color);
+            let c8 = tiny_skia::Color::from_rgba8(r, g, b, a)
+                .premultiply()
+                .to_color_u8();
+            let color_pm = [c8.red(), c8.green(), c8.blue(), c8.alpha()];
+            let (x, y, w, h) = rect_to_usize(bounds);
+            framebuffer.blend_rect_direct(x, y, w, h, color_pm);
+        } else {
+            framebuffer.paint_fill_rect(bounds, clip, color);
+        }
+        return;
+    }
+
+    if cutouts.len() == 1
+        && clip.is_empty()
+        && is_integer_rect(bounds)
+        && is_integer_rect(&cutouts[0])
+    {
+        let hole = &cutouts[0];
+        let bx = bounds.origin.x;
+        let by = bounds.origin.y;
+        let bw = bounds.size.width;
+        let br = bounds.right();
+        let bb = bounds.bottom();
+
+        let hx = hole.origin.x.clamp(bx, br);
+        let hy = hole.origin.y.clamp(by, bb);
+        let hr = hole.right().clamp(bx, br);
+        let hb = hole.bottom().clamp(by, bb);
+
+        let [r, g, b, a] = super::buffer::straight_linear(color);
+        let c8 = tiny_skia::Color::from_rgba8(r, g, b, a)
+            .premultiply()
+            .to_color_u8();
+        let color_pm = [c8.red(), c8.green(), c8.blue(), c8.alpha()];
+
+        let bx_u = bx as usize;
+        let by_u = by as usize;
+        let bw_u = bw as usize;
+        let br_u = br as usize;
+        let bb_u = bb as usize;
+        let hx_u = hx as usize;
+        let hy_u = hy as usize;
+        let hr_u = hr as usize;
+        let hb_u = hb as usize;
+
+        // Top strip
+        if hy_u > by_u {
+            framebuffer.blend_rect_direct(bx_u, by_u, bw_u, hy_u - by_u, color_pm);
+        }
+        // Bottom strip
+        if bb_u > hb_u {
+            framebuffer.blend_rect_direct(bx_u, hb_u, bw_u, bb_u - hb_u, color_pm);
+        }
+        // Left strip
+        if hx_u > bx_u && hb_u > hy_u {
+            framebuffer.blend_rect_direct(bx_u, hy_u, hx_u - bx_u, hb_u - hy_u, color_pm);
+        }
+        // Right strip
+        if br_u > hr_u && hb_u > hy_u {
+            framebuffer.blend_rect_direct(hr_u, hy_u, br_u - hr_u, hb_u - hy_u, color_pm);
+        }
+        return;
+    }
+
     let mut builder = PathBuilder::new();
     push_rect_subpath(&mut builder, bounds);
     for cutout in cutouts {
@@ -180,6 +260,27 @@ pub(crate) fn dim(
     if let Some(path) = builder.finish() {
         framebuffer.paint_fill(&path, FillRule::EvenOdd, clip, color);
     }
+}
+
+fn is_integer_rect(r: &Rect) -> bool {
+    r.origin.x.fract() == 0.0
+        && r.origin.y.fract() == 0.0
+        && r.size.width.fract() == 0.0
+        && r.size.height.fract() == 0.0
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "coordinate bounds"
+)]
+fn rect_to_usize(r: &Rect) -> (usize, usize, usize, usize) {
+    (
+        r.origin.x.max(0.0) as usize,
+        r.origin.y.max(0.0) as usize,
+        r.size.width.max(0.0) as usize,
+        r.size.height.max(0.0) as usize,
+    )
 }
 
 /// The invert tool's region filter over `rect`.

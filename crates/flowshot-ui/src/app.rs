@@ -206,6 +206,9 @@ impl OverlayApp {
             {
                 tracing::error!(%error, window = slot.index(), "pixel effect texture sync failed");
             }
+        } else if let Some(software) = entry.software.as_mut() {
+            let effects = self.core.editor().pixel_effects();
+            crate::export::sync_effect_software(software, &mut entry.effect_textures, effects);
         }
         // The frame's display list builds through the SHARED builder (the
         // extracted frame module): the live shell and the offscreen QA

@@ -127,10 +127,10 @@ pub(crate) fn blit_nearest(
     let (y_lo, y_hi) = (y_start.max(-shift_y), y_end.min(tex_h as i32 - shift_y));
     let clip_free = clip.is_empty();
     let opaque_fade = fade >= 1.0;
-    if clip_free && opaque_fade && source.opaque() && framebuffer.transparent() {
+    if clip_free && opaque_fade && source.opaque() {
         let span = (x_hi - x_lo).max(0) as usize * 4;
         for y in y_lo..y_hi {
-            let src = (y + shift_y) as usize * tex_w as usize * 4 + x_lo as usize * 4;
+            let src = (y + shift_y) as usize * tex_w as usize * 4 + (x_lo + shift_x) as usize * 4;
             let dst = y as usize * fb_w as usize * 4 + x_lo as usize * 4;
             framebuffer.copy_row(dst, &data[src..][..span]);
         }
@@ -231,10 +231,9 @@ pub(crate) fn bilinear(data: &[u8], width: u32, height: u32, x: f32, y: f32) -> 
     let (fx, fy) = (x - x0f, y - y0f);
     let (x0, y0) = (x0f as i32, y0f as i32);
     let at = |tx: i32, ty: i32, channel: usize| -> f32 {
-        if tx < 0 || ty < 0 || tx as u32 >= width || ty as u32 >= height {
-            return 0.0;
-        }
-        f32::from(data[(ty as usize * width as usize + tx as usize) * 4 + channel])
+        let tx = tx.clamp(0, width as i32 - 1) as usize;
+        let ty = ty.clamp(0, height as i32 - 1) as usize;
+        f32::from(data[(ty * width as usize + tx) * 4 + channel])
     };
     let mix = |channel: usize| -> u8 {
         let top = at(x0, y0, channel) + (at(x0 + 1, y0, channel) - at(x0, y0, channel)) * fx;
@@ -243,4 +242,63 @@ pub(crate) fn bilinear(data: &[u8], width: u32, height: u32, x: f32, y: f32) -> 
         unit_to_byte((top + (bottom - top) * fy) / 255.0)
     };
     [mix(0), mix(1), mix(2), mix(3)]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bilinear_clamps_to_edge_texels_instead_of_transparent_black() {
+        // 2x2 opaque image: all texels have alpha 255
+        let data = vec![
+            10, 20, 30, 255, 40, 50, 60, 255, 70, 80, 90, 255, 100, 110, 120, 255,
+        ];
+        // Sample negative coordinate (-0.5, -0.5) - must clamp to top-left texel (10, 20, 30, 255)
+        let sample_neg = bilinear(&data, 2, 2, -0.5, -0.5);
+        assert_eq!(sample_neg[3], 255, "clamped sample must stay opaque");
+        assert_eq!(&sample_neg[..3], &[10, 20, 30]);
+
+        // Sample outside bottom-right (2.5, 2.5) - must clamp to bottom-right texel
+        let sample_pos = bilinear(&data, 2, 2, 2.5, 2.5);
+        assert_eq!(sample_pos[3], 255);
+        assert_eq!(&sample_pos[..3], &[100, 110, 120]);
+    }
+
+    #[test]
+    fn blit_nearest_copies_with_non_zero_offsets_without_panic() {
+        let mut fb = SoftwareFramebuffer::new(32, 32);
+        let src_data = vec![255u8; 16 * 16 * 4];
+        let entry = ImageEntry {
+            width: 16,
+            height: 16,
+            data: src_data,
+            opaque: true,
+        };
+        let mut images = HashMap::new();
+        let tex_id = TextureId::new(42);
+        images.insert(tex_id, entry);
+
+        // Blit a 16x16 sub-image offset into destination at (8, 8)
+        let cmd = ImageCommand {
+            texture: tex_id,
+            dst: Rect::from_parts(8.0, 8.0, 16.0, 16.0),
+            src: Some(Rect::from_parts(0.0, 0.0, 16.0, 16.0)),
+            alpha: 1.0,
+        };
+        blit(&mut fb, &[], &cmd, &images);
+
+        // Verify destination received pixels at (8, 8)
+        let at = (8 * 32 + 8) * 4;
+        assert_eq!(&fb.data()[at..at + 4], &[255, 255, 255, 255]);
+    }
+
+    #[test]
+    fn linear_table_matches_srgb_to_linear_transfer_function() {
+        let table = linear_table();
+        for (i, &slot) in table.iter().enumerate() {
+            let expected = unit_to_byte(srgb_to_linear(i as f32 / 255.0));
+            assert_eq!(slot, expected);
+        }
+    }
 }

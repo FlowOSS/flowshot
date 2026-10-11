@@ -87,6 +87,7 @@ fn main() -> ExitCode {
 #[derive(Clone)]
 struct Args {
     events: usize,
+    mode: String,
     resize: bool,
     panel: bool,
     magnifier: bool,
@@ -100,6 +101,7 @@ struct Args {
 fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
     let mut args = Args {
         events: 500,
+        mode: "move".to_string(),
         resize: false,
         panel: false,
         magnifier: true,
@@ -118,7 +120,11 @@ fn parse_args() -> Result<Args, Box<dyn std::error::Error>> {
         };
         match flag.as_str() {
             "--events" => args.events = value("--events")?.parse()?,
-            "--mode" => args.resize = value("--mode")? == "resize",
+            "--mode" => {
+                let m = value("--mode")?;
+                args.resize = m == "resize";
+                args.mode = m;
+            }
             "--panel" => args.panel = true,
             "--no-magnifier" => args.magnifier = false,
             "--objects" => args.objects = value("--objects")?.parse()?,
@@ -396,6 +402,7 @@ fn seed_objects(core: &mut OverlayCore, count: usize) {
 /// One production frame for window `index`: rebuild the display list, upload
 /// the magnifier texture (the live `render_window` order), render offscreen.
 /// Returns the four-way timing breakdown in microseconds.
+
 struct FrameTiming {
     list_build: f64,
     tess_shape: f64,
@@ -464,6 +471,7 @@ fn render_window(
                 eprintln!("profile win{index}: {label} {us:.0}us");
             }
         }
+
         let stats = software.render(&frame.list);
         return Ok(FrameTiming {
             list_build: list_build_us,
@@ -512,11 +520,61 @@ fn step(
     let route_started = Instant::now();
     scene.core.inject_event(input);
     let route_us = route_started.elapsed().as_secs_f64() * 1e6;
-    let mut frames = Vec::with_capacity(scene.rigs.len());
     let frame_started = Instant::now();
-    for index in 0..scene.rigs.len() {
-        frames.push(render_window(gpu, scene, index, now)?);
-    }
+    let frames: Vec<FrameTiming> = if scene.software && scene.rigs.len() > 1 && !scene.profile {
+        let mut frame_builds = Vec::with_capacity(scene.rigs.len());
+        for (index, rig) in scene.rigs.iter().enumerate() {
+            let options = BackdropOptions {
+                dim: !scene.no_dim,
+                cursor_visible: false,
+                selection: scene.core.selection().rect(),
+            };
+            let build_started = Instant::now();
+            let frame = build_overlay_frame(
+                &scene.core,
+                WindowSlot::new(index),
+                (rig.width, rig.height),
+                Some((&scene.backdrop, &options)),
+                now,
+            );
+            let list_build_us = build_started.elapsed().as_secs_f64() * 1e6;
+            frame_builds.push((list_build_us, frame));
+        }
+        std::thread::scope(|s| {
+            let mut handles = Vec::with_capacity(scene.rigs.len());
+            for (rig, (list_build_us, frame)) in scene.rigs.iter_mut().zip(frame_builds) {
+                handles.push(s.spawn(move || {
+                    let software = &mut rig.software;
+                    if let Some(texture) = frame.magnifier.as_ref() {
+                        software.upload(
+                            texture.id,
+                            ImageSource {
+                                width: texture.width,
+                                height: texture.height,
+                                data: texture.pixels.to_vec(),
+                            },
+                        );
+                    }
+                    let stats = software.render(&frame.list);
+                    FrameTiming {
+                        list_build: list_build_us,
+                        tess_shape: stats.cpu_time.as_secs_f64() * 1e6,
+                        encode_submit: 0.0,
+                    }
+                }));
+            }
+            handles
+                .into_iter()
+                .map(|h| h.join().expect("worker thread panicked"))
+                .collect()
+        })
+    } else {
+        let mut f = Vec::with_capacity(scene.rigs.len());
+        for index in 0..scene.rigs.len() {
+            f.push(render_window(gpu, scene, index, now)?);
+        }
+        f
+    };
     let frame_us = frame_started.elapsed().as_secs_f64() * 1e6;
     Ok((route_us, route_us + frame_us, frames))
 }
@@ -648,11 +706,13 @@ fn storm(gpu: &GpuContext, scene: &mut Scene, args: &Args) -> String {
             }
         }
     }
-    scene.core.inject_event(SyntheticInput::pointer_button(
-        slot0,
-        MouseButton::Left,
-        false,
-    ));
+    if args.mode != "hover" {
+        scene.core.inject_event(SyntheticInput::pointer_button(
+            slot0,
+            MouseButton::Left,
+            false,
+        ));
+    }
 
     report(
         args,

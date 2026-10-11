@@ -43,7 +43,12 @@ pub(crate) fn text(
     if command.bold {
         attrs = attrs.weight(Weight::BOLD);
     }
-    buffer.set_text(&command.text, &attrs, Shaping::Advanced, None);
+    let shaping = if command.text.is_ascii() {
+        Shaping::Basic
+    } else {
+        Shaping::Advanced
+    };
+    buffer.set_text(&command.text, &attrs, shaping, None);
     buffer.shape_until_scroll(font_system, false);
 
     let origin = match command.anchor {

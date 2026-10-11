@@ -226,28 +226,46 @@ impl WindowSurface {
         list: &DisplayList,
         vertices: Option<[[f32; 2]; 4]>,
     ) -> FrameStats {
+        // Step 1: Render on CPU FIRST before acquiring the surface texture,
+        // so the compositor swapchain buffer is never held locked during CPU work.
+        renderer.resize(self.config.width, self.config.height);
+        let stats = renderer.render(list);
+
+        // Step 2: Acquire the swapchain texture now that pixels are ready to upload.
         let acquire_started = Instant::now();
         let frame = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(frame)
             | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
             wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
                 self.surface.configure(&gpu.device, &self.config);
-                return FrameStats::default();
+                return stats;
             }
             wgpu::CurrentSurfaceTexture::Timeout
             | wgpu::CurrentSurfaceTexture::Occluded
-            | wgpu::CurrentSurfaceTexture::Validation => return FrameStats::default(),
+            | wgpu::CurrentSurfaceTexture::Validation => return stats,
         };
         let acquire_time = acquire_started.elapsed();
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-        renderer.resize(self.config.width, self.config.height);
-        let stats = renderer.render(list);
-        presenter.present(&gpu.device, &gpu.queue, &view, renderer);
+
+        // Step 3: Single unified render pass and single queue submit for
+        // both the fullscreen software presenter sample and the crosshair overlay.
+        let (width, height) = renderer.size();
+        let was_resized = width != presenter.size().0 || height != presenter.size().1;
+        presenter.ensure(&gpu.device, width, height);
+        if was_resized {
+            presenter.upload(&gpu.queue, renderer.pixels());
+        } else if let Some((origin, extent)) = renderer.last_damage() {
+            presenter.upload_region(&gpu.queue, renderer.pixels(), origin, extent);
+        } else {
+            presenter.upload(&gpu.queue, renderer.pixels());
+        }
+
         if let Some(vertices) = vertices {
             self.crosshair.write_vertices(&gpu.queue, vertices);
         }
+
         let mut encoder = gpu
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -255,13 +273,13 @@ impl WindowSurface {
             });
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("overlay-software-crosshair"),
+                label: Some("overlay-software-pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -270,6 +288,7 @@ impl WindowSurface {
                 occlusion_query_set: None,
                 multiview_mask: None,
             });
+            presenter.draw(&mut pass);
             if vertices.is_some() {
                 self.crosshair.draw(&mut pass);
             }

@@ -219,6 +219,52 @@ impl Presenter {
         );
     }
 
+    /// Copies a damaged sub-region of the CPU frame into the source texture.
+    pub fn upload_region(
+        &mut self,
+        queue: &wgpu::Queue,
+        bytes: &[u8],
+        origin: (u32, u32),
+        extent: (u32, u32),
+    ) {
+        let Some(texture) = self.texture.as_ref() else {
+            return;
+        };
+        let (origin_x, origin_y) = origin;
+        let (width, height) = extent;
+        if width == 0
+            || height == 0
+            || origin_x + width > self.width
+            || origin_y + height > self.height
+        {
+            return;
+        }
+        let start = (origin_y as usize * self.width as usize + origin_x as usize) * 4;
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: origin_x,
+                    y: origin_y,
+                    z: 0,
+                },
+                aspect: wgpu::TextureAspect::All,
+            },
+            &bytes[start..],
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(self.width * 4),
+                rows_per_image: Some(height),
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+
     /// The source texture extent.
     #[must_use]
     pub const fn size(&self) -> (u32, u32) {
@@ -245,8 +291,15 @@ impl Presenter {
         renderer: &SoftwareRenderer,
     ) {
         let (width, height) = renderer.size();
+        let was_resized = width != self.width || height != self.height;
         self.ensure(device, width, height);
-        self.upload(queue, renderer.pixels());
+        if was_resized {
+            self.upload(queue, renderer.pixels());
+        } else if let Some((origin, extent)) = renderer.last_damage() {
+            self.upload_region(queue, renderer.pixels(), origin, extent);
+        } else {
+            self.upload(queue, renderer.pixels());
+        }
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("software-present-encoder"),
         });
