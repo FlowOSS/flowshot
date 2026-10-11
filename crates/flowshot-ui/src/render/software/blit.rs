@@ -19,7 +19,7 @@
 use std::collections::HashMap;
 
 use crate::render::color::srgb_to_linear;
-use crate::render::geom::Rect;
+use crate::render::geometry::Rect;
 use crate::render::list::{ImageCommand, TextureId};
 use crate::render::software::ImageEntry;
 use crate::render::software::buffer::{ClipMask, SoftwareFramebuffer, unit_to_byte};

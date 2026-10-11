@@ -165,42 +165,65 @@ impl WindowSurface {
             None => FrameStats::default(),
         };
         stats.acquire_time = acquire_time;
+        // Only encode a secondary pass if crosshair vertices exist or if there was no content pass.
+        // When content was rendered and there is no crosshair, skip the redundant encoder and queue submit entirely.
         if let Some(vertices) = vertices {
             self.crosshair.write_vertices(&gpu.queue, vertices);
-        }
-        let mut encoder = gpu
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("overlay-frame-encoder"),
-            });
-        {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("overlay-frame"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        // The content pass already cleared and resolved into
-                        // the view; the crosshair pass must preserve it.
-                        load: if has_content {
-                            wgpu::LoadOp::Load
-                        } else {
-                            wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
+            let mut encoder = gpu
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("overlay-crosshair-encoder"),
+                });
+            {
+                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("overlay-crosshair-pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: if has_content {
+                                wgpu::LoadOp::Load
+                            } else {
+                                wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT)
+                            },
+                            store: wgpu::StoreOp::Store,
                         },
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            if vertices.is_some() {
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    multiview_mask: None,
+                });
                 self.crosshair.draw(&mut pass);
             }
+            gpu.queue.submit(Some(encoder.finish()));
+        } else if !has_content {
+            let mut encoder = gpu
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("overlay-clear-encoder"),
+                });
+            {
+                let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("overlay-clear-pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    multiview_mask: None,
+                });
+            }
+            gpu.queue.submit(Some(encoder.finish()));
         }
-        gpu.queue.submit(Some(encoder.finish()));
         // Notify winit AFTER drawing, BEFORE the present (its documented
         // contract): on Wayland this schedules the frame callback that
         // throttles `RedrawRequested` to the output refresh. Without it the

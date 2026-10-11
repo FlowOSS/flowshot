@@ -10,7 +10,7 @@
 
 use std::borrow::Cow;
 
-use super::geom::Rect;
+use super::geometry::Rect;
 use super::list::ShadowSpec;
 use super::vector::content_stencil;
 
@@ -201,7 +201,7 @@ mod tests {
 
     use super::*;
     use crate::render::color::Color;
-    use crate::render::geom::Point;
+    use crate::render::geometry::Point;
 
     fn spec(blur: f32) -> ShadowSpec {
         ShadowSpec {

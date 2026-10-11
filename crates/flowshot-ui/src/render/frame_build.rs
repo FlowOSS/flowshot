@@ -10,7 +10,7 @@ use super::glyph::TextVertex;
 use super::image::{ImageVertex, TextureStore, image_quad, uv_rect};
 use super::list::{ClipCommand, Command, ImageCommand, Shape, TextureId};
 use super::shadow::{ShadowVertex, shadow_quad};
-use super::tess::{FlatVertex, Tessellator};
+use super::tessellation::{FlatVertex, Tessellator};
 use super::text::TextStack;
 
 /// Clip depths beyond this are ignored (stencil is 8-bit; overlay UIs nest

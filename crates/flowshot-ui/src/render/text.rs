@@ -21,7 +21,7 @@ use cosmic_text::{
 };
 
 use super::atlas::{AtlasSlot, ShelfAtlas};
-use super::geom::Point;
+use super::geometry::Point;
 use super::glyph::{GlyphPlacement, TextVertex, glyph_quad, glyph_rgba, tint_for};
 use super::list::{TextAnchor, TextCommand};
 use super::text_pipeline::{atlas_resources, text_pipeline};

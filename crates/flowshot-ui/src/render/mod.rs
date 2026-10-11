@@ -34,7 +34,7 @@
 mod atlas;
 mod color;
 mod frame_build;
-mod geom;
+mod geometry;
 mod glyph;
 mod image;
 mod image_pipeline;
@@ -47,14 +47,14 @@ pub mod software;
 mod staging;
 mod stats;
 mod target;
-mod tess;
+mod tessellation;
 mod text;
 mod text_pipeline;
 mod vector;
 
 pub use color::{Color, linear_to_srgb, srgb_to_linear};
-pub use geom::{Point, Rect, Size};
-pub(crate) use geom::{f32_from_f64, f32_from_i32, f32_from_u32};
+pub use geometry::{Point, Rect, Size};
+pub(crate) use geometry::{f32_from_f64, f32_from_i32, f32_from_u32};
 pub use image::{RgbaImage, TextureStore};
 pub use list::{
     ClipCommand, Command, DisplayList, ImageCommand, PathSegment, ShadowSpec, Shape, TextAnchor,

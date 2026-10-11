@@ -138,6 +138,85 @@ impl Rect {
     pub fn is_valid(self) -> bool {
         self.origin.x.is_finite() && self.origin.y.is_finite() && self.size.is_valid()
     }
+
+    /// Computes the intersection of two rectangles, or `None` if they do not overlap.
+    #[must_use]
+    pub fn intersection(&self, other: &Self) -> Option<Self> {
+        let x0 = self.origin.x.max(other.origin.x);
+        let y0 = self.origin.y.max(other.origin.y);
+        let x1 = self.right().min(other.right());
+        let y1 = self.bottom().min(other.bottom());
+        if x1 > x0 && y1 > y0 {
+            Some(Self::from_parts(x0, y0, x1 - x0, y1 - y0))
+        } else {
+            None
+        }
+    }
+
+    /// Computes the bounding union containing both rectangles.
+    #[must_use]
+    pub fn union(&self, other: &Self) -> Self {
+        let x0 = self.origin.x.min(other.origin.x);
+        let y0 = self.origin.y.min(other.origin.y);
+        let x1 = self.right().max(other.right());
+        let y1 = self.bottom().max(other.bottom());
+        Self::from_parts(x0, y0, x1 - x0, y1 - y0)
+    }
+}
+
+/// Invokes `f` for each non-empty rectangular strip formed by subtracting `hole`
+/// from `bounds` (at most 4 axis-aligned rectangles: top, bottom, left, right).
+pub(crate) fn for_each_dim_strip<F: FnMut(Rect)>(bounds: &Rect, hole: &Rect, mut callback: F) {
+    if !bounds.is_valid() || !hole.is_valid() {
+        return;
+    }
+    let bounds_left = bounds.origin.x;
+    let bounds_top = bounds.origin.y;
+    let bounds_width = bounds.size.width;
+    let bounds_right = bounds.right();
+    let bounds_bottom = bounds.bottom();
+
+    let hole_left = hole.origin.x.clamp(bounds_left, bounds_right);
+    let hole_top = hole.origin.y.clamp(bounds_top, bounds_bottom);
+    let hole_right = hole.right().clamp(bounds_left, bounds_right);
+    let hole_bottom = hole.bottom().clamp(bounds_top, bounds_bottom);
+
+    // Top strip
+    if hole_top > bounds_top {
+        callback(Rect::from_parts(
+            bounds_left,
+            bounds_top,
+            bounds_width,
+            hole_top - bounds_top,
+        ));
+    }
+    // Bottom strip
+    if bounds_bottom > hole_bottom {
+        callback(Rect::from_parts(
+            bounds_left,
+            hole_bottom,
+            bounds_width,
+            bounds_bottom - hole_bottom,
+        ));
+    }
+    // Left strip
+    if hole_left > bounds_left && hole_bottom > hole_top {
+        callback(Rect::from_parts(
+            bounds_left,
+            hole_top,
+            hole_left - bounds_left,
+            hole_bottom - hole_top,
+        ));
+    }
+    // Right strip
+    if bounds_right > hole_right && hole_bottom > hole_top {
+        callback(Rect::from_parts(
+            hole_right,
+            hole_top,
+            bounds_right - hole_right,
+            hole_bottom - hole_top,
+        ));
+    }
 }
 
 /// `u32` texture/atlas dimensions and pixel counts convert losslessly for
@@ -208,6 +287,32 @@ mod tests {
         assert!(!a.intersects(&Rect::from_parts(30.0, 10.0, 20.0, 20.0)));
         assert!(!a.intersects(&Rect::from_parts(10.0, 30.0, 20.0, 20.0)));
         assert!(!a.intersects(&Rect::from_parts(100.0, 100.0, 5.0, 5.0)));
+    }
+
+    #[test]
+    fn rect_intersection_and_union() {
+        let r1 = Rect::from_parts(0.0, 0.0, 10.0, 10.0);
+        let r2 = Rect::from_parts(5.0, 5.0, 10.0, 10.0);
+        let inter = r1.intersection(&r2);
+        assert_eq!(inter, Some(Rect::from_parts(5.0, 5.0, 5.0, 5.0)));
+        let union = r1.union(&r2);
+        assert_eq!(union, Rect::from_parts(0.0, 0.0, 15.0, 15.0));
+
+        let disjoint = Rect::from_parts(20.0, 20.0, 5.0, 5.0);
+        assert_eq!(r1.intersection(&disjoint), None);
+    }
+
+    #[test]
+    fn for_each_dim_strip_decomposes_cleanly() {
+        let bounds = Rect::from_parts(0.0, 0.0, 100.0, 100.0);
+        let hole = Rect::from_parts(25.0, 25.0, 50.0, 50.0);
+        let mut strips = Vec::new();
+        for_each_dim_strip(&bounds, &hole, |s| strips.push(s));
+        assert_eq!(strips.len(), 4);
+        assert_eq!(strips[0], Rect::from_parts(0.0, 0.0, 100.0, 25.0)); // top
+        assert_eq!(strips[1], Rect::from_parts(0.0, 75.0, 100.0, 25.0)); // bottom
+        assert_eq!(strips[2], Rect::from_parts(0.0, 25.0, 25.0, 50.0)); // left
+        assert_eq!(strips[3], Rect::from_parts(75.0, 25.0, 25.0, 50.0)); // right
     }
 
     #[test]

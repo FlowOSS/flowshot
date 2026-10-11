@@ -51,7 +51,7 @@ mod text;
 mod vector;
 
 use super::color::Color;
-use super::geom::{Rect, Size};
+use super::geometry::{Rect, Size};
 use super::list::{ClipCommand, Command, DisplayList, ImageCommand, TextureId};
 use super::software::buffer::{ClipMask, full_mask};
 use super::software::shadow::shadow;
@@ -287,8 +287,8 @@ impl SoftwareRenderer {
     #[must_use]
     fn cached_frame(&mut self, list: &DisplayList) -> Option<Region> {
         let extent = Size::new(
-            crate::render::geom::f32_from_u32(self.width),
-            crate::render::geom::f32_from_u32(self.height),
+            crate::render::geometry::f32_from_u32(self.width),
+            crate::render::geometry::f32_from_u32(self.height),
         );
         let window = ((0, 0), (self.width, self.height));
         let image = match list.iter().next() {
@@ -311,8 +311,8 @@ impl SoftwareRenderer {
         let src_region = image.src.unwrap_or(Rect::from_parts(
             0.0,
             0.0,
-            crate::render::geom::f32_from_u32(tex_w),
-            crate::render::geom::f32_from_u32(tex_h),
+            crate::render::geometry::f32_from_u32(tex_w),
+            crate::render::geometry::f32_from_u32(tex_h),
         ));
         let scale_x = src_region.size.width / image.dst.size.width;
         let scale_y = src_region.size.height / image.dst.size.height;
@@ -561,7 +561,7 @@ mod tests {
     use super::buffer::unit_to_byte;
     use super::*;
     use crate::render::color::Color;
-    use crate::render::geom::{Point, Rect};
+    use crate::render::geometry::{Point, Rect};
     use crate::render::list::Shape;
 
     #[test]

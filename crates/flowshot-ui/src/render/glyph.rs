@@ -10,7 +10,7 @@ use cosmic_text::{SwashContent, SwashImage};
 
 use super::atlas::AtlasSlot;
 use super::color::srgb_to_linear;
-use super::geom::f32_from_u32;
+use super::geometry::f32_from_u32;
 use super::text::GLYPH_PADDING;
 
 /// Interleaved text vertex: `[pos xy, uv xy, tint rgba]`.
