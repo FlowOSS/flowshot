@@ -20,6 +20,10 @@ use super::instance::OVERLAY_BACKENDS;
 pub struct GpuContext {
     /// The selected adapter (kept for surface capability queries).
     pub adapter: wgpu::Adapter,
+    /// The power class of the selected adapter, the CPU-raster fallback's
+    /// input: a software/virtual/CPU driver class takes the CPU path at any
+    /// extent.
+    pub(crate) power: PowerClass,
     /// The device, requested with the adapter's own limits (never the
     /// 2048-capped downlevel defaults).
     pub device: wgpu::Device,
@@ -46,10 +50,11 @@ impl GpuContext {
         instance: &wgpu::Instance,
         probe_surface: &wgpu::Surface<'static>,
     ) -> Result<Self, UiError> {
-        let (adapter, device, queue) =
+        let (adapter, device, queue, power) =
             futures::executor::block_on(request_adapter_device(instance, Some(probe_surface)))?;
         Ok(Self {
             adapter,
+            power,
             device,
             queue,
         })
@@ -65,10 +70,11 @@ impl GpuContext {
     /// Same failure modes as [`Self::new`] minus surface support (which is
     /// not probed).
     pub fn new_headless(instance: &wgpu::Instance) -> Result<Self, UiError> {
-        let (adapter, device, queue) =
+        let (adapter, device, queue, power) =
             futures::executor::block_on(request_adapter_device(instance, None))?;
         Ok(Self {
             adapter,
+            power,
             device,
             queue,
         })
@@ -78,7 +84,7 @@ impl GpuContext {
 async fn request_adapter_device(
     instance: &wgpu::Instance,
     probe_surface: Option<&wgpu::Surface<'static>>,
-) -> Result<(wgpu::Adapter, wgpu::Device, wgpu::Queue), UiError> {
+) -> Result<(wgpu::Adapter, wgpu::Device, wgpu::Queue, PowerClass), UiError> {
     let mut adapters = instance.enumerate_adapters(OVERLAY_BACKENDS).await;
     if adapters.is_empty() {
         return Err(UiError::NoGpuAdapter);
@@ -129,5 +135,5 @@ async fn request_adapter_device(
             ..wgpu::DeviceDescriptor::default()
         })
         .await?;
-    Ok((adapter, device, queue))
+    Ok((adapter, device, queue, chosen.power))
 }

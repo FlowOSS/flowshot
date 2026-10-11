@@ -87,6 +87,47 @@ pub(crate) fn select_adapter(candidates: &[AdapterCandidate]) -> Option<usize> {
     })
 }
 
+/// The GPU renderer's per-frame offscreen cost in bytes: the multisampled RGBA8
+/// color target (4 bytes per sample) plus the `Stencil8` attachment (1 byte),
+/// at the surface extent.
+///
+/// This is the allocation that made an OOM-starved desktop die at the swapchain
+/// rather than at `request_device`: measured ~230 MB at the 4480x1440 dual
+/// monitor union with 8x MSAA.
+/// The MSAA rung the policy budgets: the upper bound of
+/// `render::target::msaa_sample_count` (8 when the device has
+/// `TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES`, else 4), so the policy
+/// over-estimates the target rather than under-estimating it.
+pub(crate) const MSAA_SAMPLES: u32 = 8;
+
+/// The offscreen budget above which the CPU raster path takes over.
+///
+/// Set below the measured 230 MB of the dual-monitor union (which OOM'd) and
+/// above the single 2560x1440 output (~74 MB, which presented fine), so the
+/// policy splits the two observed cases rather than guessing between them.
+pub(crate) const GPU_TARGET_MEMORY_BUDGET: usize = 128 << 20;
+
+/// The GPU renderer's offscreen target bytes for a `width` x `height` extent.
+#[must_use]
+pub(crate) fn offscreen_target_bytes(width: u32, height: u32) -> usize {
+    let pixels = usize::try_from(width).unwrap_or(0) * usize::try_from(height).unwrap_or(0);
+    pixels * (usize::try_from(MSAA_SAMPLES).unwrap_or(0) * 4 + 1)
+}
+
+/// Whether the CPU raster path should present a `width` x `height` window
+/// surface driven by a `power`-class adapter: a software/virtual/CPU driver
+/// (whose `encode+submit` was measured at ~63 ms/frame) or an extent whose
+/// offscreen target exceeds the memory budget.
+#[must_use]
+pub(crate) fn software_path_for(power: PowerClass, width: u32, height: u32) -> bool {
+    match power {
+        PowerClass::Other => true,
+        PowerClass::HighPerformance | PowerClass::LowPower => {
+            offscreen_target_bytes(width, height) > GPU_TARGET_MEMORY_BUDGET
+        }
+    }
+}
+
 /// Whether a `width` x `height` surface extent fits a device whose
 /// `max_texture_dimension_2d` is `limit`.
 ///
@@ -143,6 +184,28 @@ mod tests {
                 fits,
                 "{width}x{height} against cap {cap}"
             );
+        }
+    }
+
+    #[test]
+    fn software_path_matches_the_measured_cases() {
+        let cases = [
+            // The OOM'd dual-monitor union: 4480x1440 with 8x MSAA + stencil
+            // (213 MB), above the budget.
+            (PowerClass::HighPerformance, 4480, 1440, true),
+            // The single 2560x1440 output that presented fine (116 MB).
+            (PowerClass::HighPerformance, 2560, 1440, false),
+            // A 4K single output (274 MB) also takes the CPU path.
+            (PowerClass::LowPower, 3840, 2160, true),
+            // A software/virtual/CPU driver takes the CPU path at any extent.
+            (PowerClass::Other, 1, 1, true),
+            // The budget boundary: just under it stays on the GPU path,
+            // just over takes the CPU path.
+            (PowerClass::HighPerformance, 1, 4_000_000, false),
+            (PowerClass::HighPerformance, 1, 4_100_000, true),
+        ];
+        for (power, width, height, software) in cases {
+            assert_eq!(software_path_for(power, width, height), software);
         }
     }
 

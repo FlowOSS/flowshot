@@ -15,11 +15,12 @@ use winit::event_loop::ActiveEventLoop;
 use winit::monitor::MonitorHandle;
 use winit::window::{Fullscreen, Window, WindowAttributes, WindowLevel};
 
+use crate::adapter::software_path_for;
 use crate::app::{OverlayApp, WindowEntry};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::monitor;
-use crate::render::Renderer;
+use crate::render::{ImageSource, Presenter, Renderer, SoftwareRenderer};
 use crate::router::WindowSlot;
 use crate::surface::{SurfaceSpec, WindowSurface};
 
@@ -68,6 +69,8 @@ impl OverlayApp {
                 monitor_name,
                 renderer: None,
                 effect_textures: Vec::new(),
+                software: None,
+                presenter: None,
             });
         }
         self.init_surfaces()?;
@@ -135,6 +138,36 @@ impl OverlayApp {
             let Some(surface) = entry.surface.as_ref() else {
                 continue;
             };
+            let (width, height) = surface.size();
+            if software_path_for(gpu.power, width, height) {
+                tracing::warn!(
+                    window = index,
+                    width,
+                    height,
+                    "the gpu frame target is not affordable here; the cpu raster path presents this window",
+                );
+                entry.software = Some(SoftwareRenderer::new(width, height));
+                entry.presenter = Some(Presenter::new(&gpu.device, surface.format()));
+                let Some(software) = entry.software.as_mut() else {
+                    continue;
+                };
+                software.upload(
+                    crate::widgets::ICON_ATLAS_ID,
+                    ImageSource {
+                        width: crate::widgets::ATLAS_WIDTH,
+                        height: crate::widgets::ATLAS_HEIGHT,
+                        data: crate::widgets::ICON_ATLAS.to_vec(),
+                    },
+                );
+                if let Some(backdrop) = backdrop.as_mut() {
+                    let slot = WindowSlot::new(index);
+                    if let Some(output_index) = core.router().output_index_for(slot) {
+                        backdrop.upload_software_for(output_index, software);
+                    }
+                    backdrop.upload_cursor_software(software);
+                }
+                continue;
+            }
             let mut renderer = Renderer::new(&gpu.device, &gpu.queue, surface.format());
 
             let atlas_image = crate::render::RgbaImage {

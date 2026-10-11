@@ -43,6 +43,7 @@ mod pass;
 mod readback;
 mod renderer;
 mod shadow;
+mod software;
 mod staging;
 mod stats;
 mod target;
@@ -61,4 +62,5 @@ pub use list::{
 };
 pub use readback::read_texture_rgba;
 pub use renderer::Renderer;
+pub use software::{ImageSource, Presenter, SoftwareRenderer};
 pub use stats::{FrameStats, RenderTarget};

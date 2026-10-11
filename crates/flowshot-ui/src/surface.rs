@@ -12,7 +12,7 @@ use crate::adapter::surface_size_fits;
 use crate::crosshair::CrosshairPipeline;
 use crate::error::UiError;
 use crate::gpu::GpuContext;
-use crate::render::{DisplayList, FrameStats, RenderTarget, Renderer};
+use crate::render::{DisplayList, FrameStats, Presenter, RenderTarget, Renderer, SoftwareRenderer};
 
 /// Everything one window's surface needs beyond the shared GPU objects:
 /// which monitor it covers (error context), its initial extent, the
@@ -211,5 +211,74 @@ impl WindowSurface {
         self.window.pre_present_notify();
         gpu.queue.present(frame);
         Ok(stats)
+    }
+
+    /// Presents one CPU-rendered frame: the software path's framebuffer is
+    /// uploaded and drawn as one fullscreen quad, then the crosshair pass runs
+    /// on top. Same surface lifecycle and same transient-invalidation recovery
+    /// as [`WindowSurface::render`]; the difference is only the content pass,
+    /// which costs one `write_texture` plus one three-vertex draw.
+    pub(crate) fn render_software(
+        &mut self,
+        gpu: &GpuContext,
+        presenter: &mut Presenter,
+        renderer: &mut SoftwareRenderer,
+        list: &DisplayList,
+        vertices: Option<[[f32; 2]; 4]>,
+    ) -> FrameStats {
+        let acquire_started = Instant::now();
+        let frame = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
+                self.surface.configure(&gpu.device, &self.config);
+                return FrameStats::default();
+            }
+            wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Validation => return FrameStats::default(),
+        };
+        let acquire_time = acquire_started.elapsed();
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let stats = renderer.render(list);
+        presenter.present(&gpu.device, &gpu.queue, &view, renderer);
+        if let Some(vertices) = vertices {
+            self.crosshair.write_vertices(&gpu.queue, vertices);
+        }
+        let mut encoder = gpu
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("overlay-software-frame-encoder"),
+            });
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("overlay-software-crosshair"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            if vertices.is_some() {
+                self.crosshair.draw(&mut pass);
+            }
+        }
+        gpu.queue.submit(Some(encoder.finish()));
+        self.window.pre_present_notify();
+        gpu.queue.present(frame);
+        FrameStats {
+            acquire_time,
+            ..stats
+        }
     }
 }
