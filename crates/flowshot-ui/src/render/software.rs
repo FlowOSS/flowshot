@@ -11,12 +11,12 @@
 //!
 //! # Color contract
 //!
-//! The framebuffer is **premultiplied, sRGB-encoded** RGBA8 — the byte space the
-//! GPU path writes into its sRGB target, so the two paths agree on opaque token
-//! fills byte for byte. Antialiasing is coverage-based rather than
-//! multisample-based, so translucent overlaps blend in the encoded space
-//! instead of linear light: the difference is confined to antialiased edges,
-//! the same band the cross-rasterizer parity policy masks.
+//! The framebuffer is **premultiplied, linear-light** RGBA8 — the space the GPU
+//! path blends in. The presenter stores it into an sRGB target, whose store
+//! re-encodes, so the two paths agree byte for byte in the target and opaque
+//! token fills round-trip through that encode exactly. Antialiasing is
+//! coverage-based rather than multisample-based, so edge coverage quantizes
+//! differently from MSAA — the band the cross-rasterizer parity policy masks.
 //!
 //! # Failure behavior
 //!
@@ -121,6 +121,20 @@ impl SoftwareRenderer {
         self.images.clear();
     }
 
+    /// Reallocates the framebuffer when the window extent changes, so the
+    /// presenter's 1:1 copy never stretches a stale-extent frame onto a new
+    /// swapchain. Unchanged extents are a no-op; a resize drops any clip
+    /// stack left over from the abandoned frame.
+    pub fn resize(&mut self, width: u32, height: u32) {
+        if self.size() == (width.max(1), height.max(1)) {
+            return;
+        }
+        self.width = width.max(1);
+        self.height = height.max(1);
+        self.buffer = buffer::SoftwareFramebuffer::new(self.width, self.height);
+        self.clip.clear();
+    }
+
     /// The framebuffer extent in physical pixels.
     #[must_use]
     pub(crate) const fn size(&self) -> (u32, u32) {
@@ -129,7 +143,7 @@ impl SoftwareRenderer {
 
     /// The premultiplied sRGB-encoded RGBA8 bytes of the last rendered frame.
     #[must_use]
-    pub(crate) fn pixels(&self) -> &[u8] {
+    pub fn pixels(&self) -> &[u8] {
         self.buffer.data()
     }
 
@@ -202,29 +216,37 @@ impl SoftwareRenderer {
 }
 #[cfg(test)]
 mod tests {
+    use super::buffer::unit_to_byte;
     use super::*;
     use crate::render::color::Color;
     use crate::render::geom::{Point, Rect};
     use crate::render::list::Shape;
 
     #[test]
-    fn opaque_token_fill_is_byte_exact() {
+    fn the_opaque_fill_lands_in_linear_light() {
+        // Given an opaque token fill, when the frame is rasterized, then the
+        // framebuffer holds that color's premultiplied LINEAR bytes — the space
+        // the GPU path blends in — so the presenter's sRGB store re-encodes to
+        // the token bytes.
         let mut renderer = SoftwareRenderer::new(4, 4);
         let mut list = DisplayList::new();
+        let color = Color::from_rgba8(99, 102, 241, 255);
         list.fill(
             Shape::Rect {
                 rect: Rect::from_parts(0.0, 0.0, 4.0, 4.0),
                 radius: 0.0,
             },
-            Color::from_rgba8(255, 0, 0, 255),
+            color,
         );
         let _stats = renderer.render(&list);
         let pixels = renderer.pixels();
+        let [r, g, b, a] = color.premultiplied_linear();
+        let want = [r, g, b, a].map(unit_to_byte);
         for offset in 0..16 {
             let at = offset * 4;
             assert_eq!(
                 [pixels[at], pixels[at + 1], pixels[at + 2], pixels[at + 3]],
-                [255, 0, 0, 255]
+                want,
             );
         }
     }

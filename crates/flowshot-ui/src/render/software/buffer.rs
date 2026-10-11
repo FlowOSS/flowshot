@@ -12,12 +12,12 @@
 //!
 //! # Color contract
 //!
-//! The framebuffer is **premultiplied, sRGB-encoded** RGBA8 — the byte space the
-//! GPU path writes into its sRGB target, so the two paths agree on opaque token
-//! fills byte for byte. Antialiasing is coverage-based rather than
-//! multisample-based, so translucent overlaps blend in the encoded space
-//! instead of linear light: the difference is confined to antialiased edges,
-//! the same band the cross-rasterizer parity policy masks.
+//! The framebuffer is **premultiplied, linear-light** RGBA8 — the space the GPU
+//! path blends in. The presenter stores it into an sRGB target, whose store
+//! re-encodes, so the two paths agree byte for byte in the target and opaque
+//! token fills round-trip through that encode exactly. Antialiasing is
+//! coverage-based rather than multisample-based, so edge coverage quantizes
+//! differently from MSAA — the band the cross-rasterizer parity policy masks.
 //!
 //! # Clip contract
 //!
@@ -32,7 +32,7 @@
 
 use tiny_skia::{FillRule, LineCap, LineJoin, Mask, Paint, Path, PixmapMut, Stroke, Transform};
 
-use crate::render::color::Color;
+use crate::render::color::{Color, srgb_to_linear};
 
 /// A frame-extent clip mask: tiny-skia's per-pixel coverage mask.
 pub(crate) type ClipMask = Mask;
@@ -51,7 +51,7 @@ pub(crate) fn full_mask(width: u32, height: u32) -> Option<ClipMask> {
     Some(mask)
 }
 
-/// The framebuffer: premultiplied sRGB-encoded RGBA8, row-major, top row first.
+/// The framebuffer: premultiplied linear-light RGBA8, row-major, top row first.
 #[derive(Debug)]
 pub(crate) struct SoftwareFramebuffer {
     width: u32,
@@ -233,14 +233,29 @@ impl SoftwareFramebuffer {
     }
 }
 
-/// A [`Color`] as premultiplied sRGB-encoded RGBA8.
+/// A [`Color`] as premultiplied LINEAR-light RGBA8 — the framebuffer's space.
 #[must_use]
 pub(crate) fn premultiplied(color: &Color) -> [u8; 4] {
-    let alpha = unit_to_byte(color.a);
-    let scaled = |unit: f32| -> u8 {
-        u8::try_from((u32::from(unit_to_byte(unit)) * u32::from(alpha)) / 255).unwrap_or(255)
-    };
-    [scaled(color.r), scaled(color.g), scaled(color.b), alpha]
+    let [r, g, b, a] = color.premultiplied_linear();
+    [
+        unit_to_byte(r),
+        unit_to_byte(g),
+        unit_to_byte(b),
+        unit_to_byte(a),
+    ]
+}
+
+/// A [`Color`] as straight (non-premultiplied) LINEAR-light RGBA8: what tiny-skia's
+/// `Paint` expects, since it premultiplies internally — feeding it premultiplied
+/// bytes would premultiply twice.
+#[must_use]
+pub(crate) fn straight_linear(color: &Color) -> [u8; 4] {
+    [
+        unit_to_byte(srgb_to_linear(color.r)),
+        unit_to_byte(srgb_to_linear(color.g)),
+        unit_to_byte(srgb_to_linear(color.b)),
+        unit_to_byte(color.a),
+    ]
 }
 
 /// A normalized channel as its sRGB-encoded byte.
@@ -263,7 +278,7 @@ pub(crate) fn paint_of(color: &Color) -> Paint<'static> {
         anti_alias: true,
         ..Paint::default()
     };
-    let [r, g, b, a] = premultiplied(color);
+    let [r, g, b, a] = straight_linear(color);
     paint.set_color_rgba8(r, g, b, a);
     paint
 }

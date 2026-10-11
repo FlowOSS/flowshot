@@ -8,12 +8,14 @@
 //!
 //! # Sampling contract
 //!
-//! The vertex stage emits `uv = position * 0.5 + 0.5`, which at a fragment's
-//! pixel center is exactly the texel center of the same coordinate — a 1:1 copy
-//! with no resampling and no frame-extent uniform. The source texture is always
-//! `RGBA8Unorm` (the framebuffer's own space) regardless of the surface format,
-//! and the blend is premultiplied, matching the framebuffer's premultiplied
-//! bytes.
+//! The vertex stage emits `uv = (x, -y) * 0.5 + 0.5`, which at a fragment's
+//! pixel center is exactly the texel center of the same screen coordinate — a
+//! 1:1 copy with no resampling and no frame-extent uniform. The framebuffer is
+//! filled top-row-first (physical px, y down) while clip space is y up, so the
+//! v axis is flipped. The source texture is always `RGBA8Unorm` (the
+//! framebuffer's own premultiplied linear-light space) regardless of the
+//! surface format, and the blend is premultiplied: the sRGB target's store
+//! re-encodes, which is what puts the CPU path in the GPU path's byte space.
 
 use std::borrow::Cow;
 
@@ -36,15 +38,14 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VsOut {
     let y = select(-1.0, 3.0, (index & 2u) != 0u);
     var out: VsOut;
     out.clip = vec4<f32>(x, y, 0.0, 1.0);
-    out.uv = vec2<f32>(x, y) * 0.5 + vec2<f32>(0.5, 0.5);
+    out.uv = vec2<f32>(x, -y) * 0.5 + vec2<f32>(0.5, 0.5);
     return out;
 }
 
 @fragment
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     return textureSample(frame_texture, frame_sampler, in.uv);
-}
-";
+}";
 
 /// The synthesized fullscreen triangle's vertex count.
 const VERTEX_COUNT: u32 = 3;

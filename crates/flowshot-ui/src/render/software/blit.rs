@@ -15,6 +15,7 @@
 
 use std::collections::HashMap;
 
+use crate::render::color::srgb_to_linear;
 use crate::render::geom::Rect;
 use crate::render::list::{ImageCommand, TextureId};
 use crate::render::software::ImageSource;
@@ -82,11 +83,11 @@ pub(crate) fn blit(
             }
             let u = region.origin.x + (x as f32 + 0.5 - destination.origin.x) * scale_x;
             let v = region.origin.y + (y as f32 + 0.5 - destination.origin.y) * scale_y;
-            let texel = if one_to_one {
+            let texel = to_linear(if one_to_one {
                 nearest(data, tex_w, tex_h, u, v)
             } else {
                 bilinear(data, tex_w, tex_h, u - 0.5, v - 0.5)
-            };
+            });
             framebuffer.blend_covered(framebuffer.offset(x, y), scaled(coverage, fade), texel);
         }
     }
@@ -96,6 +97,20 @@ pub(crate) fn blit(
 #[must_use]
 pub(crate) fn scaled(coverage: u8, fade: f32) -> u8 {
     unit_to_byte(f32::from(coverage) * fade.clamp(0.0, 1.0))
+}
+
+/// Image source bytes are premultiplied sRGB-encoded (the capture's space);
+/// the framebuffer blends in linear light, so each rgb channel crosses the
+/// transfer function before it composites. Alpha is linear by convention.
+#[must_use]
+pub(crate) fn to_linear(texel: [u8; 4]) -> [u8; 4] {
+    let channel = |byte: u8| -> u8 { unit_to_byte(srgb_to_linear(f32::from(byte) / 255.0)) };
+    [
+        channel(texel[0]),
+        channel(texel[1]),
+        channel(texel[2]),
+        texel[3],
+    ]
 }
 
 /// The nearest texel at texel-space `(u, v)`, transparent outside the source.

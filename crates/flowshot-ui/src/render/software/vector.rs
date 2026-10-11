@@ -67,6 +67,9 @@ pub(crate) fn shape_path(shape: &Shape) -> Option<(Path, FillRule)> {
     Some((builder.finish()?, FillRule::EvenOdd))
 }
 
+/// The cubic constant for a quarter-circle arc split: the handle fraction of
+/// the radius, shared by the rounded-rect corners and the ellipse split.
+pub(crate) const ARC_K: f32 = 0.552_284_7;
 /// A rectangle path with `radius` rounded corners, clamped to half the
 /// smaller side (the GPU path's contract).
 #[must_use]
@@ -82,18 +85,25 @@ pub(crate) fn rect_path(rect: &Rect, radius: f32) -> Option<Path> {
     }
     let (x, y) = (rect.origin.x, rect.origin.y);
     let (right, bottom) = (rect.right(), rect.bottom());
+    // The GPU path's corner is a quadratic whose control point is the sharp
+    // corner; a cubic with the two-thirds handles is the same curve exactly.
+    let third = radius / 3.0;
     builder.move_to(x + radius, y);
-    builder.cubic_to(right - radius, y, right, y, right, y + radius);
+    builder.line_to(right - radius, y);
+    builder.cubic_to(right - third, y, right, y + third, right, y + radius);
+    builder.line_to(right, bottom - radius);
     builder.cubic_to(
         right,
-        bottom - radius,
-        right,
+        bottom - third,
+        right - third,
         bottom,
         right - radius,
         bottom,
     );
-    builder.cubic_to(x + radius, bottom, x, bottom, x, bottom - radius);
-    builder.cubic_to(x, y + radius, x, y, x + radius, y);
+    builder.line_to(x + radius, bottom);
+    builder.cubic_to(x + third, bottom, x, bottom - third, x, bottom - radius);
+    builder.line_to(x, y + radius);
+    builder.cubic_to(x, y + third, x + third, y, x + radius, y);
     builder.close();
     builder.finish()
 }
@@ -105,7 +115,7 @@ pub(crate) fn ellipse_path(center: Point, radii: (f32, f32)) -> Option<Path> {
     let mut builder = PathBuilder::new();
     let (cx, cy) = (center.x, center.y);
     let (rx, ry) = radii;
-    let arc = 0.552_284_7;
+    let arc = ARC_K;
     let (ox, oy) = (rx * arc, ry * arc);
     builder.move_to(cx - rx, cy);
     builder.cubic_to(cx - rx, cy - oy, cx - ox, cy - ry, cx, cy - ry);

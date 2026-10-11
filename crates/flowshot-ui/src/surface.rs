@@ -242,6 +242,7 @@ impl WindowSurface {
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+        renderer.resize(self.config.width, self.config.height);
         let stats = renderer.render(list);
         presenter.present(&gpu.device, &gpu.queue, &view, renderer);
         if let Some(vertices) = vertices {
