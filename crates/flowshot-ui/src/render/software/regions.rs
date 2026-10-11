@@ -288,6 +288,7 @@ fn split_into(piece: Rect, hole: Rect) -> Vec<Rect> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
     use super::*;
     use crate::render::color::Color;
     use crate::render::geom::Size;

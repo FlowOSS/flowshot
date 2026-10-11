@@ -410,6 +410,13 @@ impl crate::app::OverlayApp {
 
 #[cfg(test)]
 mod tests {
+    #![allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::cast_possible_wrap,
+        clippy::cast_precision_loss,
+        clippy::uninlined_format_args
+    )]
     use super::*;
     use crate::backdrop::FrozenCapture;
     use crate::editor::{EditorTools, ToolRegistry};

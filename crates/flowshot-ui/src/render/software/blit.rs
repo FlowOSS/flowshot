@@ -246,6 +246,7 @@ pub(crate) fn bilinear(data: &[u8], width: u32, height: u32, x: f32, y: f32) -> 
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
     use super::*;
 
     #[test]

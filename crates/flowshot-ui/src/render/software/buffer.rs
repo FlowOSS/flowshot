@@ -516,6 +516,12 @@ pub(crate) fn stroke_of(width: f32) -> Stroke {
 
 #[cfg(test)]
 mod tests {
+    #![allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::manual_range_contains,
+        clippy::cast_possible_truncation
+    )]
     use super::*;
 
     #[test]

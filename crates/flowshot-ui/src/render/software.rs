@@ -557,6 +557,7 @@ impl SoftwareRenderer {
 }
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::too_many_lines)]
     use super::buffer::unit_to_byte;
     use super::*;
     use crate::render::color::Color;
