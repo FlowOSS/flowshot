@@ -1,6 +1,6 @@
 # crates/flowshot-ui/src
 
-227 files, 17 module dirs (30 nested), 87 re-exports via `lib.rs`.
+228 files, 17 module dirs (30 nested), 87 re-exports via `lib.rs`.
 The crate root covers packaging; this covers what breaks silently if guessed.
 
 ## OVERVIEW
@@ -17,6 +17,7 @@ Two layers, split so the interesting logic never touches a GPU or a display: a
 | Window shell | `runtime`, `app`, `handler/`, `surface`, `gpu/`, `monitor`, `adapter`, `crosshair` | winit loop, per-monitor windows, device/surface policy |
 | Renderer | `render/` (21 files) | `Renderer`, `DisplayList`, `Command`, `Color`, `TextureStore` |
 | CPU raster fallback | `render/software` (renderer + `Presenter`) | `SoftwareRenderer`, `ImageSource`, `Presenter` — same `DisplayList`, no GPU rasterizer |
+| Status pill | `chrome/status` + `widgets/chip` (`StatusChip`) | the label-only `CPU raster` badge on the corner opposite the aid chips — decoration the funnel never hit-tests |
 | Frame build | `frame`, `backdrop/`, `export`, `completion` | the ONE paint path + frozen-frame pixel prep |
 | Behavior | `selection/`, `editor/`, `editor/tools/`, `chrome/`, `pins/` | the F27 selection spec, tool framework, chrome, pin windows |
 | Design system | `widgets/`, `motion/`, `egui_host/` | token-driven primitives, easing, the embedded egui stack |

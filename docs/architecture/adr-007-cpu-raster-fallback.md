@@ -52,6 +52,16 @@ Keep one display-list vocabulary and add a second rasterizer behind it:
   lifecycle (same transient-invalidation recovery, same `pre_present_notify`
   seam, same crosshair pass) and differs only in the content pass.
 
+## What the user sees
+
+When a window presents through the CPU path, a label-only status pill
+(`chrome/status`, the `StatusChip` widget) states `CPU raster` at that
+output's trailing-bottom corner — diagonally opposite the quick-aids
+cluster's default above-leading slot, so the two never compete for the same
+corner, and the pill walks to trailing-top / leading-bottom if the aid chips
+own it. The pill is decoration, not a control: the chrome funnel never
+hit-tests it, so it never steals a click.
+
 ## QA override
 
 `FLOWSHOT_RENDER_PATH` masks the policy for testing on a healthy GPU desktop:

@@ -91,7 +91,14 @@ temp artifacts are transient.
   reachable on a healthy GPU desktop; its rule is pinned by
   `render_path_override_names_only_the_two_tokens`, and activation logs a
   `warn` line naming the window, extent, and whether the policy or the
-  override chose it.
+  override chose it. A label-only status pill (`chrome/status`, the
+  `StatusChip` widget) states `CPU raster` at the trailing-bottom corner of
+  exactly the outputs presenting through the CPU path; its four contracts
+  (`the_pill_docks_at_the_trailing_bottom_corner`,
+  `the_pill_walks_to_a_free_corner_when_the_chips_own_it`,
+  `the_pill_scales_with_the_output`, `the_pill_states_the_fact_in_one_label`)
+  pin the placement walk and that the pill is one fill plus one label with no
+  key plate and no wash.
   The whole-workspace gate (`cargo fmt --check`, `cargo clippy --workspace
   --all-targets -D warnings`, `cargo test --workspace`, the purity gate, the
   deny check) passes with 674 flowshot-ui lib tests green — run with `-j 2`
