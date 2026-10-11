@@ -54,15 +54,18 @@ Keep one display-list vocabulary and add a second rasterizer behind it:
 
 ## What the user sees
 
-Every window carries a label-only status pill (`chrome/status`, the `StatusChip`
-widget) at its trailing-bottom corner — diagonally opposite the quick-aids
-cluster's default above-leading slot, walking to trailing-top / leading-bottom
-if the aid chips own that corner. It states the rasterizer that presents that
-window: `GPU raster` quiet (dimmed contrast) when all is well, accent-tinted
-`CPU raster` when the session lost the GPU frame target and the fallback took
-over. The read is always present, so a degraded session is visible rather than
-silently rendering differently. The pill is decoration, not a control: the
-chrome funnel never hit-tests it, so it never steals a click.
+The pill rides the SELECTION, like the quick-aids cluster and the toolbar
+plate: a label-only status pill (`chrome/status`, the `StatusChip` widget)
+hugs one of the four slots just outside the selection rect on a medium margin,
+preferring the slot diagonally opposite the aid cluster's above-leading
+default and walking through the rest, skipping any slot the toolbar plate or
+the aid chips already own. It states the rasterizer that presents that
+window: `GPU` quiet (dimmed contrast) when all is well, accent-tinted
+`CPU fallback` when the session lost the GPU frame target and the fallback took
+over. Unlike those two chrome elements, the pill never clamps into the output:
+with no selection yet, or with a selection that leaves no free edge, the pill
+is simply gone. The pill is decoration, not a control: the chrome funnel never
+hit-tests it, so it never steals a click.
 
 ## QA override
 

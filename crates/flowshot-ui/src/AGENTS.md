@@ -17,7 +17,7 @@ Two layers, split so the interesting logic never touches a GPU or a display: a
 | Window shell | `runtime`, `app`, `handler/`, `surface`, `gpu/`, `monitor`, `adapter`, `crosshair` | winit loop, per-monitor windows, device/surface policy |
 | Renderer | `render/` (21 files) | `Renderer`, `DisplayList`, `Command`, `Color`, `TextureStore` |
 | CPU raster fallback | `render/software` (renderer + `Presenter`) | `SoftwareRenderer`, `ImageSource`, `Presenter` — same `DisplayList`, no GPU rasterizer |
-| Status pill | `chrome/status` + `widgets/chip` (`StatusChip`) | the always-on corner badge stating `GPU raster` (quiet) or `CPU raster` (accent) — decoration the funnel never hit-tests |
+| Status pill | `chrome/status` + `widgets/chip` (`StatusChip`) | the selection-attached badge stating `GPU` (quiet) or `CPU fallback` (accent); gone when no slot fits — decoration the funnel never hit-tests |
 | Frame build | `frame`, `backdrop/`, `export`, `completion` | the ONE paint path + frozen-frame pixel prep |
 | Behavior | `selection/`, `editor/`, `editor/tools/`, `chrome/`, `pins/` | the F27 selection spec, tool framework, chrome, pin windows |
 | Design system | `widgets/`, `motion/`, `egui_host/` | token-driven primitives, easing, the embedded egui stack |
