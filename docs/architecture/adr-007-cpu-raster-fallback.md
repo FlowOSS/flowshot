@@ -52,6 +52,18 @@ Keep one display-list vocabulary and add a second rasterizer behind it:
   lifecycle (same transient-invalidation recovery, same `pre_present_notify`
   seam, same crosshair pass) and differs only in the content pass.
 
+## QA override
+
+`FLOWSHOT_RENDER_PATH` masks the policy for testing on a healthy GPU desktop:
+`software` forces the CPU raster path at any extent and adapter class, `gpu`
+forces the GPU path regardless of the policy. Tokens are byte-exact, the
+variable is named as `adapter::RENDER_PATH_OVERRIDE_ENV` next to the policy,
+and the CLI's spawned daemon inherits the environment (the same channel the
+`FLOWSHOT_SHORTCUTS_PORTAL` override uses), so one shell prefix reaches every
+surface. The activation is a `warn`-level tracing line naming the window, the
+extent, and whether the policy or the override chose it — visible under the
+CLI's default `warn` filter.
+
 ## Consequences
 
 What the fallback buys:

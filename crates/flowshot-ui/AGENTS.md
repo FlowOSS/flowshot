@@ -50,13 +50,19 @@ only shipped-code file with a file-scope `#![allow(clippy::unwrap_used, ...)]`.
 
 - **Purity-gated.** `src/` may not import wayland/x11/dbus/pipewire/unix-FFI
   crates, use `winit::platform::*` or `*ExtWayland`, or carry any
-  `cfg(target_os/target_family/target_arch/unix/...)`. The single env probe
-  (`WAYLAND_DISPLAY` via `std::env::var_os`) is allowlisted by construction.
+  `cfg(target_os/target_family/target_arch/unix/...)`. The two portable env
+  probes (`WAYLAND_DISPLAY`/`DISPLAY` for the session gate, and
+  `FLOWSHOT_RENDER_PATH` for the CPU-raster QA override, both via
+  `std::env::var_os`) are invisible to the gate by construction — values and
+  identifiers, not imports.
 - `flowshot-capture-wayland` and `flowshot-actions` are **dev-dependencies
   only** (examples/tests composition; the two allowlist entries exist for
   them). The lib talks to `flowshot-capture` — the contract crate — and never
   to the platform crate.
-- `tiny-skia` / `image` are DEV-ONLY parity oracles, never a runtime CPU fallback.
+- `tiny-skia` is BOTH the dev-only parity oracle (`tests/parity.rs`) and the
+  runtime CPU raster backend behind `render/software` (ADR-007) — the
+  `image` crate stays dev-only. The fallback never replaces the GPU path
+  unless the policy or `FLOWSHOT_RENDER_PATH` says so.
 - `egui-winit` is deliberately absent (not in `Cargo.lock`): the hand-feed bridge `egui_host::input` is the tested surface.
 
 ## COMMANDS

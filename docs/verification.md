@@ -85,7 +85,13 @@ temp artifacts are transient.
   contracts are pinned pixel-exact (`opaque_token_fill_is_byte_exact`,
   `clip_punches_only_the_clipped_region`, `invert_complements_painted_pixels`,
   `a_1_to_1_blit_copies_the_source_bytes`, `a_missing_texture_draws_the_magenta
-  placeholder`, `degenerate_geometry_paints_nothing_and_never_panics`).
+  placeholder`, `degenerate_geometry_paints_nothing_and_never_panics`). A QA
+  override (`adapter::RENDER_PATH_OVERRIDE_ENV` = `FLOWSHOT_RENDER_PATH`,
+  `software`/`gpu` byte-exact tokens) masks the policy so the CPU path is
+  reachable on a healthy GPU desktop; its rule is pinned by
+  `render_path_override_names_only_the_two_tokens`, and activation logs a
+  `warn` line naming the window, extent, and whether the policy or the
+  override chose it.
   The whole-workspace gate (`cargo fmt --check`, `cargo clippy --workspace
   --all-targets -D warnings`, `cargo test --workspace`, the purity gate, the
   deny check) passes with 674 flowshot-ui lib tests green — run with `-j 2`
