@@ -389,6 +389,8 @@ jobs:
   aur-publish:
     needs: [meta, release]
     if: github.event_name == 'push' && needs.meta.outputs.is_prerelease != 'true'
+    permissions:
+      contents: read
     uses: ./.github/workflows/aur.yml
     with:
       package: both
