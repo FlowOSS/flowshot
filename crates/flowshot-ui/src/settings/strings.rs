@@ -168,6 +168,14 @@ pub const FIELD_DIM_OPACITY: &str = "Overlay dim opacity (0-255)";
 pub const FIELD_TOOLBAR_BUTTONS: &str = "Toolbar button order";
 /// `[editor].color_palette`.
 pub const FIELD_COLOR_PALETTE: &str = "Color palette swatches";
+/// Cursor style selector label.
+pub const FIELD_CURSOR_STYLE: &str = "Selection cursor";
+/// Enum label: standard pointer.
+pub const ENUM_CURSOR_POINTER: &str = "Pointer (default)";
+/// Enum label: compact precision crosshair.
+pub const ENUM_CURSOR_CROSSHAIR: &str = "Crosshair (+)";
+/// Enum label: full-screen axis guide lines.
+pub const ENUM_CURSOR_FULL_AXIS: &str = "Full-screen axis guides";
 /// Theme selector label.
 pub const FIELD_THEME: &str = "Theme";
 /// `[save].filename_pattern`.

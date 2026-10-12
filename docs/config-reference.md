@@ -155,6 +155,7 @@ color_palette = [
 | `contrast_color` | string | `"#0F172A"` | Contrast/backdrop color, `#RRGGBB`. Seeded from the design-token palette. |
 | `dim_opacity` | integer (0-255) | `190` | Opacity of the dim layer over the frozen backdrop. |
 | `toolbar_buttons` | array of strings | see below | Toolbar button order, by tool identifier. |
+| `cursor_style` | string | `"pointer"` | Cursor style during selection: `"pointer"` (standard pointer), `"crosshair"` (compact precision crosshair), or `"full-axis"` (full-screen X/Y guide lines). |
 
 Default `toolbar_buttons`:
 

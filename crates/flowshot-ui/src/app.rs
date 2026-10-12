@@ -62,6 +62,7 @@ pub(crate) struct OverlayApp {
     /// (transparent clear + crosshair only).
     pub backdrop: Option<Backdrop>,
     pub backdrop_options: BackdropOptions,
+    pub cursor_style: flowshot_core::config::CursorStyle,
     /// The binary-layer window-attributes hook (Wayland `app_id`; the
     /// `pins::WindowCustomizer` seam - the lib stays platform-pure).
     pub customizer: Option<crate::pins::WindowCustomizer>,
@@ -81,6 +82,7 @@ impl OverlayApp {
             fatal_error: None,
             backdrop: None,
             backdrop_options: BackdropOptions::default(),
+            cursor_style: flowshot_core::config::CursorStyle::default(),
             customizer: None,
             ime_area: None,
         }
@@ -186,16 +188,19 @@ impl OverlayApp {
         // an implicit grab that is the drag-origin window even while the
         // cursor is logically over a neighbor. The active tool may suppress
         // it (the tool-cursor change: the tool's own preview is the cursor).
-        let vertices = self
-            .core
-            .cursor()
-            .filter(|cursor| cursor.slot == slot)
-            .filter(|_| self.core.editor().cursor_shape() != ToolCursor::Hidden)
-            .and_then(|cursor| {
-                let (local_x, local_y) = self.core.router().to_local(slot, cursor.clamped)?;
-                let (width, height) = surface.size();
-                crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
-            });
+        let vertices = (self.cursor_style == flowshot_core::config::CursorStyle::FullAxis)
+            .then(|| {
+                self.core
+                    .cursor()
+                    .filter(|cursor| cursor.slot == slot)
+                    .filter(|_| self.core.editor().cursor_shape() != ToolCursor::Hidden)
+                    .and_then(|cursor| {
+                        let (local_x, local_y) = self.core.router().to_local(slot, cursor.clamped)?;
+                        let (width, height) = surface.size();
+                        crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
+                    })
+            })
+            .flatten();
         // The pixel-effect textures must exist in THIS renderer
         // before the display list references them (missing ids draw the
         // magenta placeholder).

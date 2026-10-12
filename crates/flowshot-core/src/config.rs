@@ -393,6 +393,19 @@ impl Default for UploadConfig {
     }
 }
 
+/// Cursor style used during interactive capture selection.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CursorStyle {
+    /// Standard system mouse pointer (clean and familiar).
+    #[default]
+    Pointer,
+    /// Precision crosshair icon (+ cursor at the pointer tip).
+    Crosshair,
+    /// Full-screen X/Y axis guide lines spanning the entire display.
+    FullAxis,
+}
+
 /// `[ui]` — application theming and toolbar layout.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -405,6 +418,8 @@ pub struct UiConfig {
     pub dim_opacity: u8,
     /// Toolbar button order, by tool identifier.
     pub toolbar_buttons: Vec<String>,
+    /// Cursor style during selection (`pointer`, `crosshair`, or `full-axis`).
+    pub cursor_style: CursorStyle,
 }
 
 impl Default for UiConfig {
@@ -415,6 +430,7 @@ impl Default for UiConfig {
             contrast_color: palette.contrast,
             dim_opacity: palette.dim_opacity,
             toolbar_buttons: default_toolbar_buttons(),
+            cursor_style: CursorStyle::default(),
         }
     }
 }
@@ -888,6 +904,9 @@ mod tests {
 
             [tools.arrow]
             style = "curved"
+
+            [ui]
+            cursor_style = "full-axis"
         "#;
         let config = Config::from_toml_str(text)?;
         assert_eq!(config.save.clipboard_format, ClipboardFormat::Jpeg);
@@ -905,6 +924,7 @@ mod tests {
         );
         assert_eq!(config.editor.magnifier_shape, MagnifierShape::Circle);
         assert_eq!(config.tools.arrow.style, ArrowStyle::Curved);
+        assert_eq!(config.ui.cursor_style, CursorStyle::FullAxis);
         Ok(())
     }
 
