@@ -398,9 +398,9 @@ impl Default for UploadConfig {
 #[serde(rename_all = "kebab-case")]
 pub enum CursorStyle {
     /// Standard system mouse pointer (clean and familiar).
-    #[default]
     Pointer,
     /// Precision crosshair icon (+ cursor at the pointer tip).
+    #[default]
     Crosshair,
     /// Full-screen X/Y axis guide lines spanning the entire display.
     FullAxis,

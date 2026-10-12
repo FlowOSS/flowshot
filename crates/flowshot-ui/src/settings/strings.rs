@@ -170,10 +170,10 @@ pub const FIELD_TOOLBAR_BUTTONS: &str = "Toolbar button order";
 pub const FIELD_COLOR_PALETTE: &str = "Color palette swatches";
 /// Cursor style selector label.
 pub const FIELD_CURSOR_STYLE: &str = "Selection cursor";
-/// Enum label: standard pointer.
-pub const ENUM_CURSOR_POINTER: &str = "Pointer (default)";
 /// Enum label: compact precision crosshair.
-pub const ENUM_CURSOR_CROSSHAIR: &str = "Crosshair (+)";
+pub const ENUM_CURSOR_CROSSHAIR: &str = "Crosshair (default)";
+/// Enum label: standard pointer.
+pub const ENUM_CURSOR_POINTER: &str = "Pointer";
 /// Enum label: full-screen axis guide lines.
 pub const ENUM_CURSOR_FULL_AXIS: &str = "Full-screen axis guides";
 /// Theme selector label.
