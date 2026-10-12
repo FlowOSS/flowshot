@@ -33,6 +33,9 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
+use tokio::sync::Notify;
 
 use flowshot_core::Config;
 use flowshot_core::config::TelemetryConfig;
@@ -99,6 +102,21 @@ pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) 
     }
 }
 
+
+static CONSENT_ACTIVE: AtomicBool = AtomicBool::new(false);
+static CONSENT_NOTIFY: OnceLock<Notify> = OnceLock::new();
+
+fn consent_notify() -> &'static Notify {
+    CONSENT_NOTIFY.get_or_init(Notify::new)
+}
+
+/// Awaits any currently active first-launch consent dialog before proceeding.
+pub async fn wait_for_consent_if_active() {
+    while CONSENT_ACTIVE.load(Ordering::Acquire) {
+        consent_notify().notified().await;
+    }
+}
+
 /// The spec the parent writes for a detached prompt (shared with the
 /// wire round-trip test).
 fn consent_spec(config_path: Option<PathBuf>, result_path: PathBuf) -> SessionSpec {
@@ -131,6 +149,7 @@ fn spawn_detached(config_path: Option<PathBuf>) -> Result<(), ExecuteError> {
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
         .spawn()?;
+    CONSENT_ACTIVE.store(true, Ordering::Release);
     tracing::info!(exe = %exe.display(), pid = child.id(), "consent session child spawning");
     reap_detached(child, spec_path, result_path);
     Ok(())

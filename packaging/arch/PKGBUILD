@@ -19,7 +19,7 @@
 # options=('!lto') because slim C LTO objects break the aws-lc link).
 pkgname=flowshot
 _pkgname=flowshot
-pkgver=0.3.0
+pkgver=0.3.1
 pkgrel=1
 pkgdesc='Screenshot and annotation tool for Wayland and X11 with mixed-DPI support'
 arch=('x86_64')

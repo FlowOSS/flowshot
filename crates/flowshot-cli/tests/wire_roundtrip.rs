@@ -41,6 +41,7 @@ fn full_request() -> CaptureRequest {
         hide_cursor: true,
         region: Some("640x480+10+20".to_owned()),
         last_region: true,
+        render_path: Some("software".to_owned()),
     }
 }
 
@@ -90,33 +91,28 @@ fn single_modifier_serializes_lean() {
 
 fn any_capture_request() -> impl Strategy<Value = CaptureRequest> {
     (
-        any::<u32>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<bool>(),
-        any::<Option<String>>(),
-        any::<Option<String>>(),
+        (
+            any::<u32>(),
+            any::<bool>(),
+            any::<bool>(),
+            any::<bool>(),
+            any::<bool>(),
+            any::<bool>(),
+        ),
+        (
+            any::<bool>(),
+            any::<bool>(),
+            any::<bool>(),
+            any::<bool>(),
+            any::<Option<String>>(),
+            any::<Option<String>>(),
+            any::<Option<String>>(),
+        ),
     )
         .prop_map(
             |(
-                delay_ms,
-                instant,
-                no_edit,
-                copy,
-                pin,
-                upload,
-                raw,
-                print_geometry,
-                hide_cursor,
-                last_region,
-                output,
-                region,
+                (delay_ms, instant, no_edit, copy, pin, upload),
+                (raw, print_geometry, hide_cursor, last_region, output, region, render_path),
             )| {
                 CaptureRequest {
                     delay_ms,
@@ -131,6 +127,7 @@ fn any_capture_request() -> impl Strategy<Value = CaptureRequest> {
                     hide_cursor,
                     region,
                     last_region,
+                    render_path,
                 }
             },
         )

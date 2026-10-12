@@ -53,6 +53,7 @@ pub async fn run_interactive(
     started: Instant,
     color_mode: bool,
 ) -> Result<ExecOutcome, ExecuteError> {
+    super::consent::wait_for_consent_if_active().await;
     super::post::validate_stdout_modes(&request)?;
     if let Some(target) = x11_headless_region(&request, ctx).await? {
         tracing::info!(

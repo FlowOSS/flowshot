@@ -202,6 +202,10 @@ pub struct CaptureArgs {
     /// process).
     #[arg(long)]
     pub no_daemon: bool,
+
+    /// Override the render path (`software`, `cpu`, or `gpu`). Also honors `FLOWSHOT_RENDER_PATH`.
+    #[arg(long, value_name = "PATH")]
+    pub render_path: Option<String>,
 }
 
 /// `flowshot daemon` arguments (mirrors the `flowshot-daemon` helper
