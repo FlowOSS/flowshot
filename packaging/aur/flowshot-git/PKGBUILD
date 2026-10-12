@@ -20,6 +20,7 @@ depends=(
 )
 makedepends=(
   'cargo'
+  'mold'
   'clang'
   'desktop-file-utils'
   'git'

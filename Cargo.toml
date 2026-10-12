@@ -38,7 +38,7 @@ futures = "0.3.30"
 parking_lot = "0.12.3"
 
 # Image
-image = "0.25.2"
+image = { version = "0.25.2", default-features = false, features = ["png", "jpeg", "webp"] }
 fast_image_resize = "2.0.0"
 
 # Graphics and UI
@@ -123,16 +123,14 @@ pedantic = { level = "warn", priority = -1 }
 unwrap_used = "deny"
 expect_used = "deny"
 
+[profile.dev]
+# Keep file and line info for readable backtraces while cutting 80% of DWARF symbol I/O
+debug = 1
+
 [profile.release]
-# The shipped-binary profile (prebuilt packages): LTO + one codegen unit for
-# size and speed; `line-tables-only` keeps just enough DWARF for the release
-# workflow's objcopy split (ship stripped, archive the .d companion so Sentry
-# file:line symbolication can be enabled retroactively). Stripping itself is
-# per-artifact (makepkg strips Arch packages; the CI release job objcopy-
-# splits), never here, so the debug companion stays extractable. `panic`
-# stays `unwind` deliberately: the sentry panic integration and session
-# Drop-close semantics rely on it.
-lto = true
-codegen-units = 1
+# The shipped-binary profile: ThinLTO parallelizes LLVM optimization across all available
+# CPU cores dynamically (saturating multicore machines portably without hardcoded limits);
+# `line-tables-only` keeps just enough DWARF for Sentry file:line symbolication.
+lto = "thin"
 debug = "line-tables-only"
 strip = false

@@ -110,7 +110,7 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential clang libclang-dev pkg-config libpipewire-0.3-dev \
-            curl git ca-certificates jq
+            curl git ca-certificates jq mold
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: dtolnay/rust-toolchain@stable
