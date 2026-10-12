@@ -1,6 +1,6 @@
 [package]
 name = "flowshot-ui"
-version = "0.2.0"
+version.workspace = true
 edition = "2024"
 license.workspace = true
 repository = "https://github.com/flowoss/flowshot"

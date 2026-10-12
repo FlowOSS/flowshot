@@ -14,7 +14,7 @@ use cosmic_text::{
     Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache, SwashContent, Weight,
 };
 
-use crate::render::geom::Point;
+use crate::render::geometry::Point;
 use crate::render::list::{TextAnchor, TextCommand};
 use crate::render::software::buffer::{ClipMask, SoftwareFramebuffer, premultiplied};
 

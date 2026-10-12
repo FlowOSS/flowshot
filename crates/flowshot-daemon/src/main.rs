@@ -56,11 +56,11 @@ enum Sub {
 
 /// Default tracing filter when `RUST_LOG` is unset (an explicit `RUST_LOG`
 /// overrides it completely via `try_from_default_env`): an `info` base plus
-/// ERROR-only for three known-benign upstream spam targets - the ashpd
-/// portal session/request teardown race (`zbus::proxy` `GetAll` warnings) and
+/// ERROR-only for four known-benign upstream spam targets - the ashpd
+/// portal session/request teardown race (`zbus::proxy` `GetAll` warnings),
+/// zbus's single-instance name acquisition warning (`zbus::connection`), and
 /// wgpu's NVIDIA present-mode/layer warnings (`wgpu_hal::vulkan`).
-const DEFAULT_LOG_FILTER: &str =
-    "info,zbus::proxy=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
+const DEFAULT_LOG_FILTER: &str = "info,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()

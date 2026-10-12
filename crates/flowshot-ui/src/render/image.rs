@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use super::geom::Rect;
+use super::geometry::Rect;
 pub(crate) use super::image_pipeline::ImageVertex;
 use super::image_pipeline::image_pipeline;
 use super::list::TextureId;
@@ -260,8 +260,8 @@ fn upload(
 /// samples the whole texture. Out-of-bounds regions clamp to the texture.
 pub(crate) fn uv_rect(src: Option<Rect>, tex_width: u32, tex_height: u32) -> [f32; 4] {
     let (w, h) = (
-        super::geom::f32_from_u32(tex_width),
-        super::geom::f32_from_u32(tex_height),
+        super::geometry::f32_from_u32(tex_width),
+        super::geometry::f32_from_u32(tex_height),
     );
     let Some(src) = src else {
         return [0.0, 0.0, 1.0, 1.0];

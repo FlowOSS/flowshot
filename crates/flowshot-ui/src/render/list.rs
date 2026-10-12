@@ -10,7 +10,7 @@
 use flowshot_core::tokens::Shadow;
 
 use super::color::Color;
-use super::geom::{Point, Rect, Size};
+use super::geometry::{Point, Rect, Size};
 
 /// Opaque handle of an uploaded image texture (frozen frame, magnifier
 /// source, icon atlas...). Issued by the consumer; the renderer's texture
@@ -151,7 +151,7 @@ impl ShadowSpec {
         let color = Color::from_shadow_token(token)?;
         let factor = scale.max(0.0);
         Some(Self {
-            blur: super::geom::f32_from_u32(token.blur) * factor,
+            blur: super::geometry::f32_from_u32(token.blur) * factor,
             offset: Point::new(token.offset[0] * factor, token.offset[1] * factor),
             color,
         })

@@ -26,7 +26,7 @@
     reason = "physical-pixel byte offsets and extents from non-negative bounds"
 )]
 
-use crate::render::geom::{Point, Rect, Size, f32_from_u32};
+use crate::render::geometry::{Point, Rect, Size, f32_from_u32};
 use crate::render::list::{Command, PathSegment, Shape, TextCommand};
 
 /// A region of the frame: an integer-aligned box as ((origin x, origin y),
@@ -291,7 +291,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
     use super::*;
     use crate::render::color::Color;
-    use crate::render::geom::Size;
+    use crate::render::geometry::Size;
     use crate::render::list::ImageCommand;
     use crate::render::list::TextureId;
 

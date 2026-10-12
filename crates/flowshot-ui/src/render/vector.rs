@@ -80,7 +80,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
 ";
 
 /// Interleaved `[pos xy, color rgba]` flat-vertex layout (matches
-/// [`super::tess::FlatVertex`]).
+/// [`super::tessellation::FlatVertex`]).
 pub(crate) const FLAT_VERTEX_ATTRIBUTES: &[wgpu::VertexAttribute] =
     &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x4];
 /// Bytes per flat vertex.

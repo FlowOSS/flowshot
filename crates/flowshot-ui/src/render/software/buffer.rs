@@ -52,7 +52,7 @@ pub(crate) fn full_mask(width: u32, height: u32) -> Option<ClipMask> {
 }
 
 use super::regions::Region;
-use crate::render::geom::Rect;
+use crate::render::geometry::Rect;
 
 /// The framebuffer: premultiplied linear-light RGBA8, row-major, top row first.
 #[derive(Debug)]

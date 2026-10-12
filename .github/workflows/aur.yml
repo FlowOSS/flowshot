@@ -13,6 +13,13 @@
 name: aur
 
 on:
+  workflow_call:
+    inputs:
+      package:
+        description: 'Which package to publish'
+        required: false
+        default: 'both'
+        type: string
   release:
     types: [published]
   push:
@@ -37,6 +44,7 @@ concurrency:
 jobs:
   publish-bin:
     if: >-
+      github.event_name == 'workflow_call' ||
       (github.event_name == 'release' && !github.event.release.prerelease) ||
       (github.event_name == 'workflow_dispatch' &&
        (inputs.package == 'bin' || inputs.package == 'both'))
@@ -113,6 +121,7 @@ jobs:
 
   publish-git:
     if: >-
+      github.event_name == 'workflow_call' ||
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' &&
        (inputs.package == 'git' || inputs.package == 'both'))
@@ -151,7 +160,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cp -a packaging/aur/flowshot-git /work-pkg
           chown -R builder:builder /work-pkg "$GITHUB_WORKSPACE"
-          sudo -u builder bash -c 'cd /work-pkg && makepkg --printsrcinfo > .SRCINFO && makepkg --syncdeps --noconfirm'
+          sudo -u builder bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm && makepkg --printsrcinfo > .SRCINFO'
           cd /work-pkg
           namcap PKGBUILD
           # namcap the main artifact only: a makepkg debug split's .build-id

@@ -4,7 +4,7 @@
 use super::glyph::TextVertex;
 use super::image::ImageVertex;
 use super::shadow::ShadowVertex;
-use super::tess::FlatVertex;
+use super::tessellation::FlatVertex;
 
 /// A growable GPU staging buffer, recreated when the payload outgrows it.
 #[derive(Debug)]

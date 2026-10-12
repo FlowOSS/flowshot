@@ -5,7 +5,10 @@
 //! (`config_version` 3).
 
 /// The complete `flowshot-config.5` page.
-pub const FLOWSHOT_CONFIG_ROFF: &str = r#".TH FLOWSHOT-CONFIG 5 "2026-09-26" "FlowShot 0.2.0" "File Formats Manual"
+pub const FLOWSHOT_CONFIG_ROFF: &str = concat!(
+    r#".TH FLOWSHOT-CONFIG 5 "" "FlowShot "#,
+    env!("CARGO_PKG_VERSION"),
+    r#"" "File Formats Manual"
 .SH NAME
 flowshot-config \- FlowShot TOML configuration file
 .SH SYNOPSIS
@@ -221,4 +224,5 @@ Random per\-install identifier, sent only with
 delete the file to regenerate it.
 .SH "SEE ALSO"
 .BR flowshot (1)
-"#;
+"#
+);

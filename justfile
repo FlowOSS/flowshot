@@ -49,3 +49,7 @@ daemon:
 # Probe the wayland capture
 probe:
 	cargo run -p flowshot-capture-wayland --example probe
+# Bump the workspace version in root Cargo.toml (inherited by all crates)
+bump VER:
+	sed -i 's/^version = ".*"/version = "{{VER}}"/' Cargo.toml
+	cargo check

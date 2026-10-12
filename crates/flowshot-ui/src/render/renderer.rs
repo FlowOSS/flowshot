@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 use lyon::tessellation::VertexBuffers;
 
 use super::frame_build::{FrameBuild, Step};
-use super::geom::{f32_from_u32, ndc_transform};
+use super::geometry::{f32_from_u32, ndc_transform};
 use super::glyph::TextVertex;
 use super::image::{ImageVertex, TextureStore};
 use super::list::DisplayList;
@@ -27,7 +27,7 @@ use super::shadow::{ShadowPipeline, ShadowVertex};
 use super::staging::{StagingBuffers, StagingData};
 use super::stats::{FrameStats, RenderTarget};
 use super::target::{FrameTarget, msaa_sample_count, validate_extent};
-use super::tess::{FlatVertex, Tessellator};
+use super::tessellation::{FlatVertex, Tessellator};
 use super::text::TextStack;
 use super::vector::VectorPipelines;
 use crate::error::UiError;

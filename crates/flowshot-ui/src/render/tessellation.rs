@@ -15,7 +15,7 @@ use lyon::tessellation::{
     StrokeTessellator, StrokeVertex, StrokeVertexConstructor, VertexBuffers,
 };
 
-use super::geom::{Point, Rect};
+use super::geometry::{Point, Rect, for_each_dim_strip};
 use super::list::Shape;
 
 /// Path builder flavor exposing the shape helpers (`add_rectangle`,
@@ -131,6 +131,25 @@ impl Tessellator {
             tracing::debug!("invalid dim bounds skipped");
             return;
         }
+
+        // Fast path 1: No cutout -> 1 direct flat quad (zero Lyon tessellation)
+        if cutouts.is_empty() {
+            push_flat_quad(out, bounds, color);
+            return;
+        }
+
+        // Fast path 2: Standard single-cutout selection -> 4 direct flat quads
+        if cutouts.len() == 1 {
+            let hole = cutouts[0];
+            if hole.is_valid() {
+                for_each_dim_strip(&bounds, &hole, |strip| {
+                    push_flat_quad(out, strip, color);
+                });
+                return;
+            }
+        }
+
+        // Complex scene fallback: multiple overlapping cutouts use Lyon EvenOdd
         let mut builder = Path::builder();
         add_rect(&mut builder, bounds);
         for cutout in cutouts {
@@ -226,6 +245,35 @@ fn shape_path(shape: &Shape) -> Option<Path> {
         }
     }
     Some(builder.build())
+}
+
+/// Directly emits an axis-aligned rectangular quad into `MeshBuffers`
+/// (4 vertices, 6 indices, 2 triangles) without invoking Lyon's CPU tessellator.
+fn push_flat_quad(out: &mut MeshBuffers, rect: Rect, color: [f32; 4]) {
+    if rect.size.width <= 0.0 || rect.size.height <= 0.0 {
+        return;
+    }
+    let base_index = match u32::try_from(out.vertices.len()) {
+        Ok(base) if base <= u32::MAX - 4 => base,
+        _ => return,
+    };
+    let (left, top) = (rect.origin.x, rect.origin.y);
+    let (right, bottom) = (rect.right(), rect.bottom());
+    let [red, green, blue, alpha] = color;
+    out.vertices.extend_from_slice(&[
+        [left, top, red, green, blue, alpha],
+        [right, top, red, green, blue, alpha],
+        [right, bottom, red, green, blue, alpha],
+        [left, bottom, red, green, blue, alpha],
+    ]);
+    out.indices.extend_from_slice(&[
+        base_index,
+        base_index + 1,
+        base_index + 2,
+        base_index,
+        base_index + 2,
+        base_index + 3,
+    ]);
 }
 
 fn add_rect(builder: &mut SvgBuilder, rect: Rect) {
@@ -422,6 +470,46 @@ mod tests {
     }
 
     #[test]
+    fn dim_fast_path_quad_counts_and_clamping() {
+        let mut tess = Tessellator::new();
+        let bounds = Rect::from_parts(0.0, 0.0, 200.0, 100.0);
+
+        // 1. Zero cutouts -> exactly 1 quad (4 vertices, 6 indices)
+        let mut no_hole = MeshBuffers::new();
+        tess.dim(bounds, &[], OPAQUE, &mut no_hole);
+        assert_eq!(no_hole.vertices.len(), 4);
+        assert_eq!(no_hole.indices.len(), 6);
+        assert_eq!(bounds_of(&no_hole), (0.0, 0.0, 200.0, 100.0));
+
+        // 2. Standard centered hole -> exactly 4 quads (16 vertices, 24 indices)
+        let mut centered = MeshBuffers::new();
+        let hole = Rect::from_parts(50.0, 25.0, 100.0, 50.0);
+        tess.dim(bounds, &[hole], OPAQUE, &mut centered);
+        assert_eq!(centered.vertices.len(), 16);
+        assert_eq!(centered.indices.len(), 24);
+        assert_eq!(bounds_of(&centered), (0.0, 0.0, 200.0, 100.0));
+
+        // 3. Hole covering entire bounds -> exactly 0 quads (0 vertices, 0 indices)
+        let mut full_hole = MeshBuffers::new();
+        tess.dim(bounds, &[bounds], OPAQUE, &mut full_hole);
+        assert_eq!(full_hole.vertices.len(), 0);
+        assert_eq!(full_hole.indices.len(), 0);
+
+        // 4. Clamped out-of-bounds hole -> does not panic or invert
+        let mut clamped = MeshBuffers::new();
+        let big_hole = Rect::from_parts(-50.0, -25.0, 300.0, 150.0);
+        tess.dim(bounds, &[big_hole], OPAQUE, &mut clamped);
+        assert_eq!(clamped.vertices.len(), 0);
+
+        // 5. Multiple holes -> falls back to Lyon EvenOdd without panicking
+        let mut multi = MeshBuffers::new();
+        let hole1 = Rect::from_parts(10.0, 10.0, 20.0, 20.0);
+        let hole2 = Rect::from_parts(50.0, 50.0, 20.0, 20.0);
+        tess.dim(bounds, &[hole1, hole2], OPAQUE, &mut multi);
+        assert_eq!(multi.vertices.len(), 12);
+    }
+
+    #[test]
     fn dim_cutout_produces_a_hole_mesh() {
         let mut tess = Tessellator::new();
         let mut plain = MeshBuffers::new();
@@ -474,8 +562,8 @@ mod tests {
         assert_ne!(path.vertices, [] as [[f32; 6]; 0]);
     }
 
-    fn lyon_size(width: f32, height: f32) -> crate::render::geom::Size {
-        crate::render::geom::Size::new(width, height)
+    fn lyon_size(width: f32, height: f32) -> crate::render::geometry::Size {
+        crate::render::geometry::Size::new(width, height)
     }
 
     #[test]

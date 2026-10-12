@@ -13,8 +13,9 @@
     reason = "physical-pixel index math, clamped into range before each cast"
 )]
 
-use crate::render::geom::{Point, Rect};
+use crate::render::geometry::{Point, Rect};
 use crate::render::list::ShadowSpec;
+use crate::render::shadow::{expansion_for_sigma, sigma_for_blur};
 use crate::render::software::buffer::{ClipMask, SoftwareFramebuffer, premultiplied, unit_to_byte};
 
 /// The signed distance from a point to a rounded box's outline (negative
@@ -45,8 +46,8 @@ pub(crate) fn shadow(
     if spec.blur <= 0.0 {
         return;
     }
-    let sigma = spec.blur * 0.5;
-    let expand = sigma * 3.0;
+    let sigma = sigma_for_blur(spec.blur);
+    let expand = expansion_for_sigma(sigma);
     let half_w = rect.size.width * 0.5;
     let half_h = rect.size.height * 0.5;
     let radius = radius.max(0.0).min(half_w).min(half_h);

@@ -15,7 +15,7 @@
 use tiny_skia::{FillRule, Mask, Path, PathBuilder, Transform};
 
 use crate::render::color::Color;
-use crate::render::geom::{Point, Rect};
+use crate::render::geometry::{Point, Rect, for_each_dim_strip};
 use crate::render::list::{ClipCommand, PathSegment, Shape};
 use crate::render::software::buffer::{ClipMask, SoftwareFramebuffer};
 
@@ -173,10 +173,7 @@ pub(crate) fn stroke(
 /// out, as one path (the GPU path's single even-odd draw).
 #[expect(
     clippy::many_single_char_names,
-    clippy::similar_names,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    reason = "strip coordinate math and rect conversions"
+    reason = "r, g, b, a and x, y, w, h components"
 )]
 pub(crate) fn dim(
     framebuffer: &mut SoftwareFramebuffer,
@@ -206,49 +203,16 @@ pub(crate) fn dim(
         && is_integer_rect(&cutouts[0])
     {
         let hole = &cutouts[0];
-        let bx = bounds.origin.x;
-        let by = bounds.origin.y;
-        let bw = bounds.size.width;
-        let br = bounds.right();
-        let bb = bounds.bottom();
-
-        let hx = hole.origin.x.clamp(bx, br);
-        let hy = hole.origin.y.clamp(by, bb);
-        let hr = hole.right().clamp(bx, br);
-        let hb = hole.bottom().clamp(by, bb);
-
         let [r, g, b, a] = super::buffer::straight_linear(color);
         let c8 = tiny_skia::Color::from_rgba8(r, g, b, a)
             .premultiply()
             .to_color_u8();
         let color_pm = [c8.red(), c8.green(), c8.blue(), c8.alpha()];
 
-        let bx_u = bx as usize;
-        let by_u = by as usize;
-        let bw_u = bw as usize;
-        let br_u = br as usize;
-        let bb_u = bb as usize;
-        let hx_u = hx as usize;
-        let hy_u = hy as usize;
-        let hr_u = hr as usize;
-        let hb_u = hb as usize;
-
-        // Top strip
-        if hy_u > by_u {
-            framebuffer.blend_rect_direct(bx_u, by_u, bw_u, hy_u - by_u, color_pm);
-        }
-        // Bottom strip
-        if bb_u > hb_u {
-            framebuffer.blend_rect_direct(bx_u, hb_u, bw_u, bb_u - hb_u, color_pm);
-        }
-        // Left strip
-        if hx_u > bx_u && hb_u > hy_u {
-            framebuffer.blend_rect_direct(bx_u, hy_u, hx_u - bx_u, hb_u - hy_u, color_pm);
-        }
-        // Right strip
-        if br_u > hr_u && hb_u > hy_u {
-            framebuffer.blend_rect_direct(hr_u, hy_u, br_u - hr_u, hb_u - hy_u, color_pm);
-        }
+        for_each_dim_strip(bounds, hole, |strip| {
+            let (x, y, w, h) = rect_to_usize(&strip);
+            framebuffer.blend_rect_direct(x, y, w, h, color_pm);
+        });
         return;
     }
 
