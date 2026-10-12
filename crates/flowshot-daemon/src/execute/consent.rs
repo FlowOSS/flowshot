@@ -85,6 +85,7 @@ pub fn spawn_armed(wired: bool, telemetry: &TelemetryConfig) -> bool {
 /// on the next daemon start).
 pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) {
     if !spawn_armed(prompt.enabled, telemetry) {
+        set_consent_active(false);
         tracing::debug!(
             wired = prompt.enabled,
             asked = telemetry.asked_on_first_launch,
@@ -92,12 +93,16 @@ pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) 
         );
         return;
     }
+    set_consent_active(true);
     match spawn_detached(prompt.config_path.clone()) {
         Ok(()) => tracing::info!("first-launch consent dialog spawned (detached)"),
-        Err(error) => tracing::warn!(
-            %error,
-            "consent dialog spawn failed; the next daemon start asks again"
-        ),
+        Err(error) => {
+            set_consent_active(false);
+            tracing::warn!(
+                %error,
+                "consent dialog spawn failed; the next daemon start asks again"
+            );
+        }
     }
 }
 
@@ -108,7 +113,8 @@ fn consent_channel() -> &'static (watch::Sender<bool>, watch::Receiver<bool>) {
     CONSENT_CHANNEL.get_or_init(|| watch::channel(false))
 }
 
-fn set_consent_active(active: bool) {
+/// Sets the active state of the first-launch consent dialog barrier.
+pub fn set_consent_active(active: bool) {
     let (tx, _) = consent_channel();
     let _ = tx.send(active);
 }
