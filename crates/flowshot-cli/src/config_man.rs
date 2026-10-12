@@ -6,7 +6,7 @@
 
 /// The complete `flowshot-config.5` page.
 pub const FLOWSHOT_CONFIG_ROFF: &str = concat!(
-    r#".TH FLOWSHOT-CONFIG 5 "2026-09-26" "FlowShot "#,
+    r#".TH FLOWSHOT-CONFIG 5 "" "FlowShot "#,
     env!("CARGO_PKG_VERSION"),
     r#"" "File Formats Manual"
 .SH NAME
