@@ -33,9 +33,8 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
-use tokio::sync::Notify;
+use tokio::sync::watch;
 
 use flowshot_core::Config;
 use flowshot_core::config::TelemetryConfig;
@@ -103,18 +102,25 @@ pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) 
 }
 
 
-static CONSENT_ACTIVE: AtomicBool = AtomicBool::new(false);
-static CONSENT_NOTIFY: OnceLock<Notify> = OnceLock::new();
+static CONSENT_CHANNEL: OnceLock<(watch::Sender<bool>, watch::Receiver<bool>)> = OnceLock::new();
 
-fn consent_notify() -> &'static Notify {
-    CONSENT_NOTIFY.get_or_init(Notify::new)
+fn consent_channel() -> &'static (watch::Sender<bool>, watch::Receiver<bool>) {
+    CONSENT_CHANNEL.get_or_init(|| watch::channel(false))
+}
+
+fn set_consent_active(active: bool) {
+    let (tx, _) = consent_channel();
+    let _ = tx.send(active);
 }
 
 /// Awaits any currently active first-launch consent dialog before proceeding.
 pub async fn wait_for_consent_if_active() {
-    while CONSENT_ACTIVE.load(Ordering::Acquire) {
-        consent_notify().notified().await;
+    let (_, rx) = consent_channel();
+    let mut rx = rx.clone();
+    if !*rx.borrow() {
+        return;
     }
+    let _ = rx.wait_for(|&active| !active).await;
 }
 
 /// The spec the parent writes for a detached prompt (shared with the
@@ -149,7 +155,7 @@ fn spawn_detached(config_path: Option<PathBuf>) -> Result<(), ExecuteError> {
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
         .spawn()?;
-    CONSENT_ACTIVE.store(true, Ordering::Release);
+    set_consent_active(true);
     tracing::info!(exe = %exe.display(), pid = child.id(), "consent session child spawning");
     reap_detached(child, spec_path, result_path);
     Ok(())
