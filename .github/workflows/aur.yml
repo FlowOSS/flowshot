@@ -44,10 +44,9 @@ concurrency:
 jobs:
   publish-bin:
     if: >-
-      github.event_name == 'workflow_call' ||
-      (github.event_name == 'release' && !github.event.release.prerelease) ||
-      (github.event_name == 'workflow_dispatch' &&
-       (inputs.package == 'bin' || inputs.package == 'both'))
+      inputs.package == 'bin' ||
+      inputs.package == 'both' ||
+      (github.event_name == 'release' && !github.event.release.prerelease)
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
@@ -121,10 +120,9 @@ jobs:
 
   publish-git:
     if: >-
-      github.event_name == 'workflow_call' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' &&
-       (inputs.package == 'git' || inputs.package == 'both'))
+      inputs.package == 'git' ||
+      inputs.package == 'both' ||
+      github.event_name == 'push'
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
