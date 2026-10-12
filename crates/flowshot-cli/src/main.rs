@@ -135,11 +135,12 @@ fn report(error: &anyhow::Error) -> ExitCode {
 
 /// Default tracing filter when `RUST_LOG` is unset (an explicit `RUST_LOG`
 /// overrides it completely via `try_from_default_env`): a `warn` base plus
-/// ERROR-only for three known-benign upstream spam targets - the ashpd
-/// portal session/request teardown race (`zbus::proxy` `GetAll` warnings) and
+/// ERROR-only for four known-benign upstream spam targets - the ashpd
+/// portal session/request teardown race (`zbus::proxy` `GetAll` warnings),
+/// zbus's single-instance name acquisition warning (`zbus::connection`), and
 /// wgpu's NVIDIA present-mode/layer warnings (`wgpu_hal::vulkan`).
 const DEFAULT_LOG_FILTER: &str =
-    "warn,zbus::proxy=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
+    "warn,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
 
 fn init_tracing() {
     tracing_subscriber::fmt()
@@ -156,8 +157,9 @@ mod tests {
     use super::DEFAULT_LOG_FILTER;
 
     #[test]
-    fn default_filter_suppresses_the_three_upstream_spam_targets() {
+    fn default_filter_suppresses_the_four_upstream_spam_targets() {
         assert!(DEFAULT_LOG_FILTER.contains("zbus::proxy=error"));
+        assert!(DEFAULT_LOG_FILTER.contains("zbus::connection=error"));
         assert!(DEFAULT_LOG_FILTER.contains("wgpu_hal::vulkan::conv=error"));
         assert!(DEFAULT_LOG_FILTER.contains("wgpu_hal::vulkan::instance=error"));
     }
