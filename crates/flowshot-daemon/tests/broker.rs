@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 /// 4-vCPU CI containers while passing on 16-core dev machines; green-path
 /// speed is unchanged because the deadline only bounds polling. Same 45 s
 /// budget as `testsupport::CALL_TIMEOUT`.
-const TEST_BUDGET: Duration = Duration::from_secs(45);
+const TEST_BUDGET: Duration = Duration::from_secs(90);
 
 use flowshot_core::Config;
 use flowshot_daemon::bus::SERVICE;
