@@ -60,8 +60,7 @@ enum Sub {
 /// portal session/request teardown race (`zbus::proxy` `GetAll` warnings),
 /// zbus's single-instance name acquisition warning (`zbus::connection`), and
 /// wgpu's NVIDIA present-mode/layer warnings (`wgpu_hal::vulkan`).
-const DEFAULT_LOG_FILTER: &str =
-    "info,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
+const DEFAULT_LOG_FILTER: &str = "info,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()

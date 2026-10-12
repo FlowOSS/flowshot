@@ -139,8 +139,7 @@ fn report(error: &anyhow::Error) -> ExitCode {
 /// portal session/request teardown race (`zbus::proxy` `GetAll` warnings),
 /// zbus's single-instance name acquisition warning (`zbus::connection`), and
 /// wgpu's NVIDIA present-mode/layer warnings (`wgpu_hal::vulkan`).
-const DEFAULT_LOG_FILTER: &str =
-    "warn,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
+const DEFAULT_LOG_FILTER: &str = "warn,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
 
 fn init_tracing() {
     tracing_subscriber::fmt()
