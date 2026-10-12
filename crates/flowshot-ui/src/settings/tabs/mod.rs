@@ -135,7 +135,7 @@ fn show_action_bar(ui: &mut Ui, m: &FormMetrics, model: &mut SettingsModel) -> F
             action = FrameAction::Apply;
         }
         if ui
-            .add_enabled(model.is_dirty(), egui::Button::new(strings::BUTTON_RESET))
+            .add_enabled(model.reset_enabled(), egui::Button::new(strings::BUTTON_RESET))
             .clicked()
         {
             model.reset();

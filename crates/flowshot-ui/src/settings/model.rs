@@ -233,10 +233,21 @@ impl SettingsModel {
     /// repair pending (the banner's "Apply to repair the file" promise -
     /// a clean defaults model over a corrupt file is repairable), and
     /// validation is clean.
+    /// Whether Apply must be enabled: edits pending OR a corrupt-load
+    /// repair pending (the banner's "Apply to repair the file" promise -
+    /// a clean defaults model over a corrupt file is repairable), and
+    /// validation is clean.
     #[must_use]
     pub fn apply_enabled(&self) -> bool {
         (self.dirty || matches!(self.banner, Some(Banner::CorruptConfig)))
             && self.validate().is_empty()
+    }
+
+    /// Whether Reset is enabled: edits are pending OR the current configuration
+    /// differs from default configuration.
+    #[must_use]
+    pub fn reset_enabled(&self) -> bool {
+        self.dirty || self.config != flowshot_core::Config::default()
     }
 
     /// Marks pending edits.
