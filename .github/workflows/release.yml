@@ -145,7 +145,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential clang libclang-dev pkg-config libpipewire-0.3-dev \
             curl git ca-certificates jq binutils xz-utils \
-            desktop-file-utils librsvg2-bin
+            desktop-file-utils librsvg2-bin mold
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: dtolnay/rust-toolchain@stable
@@ -255,7 +255,7 @@ jobs:
           set -euo pipefail
           pacman -Syu --noconfirm --needed \
             base-devel cargo clang desktop-file-utils git librsvg pipewire \
-            pkgconf ttf-dejavu pacman-contrib namcap
+            pkgconf ttf-dejavu pacman-contrib namcap mold
           useradd -m builder
           # makepkg --syncdeps shells out to `sudo pacman`; NOPASSWD keeps the
           # container build unattended (the deps are pre-installed above, so

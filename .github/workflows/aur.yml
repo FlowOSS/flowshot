@@ -56,7 +56,7 @@ jobs:
         shell: bash
     steps:
       - name: Base deps
-        run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap github-cli
+        run: pacman -Syu --noconfirm --needed base-devel git openssh pacman-contrib namcap mold github-cli
       - uses: actions/checkout@v4
       - name: Check the AUR credential
         id: key
