@@ -173,10 +173,7 @@ pub(crate) fn stroke(
 /// out, as one path (the GPU path's single even-odd draw).
 #[expect(
     clippy::many_single_char_names,
-    clippy::similar_names,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    reason = "strip coordinate math and rect conversions"
+    reason = "r, g, b, a and x, y, w, h components"
 )]
 pub(crate) fn dim(
     framebuffer: &mut SoftwareFramebuffer,
