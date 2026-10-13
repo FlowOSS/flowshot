@@ -153,7 +153,7 @@ jobs:
         with:
           shared-key: release
       - name: Build (release, locked)
-        run: cargo build --release --locked -p flowshot-cli -p flowshot-daemon --example man_pages
+        run: cargo build --release --locked -p flowshot-cli -p flowshot-daemon --bins --example man_pages
       - name: Assert no OpenSSL linkage (stale-graph guard)
         run: |
           set -euo pipefail
