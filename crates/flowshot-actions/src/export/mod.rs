@@ -8,7 +8,7 @@ mod stdout;
 
 pub use encode::{encode, encode_jpeg, encode_png, encode_webp};
 pub use open::open_with_app;
-pub use path::{next_available_path, resolve_save_path};
+pub use path::{default_filename, next_available_path, resolve_save_path};
 pub use pattern::{DEFAULT_PATTERN, expand_pattern, sanitize_filename};
 pub use stdout::{format_geometry, write_raw_png};
 

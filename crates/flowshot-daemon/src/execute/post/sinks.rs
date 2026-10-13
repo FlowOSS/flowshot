@@ -28,7 +28,40 @@ impl FileDialogSink for PicturesDirDialog {
     }
 }
 
-fn pictures_dir() -> Result<PathBuf, ExportError> {
+use ashpd::desktop::file_chooser::SelectedFiles;
+
+/// Requests a save path from the user via the XDG Desktop Portal `FileChooser`.
+/// Returns `None` if the user cancels the dialog.
+pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
+    let request = match SelectedFiles::save_file()
+        .title("Save Screenshot As")
+        .accept_label("Save")
+        .modal(true)
+        .current_name(default_name)
+        .send()
+        .await
+    {
+        Ok(req) => req,
+        Err(error) => {
+            tracing::debug!(%error, "XDG desktop portal FileChooser unavailable; falling back to pictures directory");
+            return pictures_dir().ok().map(|dir| dir.join(default_name));
+        }
+    };
+
+    let files = match request.response() {
+        Ok(files) => files,
+        Err(error) => {
+            tracing::debug!(%error, "portal save-file dialog cancelled by user");
+            return None;
+        }
+    };
+
+    let uri = files.uris().first()?;
+    let url = url::Url::parse(uri.as_str()).ok()?;
+    url.to_file_path().ok()
+}
+
+pub(crate) fn pictures_dir() -> Result<PathBuf, ExportError> {
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| ExportError::DirectoryNotFound(PathBuf::from("$HOME")))?;

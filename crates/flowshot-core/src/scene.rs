@@ -809,19 +809,19 @@ impl<'de> Deserialize<'de> for Scene {
 /// by a limit (config `undo_limit`, default [`DEFAULT_UNDO_LIMIT`]); when the
 /// limit is exceeded the oldest snapshot is evicted.
 #[derive(Debug, Clone)]
-pub struct UndoStack {
-    snapshots: Vec<(Scene, Scene)>,
+pub struct UndoStack<T = Scene> {
+    snapshots: Vec<(T, T)>,
     cursor: usize,
     limit: usize,
 }
 
-impl Default for UndoStack {
+impl<T: Clone> Default for UndoStack<T> {
     fn default() -> Self {
         Self::with_limit(DEFAULT_UNDO_LIMIT)
     }
 }
 
-impl UndoStack {
+impl<T: Clone> UndoStack<T> {
     /// Creates a stack with the [`DEFAULT_UNDO_LIMIT`].
     #[must_use]
     pub fn new() -> Self {
@@ -851,7 +851,7 @@ impl UndoStack {
     /// Records a modification as a full before/after snapshot pair.
     ///
     /// Discards any redo tail, then evicts oldest entries while over limit.
-    pub fn push(&mut self, before: Scene, after: Scene) {
+    pub fn push(&mut self, before: T, after: T) {
         self.snapshots.truncate(self.cursor);
         self.snapshots.push((before, after));
         while self.snapshots.len() > self.limit {
@@ -860,25 +860,25 @@ impl UndoStack {
         self.cursor = self.snapshots.len();
     }
 
-    /// Steps one modification back and returns the restored (before) scene.
+    /// Steps one modification back and returns the restored (before) snapshot.
     ///
     /// Silent no-op returning `None` on an empty stack or at history start.
     #[must_use]
-    pub fn undo(&mut self) -> Option<Scene> {
+    pub fn undo(&mut self) -> Option<T> {
         let index = self.cursor.checked_sub(1)?;
-        let scene = self.snapshots.get(index)?.0.clone();
+        let snapshot = self.snapshots.get(index)?.0.clone();
         self.cursor = index;
-        Some(scene)
+        Some(snapshot)
     }
 
-    /// Steps one modification forward and returns the reapplied (after) scene.
+    /// Steps one modification forward and returns the reapplied (after) snapshot.
     ///
     /// Silent no-op returning `None` when already at the newest state.
     #[must_use]
-    pub fn redo(&mut self) -> Option<Scene> {
-        let scene = self.snapshots.get(self.cursor)?.1.clone();
+    pub fn redo(&mut self) -> Option<T> {
+        let snapshot = self.snapshots.get(self.cursor)?.1.clone();
         self.cursor = self.cursor.saturating_add(1);
-        Some(scene)
+        Some(snapshot)
     }
 
     /// Drops all history.
@@ -1140,7 +1140,7 @@ mod tests {
     #[test]
     fn undo_redo_sequence_equivalence() {
         let mut scene = Scene::new();
-        let mut stack = UndoStack::new();
+        let mut stack = UndoStack::<Scene>::new();
         let initial = scene.clone();
 
         // Op 1: add a counter.
@@ -1186,7 +1186,7 @@ mod tests {
 
     #[test]
     fn undo_on_empty_stack_is_silent_noop() {
-        let mut stack = UndoStack::new();
+        let mut stack = UndoStack::<Scene>::new();
         assert!(stack.undo().is_none());
         assert!(stack.redo().is_none());
         assert!(!stack.can_undo());
@@ -1255,9 +1255,10 @@ mod tests {
 
     #[test]
     fn from_undo_limit_matches_config_default() {
-        let stack = UndoStack::from_undo_limit(crate::config::EditorConfig::default().undo_limit);
+        let stack =
+            UndoStack::<Scene>::from_undo_limit(crate::config::EditorConfig::default().undo_limit);
         assert_eq!(stack.limit(), DEFAULT_UNDO_LIMIT);
-        assert_eq!(UndoStack::new().limit(), DEFAULT_UNDO_LIMIT);
+        assert_eq!(UndoStack::<Scene>::new().limit(), DEFAULT_UNDO_LIMIT);
     }
 
     #[test]

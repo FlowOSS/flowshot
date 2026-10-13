@@ -14,15 +14,26 @@ use crate::error::ExportError;
 /// # Errors
 ///
 /// Returns [`ExportError`] if the path cannot be resolved.
+/// Generates the default filename from the save configuration's pattern and extension.
+#[must_use]
+pub fn default_filename(config: &SaveConfig) -> String {
+    let now = Local::now();
+    let pattern = expand_pattern(&config.filename_pattern, now);
+    let sanitized = sanitize_filename(&pattern);
+    format!("{sanitized}.{}", config.extension)
+}
+
+/// Resolve the final save path from the configuration.
+///
+/// # Errors
+///
+/// Returns [`ExportError`] if the path cannot be resolved.
 pub fn resolve_save_path(
     config: &SaveConfig,
     dialog: &dyn super::FileDialogSink,
 ) -> Result<PathBuf, ExportError> {
-    let now = Local::now();
-    let pattern = expand_pattern(&config.filename_pattern, now);
-    let sanitized = sanitize_filename(&pattern);
+    let default_name = default_filename(config);
     let extension = &config.extension;
-    let default_name = format!("{sanitized}.{extension}");
 
     let base = if config.path.is_empty() {
         match dialog.pick_save_path(&default_name)? {

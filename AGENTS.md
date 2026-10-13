@@ -143,9 +143,8 @@ cargo run -p flowshot-ui --example {e2e_headless,qa_bundle} --features test-driv
   both p2p sides must build CONCURRENTLY or the server blocks on the client's SASL handshake
   (`daemon/src/testsupport.rs`, `tests/broker.rs`). Raise budgets, never weaken assertions.
   `proptest`: core geometry + scene, `cli/tests/wire_roundtrip.rs`. `wiremock`: Imgur + telemetry.
-- Dead deps no gate catches (no `cargo machete`): `core` declares `chrono`, `bytes`, `image` with zero
-  import sites (`actions`'s dead `rfd` and `capture-x11`'s phantom `x11rb-protocol` were removed
-  2026-10-08). `FileDialogSink`'s production impl is a
+- Dead deps: `core`'s phantom `chrono`, `bytes`, and `image` were purged (`actions`'s dead `rfd` and
+  `capture-x11`'s phantom `x11rb-protocol` were removed earlier). `FileDialogSink`'s production impl is a
   pictures-directory stand-in in `daemon/src/execute/post/sinks.rs`.
 - Deep sub-trees deliberately carry no own `AGENTS.md`: `ui/src/editor`, `settings`, `render`,
   `chrome`, `selection`, `pins`, `widgets`, `launcher`, `consent`; `editor` is the top candidate

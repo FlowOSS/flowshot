@@ -82,7 +82,7 @@ notify-rust = { workspace = true }
 # session-bus connection is a process-global OnceLock singleton (proxy.rs
 # `static SESSION`) - correct in production, and the reason the stub-portal
 # test drives it through DBUS_SESSION_BUS_ADDRESS.
-ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings"] }
+ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings", "file_chooser"] }
 # Restore-data persistence (JSON in the config dir) + `StreamExt` for the
 # portal's Activated signal stream. Both pre-locked workspace deps.
 serde = { workspace = true }

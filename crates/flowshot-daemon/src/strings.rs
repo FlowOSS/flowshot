@@ -54,6 +54,9 @@ pub const AUTOSTART_COMMENT: &str = "FlowShot screenshot daemon (session autosta
 /// `Id` property of the tray item (host-side identification token).
 pub const TRAY_ID: &str = "flowshot";
 
+/// Themed icon name (`org.flowoss.FlowShot`, per packaging/ICONS.md).
+pub const TRAY_ICON_NAME: &str = "org.flowoss.FlowShot";
+
 /// Tray tooltip and `Title` property (tooltip `FlowShot`).
 pub const TRAY_TITLE: &str = "FlowShot";
 

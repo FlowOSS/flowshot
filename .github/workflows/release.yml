@@ -324,8 +324,42 @@ jobs:
           path: flowshot-*.pkg.tar.zst
           if-no-files-found: error
 
+
+  package-deb:
+    needs: [meta, build-linux]
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packaging tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries-x86_64-unknown-linux-gnu
+          path: target/release
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb
+      - name: Build Debian/Ubuntu package
+        run: |
+          set -euo pipefail
+          chmod +x target/release/flowshot target/release/flowshot-daemon
+          ./packaging/debian/build-deb.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: target/debian/*.deb
+          if-no-files-found: error
+
   release:
-    needs: [meta, changelog, gate, build-linux, package-arch]
+    needs: [meta, changelog, gate, build-linux, package-arch, package-deb]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -338,8 +372,10 @@ jobs:
           # side, so `sha256sum -c` must work in a flat directory.
           (cd tarball && sha256sum *.tar.xz) > sha256sums.txt
           (cd arch-package && sha256sum *.pkg.tar.zst) >> sha256sums.txt
+          (cd deb-package && sha256sum *.deb) >> sha256sums.txt
           (cd tarball && sha256sum -c ../sha256sums.txt --ignore-missing)
           (cd arch-package && sha256sum -c ../sha256sums.txt --ignore-missing)
+          (cd deb-package && sha256sum -c ../sha256sums.txt --ignore-missing)
       # Rehearsal mode (workflow_dispatch): publish NOTHING - no draft release,
       # no tag - just expose every built artifact for inspection.
       - name: Rehearsal - upload all artifacts, skip publishing
@@ -350,6 +386,7 @@ jobs:
           path: |
             tarball/
             arch-package/
+            deb-package/
             changelog/
             sha256sums.txt
           if-no-files-found: error
@@ -364,6 +401,7 @@ jobs:
           files: |
             tarball/*.tar.xz
             arch-package/*.pkg.tar.zst
+            deb-package/*.deb
             sha256sums.txt
             changelog/CHANGELOG.md
       - name: Validate the published asset list, then undraft
@@ -377,6 +415,7 @@ jobs:
           assets="$(gh release view "v$VER" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')"
           for want in "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" \
                       "flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
+                      "flowshot_${VER}_amd64.deb" \
                       "sha256sums.txt" "CHANGELOG.md"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }
