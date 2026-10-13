@@ -177,10 +177,12 @@ fn reap_detached(mut child: std::process::Child, spec_path: PathBuf, result_path
                 Ok(status) => tracing::debug!(%status, "consent session child exited"),
                 Err(error) => tracing::warn!(%error, "consent reaper wait failed"),
             }
+            set_consent_active(false);
             let _ = std::fs::remove_file(&spec_path);
             let _ = std::fs::remove_file(&result_path);
         });
     if let Err(error) = reaper {
+        set_consent_active(false);
         tracing::warn!(%error, "consent reaper thread failed to start; temp files may leak");
     }
 }
