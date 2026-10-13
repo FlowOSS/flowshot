@@ -103,6 +103,7 @@ fn parse_capture(args: &[String]) -> Result<InvokeCall, ExecuteError> {
             "--hide-cursor" => request.hide_cursor = true,
             "--region" => request.region = Some(next_value(&mut iter, arg)?),
             "--last-region" => request.last_region = true,
+            "--render-path" => request.render_path = Some(next_value(&mut iter, arg)?),
             "--raw" | "--print-geometry" => {
                 return Err(ExecuteError::Usage(format!(
                     "{arg} is a one-shot stdout mode and never reaches the daemon"
@@ -257,6 +258,21 @@ mod tests {
             InvokeCall::Pin(Some(PathBuf::from("/tmp/x.png")))
         );
         assert_eq!(parse(&argv(&["color"])).unwrap(), InvokeCall::Color);
+    }
+
+        #[test]
+    fn parses_render_path_override() {
+        let call = parse(&argv(&["capture", "full", "--render-path", "cpu"])).unwrap();
+        assert_eq!(
+            call,
+            InvokeCall::Direct(
+                Target::Full,
+                CaptureRequest {
+                    render_path: Some("cpu".to_owned()),
+                    ..CaptureRequest::default()
+                }
+            )
+        );
     }
 
     #[test]
