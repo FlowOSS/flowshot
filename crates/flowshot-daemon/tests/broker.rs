@@ -204,9 +204,11 @@ async fn second_daemon_start_reports_already_running() {
         return;
     };
 
-    // Given a running daemon pinned by the tray reason.
+    // Given a running daemon pinned by the shortcuts reason
+    // (so the contention phase cannot race the idle exit).
     let recorder = RecordingSink::new();
-    let state = Arc::new(DaemonState::new(true, Instant::now()));
+    let state = Arc::new(DaemonState::new(false, Instant::now()));
+    state.set_shortcuts_registered(true);
     let options = daemon_options(&bus.address, Arc::clone(&state), Arc::new(recorder.clone()));
     let first = tokio::spawn(async move {
         match Daemon::start(options).await.unwrap() {
@@ -230,8 +232,8 @@ async fn second_daemon_start_reports_already_running() {
         "the second daemon must defer to the name owner"
     );
 
-    // Cleanup: releasing the tray lets the first daemon idle-exit.
-    state.set_tray(false);
+    // Cleanup: releasing the persistence reason lets the first daemon idle-exit.
+    state.set_shortcuts_registered(false);
     let reason = tokio::time::timeout(TEST_BUDGET, first)
         .await
         .unwrap()
