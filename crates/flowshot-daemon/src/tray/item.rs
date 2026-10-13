@@ -146,7 +146,7 @@ impl StatusNotifierItem {
         reason = "the zbus wire contract keeps fdo::Result for error replies; this member never rejects"
     )]
     #[zbus(property)]
-    fn window_id(&self) -> fdo::Result<i32> {
+    fn window_id(&self) -> fdo::Result<u32> {
         Ok(0)
     }
 
@@ -173,7 +173,7 @@ impl StatusNotifierItem {
     )]
     #[zbus(property)]
     fn icon_name(&self) -> fdo::Result<String> {
-        Ok(String::new())
+        Ok(strings::TRAY_ICON_NAME.to_owned())
     }
 
     #[expect(
@@ -285,4 +285,31 @@ impl StatusNotifierItem {
     fn item_is_menu(&self) -> fdo::Result<bool> {
         Ok(false)
     }
+
+    /// Sent when the item title changes.
+    #[zbus(signal)]
+    async fn new_title(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+
+    /// Sent when the item icon changes.
+    #[zbus(signal)]
+    async fn new_icon(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+
+    /// Sent when the attention icon changes.
+    #[zbus(signal)]
+    async fn new_attention_icon(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+
+    /// Sent when the overlay icon changes.
+    #[zbus(signal)]
+    async fn new_overlay_icon(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+
+    /// Sent when the tooltip changes.
+    #[zbus(signal)]
+    async fn new_tool_tip(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+
+    /// Sent when the item status changes.
+    #[zbus(signal)]
+    async fn new_status(
+        emitter: &zbus::object_server::SignalEmitter<'_>,
+        status: &str,
+    ) -> zbus::Result<()>;
 }
