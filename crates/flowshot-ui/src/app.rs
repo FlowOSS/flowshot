@@ -173,6 +173,31 @@ impl OverlayApp {
         }
     }
 
+    fn crosshair_for_slot(
+        core: &OverlayCore,
+        cursor_style: flowshot_core::config::CursorStyle,
+        slot: WindowSlot,
+        width: u32,
+        height: u32,
+    ) -> Option<[[f32; 2]; 4]> {
+        (cursor_style == flowshot_core::config::CursorStyle::FullAxis)
+            .then(|| {
+                core.cursor()
+                    .filter(|cursor| cursor.slot == slot)
+                    .filter(|_| core.editor().cursor_shape() != ToolCursor::Hidden)
+                    .and_then(|cursor| {
+                        let (local_x, local_y) = core.router().to_local(slot, cursor.clamped)?;
+                        crosshair::crosshair_vertices(
+                            local_x,
+                            local_y,
+                            f64::from(width),
+                            f64::from(height),
+                        )
+                    })
+            })
+            .flatten()
+    }
+
     pub(crate) fn render_window(&mut self, slot: WindowSlot) {
         let _span = tracing::trace_span!("frame.render", window = slot.index()).entered();
         let Some(gpu) = self.gpu.as_ref() else {
@@ -184,29 +209,8 @@ impl OverlayApp {
         let Some(surface) = entry.surface.as_mut() else {
             return;
         };
-        // The crosshair follows the window that last received motion; during
-        // an implicit grab that is the drag-origin window even while the
-        // cursor is logically over a neighbor. The active tool may suppress
-        // it (the tool-cursor change: the tool's own preview is the cursor).
-        let vertices = (self.cursor_style == flowshot_core::config::CursorStyle::FullAxis)
-            .then(|| {
-                self.core
-                    .cursor()
-                    .filter(|cursor| cursor.slot == slot)
-                    .filter(|_| self.core.editor().cursor_shape() != ToolCursor::Hidden)
-                    .and_then(|cursor| {
-                        let (local_x, local_y) =
-                            self.core.router().to_local(slot, cursor.clamped)?;
-                        let (width, height) = surface.size();
-                        crosshair::crosshair_vertices(
-                            local_x,
-                            local_y,
-                            f64::from(width),
-                            f64::from(height),
-                        )
-                    })
-            })
-            .flatten();
+        let (width, height) = surface.size();
+        let vertices = Self::crosshair_for_slot(&self.core, self.cursor_style, slot, width, height);
         // The pixel-effect textures must exist in THIS renderer
         // before the display list references them (missing ids draw the
         // magenta placeholder).

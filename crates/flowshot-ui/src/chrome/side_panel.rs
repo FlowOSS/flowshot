@@ -219,29 +219,17 @@ pub fn layout(
         ..SidePanelLayout::default()
     };
 
-    if tool_section {
-        cy += line + gap;
-        if sized {
-            cy += line + gap;
-            layout.size_slider = Some(Rect::from_parts(cx, cy, content, row));
-            cy += row + gap;
-        }
-        if arrow {
-            layout.arrow_style = Some(Rect::from_parts(cx, cy, content, toggle_row));
-            cy += toggle_row + gap;
-            layout.arrow_reverse = Some(Rect::from_parts(cx, cy, content, toggle_row));
-            cy += toggle_row + gap;
-        }
-        if counter {
-            layout.counter_outline = Some(Rect::from_parts(cx, cy, content, toggle_row));
-            cy += toggle_row + gap;
-        }
-        if pixelate {
-            layout.pixelate_mode = Some(Rect::from_parts(cx, cy, content, toggle_row));
-            cy += toggle_row + gap;
-        }
-        cy += gap;
-    }
+    cy = layout_tool_controls(
+        &mut layout,
+        editor,
+        cx,
+        cy,
+        content,
+        line,
+        gap,
+        row,
+        toggle_row,
+    );
 
     let z_edge = z_button_edge(tokens) * scale;
     layout.raise_button = Some(Rect::from_parts(
@@ -266,6 +254,48 @@ pub fn layout(
         }
     }
     layout
+}
+
+fn layout_tool_controls(
+    layout: &mut SidePanelLayout,
+    editor: &EditorState,
+    cx: f32,
+    mut cy: f32,
+    content: f32,
+    line: f32,
+    gap: f32,
+    row: f32,
+    toggle_row: f32,
+) -> f32 {
+    let kind = editor.active_tool();
+    let sized = kind.and_then(size_label).is_some();
+    let arrow = kind == Some(ToolKind::Arrow);
+    let counter = kind == Some(ToolKind::Counter);
+    let pixelate = matches!(kind, Some(ToolKind::Pixelate | ToolKind::Blur));
+    if sized || arrow || counter || pixelate {
+        cy += line + gap;
+        if sized {
+            cy += line + gap;
+            layout.size_slider = Some(Rect::from_parts(cx, cy, content, row));
+            cy += row + gap;
+        }
+        if arrow {
+            layout.arrow_style = Some(Rect::from_parts(cx, cy, content, toggle_row));
+            cy += toggle_row + gap;
+            layout.arrow_reverse = Some(Rect::from_parts(cx, cy, content, toggle_row));
+            cy += toggle_row + gap;
+        }
+        if counter {
+            layout.counter_outline = Some(Rect::from_parts(cx, cy, content, toggle_row));
+            cy += toggle_row + gap;
+        }
+        if pixelate {
+            layout.pixelate_mode = Some(Rect::from_parts(cx, cy, content, toggle_row));
+            cy += toggle_row + gap;
+        }
+        cy += gap;
+    }
+    cy
 }
 
 impl SidePanelLayout {

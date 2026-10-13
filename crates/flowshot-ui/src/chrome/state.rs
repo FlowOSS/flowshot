@@ -77,6 +77,7 @@ impl std::fmt::Debug for ChromeState {
             .field("aids", &self.aids)
             .field("tokens", &self.tokens)
             .field("panel_visible", &self.panel_visible)
+            .field("panel_scroll", &self.panel_scroll)
             .field("grabbed", &self.grabbed)
             .field("layer_drag", &self.layer_drag)
             .field("draw_color_sink", &self.draw_color_sink.is_some())

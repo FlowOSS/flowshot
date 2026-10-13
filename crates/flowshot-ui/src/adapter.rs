@@ -249,7 +249,8 @@ mod tests {
             (Some(std::ffi::OsStr::new("")), None),
             (Some(std::ffi::OsStr::new("SOFTWARE")), None),
             (Some(std::ffi::OsStr::new("software ")), None),
-            (Some(std::ffi::OsStr::new("cpu")), None),
+            (Some(std::ffi::OsStr::new("cpu")), Some(true)),
+            (Some(std::ffi::OsStr::new("invalid")), None),
         ];
         for (value, expected) in cases {
             assert_eq!(render_path_for_override(value), expected, "token {value:?}");
