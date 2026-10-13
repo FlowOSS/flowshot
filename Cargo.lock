@@ -1360,9 +1360,6 @@ dependencies = [
 name = "flowshot-core"
 version = "0.3.2"
 dependencies = [
- "bytes",
- "chrono",
- "image",
  "proptest",
  "serde",
  "thiserror 2.0.21",
