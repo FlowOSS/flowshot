@@ -30,7 +30,7 @@ impl FileDialogSink for PicturesDirDialog {
 
 use ashpd::desktop::file_chooser::SelectedFiles;
 
-/// Requests a save path from the user via the XDG Desktop Portal FileChooser.
+/// Requests a save path from the user via the XDG Desktop Portal `FileChooser`.
 /// Returns `None` if the user cancels the dialog.
 pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
     let request = match SelectedFiles::save_file()

@@ -84,14 +84,11 @@ pub async fn run_post(
         && !save_config.path_fixed
     {
         let default_name = flowshot_actions::export::default_filename(&save_config);
-        match sinks::pick_save_file_portal(&default_name).await {
-            Some(chosen_path) => {
-                save_config.path = chosen_path.to_string_lossy().to_string();
-            }
-            None => {
-                tracing::info!("save action cancelled by user in file dialog");
-                pipeline_actions.retain(|action| *action != Action::Save);
-            }
+        if let Some(chosen_path) = sinks::pick_save_file_portal(&default_name).await {
+            save_config.path = chosen_path.to_string_lossy().to_string();
+        } else {
+            tracing::info!("save action cancelled by user in file dialog");
+            pipeline_actions.retain(|action| *action != Action::Save);
         }
     }
     let hold_release = sinks::clipboard_for_run(ctx.state.as_ref());
