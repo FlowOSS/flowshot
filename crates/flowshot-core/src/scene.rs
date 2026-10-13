@@ -932,3 +932,593 @@ impl<T: Clone> UndoStack<T> {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use proptest::prop_assert_eq;
+
+    #[derive(Debug, Default)]
+    struct MockSink {
+        calls: Vec<String>,
+    }
+
+    impl PaintSink for MockSink {
+        fn fill_rect(&mut self, rect: Rect, color: Color) {
+            self.calls.push(format!("fill_rect({rect:?},{color:?})"));
+        }
+        fn stroke_rect(&mut self, rect: Rect, color: Color, width: f32) {
+            self.calls
+                .push(format!("stroke_rect({rect:?},{color:?},{width})"));
+        }
+        fn stroke_rounded_rect(&mut self, rect: Rect, radius: f32, color: Color, width: f32) {
+            self.calls.push(format!(
+                "stroke_rounded_rect({rect:?},{radius},{color:?},{width})"
+            ));
+        }
+        fn fill_ellipse(&mut self, rect: Rect, color: Color) {
+            self.calls.push(format!("fill_ellipse({rect:?},{color:?})"));
+        }
+        fn stroke_ellipse(&mut self, rect: Rect, color: Color, width: f32) {
+            self.calls
+                .push(format!("stroke_ellipse({rect:?},{color:?},{width})"));
+        }
+        fn draw_line(&mut self, from: Point, to: Point, color: Color, width: f32) {
+            self.calls
+                .push(format!("draw_line({from:?},{to:?},{color:?},{width})"));
+        }
+        fn stroke_polyline(&mut self, points: &[Point], color: Color, width: f32) {
+            self.calls
+                .push(format!("stroke_polyline({points:?},{color:?},{width})"));
+        }
+        fn fill_polygon(&mut self, points: &[Point], color: Color) {
+            self.calls
+                .push(format!("fill_polygon({points:?},{color:?})"));
+        }
+        fn invert_region(&mut self, rect: Rect) {
+            self.calls.push(format!("invert_region({rect:?})"));
+        }
+        fn draw_text(&mut self, position: Point, text: &str, font_size: f32, color: Color) {
+            self.calls.push(format!(
+                "draw_text({position:?},{text},{font_size},{color:?})"
+            ));
+        }
+        fn draw_text_centered(&mut self, center: Point, text: &str, style: LabelStyle) {
+            self.calls
+                .push(format!("draw_text_centered({center:?},{text},{style:?})"));
+        }
+    }
+
+    const RED: Color = Color::new(255, 0, 0, 255);
+    const BLACK: Color = Color::new(0, 0, 0, 255);
+
+    fn counter(count: u32) -> Box<dyn ToolObject> {
+        Box::new(CounterObject::new(Point::new(10.0, 10.0), 12.0, RED, count))
+    }
+
+    fn text(label: &str) -> Box<dyn ToolObject> {
+        Box::new(TextObject::new(
+            Point::new(0.0, 0.0),
+            label.to_owned(),
+            14.0,
+            BLACK,
+        ))
+    }
+
+    fn scene_with_counters(n: usize) -> Scene {
+        let mut scene = Scene::new();
+        for _ in 0..n {
+            scene.add_object(counter(0));
+        }
+        scene
+    }
+
+    fn sorted_counts(scene: &Scene) -> Vec<u32> {
+        let mut counts = scene.counter_counts();
+        counts.sort_unstable();
+        counts
+    }
+
+    fn id_with_count(scene: &Scene, wanted: u32) -> usize {
+        scene
+            .ids()
+            .find(|&id| scene.get_object(id).and_then(ToolObject::count) == Some(wanted))
+            .expect("counter with wanted count must exist")
+    }
+
+    #[test]
+    fn auto_numbers_counters_with_max_plus_one_on_add() {
+        let mut scene = Scene::new();
+        assert_eq!(scene.next_counter_value(), 1);
+        scene.add_object(counter(0));
+        scene.add_object(counter(0));
+        scene.add_object(counter(0));
+        assert_eq!(sorted_counts(&scene), [1, 2, 3]);
+        // Explicit counts are preserved.
+        scene.add_object(counter(7));
+        assert_eq!(sorted_counts(&scene), [1, 2, 3, 7]);
+        assert_eq!(scene.next_counter_value(), 8);
+    }
+
+    #[test]
+    fn mid_list_counter_delete_renumbers_subsequent_counts() {
+        // Spec: counters [1..5] == [1, 2, 3, 4]; delete #2 -> [1, 2, 3].
+        let mut scene = scene_with_counters(4);
+        assert_eq!(sorted_counts(&scene), [1, 2, 3, 4]);
+
+        let victim = id_with_count(&scene, 2);
+        let removed = scene.remove_object(victim).expect("valid id");
+        assert_eq!(removed.count(), Some(2));
+
+        assert_eq!(scene.object_count(), 3);
+        assert_eq!(sorted_counts(&scene), [1, 2, 3]);
+    }
+
+    #[test]
+    fn counter_restore_uses_max_plus_one_rule() {
+        let mut scene = scene_with_counters(3);
+        let victim = id_with_count(&scene, 2);
+        let removed = scene.remove_object(victim).expect("valid id");
+        assert_eq!(sorted_counts(&scene), [1, 2]);
+
+        // Restoring the stale counter renumbers it to max+1 instead of 2.
+        scene.restore_object(removed);
+        assert_eq!(sorted_counts(&scene), [1, 2, 3]);
+        let restored_id = id_with_count(&scene, 3);
+        assert_eq!(
+            scene.get_object(restored_id).map(ToolObject::type_id),
+            Some("counter")
+        );
+    }
+
+    #[test]
+    fn remove_object_compacts_ids_and_remaps_z_order() {
+        let mut scene = Scene::new();
+        scene.add_object(text("A"));
+        scene.add_object(text("B"));
+        scene.add_object(text("C"));
+        assert_eq!(scene.z_order(), &[0, 1, 2]);
+
+        scene.remove_object(1);
+        assert_eq!(scene.object_count(), 2);
+        assert_eq!(scene.z_order(), &[0, 1]);
+
+        let data = scene.to_data();
+        assert_eq!(
+            data.objects[1],
+            ToolObjectData::Text(TextObject::new(
+                Point::new(0.0, 0.0),
+                "C".to_owned(),
+                14.0,
+                BLACK
+            ))
+        );
+        assert!(scene.remove_object(99).is_none());
+    }
+
+    #[test]
+    fn z_order_moves_work() {
+        let mut scene = Scene::new();
+        let a = scene.add_object(text("A"));
+        let b = scene.add_object(text("B"));
+        let c = scene.add_object(text("C"));
+        assert_eq!(scene.z_order(), &[a, b, c]);
+
+        assert!(scene.raise(a));
+        assert_eq!(scene.z_order(), &[b, a, c]);
+
+        assert!(scene.lower(c));
+        assert_eq!(scene.z_order(), &[b, c, a]);
+
+        // `a` is already top-most: raise is a no-op returning false.
+        assert!(!scene.raise(a));
+        assert_eq!(scene.z_order(), &[b, c, a]);
+
+        assert!(scene.raise_to_top(b));
+        assert_eq!(scene.z_order(), &[c, a, b]);
+
+        assert!(scene.lower_to_bottom(b));
+        assert_eq!(scene.z_order(), &[b, c, a]);
+
+        // `b` is bottom-most: lower is a no-op returning false.
+        assert!(!scene.lower(b));
+
+        // Invalid ids are rejected.
+        assert!(!scene.raise(99));
+        assert!(!scene.lower(99));
+        assert!(!scene.raise_to_top(99));
+        assert!(!scene.lower_to_bottom(99));
+        assert_eq!(scene.z_index(a), Some(2));
+        assert_eq!(scene.z_index(99), None);
+    }
+
+    #[test]
+    fn undo_redo_sequence_equivalence() {
+        let mut scene = Scene::new();
+        let mut stack = UndoStack::<Scene>::new();
+        let initial = scene.clone();
+
+        // Op 1: add a counter.
+        let before = scene.clone();
+        scene.add_object(counter(0));
+        let after_op1 = scene.clone();
+        stack.push(before, scene.clone());
+
+        // Op 2: add text.
+        let before = scene.clone();
+        scene.add_object(text("hello"));
+        stack.push(before, scene.clone());
+
+        // Op 3: z-order move.
+        let before = scene.clone();
+        scene.raise(0);
+        stack.push(before, scene.clone());
+
+        // Op 4: delete the counter (triggers renumbering).
+        let before = scene.clone();
+        scene.remove_object(0);
+        let final_state = scene.clone();
+        stack.push(before, final_state.clone());
+
+        // Undo N steps returns through each intermediate state to the start.
+        scene = stack.undo().expect("undo op4");
+        assert_eq!(scene.counter_counts(), vec![1]);
+        scene = stack.undo().expect("undo op3");
+        assert_eq!(scene.z_index(0), Some(0));
+        scene = stack.undo().expect("undo op2");
+        assert_eq!(scene, after_op1);
+        scene = stack.undo().expect("undo op1");
+        assert_eq!(scene, initial);
+        assert!(stack.undo().is_none());
+
+        // Redo N steps lands exactly on the post-ops state.
+        for _ in 0..4 {
+            scene = stack.redo().expect("redo step");
+        }
+        assert_eq!(scene, final_state);
+        assert!(stack.redo().is_none());
+    }
+
+    #[test]
+    fn undo_on_empty_stack_is_silent_noop() {
+        let mut stack = UndoStack::<Scene>::new();
+        assert!(stack.undo().is_none());
+        assert!(stack.redo().is_none());
+        assert!(!stack.can_undo());
+        assert!(!stack.can_redo());
+        assert!(stack.is_empty());
+        stack.clear(); // also a no-op, must not panic
+        assert!(stack.undo().is_none());
+    }
+
+    #[test]
+    fn redo_past_end_is_silent_noop() {
+        let mut stack = UndoStack::new();
+        let before = Scene::new();
+        let after = scene_with_counters(1);
+        stack.push(before.clone(), after.clone());
+
+        // Cursor sits at the newest state: redo has nothing to reapply.
+        assert!(!stack.can_redo());
+        assert!(stack.redo().is_none());
+
+        assert_eq!(stack.undo(), Some(before));
+        assert!(stack.can_redo());
+        assert_eq!(stack.redo(), Some(after));
+        assert!(stack.redo().is_none());
+    }
+
+    #[test]
+    fn push_after_undo_discards_redo_tail() {
+        let mut stack = UndoStack::new();
+        stack.push(Scene::new(), scene_with_counters(1));
+        stack.push(scene_with_counters(1), scene_with_counters(2));
+        assert_eq!(stack.len(), 2);
+
+        assert!(stack.undo().is_some());
+        stack.push(scene_with_counters(1), scene_with_counters(3));
+        assert_eq!(stack.len(), 2);
+        assert!(!stack.can_redo());
+        assert!(stack.redo().is_none());
+    }
+
+    #[test]
+    fn limit_eviction_at_three() {
+        let mut stack = UndoStack::with_limit(3);
+        assert_eq!(stack.limit(), 3);
+
+        for i in 1..=4 {
+            let before = scene_with_counters(i - 1);
+            let after = scene_with_counters(i);
+            stack.push(before, after);
+        }
+
+        // Oldest snapshot evicted; only 3 remain.
+        assert_eq!(stack.len(), 3);
+        assert_eq!(stack.undo_depth(), 3);
+
+        // Undo depth is exactly 3: back to the state before op 2.
+        let s3 = stack.undo().expect("undo 3");
+        assert_eq!(s3.object_count(), 3);
+        let s2 = stack.undo().expect("undo 2");
+        assert_eq!(s2.object_count(), 2);
+        let s1 = stack.undo().expect("undo 1");
+        assert_eq!(s1.object_count(), 1);
+        // Op 1's before-state (empty scene) was evicted.
+        assert!(stack.undo().is_none());
+    }
+
+    #[test]
+    fn from_undo_limit_matches_config_default() {
+        let stack =
+            UndoStack::<Scene>::from_undo_limit(crate::config::EditorConfig::default().undo_limit);
+        assert_eq!(stack.limit(), DEFAULT_UNDO_LIMIT);
+        assert_eq!(UndoStack::<Scene>::new().limit(), DEFAULT_UNDO_LIMIT);
+    }
+
+    #[test]
+    fn zero_limit_disables_history() {
+        let mut stack = UndoStack::with_limit(0);
+        stack.push(Scene::new(), scene_with_counters(1));
+        assert!(stack.is_empty());
+        assert!(stack.undo().is_none());
+    }
+
+    #[test]
+    fn clear_resets_history() {
+        let mut stack = UndoStack::new();
+        stack.push(Scene::new(), scene_with_counters(1));
+        stack.push(scene_with_counters(1), scene_with_counters(2));
+        assert!(stack.undo().is_some());
+        stack.clear();
+        assert!(stack.is_empty());
+        assert!(!stack.can_undo());
+        assert!(!stack.can_redo());
+        assert!(stack.undo().is_none());
+        assert!(stack.redo().is_none());
+    }
+
+    #[test]
+    fn set_limit_evicts_oldest() {
+        let mut stack = UndoStack::new();
+        for i in 1..=5 {
+            stack.push(scene_with_counters(i - 1), scene_with_counters(i));
+        }
+        assert_eq!(stack.undo_depth(), 5);
+        stack.set_limit(2);
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack.undo_depth(), 2);
+        assert_eq!(stack.undo().map(|s| s.object_count()), Some(4));
+        assert_eq!(stack.undo().map(|s| s.object_count()), Some(3));
+        assert!(stack.undo().is_none());
+    }
+
+    #[test]
+    fn scene_data_roundtrip_preserves_everything() {
+        let mut scene = Scene::new();
+        scene.add_object(Box::new(RectObject::new(
+            Rect::new(1.0, 2.0, 30.0, 40.0),
+            RED,
+            2.0,
+            false,
+        )));
+        scene.add_object(Box::new(EllipseObject::new(
+            Rect::new(5.0, 5.0, 20.0, 10.0),
+            BLACK,
+            3.0,
+            true,
+        )));
+        scene.add_object(Box::new(ArrowObject::new(
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 5.0),
+            RED,
+            2.5,
+        )));
+        scene.add_object(text("annotation"));
+        scene.add_object(counter(0));
+        scene.raise_to_top(0);
+
+        let data = scene.to_data();
+        let restored = Scene::from_data(data.clone()).expect("valid data");
+        assert_eq!(restored.to_data(), data);
+        assert_eq!(restored, scene);
+        assert_eq!(restored.z_order(), scene.z_order());
+    }
+
+    #[test]
+    fn scene_serde_toml_roundtrip() {
+        let mut scene = scene_with_counters(2);
+        scene.add_object(text("step"));
+        let encoded = toml::to_string(&scene).expect("scene serializes to TOML");
+        let decoded: Scene = toml::from_str(&encoded).expect("scene deserializes from TOML");
+        assert_eq!(decoded, scene);
+    }
+
+    #[test]
+    fn from_data_rejects_invalid_z_order() {
+        let objects = vec![
+            ToolObjectData::Text(TextObject::new(
+                Point::new(0.0, 0.0),
+                "A".to_owned(),
+                14.0,
+                BLACK,
+            )),
+            ToolObjectData::Text(TextObject::new(
+                Point::new(0.0, 0.0),
+                "B".to_owned(),
+                14.0,
+                BLACK,
+            )),
+        ];
+
+        let bad_len = Scene::from_data(SceneData {
+            objects: objects.clone(),
+            z_order: vec![0],
+        });
+        assert!(matches!(
+            bad_len,
+            Err(SceneError::ZOrderLengthMismatch {
+                expected: 2,
+                actual: 1
+            })
+        ));
+
+        let out_of_range = Scene::from_data(SceneData {
+            objects: objects.clone(),
+            z_order: vec![0, 5],
+        });
+        assert!(matches!(
+            out_of_range,
+            Err(SceneError::ZOrderIndexOutOfRange(5))
+        ));
+
+        let duplicate = Scene::from_data(SceneData {
+            objects,
+            z_order: vec![1, 1],
+        });
+        assert!(matches!(
+            duplicate,
+            Err(SceneError::DuplicateZOrderEntry(1))
+        ));
+    }
+
+    #[test]
+    fn paint_dispatches_in_z_order() {
+        let mut scene = Scene::new();
+        let a = scene.add_object(text("A"));
+        scene.add_object(text("B"));
+        scene.add_object(text("C"));
+        scene.raise_to_top(a);
+
+        let mut sink = MockSink::default();
+        scene.paint(&mut sink);
+
+        let text_calls: Vec<&String> = sink
+            .calls
+            .iter()
+            .filter(|call| call.starts_with("draw_text"))
+            .collect();
+        assert_eq!(text_calls.len(), 3);
+        let order: Vec<&str> = text_calls
+            .iter()
+            .map(|call| {
+                if call.contains(",A,") {
+                    "A"
+                } else if call.contains(",B,") {
+                    "B"
+                } else {
+                    "C"
+                }
+            })
+            .collect();
+        assert_eq!(order, ["B", "C", "A"]);
+    }
+
+    #[test]
+    fn counter_paint_emits_filled_bubble_and_centered_label() {
+        let mut scene = Scene::new();
+        scene.add_object(counter(0));
+        let mut sink = MockSink::default();
+        scene.paint(&mut sink);
+        assert!(sink.calls.iter().any(|c| c.starts_with("fill_ellipse")));
+        assert!(
+            sink.calls
+                .iter()
+                .any(|c| c.starts_with("draw_text_centered") && c.contains(",1,"))
+        );
+    }
+
+    #[test]
+    fn bounding_rects_are_sane() {
+        // The arrow head is FILLED geometry scaling from the thickness
+        // (Flameshot arrowtool math), so the exact bounds cover the head corners
+        // grown by the shaft's half-width ink - the earlier stub head (two
+        // stroked lines inside the endpoint rect) is superseded.
+        // Arrow (0,0)->(10,5) t=2: len ~11.18 < 18+2t, the head consumes the
+        // whole shaft; corners sit at (0,0) +- 7 * unit-normal(-0.447, 0.894).
+        let arrow = ArrowObject::new(Point::new(0.0, 0.0), Point::new(10.0, 5.0), RED, 2.0);
+        let bounds = arrow.bounding_rect();
+        let expected = Rect::new(-4.130, -7.261, 15.130, 14.522);
+        assert!(
+            (bounds.x - expected.x).abs() < 0.01
+                && (bounds.y - expected.y).abs() < 0.01
+                && (bounds.width - expected.width).abs() < 0.01
+                && (bounds.height - expected.height).abs() < 0.01,
+            "arrow bounds {bounds:?} vs expected {expected:?}"
+        );
+
+        let c = CounterObject::new(Point::new(20.0, 20.0), 5.0, RED, 1);
+        assert_eq!(c.bounding_rect(), Rect::new(13.0, 13.0, 14.0, 14.0));
+        assert!(c.bounding_rect().contains(Point::new(20.0, 20.0)));
+        assert!(!c.bounding_rect().contains(Point::new(0.0, 0.0)));
+
+        let t = TextObject::new(Point::new(1.0, 2.0), "abcd".to_owned(), 10.0, BLACK);
+        let rect = t.bounding_rect();
+        assert!(rect.width > 0.0 && rect.height > 0.0);
+        assert_eq!(
+            rect.center(),
+            Point::new(1.0 + rect.width / 2.0, 2.0 + rect.height / 2.0)
+        );
+    }
+
+    #[test]
+    fn clone_box_deep_copies_objects() {
+        let scene = scene_with_counters(2);
+        let cloned = scene.clone();
+        assert_eq!(cloned, scene);
+        assert_eq!(cloned.z_order(), scene.z_order());
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn invariants_hold_under_random_ops(
+            ops in proptest::collection::vec((0..5u8, 0..1024usize), 1..60)
+        ) {
+            let mut scene = Scene::new();
+            for (op, raw_index) in ops {
+                match op % 5 {
+                    0 => {
+                        scene.add_object(counter(0));
+                    }
+                    1 => {
+                        scene.add_object(text("x"));
+                    }
+                    2 => {
+                        if scene.object_count() > 0 {
+                            scene.remove_object(raw_index % scene.object_count());
+                        }
+                    }
+                    3 => {
+                        if scene.object_count() > 0 {
+                            scene.raise(raw_index % scene.object_count());
+                        }
+                    }
+                    _ => {
+                        if scene.object_count() > 0 {
+                            scene.lower(raw_index % scene.object_count());
+                        }
+                    }
+                }
+
+                // Invariant 1: z_order is a permutation of all ids.
+                let count = scene.object_count();
+                let mut z = scene.z_order().to_vec();
+                z.sort_unstable();
+                prop_assert_eq!(z, (0..count).collect::<Vec<usize>>());
+
+                // Invariant 2: counter numbering stays contiguous from 1.
+                let mut counts = scene.counter_counts();
+                counts.sort_unstable();
+                let expected: Vec<u32> = (1..=counts.len())
+                    .map(|i| u32::try_from(i).unwrap_or(u32::MAX))
+                    .collect();
+                prop_assert_eq!(counts, expected);
+            }
+        }
+    }
+}
