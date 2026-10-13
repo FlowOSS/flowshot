@@ -153,7 +153,7 @@ jobs:
         with:
           shared-key: release
       - name: Build (release, locked)
-        run: cargo build --release --locked -p flowshot-cli -p flowshot-daemon
+        run: cargo build --release --locked -p flowshot-cli -p flowshot-daemon --example man_pages
       - name: Assert no OpenSSL linkage (stale-graph guard)
         run: |
           set -euo pipefail
@@ -242,6 +242,7 @@ jobs:
           path: |
             dist/flowshot
             dist/flowshot-daemon
+            target/release/examples/man_pages
           if-no-files-found: error
 
 
@@ -347,7 +348,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y librsvg2-bin clang mold
+          sudo apt-get install -y librsvg2-bin clang mold pkg-config libpipewire-0.3-dev
       - uses: actions/download-artifact@v4
         with:
           name: binaries-x86_64-unknown-linux-gnu
@@ -358,7 +359,7 @@ jobs:
       - name: Build Debian/Ubuntu package
         run: |
           set -euo pipefail
-          chmod +x target/release/flowshot target/release/flowshot-daemon
+          chmod +x target/release/flowshot target/release/flowshot-daemon target/release/examples/man_pages 2>/dev/null || true
           ./packaging/debian/build-deb.sh
       - uses: actions/upload-artifact@v4
         with:
