@@ -4,6 +4,9 @@
 |---|---|
 | `logo.svg` | **Source of truth.** The FlowShot mark: a violet-to-azure gradient circle with white concentric arcs and a center dot (reads as a lens/target). Inkscape-authored, 200x200 viewBox. Every derived raster is regenerated from this file - edit this, never a derivative. |
 | `logo.png` | 2048x2048 RGBA raster export of `logo.svg`, for surfaces that cannot render SVG (the README header on GitHub, icon-tooling input). |
+| `wallpaper.svg` | Vector source of the FlowShot branding desktop wallpaper. |
+| `wallpaper.png` | 4000x2250 (4K) raster export of the branding wallpaper. |
+| `preview.png` | Demonstration screenshot showing FlowShot's capture overlay and annotation interface. |
 
 ## Consumers
 

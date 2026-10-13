@@ -9,6 +9,10 @@ Wayland *and* X11.**
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 [![Platform](https://img.shields.io/badge/session-Wayland%20%E2%80%A2%20X11-6366F1)](#desktop-support)
 
+<p align="center">
+  <img src="assets/preview.png" alt="FlowShot capture and annotation preview" width="850">
+</p>
+
 Capture a region, annotate it, and get it where you need it — clipboard,
 disk, a pin on your screen, or an upload — without fighting your compositor.
 FlowShot is built by [FlowOSS](https://github.com/FlowOSS) as one native
