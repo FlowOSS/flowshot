@@ -137,6 +137,12 @@ pub fn capture_vardict(request: &CaptureRequest) -> HashMap<String, Value<'stati
     if let Some(region) = &request.region {
         options.insert(key("region"), Value::Str(Str::from(region.clone())));
     }
+    if let Some(render_path) = &request.render_path {
+        options.insert(
+            key("render_path"),
+            Value::Str(Str::from(render_path.clone())),
+        );
+    }
     options
 }
 

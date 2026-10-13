@@ -4,6 +4,9 @@
 |---|---|
 | `logo.svg` | **Source of truth.** The FlowShot mark: a violet-to-azure gradient circle with white concentric arcs and a center dot (reads as a lens/target). Inkscape-authored, 200x200 viewBox. Every derived raster is regenerated from this file - edit this, never a derivative. |
 | `logo.png` | 2048x2048 RGBA raster export of `logo.svg`, for surfaces that cannot render SVG (the README header on GitHub, icon-tooling input). |
+| `wallpaper.svg` | Vector source of the FlowShot branding desktop wallpaper. |
+| `wallpaper.png` | 4000x2250 (4K) raster export of the branding wallpaper. |
+| `preview.png` | Demonstration screenshot showing FlowShot's capture overlay and annotation interface. |
 
 ## Consumers
 
@@ -11,7 +14,7 @@
   (resvg, the workspace pin) into the SNI tray pixmap sizes 16/22/24/32/48 -
   only those raw ARGB32 bytes are embedded in the daemon binary, never the
   PNG.
-- The top-level [README](../README.md) header shows `logo.png` at 128px.
+- The top-level [README](../README.md) header shows `logo.png` at 80px.
 - Packaging installs the mark as the themed icon `org.flowoss.FlowShot`
   (targets and generation rules: [packaging/ICONS.md](../packaging/ICONS.md)).
 

@@ -33,6 +33,8 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::OnceLock;
+use tokio::sync::watch;
 
 use flowshot_core::Config;
 use flowshot_core::config::TelemetryConfig;
@@ -83,6 +85,7 @@ pub fn spawn_armed(wired: bool, telemetry: &TelemetryConfig) -> bool {
 /// on the next daemon start).
 pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) {
     if !spawn_armed(prompt.enabled, telemetry) {
+        set_consent_active(false);
         tracing::debug!(
             wired = prompt.enabled,
             asked = telemetry.asked_on_first_launch,
@@ -90,13 +93,48 @@ pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) 
         );
         return;
     }
+    set_consent_active(true);
     match spawn_detached(prompt.config_path.clone()) {
         Ok(()) => tracing::info!("first-launch consent dialog spawned (detached)"),
-        Err(error) => tracing::warn!(
-            %error,
-            "consent dialog spawn failed; the next daemon start asks again"
-        ),
+        Err(error) => {
+            set_consent_active(false);
+            tracing::warn!(
+                %error,
+                "consent dialog spawn failed; the next daemon start asks again"
+            );
+        }
     }
+}
+
+static CONSENT_CHANNEL: OnceLock<(watch::Sender<bool>, watch::Receiver<bool>)> = OnceLock::new();
+
+fn consent_channel() -> &'static (watch::Sender<bool>, watch::Receiver<bool>) {
+    CONSENT_CHANNEL.get_or_init(|| watch::channel(false))
+}
+
+/// Sets the active state of the first-launch consent dialog barrier.
+pub fn set_consent_active(active: bool) {
+    let (tx, _) = consent_channel();
+    let _ = tx.send(active);
+}
+
+/// Time given to the compositor to finish its window-unmap and close-fade
+/// animation so the pending capture grabs a clean desktop without ghost artifacts.
+const COMPOSITOR_UNMAP_SETTLE: std::time::Duration = std::time::Duration::from_millis(200);
+
+/// Awaits any currently active first-launch consent dialog before proceeding.
+///
+/// When no dialog is active (standard captures), returns immediately (0 ms overhead).
+/// When a first-launch dialog was active and just closed, waits `COMPOSITOR_UNMAP_SETTLE`
+/// so the compositor finishes its close animation before the screencopy takes place.
+pub async fn wait_for_consent_if_active() {
+    let (_, rx) = consent_channel();
+    let mut rx = rx.clone();
+    if !*rx.borrow() {
+        return;
+    }
+    let _ = rx.wait_for(|&active| !active).await;
+    tokio::time::sleep(COMPOSITOR_UNMAP_SETTLE).await;
 }
 
 /// The spec the parent writes for a detached prompt (shared with the
@@ -131,6 +169,7 @@ fn spawn_detached(config_path: Option<PathBuf>) -> Result<(), ExecuteError> {
         .stdout(Stdio::null())
         .stderr(Stdio::inherit())
         .spawn()?;
+    set_consent_active(true);
     tracing::info!(exe = %exe.display(), pid = child.id(), "consent session child spawning");
     reap_detached(child, spec_path, result_path);
     Ok(())
@@ -146,10 +185,12 @@ fn reap_detached(mut child: std::process::Child, spec_path: PathBuf, result_path
                 Ok(status) => tracing::debug!(%status, "consent session child exited"),
                 Err(error) => tracing::warn!(%error, "consent reaper wait failed"),
             }
+            set_consent_active(false);
             let _ = std::fs::remove_file(&spec_path);
             let _ = std::fs::remove_file(&result_path);
         });
     if let Err(error) = reaper {
+        set_consent_active(false);
         tracing::warn!(%error, "consent reaper thread failed to start; temp files may leak");
     }
 }

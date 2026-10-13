@@ -138,6 +138,7 @@ fn every_modifier_lands_on_the_typed_request() {
             hide_cursor: true,
             region: Some("640x480+10+20".to_owned()),
             last_region: false,
+            render_path: None,
         }
     );
 }

@@ -105,10 +105,27 @@ pub struct SidePanelLayout {
     pub raise_button: Option<Rect>,
     /// The lower-selected button.
     pub lower_button: Option<Rect>,
+    /// The clipped viewport for scrollable layers.
+    pub layers_viewport: Rect,
+    /// Whether layer rows exceed the viewport and can scroll.
+    pub can_scroll: bool,
     /// The layer rows as (object id, rect), BOTTOM-TO-TOP (the plan's list
     /// order: row index == paint z, so a drop row maps straight onto
     /// [`EditorState::move_layer`]).
     pub layer_rows: Vec<(usize, Rect)>,
+}
+
+/// Returns whether the side panel fits horizontally on `output` next to `selection`.
+#[must_use]
+pub fn panel_fits(selection: LogicalRect, output: &OutputInfo, scale: f32) -> bool {
+    let local_sel = local_rect(output, selection);
+    let padding = 8.0 * scale;
+    let margin = padding;
+    let width = PANEL_WIDTH * scale;
+    let edge_x = output.physical_size.width.0 as f32 - margin;
+    let right_fits = local_sel.origin.x + local_sel.size.width + margin + width <= edge_x;
+    let left_fits = local_sel.origin.x - margin - width >= margin;
+    right_fits || left_fits
 }
 
 /// Computes the panel layout for `selection` on `output` (physical px).
@@ -119,6 +136,7 @@ pub fn layout(
     tokens: &DesignTokens,
     scale: f32,
     output: &OutputInfo,
+    scroll_offset: f32,
 ) -> SidePanelLayout {
     let local_sel = local_rect(output, selection);
     let padding = tokens.spacing.medium as f32 * scale;
@@ -136,28 +154,28 @@ pub fn layout(
     let tool_section = sized || arrow || counter || pixelate;
     let layers = editor.layers();
 
-    // Dynamic height: padding + the tool section (when any) + the layers
-    // section (header + one row per object).
-    let mut height = padding * 2.0;
+    // Calculate sticky header height (tool options + layers title with raise/lower buttons).
+    let mut header_height = padding;
     if tool_section {
-        height += line + gap;
+        header_height += line + gap;
         if sized {
-            height += line + gap + row + gap;
+            header_height += line + gap + row + gap;
         }
         if arrow {
-            height += (toggle_row + gap) * 2.0;
+            header_height += (toggle_row + gap) * 2.0;
         }
         if counter || pixelate {
-            height += toggle_row + gap;
+            header_height += toggle_row + gap;
         }
-        height += gap;
+        header_height += gap;
     }
     let z_header = line.max(z_button_edge(tokens) * scale);
-    height += z_header + gap + layers.len() as f32 * (row + gap);
+    header_height += z_header + gap;
 
-    // Anchor right of the selection; flip left near the output edge; the
-    // panel stays fully on-screen (min/max pair - never clamp on possibly
-    // inverted bounds).
+    let layers_total = layers.len() as f32 * (row + gap);
+    let total_needed = header_height + layers_total + padding;
+
+    // Anchor right of the selection; flip left near the output edge.
     let margin = padding;
     let edge_x = output.physical_size.width.0 as f32 - margin;
     let mut x = local_sel.origin.x + local_sel.size.width + margin;
@@ -165,6 +183,15 @@ pub fn layout(
         x = (local_sel.origin.x - width - margin).max(margin);
     }
     let edge_y = output.physical_size.height.0 as f32 - margin;
+
+    // Y bounds clamping: bounded by selection's height, with a minimum height so header fits
+    // and capped to fit cleanly on screen.
+    let min_height = header_height + (row + gap).min(layers_total) + padding;
+    let max_screen_height = (edge_y - local_sel.origin.y).max(min_height);
+    let selection_y_bound = local_sel.size.height.max(min_height);
+    let max_allowed = selection_y_bound.min(max_screen_height);
+    let height = total_needed.min(max_allowed);
+
     let mut y = local_sel.origin.y;
     if y + height > edge_y {
         y = (edge_y - height).max(margin);
@@ -174,13 +201,78 @@ pub fn layout(
     let cx = x + padding;
     let content = width - padding * 2.0;
     let mut cy = y + padding;
+
+    // The scrollable layers viewport underneath the sticky header
+    let viewport_top = y + header_height;
+    let viewport_bottom = y + height - padding;
+    let viewport_height = (viewport_bottom - viewport_top).max(0.0);
+    let layers_viewport = Rect::from_parts(cx, viewport_top, content, viewport_height);
+    let max_scroll = (layers_total - viewport_height).max(0.0);
+    let scroll_y = scroll_offset.clamp(0.0, max_scroll);
+    let can_scroll = max_scroll > 0.0;
+
     let mut layout = SidePanelLayout {
         rect,
+        layers_viewport,
+        can_scroll,
         layer_rows: Vec::with_capacity(layers.len()),
         ..SidePanelLayout::default()
     };
 
-    if tool_section {
+    cy = layout_tool_controls(
+        &mut layout,
+        editor,
+        cx,
+        cy,
+        content,
+        line,
+        gap,
+        row,
+        toggle_row,
+    );
+
+    let z_edge = z_button_edge(tokens) * scale;
+    layout.raise_button = Some(Rect::from_parts(
+        cx + content - z_edge * 2.0 - gap,
+        cy + (z_header - z_edge) / 2.0,
+        z_edge,
+        z_edge,
+    ));
+    layout.lower_button = Some(Rect::from_parts(
+        cx + content - z_edge,
+        cy + (z_header - z_edge) / 2.0,
+        z_edge,
+        z_edge,
+    ));
+
+    for (index, layer) in layers.iter().enumerate() {
+        let row_y = viewport_top + (index as f32 * (row + gap)) - scroll_y;
+        if row_y + row >= viewport_top - 1.0 && row_y <= viewport_bottom + 1.0 {
+            layout
+                .layer_rows
+                .push((layer.id, Rect::from_parts(cx, row_y, content, row)));
+        }
+    }
+    layout
+}
+
+fn layout_tool_controls(
+    layout: &mut SidePanelLayout,
+    editor: &EditorState,
+    cx: f32,
+    mut cy: f32,
+    content: f32,
+    line: f32,
+    gap: f32,
+    row: f32,
+    toggle_row: f32,
+) -> f32 {
+    let kind = editor.active_tool();
+    let sized = kind.and_then(size_label).is_some();
+    let arrow = kind == Some(ToolKind::Arrow);
+    let counter = kind == Some(ToolKind::Counter);
+    let pixelate = matches!(kind, Some(ToolKind::Pixelate | ToolKind::Blur));
+    if sized || arrow || counter || pixelate {
         cy += line + gap;
         if sized {
             cy += line + gap;
@@ -203,29 +295,7 @@ pub fn layout(
         }
         cy += gap;
     }
-
-    let z_edge = z_button_edge(tokens) * scale;
-    layout.raise_button = Some(Rect::from_parts(
-        cx + content - z_edge * 2.0 - gap,
-        cy + (z_header - z_edge) / 2.0,
-        z_edge,
-        z_edge,
-    ));
-    layout.lower_button = Some(Rect::from_parts(
-        cx + content - z_edge,
-        cy + (z_header - z_edge) / 2.0,
-        z_edge,
-        z_edge,
-    ));
-    cy += z_header + gap;
-
-    for layer in &layers {
-        layout
-            .layer_rows
-            .push((layer.id, Rect::from_parts(cx, cy, content, row)));
-        cy += row + gap;
-    }
-    layout
+    cy
 }
 
 impl SidePanelLayout {
@@ -251,6 +321,8 @@ impl SidePanelLayout {
             pixelate_mode: shift_opt(&self.pixelate_mode),
             raise_button: shift_opt(&self.raise_button),
             lower_button: shift_opt(&self.lower_button),
+            layers_viewport: shift(self.layers_viewport),
+            can_scroll: self.can_scroll,
             layer_rows: self
                 .layer_rows
                 .iter()

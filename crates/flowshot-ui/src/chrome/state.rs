@@ -29,7 +29,7 @@ use crate::render::{DisplayList, TextureId, f32_from_f64};
 use crate::router::WindowSlot;
 use crate::selection::SelectionState;
 use flowshot_core::config::UiConfig;
-use flowshot_core::geometry::OutputInfo;
+use flowshot_core::geometry::{LogicalRect, OutputInfo};
 use flowshot_core::tokens::DesignTokens;
 
 use super::aids::AidsInput;
@@ -56,6 +56,7 @@ pub struct ChromeState {
     pub(crate) aids: AidsInput,
     tokens: DesignTokens,
     panel_visible: bool,
+    pub(crate) panel_scroll: f32,
     pub(crate) grabbed: bool,
     layer_drag: Option<LayerDrag>,
     draw_color_sink: Option<DrawColorSink>,
@@ -76,6 +77,7 @@ impl std::fmt::Debug for ChromeState {
             .field("aids", &self.aids)
             .field("tokens", &self.tokens)
             .field("panel_visible", &self.panel_visible)
+            .field("panel_scroll", &self.panel_scroll)
             .field("grabbed", &self.grabbed)
             .field("layer_drag", &self.layer_drag)
             .field("draw_color_sink", &self.draw_color_sink.is_some())
@@ -165,6 +167,40 @@ impl ChromeState {
     #[must_use]
     pub fn panel_shown(&self, editor: &EditorState) -> bool {
         self.panel_visible && editor.config().editor.side_panel
+    }
+
+    /// Shows the side panel.
+    pub fn show_panel(&mut self, editor: &EditorState) -> bool {
+        if !editor.config().editor.side_panel {
+            return false;
+        }
+        self.panel_visible = true;
+        true
+    }
+
+    /// Auto-shows the side panel if an active tool is selected and space allows.
+    pub fn auto_show_panel_if_fits(
+        &mut self,
+        editor: &EditorState,
+        selection: LogicalRect,
+        output: &OutputInfo,
+        scale: f32,
+    ) {
+        if editor.active_tool().is_some() && side_panel::panel_fits(selection, output, scale) {
+            self.show_panel(editor);
+        }
+    }
+
+    /// Scrolls the side panel's layers list. Returns true if scroll changed.
+    pub fn scroll_panel(&mut self, delta_y: i32) -> bool {
+        let step = 30.0;
+        let old = self.panel_scroll;
+        if delta_y > 0 {
+            self.panel_scroll = (self.panel_scroll - step).max(0.0);
+        } else if delta_y < 0 {
+            self.panel_scroll += step;
+        }
+        (self.panel_scroll - old).abs() > f32::EPSILON
     }
 
     /// Toggles the side panel (Space). `false` when the
@@ -286,6 +322,7 @@ impl ChromeState {
                 selection,
                 output,
                 self.motion.panel_progress(now),
+                self.panel_scroll,
             );
         }
         self.hud.draw(list, editor, &self.tokens, scale, atlas);
@@ -358,6 +395,7 @@ impl Default for ChromeState {
             aids: AidsInput::default(),
             tokens: DesignTokens::default(),
             panel_visible: false,
+            panel_scroll: 0.0,
             grabbed: false,
             layer_drag: None,
             draw_color_sink: None,

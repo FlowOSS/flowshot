@@ -68,6 +68,15 @@ impl OverlayCore {
             if outcome.resized {
                 self.chrome.show_size_hud(env.now);
             }
+            if self.editor.active_tool().is_some()
+                && let Some(selection) = self.selection.rect()
+                && let Some(cursor) = self.cursor
+                && let Some(output) = self.router.output_for(cursor.slot)
+            {
+                let scale = crate::render::f32_from_f64(output.scale);
+                self.chrome
+                    .auto_show_panel_if_fits(&self.editor, selection, output, scale);
+            }
             // Restore the selection rect if undo/redo returned one (move-selection).
             if let Some(rect) = outcome.restore_selection {
                 self.selection.set_rect(Some(rect));
@@ -113,6 +122,40 @@ impl OverlayCore {
 
     fn route_wheel(&mut self, delta_y: i32) -> RouteReport {
         let env = self.editor_env();
+        if self.chrome.panel_shown(&self.editor)
+            && let Some(cursor) = self.cursor
+            && let Some(output) = self.router.output_for(cursor.slot)
+            && let Some(selection) = self.selection.rect()
+        {
+            let scale = crate::render::f32_from_f64(output.scale);
+            let local_pt = crate::render::Point::new(
+                crate::editor::paint::local_x(output, cursor.clamped.x.0),
+                crate::editor::paint::local_y(output, cursor.clamped.y.0),
+            );
+            let panel = crate::chrome::side_panel::layout(
+                &self.editor,
+                selection,
+                self.chrome.tokens(),
+                scale,
+                output,
+                self.chrome.panel_scroll,
+            );
+            if panel.rect.contains(local_pt) {
+                // When hovering over the side panel, the wheel event belongs exclusively
+                // to the panel and never falls through to resize tools.
+                let actions = if self.chrome.scroll_panel(delta_y) {
+                    (0..self.router.window_count())
+                        .map(|index| Action::Redraw(WindowSlot::new(index)))
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                return RouteReport {
+                    actions,
+                    ..RouteReport::default()
+                };
+            }
+        }
         let outcome = self.editor.wheel(&env, delta_y);
         if outcome.resized {
             self.chrome.show_size_hud(env.now);

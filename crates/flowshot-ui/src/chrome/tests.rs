@@ -21,7 +21,7 @@ use crate::editor::{
     EditorTools, MAX_TOOL_SIZE, Tool, ToolKind, register_pixelate_tools, register_shape_tools,
     register_text_tool, scene_color_from_hex,
 };
-use crate::input::SyntheticInput;
+use crate::input::{InputEvent, SyntheticInput};
 use crate::render::{DisplayList, Rect};
 use crate::router::{InputRouter, WindowSlot};
 use crate::state::OverlayCore;
@@ -163,6 +163,7 @@ fn panel_layout(core: &OverlayCore) -> SidePanelLayout {
         core.chrome().tokens(),
         1.0,
         &fixture_output(),
+        0.0,
     )
 }
 
@@ -493,6 +494,103 @@ fn space_toggles_the_panel_and_esc_hides_it() {
     assert!(!core.exit_requested(), "the cascade did not reach close");
     // Space reopens (the toggle is reversible).
     open_panel(&mut core);
+}
+
+#[test]
+fn wheel_over_side_panel_does_not_change_tool_size() {
+    let mut core = fixture();
+    commit_rect(&mut core, 400.0, 300.0);
+    core.editor_mut().activate_tool(ToolKind::Pencil);
+    let initial_size = core.editor().tool_size();
+
+    open_panel(&mut core);
+    let output = fixture_output();
+    let panel = side_panel::layout(
+        core.editor(),
+        core.selection().rect().unwrap(),
+        core.chrome().tokens(),
+        1.0,
+        &output,
+        0.0,
+    );
+
+    let slot = WindowSlot::new(0);
+    core.route(
+        slot,
+        &InputEvent::PointerMoved {
+            x: f64::from(panel.rect.origin.x + 10.0),
+            y: f64::from(panel.rect.origin.y + 10.0),
+        },
+    );
+
+    for _ in 0..5 {
+        core.route(slot, &InputEvent::Wheel { delta_y: 120 });
+    }
+    assert_eq!(
+        core.editor().tool_size(),
+        initial_size,
+        "tool size must not change when wheeling over the side panel"
+    );
+
+    core.route(slot, &InputEvent::PointerMoved { x: 50.0, y: 50.0 });
+    core.route(slot, &InputEvent::Wheel { delta_y: 120 });
+    assert_ne!(
+        core.editor().tool_size(),
+        initial_size,
+        "tool size must change when wheeling over canvas"
+    );
+}
+
+#[test]
+fn side_panel_height_clamps_to_selection_and_scrolls_layers() {
+    let mut core = fixture();
+    commit_rect(&mut core, 400.0, 250.0);
+    let output = fixture_output();
+    let panel_unscrolled = side_panel::layout(
+        core.editor(),
+        core.selection().rect().unwrap(),
+        core.chrome().tokens(),
+        1.0,
+        &output,
+        0.0,
+    );
+    let panel_scrolled = side_panel::layout(
+        core.editor(),
+        core.selection().rect().unwrap(),
+        core.chrome().tokens(),
+        1.0,
+        &output,
+        50.0,
+    );
+    assert_eq!(
+        panel_unscrolled.raise_button, panel_scrolled.raise_button,
+        "sticky header controls must stay identical when scrolling"
+    );
+    assert!(
+        panel_unscrolled.rect.size.height <= 350.0,
+        "panel height must be clamped rather than growing unboundedly"
+    );
+}
+
+#[test]
+fn auto_show_panel_activates_when_tool_selected_and_space_fits() {
+    let mut core = fixture();
+    commit_rect(&mut core, 400.0, 300.0);
+    assert!(!core.chrome().panel_shown(core.editor()), "starts hidden");
+
+    let output = fixture_output();
+    core.auto_show_panel_if_fits(&output, 1.0);
+    assert!(
+        !core.chrome().panel_shown(core.editor()),
+        "inactive tool does not auto-show"
+    );
+
+    core.editor_mut().activate_tool(ToolKind::Rectangle);
+    core.auto_show_panel_if_fits(&output, 1.0);
+    assert!(
+        core.chrome().panel_shown(core.editor()),
+        "auto-shows once tool is active and space fits"
+    );
 }
 
 #[test]

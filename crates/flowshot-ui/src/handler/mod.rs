@@ -56,9 +56,19 @@ impl OverlayApp {
                     source,
                 }
             })?);
-            // The crosshair is drawn by us; the compositor cursor would be
-            // invisible over the fullscreen surface anyway (#1659-class fix).
-            window.set_cursor_visible(false);
+            match self.cursor_style {
+                flowshot_core::config::CursorStyle::FullAxis => {
+                    window.set_cursor_visible(false);
+                }
+                flowshot_core::config::CursorStyle::Pointer => {
+                    window.set_cursor_visible(true);
+                    window.set_cursor(winit::window::CursorIcon::Default);
+                }
+                flowshot_core::config::CursorStyle::Crosshair => {
+                    window.set_cursor_visible(true);
+                    window.set_cursor(winit::window::CursorIcon::Crosshair);
+                }
+            }
             // Always-on IME model: enabled from map, never toggled
             // per text session.
             window.set_ime_allowed(true);

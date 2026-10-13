@@ -157,16 +157,12 @@ impl Drop for SessionGuard {
 }
 
 /// Whether one session kind takes the single-active-window-session gate:
-/// every exclusive GUI session does; pins are EXEMPT (the multi-pin
-/// registry and the `pins_alive` lifecycle reason exist for coexisting
-/// pins, and a new capture must work while pins float - Flameshot parity,
-/// where the single-instance option gates the capture GUI, never pin
-/// widgets). Platform-free: the exemption applies to Wayland and X11
-/// alike. A NEW variant is gated by default (the safe direction: an
-/// exclusive session that wrongly coexists is worse than a coexisting one
-/// that wrongly gates); exempt it here deliberately, with a test.
+/// only exclusive fullscreen capture sessions do (`Overlay` and `Launcher`).
+/// Standard desktop windows (`Settings`), background prompts (`Consent`), and
+/// floating pin widgets (`Pin`) are exempt so screenshots can be taken while
+/// the settings window is open on the desktop.
 const fn takes_session_gate(kind: &SessionKind) -> bool {
-    !matches!(kind, SessionKind::Pin)
+    matches!(kind, SessionKind::Overlay | SessionKind::Launcher)
 }
 
 /// Parent side: spawns one session child and waits for its result.
@@ -197,15 +193,19 @@ pub async fn spawn(spec: SessionSpec) -> Result<SessionResult, ExecuteError> {
     let exe = std::env::current_exe()?;
     tracing::info!(exe = %exe.display(), spec = %spec_path.display(), "session child spawning");
     let spawn_spec_path = spec_path.clone();
+    let render_path = spec.request.render_path.clone();
     let child = tokio::task::spawn_blocking(move || {
-        std::process::Command::new(&exe)
-            .arg("session")
+        let mut cmd = std::process::Command::new(&exe);
+        cmd.arg("session")
             .arg("--spec")
             .arg(&spawn_spec_path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::inherit())
-            .status()
+            .stderr(Stdio::inherit());
+        if let Some(path) = &render_path {
+            cmd.env("FLOWSHOT_RENDER_PATH", path);
+        }
+        cmd.status()
     })
     .await
     .map_err(|error| ExecuteError::Task(format!("session spawn join failed: {error}")))??;
@@ -365,20 +365,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn pin_sessions_are_exempt_from_the_single_window_gate() {
-        // The multi-pin architecture: pins coexist with each other and
-        // with new captures.
-        assert!(!takes_session_gate(&SessionKind::Pin));
-    }
-
-    #[test]
-    fn exclusive_gui_sessions_take_the_gate() {
+    fn non_capture_sessions_are_exempt_from_the_single_window_gate() {
         for kind in [
-            SessionKind::Overlay,
-            SessionKind::Launcher,
+            SessionKind::Pin,
             SessionKind::Settings,
             SessionKind::Consent,
         ] {
+            assert!(!takes_session_gate(&kind), "{kind:?} must be exempt");
+        }
+    }
+
+    #[test]
+    fn exclusive_capture_sessions_take_the_gate() {
+        for kind in [SessionKind::Overlay, SessionKind::Launcher] {
             assert!(takes_session_gate(&kind), "{kind:?} must be gated");
         }
     }

@@ -22,6 +22,7 @@ pub const CAPTURE_OPTION_KEYS: &[&str] = &[
     "hide_cursor",
     "region",
     "last_region",
+    "render_path",
 ];
 
 /// The typed form of one `Capture(options)` call: the CLI
@@ -59,6 +60,8 @@ pub struct CaptureRequest {
     pub region: Option<String>,
     /// `--last-region`: repeat the persisted `[capture].last_region`.
     pub last_region: bool,
+    /// Explicit render path override (`software`/`cpu` or `gpu`).
+    pub render_path: Option<String>,
 }
 
 impl CaptureRequest {
@@ -100,6 +103,9 @@ impl CaptureRequest {
         }
         if let Some(value) = options.get("region") {
             request.region = Some(string_value("region", value)?);
+        }
+        if let Some(value) = options.get("render_path") {
+            request.render_path = Some(string_value("render_path", value)?);
         }
         Ok(request)
     }
@@ -175,6 +181,7 @@ mod tests {
             ("hide_cursor", owned(ZValue::Bool(true))),
             ("region", owned(ZValue::Str(Str::from("640x480+10+20")))),
             ("last_region", owned(ZValue::Bool(true))),
+            ("render_path", owned(ZValue::Str(Str::from("software")))),
         ]))
         .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(
@@ -192,6 +199,7 @@ mod tests {
                 hide_cursor: true,
                 region: Some("640x480+10+20".to_owned()),
                 last_region: true,
+                render_path: Some("software".to_owned()),
             }
         );
     }

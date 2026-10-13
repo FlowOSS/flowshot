@@ -170,7 +170,7 @@ impl ChromeState {
             avoid.push(toolbar_rect);
         }
         if self.panel_shown(editor) {
-            avoid.push(side_panel::layout(editor, selection, tokens, scale, output).rect);
+            avoid.push(side_panel::layout(editor, selection, tokens, scale, output, 0.0).rect);
         }
         avoid
     }

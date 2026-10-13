@@ -106,6 +106,18 @@ impl OverlayCore {
         }
     }
 
+    /// Auto-shows the side panel if an active tool is selected and space allows.
+    pub fn auto_show_panel_if_fits(
+        &mut self,
+        output: &flowshot_core::geometry::OutputInfo,
+        scale: f32,
+    ) {
+        if let Some(selection) = self.selection.rect() {
+            self.chrome
+                .auto_show_panel_if_fits(&self.editor, selection, output, scale);
+        }
+    }
+
     /// Installs the completion sink (`None` clears): the shell calls it
     /// with the rendered export when a capture-completing gesture fires
     /// (a binary-layer seam, the `RegionSink` pattern).

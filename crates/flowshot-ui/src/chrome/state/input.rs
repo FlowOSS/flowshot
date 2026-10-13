@@ -75,13 +75,21 @@ impl ChromeState {
                 {
                     self.pending_actions.push(action);
                 }
+                self.auto_show_panel_if_fits(editor, selection, output, scale);
             }
             self.grabbed = true;
             return true;
         }
 
         if self.panel_shown(editor) {
-            let panel = side_panel::layout(editor, selection, &self.tokens, scale, output);
+            let panel = side_panel::layout(
+                editor,
+                selection,
+                &self.tokens,
+                scale,
+                output,
+                self.panel_scroll,
+            );
             if panel.rect.contains(local_pt) {
                 if left {
                     self.panel_press(&panel, local_pt, editor);
@@ -115,7 +123,14 @@ impl ChromeState {
         {
             let scale = f32_from_f64(output.scale);
             let local_pt = Point::new(local_x(output, at.x.0), local_y(output, at.y.0));
-            let panel = side_panel::layout(editor, selection, &self.tokens, scale, output);
+            let panel = side_panel::layout(
+                editor,
+                selection,
+                &self.tokens,
+                scale,
+                output,
+                self.panel_scroll,
+            );
             for (to_z, (_, rect)) in panel.layer_rows.iter().enumerate() {
                 if rect.contains(local_pt) {
                     if to_z != drag.from_z {

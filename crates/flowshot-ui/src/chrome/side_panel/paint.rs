@@ -77,8 +77,9 @@ pub(crate) fn draw(
     selection: LogicalRect,
     output: &OutputInfo,
     slide: f64,
+    scroll_offset: f32,
 ) {
-    let resting = layout(editor, selection, tokens, scale, output);
+    let resting = layout(editor, selection, tokens, scale, output, scroll_offset);
     let dx = slide_offset(
         &resting,
         crate::editor::paint::local_rect(output, selection).origin.x,
@@ -210,35 +211,39 @@ fn draw_layers(
         }
     }
     let icon_edge = layer_icon_edge(tokens) * scale;
-    for (layer, (_, row)) in editor.layers().iter().zip(&panel.layer_rows) {
-        if editor.selected_object() == Some(layer.id) {
-            list.fill(
-                Shape::Rect {
-                    rect: *row,
-                    radius: tokens.radii.small as f32 * scale,
-                },
-                accent,
+    list.push_clip(panel.layers_viewport, tokens.radii.small as f32 * scale);
+    for (layer_id, row) in &panel.layer_rows {
+        if let Some(layer) = editor.layers().iter().find(|l| l.id == *layer_id) {
+            if editor.selected_object() == Some(layer.id) {
+                list.fill(
+                    Shape::Rect {
+                        rect: *row,
+                        radius: tokens.radii.small as f32 * scale,
+                    },
+                    accent,
+                );
+            }
+            let src = layer_icon(layer.kind).rect();
+            let dst = Rect::from_parts(
+                row.origin.x + gap,
+                row.origin.y + (row_height(tokens) * scale - icon_edge) / 2.0,
+                icon_edge,
+                icon_edge,
+            );
+            list.image(
+                atlas,
+                dst,
+                Some(Rect::from_parts(src[0], src[1], src[2], src[3])),
+            );
+            labels.text(
+                list,
+                row.origin.x + gap * 2.0 + icon_edge,
+                row.origin.y + (row_height(tokens) * scale - labels.line) / 2.0,
+                layer.kind.to_string(),
             );
         }
-        let src = layer_icon(layer.kind).rect();
-        let dst = Rect::from_parts(
-            row.origin.x + gap,
-            row.origin.y + (row_height(tokens) * scale - icon_edge) / 2.0,
-            icon_edge,
-            icon_edge,
-        );
-        list.image(
-            atlas,
-            dst,
-            Some(Rect::from_parts(src[0], src[1], src[2], src[3])),
-        );
-        labels.text(
-            list,
-            row.origin.x + gap * 2.0 + icon_edge,
-            row.origin.y + (row_height(tokens) * scale - labels.line) / 2.0,
-            layer.kind.to_string(),
-        );
     }
+    list.pop_clip();
 }
 
 /// One label-left / toggle-right row (the hit region is the full row - the

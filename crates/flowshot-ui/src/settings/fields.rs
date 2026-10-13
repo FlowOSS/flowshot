@@ -120,6 +120,7 @@ pub(crate) fn combo<T: PartialEq + Copy>(
     value: &mut T,
     options: &[(T, &str)],
 ) -> bool {
+    let before = *value;
     let selected = options
         .iter()
         .find(|(option, _)| option == value)
@@ -132,10 +133,9 @@ pub(crate) fn combo<T: PartialEq + Copy>(
                 for (option, text) in options {
                     ui.selectable_value(value, *option, *text);
                 }
-            })
-            .response
-            .changed()
-    })
+            });
+    });
+    *value != before
 }
 
 /// The save-path row: Browse is laid out FIRST from the cell's right edge

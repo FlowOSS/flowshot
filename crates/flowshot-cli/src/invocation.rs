@@ -220,6 +220,10 @@ fn build_request(args: &CaptureArgs) -> Result<CaptureRequest, CliError> {
     if let Some(token) = &args.region {
         parse_region_token(token)?;
     }
+    let render_path = args
+        .render_path
+        .clone()
+        .or_else(|| std::env::var("FLOWSHOT_RENDER_PATH").ok());
     Ok(CaptureRequest {
         delay_ms: args.delay.unwrap_or(0),
         instant: args.instant,
@@ -236,6 +240,7 @@ fn build_request(args: &CaptureArgs) -> Result<CaptureRequest, CliError> {
         hide_cursor: args.hide_cursor,
         region: args.region.clone(),
         last_region: args.last_region || args.target == Some(CaptureTarget::Last),
+        render_path,
     })
 }
 

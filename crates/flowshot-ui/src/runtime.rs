@@ -170,6 +170,16 @@ impl OverlayRuntime {
     /// shell-facing name - Wayland `app_id` / X11 `WM_CLASS` - applied by
     /// the daemon's session child, a recorded shell deviation; the
     /// `pins::WindowCustomizer` precedent keeps this crate platform-pure).
+    /// Configures the cursor style for the interactive selection overlay.
+    #[must_use]
+    pub fn with_cursor_style(mut self, cursor_style: flowshot_core::config::CursorStyle) -> Self {
+        self.app.cursor_style = cursor_style;
+        self
+    }
+
+    /// Installs a custom window-attributes closure (e.g. Wayland `app_id`;
+    /// the `pins::WindowCustomizer` pattern - the library stays
+    /// platform-pure).
     #[must_use]
     pub fn with_window_customizer(mut self, customizer: crate::pins::WindowCustomizer) -> Self {
         self.app.customizer = Some(customizer);

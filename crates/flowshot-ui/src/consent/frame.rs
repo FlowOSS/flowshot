@@ -102,6 +102,9 @@ pub(super) fn choose(app: &mut ConsentApp, event_loop: &ActiveEventLoop, action:
     if matches!(action, ConsentAction::None) {
         return;
     }
+    if let Some(window) = &app.window {
+        window.set_visible(false);
+    }
     match action.persisted() {
         Some(choice) => {
             tracing::info!(

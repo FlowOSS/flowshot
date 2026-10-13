@@ -23,6 +23,7 @@ use super::super::model::{SettingsModel, ThemeChoice};
 use super::super::strings;
 use super::TabContext;
 use crate::editor::ToolKind;
+use flowshot_core::config::CursorStyle;
 
 /// The non-tool toolbar button ids (chrome/toolbar.rs icon vocabulary).
 const TOOLBAR_ACTION_IDS: [&str; 8] = [
@@ -65,6 +66,17 @@ pub(super) fn show(ui: &mut Ui, model: &mut SettingsModel, context: &TabContext<
             strings::FIELD_DIM_OPACITY,
             0..=255,
             &mut config.ui.dim_opacity,
+        );
+        changed |= combo(
+            ui,
+            m,
+            strings::FIELD_CURSOR_STYLE,
+            &mut config.ui.cursor_style,
+            &[
+                (CursorStyle::Pointer, strings::ENUM_CURSOR_POINTER),
+                (CursorStyle::Crosshair, strings::ENUM_CURSOR_CROSSHAIR),
+                (CursorStyle::FullAxis, strings::ENUM_CURSOR_FULL_AXIS),
+            ],
         );
         changed
     });
