@@ -1,15 +1,25 @@
 # Contributing to FlowShot
 
-FlowShot is a screenshot tool for Linux/Wayland. This document covers the
-build, test, and commit conventions used during development.
+FlowShot is a native screenshot and annotation tool for Linux, supporting
+both Wayland and X11. This document covers the build, test, and commit
+conventions used across the project.
 
 ## Prerequisites
 
+### Build-time dependencies
 - Rust stable (channel pinned in `rust-toolchain.toml`)
-- A Wayland compositor (Hyprland, sway, COSMIC, niri, KDE Plasma, or GNOME)
-- A D-Bus session bus
+- C toolchain (gcc/clang)
+- `clang` (for libclang to generate PipeWire FFI bindings)
+- `pkg-config`
+- PipeWire development headers (`pipewire` on Arch/Fedora, `libpipewire-0.3-dev` on Debian/Ubuntu)
+
+### Runtime requirements
+- A Wayland compositor (Hyprland, Sway, KDE Plasma, GNOME, COSMIC, niri) or an X11 server/window manager (i3, bspwm, XFCE)
+- D-Bus session bus
+- PipeWire
+- A Vulkan-capable GPU driver (Mesa or proprietary) for hardware rendering (software rendering fallback is built-in)
 - For portal features: `xdg-desktop-portal` plus your desktop's portal backend
-- For the tray: an SNI host (waybar tray, Plasma system tray, GNOME AppIndicator)
+- For the system tray: an SNI host (waybar tray, Plasma system tray, GNOME AppIndicator)
 
 ## Building
 
@@ -17,17 +27,18 @@ build, test, and commit conventions used during development.
 cargo build --workspace
 ```
 
-The workspace contains seven crates:
+The workspace contains eight member crates:
 
 | Crate | Purpose |
 |---|---|
-| `flowshot-core` | Config, geometry, scene model, design tokens |
-| `flowshot-capture` | Capture backend trait + ladder |
-| `flowshot-capture-wayland` | Wayland capture backend (ext-image-copy-capture, wlr-screencopy) |
-| `flowshot-ui` | Overlay, editor, pins, settings, renderer |
-| `flowshot-actions` | Export actions (save, copy, pin, upload, notify) |
-| `flowshot-daemon` | Session-bus daemon, lifecycle, tray, shortcuts |
-| `flowshot-cli` | Command-line interface |
+| `flowshot-core` | Platform-free config, physical geometry, scene graph, design tokens |
+| `flowshot-capture` | Capture backend trait and negotiation ladder |
+| `flowshot-capture-wayland` | Wayland capture backends (ext-image-copy-capture, wlr-screencopy, KWin D-Bus, portal) |
+| `flowshot-capture-x11` | X11 capture backend (GetImage with MIT-SHM fast path, RANDR, XFixes cursor) |
+| `flowshot-ui` | Winit overlay, annotation editor, pins, settings, wgpu and CPU raster renderer |
+| `flowshot-actions` | Export actions (save, copy, pin, upload, desktop notifications) |
+| `flowshot-daemon` | Session-bus daemon, single-instance lifecycle, system tray, shortcuts |
+| `flowshot-cli` | Command-line interface and D-Bus client forwarding |
 
 ## Testing
 
@@ -35,78 +46,70 @@ The workspace contains seven crates:
 cargo test --workspace
 ```
 
-The workspace has 1200+ tests across unit, property (proptest), integration,
-and headless QA suites. Key test categories:
+The project maintains 1350+ tests covering unit tests, property testing (proptest),
+wire round-trips, integration tests, and headless QA suites.
 
-- **Config**: `cargo test -p flowshot-core config::` — schema, migration, round-trip
-- **Geometry**: `cargo test -p flowshot-core geometry::` — physical-first coordinates, proptest
-- **Scene**: `cargo test -p flowshot-core scene::` — annotation objects, undo/redo
-- **Parity**: `cargo test -p flowshot-ui --test parity` — renderer cross-rasterizer parity
-- **Capability map**: `cargo test -p flowshot-cli --test parity_matrix` — CLI↔daemon mapping
+Key test targets:
+- **Config**: `cargo test -p flowshot-core config::` (schema, migrations, serialization round-trips)
+- **Geometry**: `cargo test -p flowshot-core geometry::` (physical-first coordinates, proptest)
+- **Scene**: `cargo test -p flowshot-core scene::` (annotation objects, undo/redo stack)
+- **Renderer Parity**: `cargo test -p flowshot-ui --test parity` (cross-rasterizer pixel parity)
+- **Wire Round-trip**: `cargo test -p flowshot-cli --test wire_roundtrip` (CLI to daemon D-Bus encoding)
 
-### Doc-sync test
+### Headless Visual QA
 
-`crates/flowshot-core/tests/doc_sync.rs` asserts every config field in
-`config.rs` appears in `docs/config-reference.md`. When adding a config field,
-update the reference doc or the test fails.
+To test the UI and renderer without opening live windows on your desktop:
 
-## Quality gates
+```sh
+# Run the complete headless visual QA suite:
+cargo run -p flowshot-ui --example qa_bundle --features test-drive
 
-Before every commit, run:
+# Run end-to-end headless integration:
+cargo run -p flowshot-ui --example e2e_headless --features test-drive
+```
+
+### Doc-Sync Test
+
+`crates/flowshot-core/tests/doc_sync.rs` asserts that every config field in
+`config.rs` is documented in `docs/config-reference.md`. When adding or
+modifying a configuration field, update the reference doc or the test will fail.
+
+## Quality Gates
+
+Before committing any changes, run the project gate suite:
 
 ```sh
 just check
 ```
 
-This runs (in order):
+This gate runs the following checks in order:
 
-1. `cargo fmt --check` — formatting
-2. `cargo clippy --workspace --all-targets -- -D warnings` — lints
-3. `cargo test --workspace` — all tests
-4. `./scripts/purity-gate.sh` — crate-boundary purity (no wayland/x11/dbus leaks in core/capture/ui)
-5. `cargo deny check` — license policy
+1. `cargo fmt --check`: code formatting
+2. `cargo clippy --workspace --all-targets -- -D warnings`: strict workspace lints
+3. `cargo test --workspace`: full test suite
+4. `./scripts/purity-gate.sh`: architecture purity (ensures core, capture, and ui remain platform-free)
+5. `cargo deny check`: dependency advisories, bans, and license validation
 
-All must pass. CI (`.github/workflows/ci.yml`) runs the same gates.
+All checks must pass. Continuous Integration (`.github/workflows/ci.yml`) executes the same suite.
 
-## Engineering standards
+## Engineering Standards
 
-- **Lints**: Every crate inherits `[workspace.lints]` via `lints.workspace = true`
-- **Safety**: `#![forbid(unsafe_code)]` in all lib crates except `flowshot-capture-wayland`
-- **Errors**: `thiserror` in all lib crates; `anyhow` only at binary top level
-- **Docs**: `//!` module header on every module; `#![deny(missing_docs)]` on core + capture
-- **No panics in lib sources** outside tests
+- **Code Safety**: `#![forbid(unsafe_code)]` holds across all crates.
+- **Error Handling**: Typed errors via `thiserror` in all library crates; `anyhow` is restricted to binary entry points. Never swallow errors silently.
+- **Documentation**: Module-level `//!` header comments on all modules. Rustdoc builds with zero warnings (`#![deny(missing_docs)]` on `flowshot-capture`, warn elsewhere).
+- **No Unwrapped Panics**: `unwrap()` and `expect()` are denied by workspace lints in library code (use typed results).
 
-## Commit conventions
+## Commit Conventions
 
 - **Conventional Commits**: `type(scope): subject`
-- **Scope vocabulary**: `workspace`, `core`, `capture`, `wayland`, `ui`, `editor`, `actions`, `daemon`, `shell`, `cli`, `packaging`, `docs`, `gates`, `e2e`
-- **Gate before every commit**: `just check` must be green
-- **Linear history** on `main`
+  - Examples: `fix(daemon): exempt settings from session lock`, `feat(ui): add crosshair cursor option`
+- **Scope vocabulary**: `core`, `capture`, `wayland`, `x11`, `ui`, `editor`, `actions`, `daemon`, `cli`, `packaging`, `docs`, `gates`
+- **Quality gate required**: `just check` must be green before committing.
+- **Linear history**: Keep commits atomic and focused.
 
-## QA evidence conventions
+## Project Resources
 
-Live-session QA produces evidence files in `.omo/evidence/` (gitignored), one
-bundle per verified change. The evidence policy and its conventions are
-documented in `docs/verification.md`.
-
-Visible-window QA items (requiring a user-present compositor session) are
-queued in `.omo/evidence/gui-qa-batch.md` and treated as user-gated, not
-failures.
-
-## Configuration
-
-FlowShot reads one TOML file: `~/.config/flowshot/flowshot.toml`. The full
-schema is documented in `docs/config-reference.md`. A missing or corrupt file
-never breaks a capture: defaults apply and a warning is logged.
-
-## D-Bus API
-
-The daemon exposes a session-bus API documented in `docs/dbus-api.md`. The CLI
-forwards to the daemon over D-Bus when a running instance is detected.
-
-## Project resources
-
-- [README.md](README.md) — overview, quick start, desktop support
-- [docs/](docs/) — per-desktop setup guides, architecture ADRs, config reference
-- [docs/verification.md](docs/verification.md) — QA evidence policy
-- [docs/architecture/](docs/architecture/) — architectural decision records
+- [README.md](README.md): Overview, quick start, desktop support
+- [docs/](docs/): Setup guides for Hyprland, Sway, KDE, GNOME, and X11
+- [docs/config-reference.md](docs/config-reference.md): Complete configuration options and defaults
+- [docs/architecture/](docs/architecture/): Architecture Decision Records (ADRs)
