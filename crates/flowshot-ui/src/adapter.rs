@@ -142,7 +142,8 @@ pub(crate) const RENDER_PATH_OVERRIDE_ENV: &str = "FLOWSHOT_RENDER_PATH";
 /// up as policy-driven behavior rather than a silently forced path.
 #[must_use]
 pub(crate) fn render_path_for_override(value: Option<&std::ffi::OsStr>) -> Option<bool> {
-    if value == Some(std::ffi::OsStr::new("software")) || value == Some(std::ffi::OsStr::new("cpu")) {
+    if value == Some(std::ffi::OsStr::new("software")) || value == Some(std::ffi::OsStr::new("cpu"))
+    {
         Some(true)
     } else if value == Some(std::ffi::OsStr::new("gpu")) {
         Some(false)

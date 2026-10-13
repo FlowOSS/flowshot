@@ -107,9 +107,14 @@ impl OverlayCore {
     }
 
     /// Auto-shows the side panel if an active tool is selected and space allows.
-    pub fn auto_show_panel_if_fits(&mut self, output: &flowshot_core::geometry::OutputInfo, scale: f32) {
+    pub fn auto_show_panel_if_fits(
+        &mut self,
+        output: &flowshot_core::geometry::OutputInfo,
+        scale: f32,
+    ) {
         if let Some(selection) = self.selection.rect() {
-            self.chrome.auto_show_panel_if_fits(&self.editor, selection, output, scale);
+            self.chrome
+                .auto_show_panel_if_fits(&self.editor, selection, output, scale);
         }
     }
 

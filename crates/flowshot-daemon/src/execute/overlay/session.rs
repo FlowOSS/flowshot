@@ -69,9 +69,9 @@ pub fn run_overlay_session(session: OverlaySession) -> SessionOutcome {
     ) {
         Ok(runtime) => runtime
             .with_cursor_style(session.config.ui.cursor_style)
-            .with_window_customizer(
-                crate::execute::window::session_window_customizer("flowshot", "FlowShot"),
-            ),
+            .with_window_customizer(crate::execute::window::session_window_customizer(
+                "flowshot", "FlowShot",
+            )),
         Err(error) => return SessionOutcome::Failed(error),
     };
     let events = Arc::new(SessionEvents::default());

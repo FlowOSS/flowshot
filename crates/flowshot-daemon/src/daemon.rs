@@ -183,7 +183,8 @@ impl Daemon {
         let superseded = Arc::new(Notify::new());
         // Arm the consent barrier BEFORE requesting bus ownership so no early D-Bus command
         // can slip past and launch the capture overlay before the dialog is spawned.
-        if crate::execute::consent::spawn_armed(options.consent.enabled, &options.config.telemetry) {
+        if crate::execute::consent::spawn_armed(options.consent.enabled, &options.config.telemetry)
+        {
             crate::execute::consent::set_consent_active(true);
         }
         let connection = instance::connect(options.bus_address.as_deref()).await?;

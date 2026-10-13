@@ -195,9 +195,15 @@ impl OverlayApp {
                     .filter(|cursor| cursor.slot == slot)
                     .filter(|_| self.core.editor().cursor_shape() != ToolCursor::Hidden)
                     .and_then(|cursor| {
-                        let (local_x, local_y) = self.core.router().to_local(slot, cursor.clamped)?;
+                        let (local_x, local_y) =
+                            self.core.router().to_local(slot, cursor.clamped)?;
                         let (width, height) = surface.size();
-                        crosshair::crosshair_vertices(local_x, local_y, f64::from(width), f64::from(height))
+                        crosshair::crosshair_vertices(
+                            local_x,
+                            local_y,
+                            f64::from(width),
+                            f64::from(height),
+                        )
                     })
             })
             .flatten();

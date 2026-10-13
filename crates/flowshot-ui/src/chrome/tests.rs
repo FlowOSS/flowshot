@@ -580,7 +580,10 @@ fn auto_show_panel_activates_when_tool_selected_and_space_fits() {
 
     let output = fixture_output();
     core.auto_show_panel_if_fits(&output, 1.0);
-    assert!(!core.chrome().panel_shown(core.editor()), "inactive tool does not auto-show");
+    assert!(
+        !core.chrome().panel_shown(core.editor()),
+        "inactive tool does not auto-show"
+    );
 
     core.editor_mut().activate_tool(ToolKind::Rectangle);
     core.auto_show_panel_if_fits(&output, 1.0);

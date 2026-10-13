@@ -106,7 +106,6 @@ pub fn prompt_first_launch(prompt: &ConsentPrompt, telemetry: &TelemetryConfig) 
     }
 }
 
-
 static CONSENT_CHANNEL: OnceLock<(watch::Sender<bool>, watch::Receiver<bool>)> = OnceLock::new();
 
 fn consent_channel() -> &'static (watch::Sender<bool>, watch::Receiver<bool>) {

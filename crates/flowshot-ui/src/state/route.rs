@@ -74,7 +74,8 @@ impl OverlayCore {
                 && let Some(output) = self.router.output_for(cursor.slot)
             {
                 let scale = crate::render::f32_from_f64(output.scale);
-                self.chrome.auto_show_panel_if_fits(&self.editor, selection, output, scale);
+                self.chrome
+                    .auto_show_panel_if_fits(&self.editor, selection, output, scale);
             }
             // Restore the selection rect if undo/redo returned one (move-selection).
             if let Some(rect) = outcome.restore_selection {
