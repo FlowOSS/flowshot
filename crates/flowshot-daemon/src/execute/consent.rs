@@ -119,7 +119,15 @@ pub fn set_consent_active(active: bool) {
     let _ = tx.send(active);
 }
 
+/// Time given to the compositor to finish its window-unmap and close-fade
+/// animation so the pending capture grabs a clean desktop without ghost artifacts.
+const COMPOSITOR_UNMAP_SETTLE: std::time::Duration = std::time::Duration::from_millis(200);
+
 /// Awaits any currently active first-launch consent dialog before proceeding.
+///
+/// When no dialog is active (standard captures), returns immediately (0 ms overhead).
+/// When a first-launch dialog was active and just closed, waits `COMPOSITOR_UNMAP_SETTLE`
+/// so the compositor finishes its close animation before the screencopy takes place.
 pub async fn wait_for_consent_if_active() {
     let (_, rx) = consent_channel();
     let mut rx = rx.clone();
@@ -127,6 +135,7 @@ pub async fn wait_for_consent_if_active() {
         return;
     }
     let _ = rx.wait_for(|&active| !active).await;
+    tokio::time::sleep(COMPOSITOR_UNMAP_SETTLE).await;
 }
 
 /// The spec the parent writes for a detached prompt (shared with the
