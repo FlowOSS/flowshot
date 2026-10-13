@@ -296,11 +296,14 @@ impl StatusNotifierItem {
 
     /// Sent when the attention icon changes.
     #[zbus(signal)]
-    async fn new_attention_icon(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+    async fn new_attention_icon(
+        emitter: &zbus::object_server::SignalEmitter<'_>,
+    ) -> zbus::Result<()>;
 
     /// Sent when the overlay icon changes.
     #[zbus(signal)]
-    async fn new_overlay_icon(emitter: &zbus::object_server::SignalEmitter<'_>) -> zbus::Result<()>;
+    async fn new_overlay_icon(emitter: &zbus::object_server::SignalEmitter<'_>)
+    -> zbus::Result<()>;
 
     /// Sent when the tooltip changes.
     #[zbus(signal)]

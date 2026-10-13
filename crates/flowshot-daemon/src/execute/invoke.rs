@@ -260,7 +260,7 @@ mod tests {
         assert_eq!(parse(&argv(&["color"])).unwrap(), InvokeCall::Color);
     }
 
-        #[test]
+    #[test]
     fn parses_render_path_override() {
         let call = parse(&argv(&["capture", "full", "--render-path", "cpu"])).unwrap();
         assert_eq!(
