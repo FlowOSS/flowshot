@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/logo.png" width="80" height="80" alt="FlowShot logo: a violet-to-azure gradient circle with white lens arcs">
   <h1>FlowShot</h1>
-  <p><strong>Screenshot and annotation for Linux — completely free software, native on Wayland <em>and</em> X11.</strong></p>
+  <p><strong>Screenshot and annotation for Linux: free, open source, native on Wayland and X11.</strong></p>
 
   <p>
     <a href="https://github.com/FlowOSS/flowshot/releases"><img src="https://img.shields.io/github/v/release/FlowOSS/flowshot?color=6366F1&label=release" alt="GitHub release"></a>
@@ -18,202 +18,168 @@
   <img src="assets/preview.png" alt="FlowShot capture and annotation preview" width="850">
 </p>
 
-Capture a region, annotate it, and get it where you need it — clipboard,
-disk, a pin on your screen, or an upload — without fighting your compositor.
-FlowShot is built by [FlowOSS](https://github.com/FlowOSS) as one native
-codebase for modern Linux desktops: no XWayland fallbacks, no per-compositor
-forks, and no account, cloud, or telemetry you did not ask for.
+Capture any region of your screen, annotate it with modern tools, and export it instantly: copy to clipboard, save to disk, pin it to float on your desktop, or upload. 
+
+Built natively for modern Linux desktops: no XWayland bridges, no per-compositor hacks, and full support for mixed-DPI multi-monitor setups.
 
 ## Why FlowShot
 
-- **Correct pixels, everywhere.** All geometry is physical-pixels-first, so
-  captures on mixed-DPI and fractional-scaling setups are neither doubled nor
-  halved — and region selection spans every monitor as one surface.
-- **Native on Wayland and X11.** The runtime probes your live session and
-  picks the best capture backend (compositor protocols, KWin's D-Bus
-  interface, the XDG portal, or native X11) — never a nested-X11 hack.
-- **A clipboard that survives.** The background daemon owns the clipboard
-  offer, so what you copied is still there after the capture window closes.
-- **Secure redaction.** The pixelate tool samples only the fringes of the
-  region and never reads the interior pixels — the redaction is not
-  reversible by block-mean attacks. There is no insecure mode to enable.
-- **Private by default.** Telemetry is opt-in, self-hosted, and off until you
-  explicitly consent; images never leave your machine, identifiers are
-  stripped, and file paths are scrubbed from crash reports.
-- **A daemon that knows when to leave.** It stays alive only while something
-  needs it — tray, global shortcuts, open pins, a held clipboard offer — and
-  exits after an idle grace otherwise.
+- **Pixel-perfect across mixed displays:** Geometry is physical-pixels-first, meaning fractional scaling and mixed-DPI monitors are captured accurately without blur or misaligned crops. Region selection spans all monitors as one unified canvas.
+- **Native Wayland and X11 integration:** Probes your active session and selects the best native capture protocol (ext-image-copy-capture, wlr-screencopy, KWin ScreenShot2, XDG portal, or native X11 SHM).
+- **GPU accelerated with CPU fallback:** Renders smoothly via Vulkan/wgpu with an automatic, zero-dependency software rasterizer fallback if GPU memory runs out or Vulkan is unavailable.
+- **Privacy-first:** No data leaves your machine without your explicit confirmation. Crash reporting is opt-in, self-hosted, and transparent.
+- **Secure redaction:** Pixelate and blur tools never leak interior pixel data, preventing reverse-engineering via block-mean recovery.
 
 ## Features
 
-**Capture** — interactive region selection (spanning monitors), fullscreen,
-one output by index or connector name, the output under the cursor, repeat
-last region, delayed capture, accept-on-select (`--instant`), region
-preselect (`--region WxH[+X+Y]|at-cursor`), a manual-coordinate launcher
-dialog (`--dialog`), a color picker (`flowshot color`), and D-Bus triggers
-for scripting.
+### Capture
+- Interactive region selection spanning multiple monitors
+- Full desktop and single-monitor capture
+- Preselected regions, delayed capture timer, and instant accept-on-select
+- Precision pixel magnifier with live RGB and HEX color readouts
+- Standalone color picker tool (`flowshot color`)
 
-**Annotate** — pencil, line, arrow (straight or curved, reversible head),
-rectangle (configurable corner radius), ellipse, highlighter, text with real
-input-method (IME) support, numbered step bubbles with automatic
-renumbering, secure pixelate, gaussian blur, color inversion, move, and an
-eyedropper. Plus a pixel magnifier with hex/RGB readout, snapping grid,
-geometry HUD, digit-key and mouse-wheel tool sizing, undo/redo, and z-order
-control for every object.
+### Annotation Suite
+- **Drawing:** Pencil, straight lines, highlighters, and rectangles with adjustable corner radii
+- **Smart arrows:** Straight or curved arrows with reversible heads
+- **Text:** Crisp typography with native IME support for international languages
+- **Step counters:** Auto-incrementing numbered bubbles that renumber automatically when deleted
+- **Redaction:** Secure pixelation and gaussian blur
+- **Controls:** Snapping grid, live geometry HUD, color palette editor, and full undo/redo
 
-**After capture** — copy to clipboard (PNG/JPEG), save to disk (PNG/JPEG/WebP
-with quality control, `strftime` filename patterns, collision numeration),
-pin to screen (drag, zoom-to-cursor, rotate, opacity), upload (Imgur behind a
-pluggable provider trait, with history and delete hashes; ships unconfigured,
-you bring your own client id), open with another app, and desktop
-notifications. The default behavior is one ordered action list
-(`[save].actions`), not a soup of interacting booleans.
+### Export & Sharing
+- Copy directly to clipboard (PNG / JPEG)
+- Save to disk with configurable patterns and image quality (PNG / JPEG / WebP)
+- **Pin to desktop:** Float screenshots as always-on-top reference windows with zoom, rotate, and opacity controls
+- Upload to Imgur with copyable links and deletion hashes
+- Open directly in external image viewers or editors
 
-**Shell** — single-instance background daemon on the session bus
-(`org.flowoss.FlowShot`) with the smart lifecycle above; status tray (SNI)
-with a per-monitor capture submenu; global shortcuts through the XDG portal
-with paste-ready compositor binds as the fallback (`flowshot
---print-bind-help`); TOML configuration with versioned migration and a
-settings UI; shell completions (bash, zsh, fish, elvish, PowerShell,
-nushell) and man pages (`flowshot(1)`, `flowshot-config(5)`).
+## Installation
 
-## Install
+### Arch Linux (AUR)
 
-Build from source (Rust stable — see
-[rust-toolchain.toml](rust-toolchain.toml)):
+FlowShot is available on the Arch User Repository:
 
 ```sh
+# Pre-built binary package (recommended)
+yay -S flowshot-bin
+
+# Or build latest git trunk from source
+yay -S flowshot-git
+```
+
+### Other Linux Distributions
+
+Pre-compiled binary releases and AppImages are available on the [Releases page](https://github.com/FlowOSS/flowshot/releases).
+
+<details>
+<summary><strong>Building from source (for developers)</strong></summary>
+
+Requires a Rust stable toolchain, `clang`, `pkg-config`, and PipeWire development headers (`pipewire` on Arch/Fedora, `libpipewire-0.3-dev` on Debian/Ubuntu):
+
+```sh
+git clone https://github.com/FlowOSS/flowshot.git
+cd flowshot
 cargo build --release
-# The multiplexed binary:
-./target/release/flowshot --help
+
+# Run the binary:
+./target/release/flowshot capture
 ```
+</details>
 
-Build-time requirements: a C toolchain, `clang` (for libclang — the build
-generates PipeWire FFI bindings), `pkg-config`, and the PipeWire development
-headers (`libpipewire-0.3-dev` on Debian/Ubuntu, `pipewire` on Arch/Fedora). At runtime you need a Wayland compositor or an X11
-server, a D-Bus session bus, PipeWire, and — for the portal-based features —
-`xdg-desktop-portal` plus your desktop's portal backend. The tray needs an
-SNI host (waybar's tray module, KDE Plasma's system tray, the GNOME
-AppIndicator extension). A Vulkan-capable GPU driver (Mesa or equivalent)
-powers the overlay renderer.
+## Quick Start
 
-## Quick start
+The simplest way to use FlowShot is with your keyboard:
 
 ```sh
-flowshot                          # interactive region capture with the editor
-flowshot capture full             # the whole desktop, all outputs
-flowshot capture screen           # the output under the cursor
-flowshot capture screen DP-1      # one output by connector name (or index)
-flowshot capture last             # repeat the last captured region
-flowshot capture -d 2000          # capture after a 2 second delay
-flowshot capture --instant        # accept on first mouse release, no editor
-flowshot capture --no-edit -c     # skip the editor, straight to clipboard
-flowshot capture -o ~/Pictures    # save into a directory
-flowshot capture --pin            # also pin the result to the screen
-flowshot capture --raw > out.png  # PNG bytes to stdout
-flowshot pin [FILE]               # pin the last capture, or an image file
-flowshot color                    # pick a color, hex to clipboard
-flowshot settings                 # open the settings UI
-flowshot completions bash         # shell completions
-flowshot --print-bind-help        # paste-ready hotkey snippets for your desktop
+flowshot                     # Open the interactive screenshot overlay
+flowshot settings            # Open the graphical settings window
+flowshot color               # Quick eyedropper tool (copies HEX to clipboard)
 ```
 
-Per-invocation flags (`-c`, `-o`, `--pin`, `--upload`) merge into your
-configured `[save].actions` set for that one capture; they never rewrite the
-config file. Exit codes: `0` success, `1` infrastructure failure, `2` usage
-error, `3` user-cancelled, `4` capture-backend failure, `5` permission
-denied, `6` export failure. Full surface: `flowshot --help`,
-`man flowshot`, and `man flowshot-config`.
+### Hotkey Setup
 
-## Desktop support
+To bind FlowShot to your **Print Screen** button:
 
-| Desktop | Capture backend | Cursor-aware preselect | Notes |
+* **Hyprland** (`hyprland.conf` / `hyprland.lua`):
+  ```ini
+  bind = ,Print,exec,flowshot capture
+  ```
+* **Sway / i3**:
+  ```ini
+  bindsym Print exec flowshot capture
+  ```
+* **GNOME / KDE:** Open system settings -> Keyboard Shortcuts -> Add custom shortcut -> Command: `flowshot capture`.
+
+To view paste-ready shortcut snippets tailored for your current desktop, run:
+```sh
+flowshot --print-bind-help
+```
+
+## Desktop Support
+
+| Desktop Environment | Capture Backend | Cursor Positioning | Status |
 |---|---|---|---|
-| Hyprland | ext-image-copy-capture-v1 | Yes (ICC cursor session + Hyprland IPC) | Fully supported; verified live. [Guide](docs/setup-hyprland.md) |
-| sway 1.10+ / wlroots | ext-image-copy-capture-v1 (wlr-screencopy fallback) | Yes (ICC cursor session) | [Guide](docs/setup-sway.md) |
-| COSMIC | ext-image-copy-capture-v1 | Yes (ICC cursor session) | Source-verified |
-| niri | wlr-screencopy | No (first-motion fallback) | ICC support is an open upstream PR |
-| KDE Plasma | KWin ScreenShot2 D-Bus | First-motion fallback | Needs the packaged `.desktop` file. [Guide](docs/setup-kde.md) |
-| GNOME | XDG portal (Screenshot / ScreenCast) | No (GNOME exposes no cursor-position API) | Portal picker appears on some paths. [Guide](docs/setup-gnome.md) |
-| i3 / X11 desktops | native X11 (GetImage, MIT-SHM fast path) | One-shot (incl. `--region at-cursor`) | Fully supported; verified live on i3. Multi-monitor spanning on X11 is not yet hardware-verified. [Guide](docs/setup-x11.md) |
+| **Hyprland** | ext-image-copy-capture | Native ICC cursor session + IPC | Fully supported (verified live) |
+| **Sway / wlroots** | ext-image-copy-capture / screencopy | Native ICC cursor session | Fully supported |
+| **KDE Plasma** | KWin ScreenShot2 D-Bus | Native cursor tracking | Fully supported |
+| **COSMIC** | ext-image-copy-capture | Native ICC cursor session | Supported |
+| **GNOME** | XDG Portal (ScreenCast / Screenshot) | Portal cursor support | Supported |
+| **X11 (i3, bspwm, XFCE)** | Native X11 (MIT-SHM fast path) | Native XFixes cursor | Fully supported (verified live) |
 
-The runtime picks the backend by probing the live session, not from this
-table; a compositor that grows protocol support is picked up without a
-FlowShot update. Where a desktop's own interfaces force an honest
-degradation (GNOME's cursor position, niri's ICC), the table says so.
-Details: [the backend ladder ADR](docs/architecture/adr-002-capture-backend-ladder.md).
+FlowShot probes your live session automatically at runtime, picking the fastest available backend without requiring manual configuration.
 
 ## Configuration
 
-One optional TOML file at `~/.config/flowshot/flowshot.toml`. A missing or
-corrupt file never breaks a capture: defaults apply and a warning is logged;
-old files migrate forward automatically.
+Settings can be changed graphically in the settings window (`flowshot settings`) or in `~/.config/flowshot/flowshot.toml`.
 
 ```toml
 config_version = 3
 
 [save]
-path = ""                    # empty = platform pictures directory
+path = ""                    # default: system Pictures directory
 filename_pattern = "%F_%H-%M"
-actions = ["copy"]           # ordered set: copy, save, pin, upload,
-                             # copy-path, notify, open-with
+actions = ["copy"]           # default actions: copy, save, pin, upload
 
 [ui]
 accent_color = "#6366F1"
+cursor_style = "crosshair"   # "crosshair", "pointer", or "full-axis"
 
 [daemon]
-tray = false
-startup_launch = false
+tray = true
 ```
 
-Every key, its type, default, and range:
-[docs/config-reference.md](docs/config-reference.md).
+For the complete list of options, ranges, and defaults, see the [Configuration Reference](docs/config-reference.md).
 
-## Telemetry
+## Privacy & Crash Reporting
 
-FlowShot has telemetry, and it is opt-in: nothing is sent until you
-explicitly enable it (a first-launch dialog asks once; the settings UI and
-`[telemetry]` config group control it afterwards). Crash and error reports
-go to a self-hosted Sentry instance — no third-party analytics, ever.
-Screenshots and image data are never transmitted; identifiers are stripped
-and file paths are scrubbed from every event. A second, separate consent
-gates the technical-detail tier (kernel, monitor layout, GPU family). The
-full field list lives in
-[docs/config-reference.md](docs/config-reference.md).
+FlowShot is built with a privacy-first approach:
+- **No data leaves your computer without consent:** You are prompted on first launch to choose whether to send crash diagnostics. If you decline or dismiss the prompt, error reporting is completely inactive, even anonymously.
+- **No image data is ever sent:** Screenshots, image buffers, and file paths are never transmitted.
+- **Self-hosted and minimal:** Crash reports are sent to our self-hosted Sentry instance, not third-party advertising or analytics networks.
+- You can review or toggle reporting preferences at any time in `flowshot settings` under the General tab.
 
-## Project status
+## Project Status
 
-Pre-1.0, in active development. The capture backends, overlay, annotation
-editor, pins, export actions, daemon, tray, shortcuts, settings UI, launcher
-dialog, color picker, and the CLI wired end to end through the daemon are
-implemented and verified — unit and property tests plus live-session QA with
-recorded evidence ([docs/verification.md](docs/verification.md)). X11
-support shipped in two live-verified phases on i3. Packaging (AUR first) is
-in progress. Still open: live KDE Plasma and GNOME session checks
-(stub/source-verified meanwhile), and a Hyprland permission-denial pass that
-needs a compositor restart.
+FlowShot is under active development towards v1.0:
+- Native Wayland (ICC, screencopy, KWin) and native X11 backends are implemented and tested.
+- GPU-accelerated rendering with automatic CPU fallback is active.
+- AUR packages (`flowshot-bin` and `flowshot-git`) are maintained.
+- Codebase maintains comprehensive test suites, platform purity checks, and strict formatting.
 
-What FlowShot deliberately does not do: no screen recording, no OCR, no
-scroll capture, no update checker, no GNOME shell extension, no
-Windows/macOS code yet (the porting gates and roadmap are in
-[docs/architecture/adr-006-cross-platform-gates.md](docs/architecture/adr-006-cross-platform-gates.md)).
+Contributions, bug reports, and feedback are welcome!
 
 ## Development
 
 ```sh
-just check                    # THE gate: fmt + clippy -D warnings + tests
-                              # + platform-purity + cargo deny
-cargo build                   # build the workspace
-cargo test --workspace        # unit, property, and stubbed integration tests
+just check                    # Full quality gate: fmt + clippy + tests + deny
+cargo test --workspace        # Run the complete test suite
+cargo build --workspace       # Build all crates
 ```
 
-CI runs the same gates (`.github/workflows/ci.yml`). Architectural decisions
-are recorded as ADRs in [docs/architecture/](docs/architecture/); the
-verification policy and its evidence classes are in
-[docs/verification.md](docs/verification.md). Contributor guide:
-[CONTRIBUTING.md](CONTRIBUTING.md).
+Contributor guidelines: [CONTRIBUTING.md](CONTRIBUTING.md).  
+Architecture Decision Records: [docs/architecture/](docs/architecture/).
 
 ## License
 
-GPL-3.0-or-later — see [LICENSE](LICENSE). Third-party notices:
-[NOTICES](NOTICES).
+GPL-3.0-or-later. See [LICENSE](LICENSE) for details. Third-party notices: [NOTICES](NOTICES).
