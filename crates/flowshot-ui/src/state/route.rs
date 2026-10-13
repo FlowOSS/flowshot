@@ -139,11 +139,18 @@ impl OverlayCore {
                 output,
                 self.chrome.panel_scroll,
             );
-            if panel.rect.contains(local_pt) && self.chrome.scroll_panel(delta_y) {
-                return RouteReport {
-                    actions: (0..self.router.window_count())
+            if panel.rect.contains(local_pt) {
+                // When hovering over the side panel, the wheel event belongs exclusively
+                // to the panel and never falls through to resize tools.
+                let actions = if self.chrome.scroll_panel(delta_y) {
+                    (0..self.router.window_count())
                         .map(|index| Action::Redraw(WindowSlot::new(index)))
-                        .collect(),
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                return RouteReport {
+                    actions,
                     ..RouteReport::default()
                 };
             }
