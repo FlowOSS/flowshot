@@ -4,9 +4,13 @@
   <p><strong>Screenshot and annotation for Linux — completely free software, native on Wayland <em>and</em> X11.</strong></p>
 
   <p>
+    <a href="https://github.com/FlowOSS/flowshot/releases"><img src="https://img.shields.io/github/v/release/FlowOSS/flowshot?color=6366F1&label=release" alt="GitHub release"></a>
+    <a href="https://aur.archlinux.org/packages/flowshot-bin"><img src="https://img.shields.io/aur/version/flowshot-bin?color=1793D1&logo=arch-linux&logoColor=white&label=flowshot-bin" alt="AUR flowshot-bin"></a>
+    <a href="https://aur.archlinux.org/packages/flowshot-git"><img src="https://img.shields.io/aur/version/flowshot-git?color=1793D1&logo=arch-linux&logoColor=white&label=flowshot-git" alt="AUR flowshot-git"></a>
     <a href="https://github.com/FlowOSS/flowshot/actions/workflows/ci.yml"><img src="https://github.com/FlowOSS/flowshot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
-    <a href="#desktop-support"><img src="https://img.shields.io/badge/session-Wayland%20%E2%80%A2%20X11-6366F1" alt="Platform"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0+-blue" alt="License: GPL-3.0+"></a>
+    <a href="#desktop-support"><img src="https://img.shields.io/badge/session-Wayland-6366F1" alt="Wayland"></a>
+    <a href="#desktop-support"><img src="https://img.shields.io/badge/session-X11-6366F1" alt="X11"></a>
   </p>
 </div>
 
