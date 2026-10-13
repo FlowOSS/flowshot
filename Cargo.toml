@@ -16,7 +16,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/flowoss/flowshot"
 authors = ["FlowShot Contributors"]
-version = "0.3.1"
+version = "0.3.2"
 
 [workspace.dependencies]
 # Core

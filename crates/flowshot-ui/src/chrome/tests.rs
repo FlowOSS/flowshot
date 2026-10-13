@@ -163,6 +163,7 @@ fn panel_layout(core: &OverlayCore) -> SidePanelLayout {
         core.chrome().tokens(),
         1.0,
         &fixture_output(),
+        0.0,
     )
 }
 
@@ -493,6 +494,55 @@ fn space_toggles_the_panel_and_esc_hides_it() {
     assert!(!core.exit_requested(), "the cascade did not reach close");
     // Space reopens (the toggle is reversible).
     open_panel(&mut core);
+}
+
+#[test]
+fn side_panel_height_clamps_to_selection_and_scrolls_layers() {
+    let mut core = fixture();
+    commit_rect(&mut core, 400.0, 250.0);
+    let output = fixture_output();
+    let panel_unscrolled = side_panel::layout(
+        core.editor(),
+        core.selection().rect().unwrap(),
+        core.chrome().tokens(),
+        1.0,
+        &output,
+        0.0,
+    );
+    let panel_scrolled = side_panel::layout(
+        core.editor(),
+        core.selection().rect().unwrap(),
+        core.chrome().tokens(),
+        1.0,
+        &output,
+        50.0,
+    );
+    assert_eq!(
+        panel_unscrolled.raise_button, panel_scrolled.raise_button,
+        "sticky header controls must stay identical when scrolling"
+    );
+    assert!(
+        panel_unscrolled.rect.size.height <= 350.0,
+        "panel height must be clamped rather than growing unboundedly"
+    );
+}
+
+#[test]
+fn auto_show_panel_activates_when_tool_selected_and_space_fits() {
+    let mut core = fixture();
+    commit_rect(&mut core, 400.0, 300.0);
+    assert!(!core.chrome().panel_shown(core.editor()), "starts hidden");
+
+    let output = fixture_output();
+    core.auto_show_panel_if_fits(&output, 1.0);
+    assert!(!core.chrome().panel_shown(core.editor()), "inactive tool does not auto-show");
+
+    core.editor_mut().activate_tool(ToolKind::Rectangle);
+    core.auto_show_panel_if_fits(&output, 1.0);
+    assert!(
+        core.chrome().panel_shown(core.editor()),
+        "auto-shows once tool is active and space fits"
+    );
 }
 
 #[test]
