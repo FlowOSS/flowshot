@@ -1,13 +1,14 @@
-<img src="assets/logo.png" width="128" height="128" alt="FlowShot logo: a violet-to-azure gradient circle with white lens arcs">
+<div align="center">
+  <img src="assets/logo.png" width="80" height="80" alt="FlowShot logo: a violet-to-azure gradient circle with white lens arcs">
+  <h1>FlowShot</h1>
+  <p><strong>Screenshot and annotation for Linux — completely free software, native on Wayland <em>and</em> X11.</strong></p>
 
-# FlowShot
-
-**Screenshot and annotation for Linux — completely free software, native on
-Wayland *and* X11.**
-
-[![CI](https://github.com/FlowOSS/flowshot/actions/workflows/ci.yml/badge.svg)](https://github.com/FlowOSS/flowshot/actions/workflows/ci.yml)
-[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
-[![Platform](https://img.shields.io/badge/session-Wayland%20%E2%80%A2%20X11-6366F1)](#desktop-support)
+  <p>
+    <a href="https://github.com/FlowOSS/flowshot/actions/workflows/ci.yml"><img src="https://github.com/FlowOSS/flowshot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
+    <a href="#desktop-support"><img src="https://img.shields.io/badge/session-Wayland%20%E2%80%A2%20X11-6366F1" alt="Platform"></a>
+  </p>
+</div>
 
 <p align="center">
   <img src="assets/preview.png" alt="FlowShot capture and annotation preview" width="850">

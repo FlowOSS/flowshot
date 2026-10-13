@@ -14,7 +14,7 @@
   (resvg, the workspace pin) into the SNI tray pixmap sizes 16/22/24/32/48 -
   only those raw ARGB32 bytes are embedded in the daemon binary, never the
   PNG.
-- The top-level [README](../README.md) header shows `logo.png` at 128px.
+- The top-level [README](../README.md) header shows `logo.png` at 80px.
 - Packaging installs the mark as the themed icon `org.flowoss.FlowShot`
   (targets and generation rules: [packaging/ICONS.md](../packaging/ICONS.md)).
 
