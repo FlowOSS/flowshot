@@ -164,7 +164,7 @@ mod tests {
     use super::*;
     use crate::command::{ExecutionOutcome, ExecutionReceipt, RecordingSink};
     use crate::testsupport::{ServiceStub, bounded, spawn_service_stub, stub_guard};
-    use std::time::Instant;
+    use std::time::{Duration, Instant};
     use zbus::zvariant::{Str, Value};
 
     /// A sink whose tracked receipt resolves to a canned outcome (the
@@ -359,10 +359,17 @@ mod tests {
         let _guard = stub_guard();
         let (stub, _sink) = recording_stub().await;
         let state = Arc::clone(stub.state());
+        // Age the activity stamp so the state has non-zero idle time before the call.
+        state.touch(Instant::now() - Duration::from_secs(5));
         let before = state.idle_for(Instant::now());
+        assert!(before >= Duration::from_secs(4));
+
         call_ok(stub.client(), "Launcher", &()).await;
         let after = state.idle_for(Instant::now());
-        assert!(after <= before);
+        assert!(
+            after < before,
+            "call must touch the activity stamp: after {after:?} vs before {before:?}"
+        );
         stub.shutdown().await;
     }
 }
