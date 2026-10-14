@@ -360,7 +360,9 @@ mod tests {
         let (stub, _sink) = recording_stub().await;
         let state = Arc::clone(stub.state());
         // Age the activity stamp so the state has non-zero idle time before the call.
-        state.touch(Instant::now() - Duration::from_secs(5));
+        let now = Instant::now();
+        let past = now.checked_sub(Duration::from_secs(5)).unwrap_or(now);
+        state.touch(past);
         let before = state.idle_for(Instant::now());
         assert!(before >= Duration::from_secs(4));
 
