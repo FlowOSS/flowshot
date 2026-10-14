@@ -352,14 +352,22 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: binaries-x86_64-unknown-linux-gnu
-          path: target/release
+          path: dist-binaries
+      - name: Stage downloaded binaries
+        run: |
+          set -euo pipefail
+          mkdir -p target/release target/release/examples
+          find dist-binaries -type f -name flowshot -exec cp -v {} target/release/flowshot \;
+          find dist-binaries -type f -name flowshot-daemon -exec cp -v {} target/release/flowshot-daemon \;
+          find dist-binaries -type f -name man_pages -exec cp -v {} target/release/examples/man_pages \;
+          chmod +x target/release/flowshot target/release/flowshot-daemon target/release/examples/man_pages
+          ls -la target/release/ target/release/examples/
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deb
       - name: Build Debian/Ubuntu package
         run: |
           set -euo pipefail
-          chmod +x target/release/flowshot target/release/flowshot-daemon target/release/examples/man_pages 2>/dev/null || true
           ./packaging/debian/build-deb.sh
       - uses: actions/upload-artifact@v4
         with:
