@@ -268,7 +268,8 @@ jobs:
 
 
   package-arch:
-    needs: meta
+    name: Package Arch Linux (makepkg)
+    needs: [meta, gate, build-linux]
     runs-on: ubuntu-24.04
     container:
       image: archlinux:base-devel
@@ -280,78 +281,42 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - name: Base deps
+      - name: Install packaging tools
         run: |
           set -euo pipefail
           pacman -Syu --noconfirm --needed \
-            base-devel cargo clang desktop-file-utils git librsvg pipewire \
-            pkgconf ttf-dejavu pacman-contrib namcap mold
+            base-devel desktop-file-utils librsvg namcap pacman-contrib
           useradd -m builder
-          # makepkg --syncdeps shells out to `sudo pacman`; NOPASSWD keeps the
-          # container build unattended (the deps are pre-installed above, so
-          # syncdeps is a verification pass here, not the installer).
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
           chmod 440 /etc/sudoers.d/builder
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Download Linux binaries
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-      - name: Render the internal recipe (pkgver + tag hash + checksums)
+          name: binaries-x86_64-unknown-linux-gnu
+          path: dist-binaries
+      - name: Build Arch Linux package (.pkg.tar.zst)
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          VER="${{ needs.meta.outputs.version }}"
-          ARCH_VER="${{ needs.meta.outputs.arch_version }}"
-          cp -a packaging/arch /work-pkg
-          chown -R builder:builder /work-pkg "$GITHUB_WORKSPACE"
-          cd /work-pkg
-          sed -i "s/^pkgver=.*/pkgver=$ARCH_VER/" PKGBUILD
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            tag_ref="$(git -C "$GITHUB_WORKSPACE" rev-parse "v$VER^{commit}")"
-          else
-            # Rehearsal (workflow_dispatch): no tag exists; build the checked-out HEAD.
-            tag_ref="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
-          fi
-          sed -i "s|^_tag=.*|_tag=$tag_ref|" PKGBUILD
-          sudo -u builder updpkgsums
-          if grep -q "b2sums=('SKIP')" PKGBUILD; then
-            echo "checksums still SKIP" >&2; exit 1
-          fi
-          sudo -u builder makepkg --printsrcinfo > .SRCINFO
-      - name: Build the Arch package (full makepkg incl. check())
-        run: sudo -u builder PACKAGER='FlowOSS <https://github.com/FlowOSS>' bash -c 'cd /work-pkg && makepkg --syncdeps --noconfirm'
-      - name: namcap + content assertions
-        run: |
-          set -euo pipefail
-          cd /work-pkg
-          # Rename FIRST (makepkg's own naming cannot carry the -Arch distro
-          # marker): every later step - namcap, assertions, collection,
-          # attestation - works on the published asset name.
-          ARCH_VER="${{ needs.meta.outputs.arch_version }}"
-          mv "flowshot-$ARCH_VER-1-x86_64.pkg.tar.zst" \
-             "flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
-          PKG="flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst"
-          namcap PKGBUILD
-          namcap "$PKG"
-          # The official archlinux image NoExtracts usr/share/{man,doc}: assert
-          # package CONTENTS, never the installed filesystem. File-based grep:
-          # `pacman -Qpl | grep -q` SIGPIPEs under pipefail (exit 141) when
-          # grep exits on first match.
-          pacman -Qpl "$PKG" > /tmp/pkglist
-          grep -q 'usr/bin/flowshot$' /tmp/pkglist
-          grep -q 'usr/share/man/man1/flowshot.1' /tmp/pkglist
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          sudo -u builder ./packaging/arch/build-arch.sh "${{ needs.meta.outputs.arch_version }}"
       - name: Collect asset
         run: |
           set -euo pipefail
-          # Explicit name (never a glob): a debug split package must not leak
-          # into the release assets even if one is ever produced.
-          cp "/work-pkg/flowshot-${{ needs.meta.outputs.arch_version }}-1-x86_64-Arch.pkg.tar.zst" .
-      - uses: actions/attest-build-provenance@v4
+          ARCH_VER="${{ needs.meta.outputs.arch_version }}"
+          mkdir -p arch-package
+          cp "packaging/arch/flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" arch-package/
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
         with:
-          subject-path: flowshot-*.pkg.tar.zst
-      - uses: actions/upload-artifact@v4
+          subject-path: arch-package/*.pkg.tar.zst
+      - name: Upload Arch package artifact
+        uses: actions/upload-artifact@v4
         with:
           name: arch-package
-          path: flowshot-*.pkg.tar.zst
+          path: arch-package/*.pkg.tar.zst
           if-no-files-found: error
 
 
