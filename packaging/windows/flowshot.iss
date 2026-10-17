@@ -43,10 +43,9 @@ Source: "..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\FlowShot"; Filename: "{app}\flowshot-daemon.exe"; IconFilename: "{app}\flowshot.ico"
-Name: "{group}\FlowShot (Capture)"; Filename: "{app}\flowshot.exe"; Parameters: "capture"; IconFilename: "{app}\flowshot.ico"
+Name: "{group}\FlowShot"; Filename: "{app}\flowshot.exe"; IconFilename: "{app}\flowshot.ico"
 Name: "{group}\{cm:UninstallProgram,FlowShot}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\FlowShot"; Filename: "{app}\flowshot.exe"; Parameters: "capture"; Tasks: desktopicon; IconFilename: "{app}\flowshot.ico"
+Name: "{autodesktop}\FlowShot"; Filename: "{app}\flowshot.exe"; Tasks: desktopicon; IconFilename: "{app}\flowshot.ico"
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "FlowShot"; ValueData: """{app}\flowshot-daemon.exe"""; Flags: uninsdeletevalue; Tasks: startup

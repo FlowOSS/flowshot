@@ -10,7 +10,7 @@ This directory contains the packaging specifications and branding assets for nat
 ## Installer Features
 
 - **Installation Directory**: Custom directory selection, defaulting to `{autopf}\FlowShot` (`C:\Program Files\FlowShot` or user local app data when non-elevated).
-- **Shortcuts**: Start Menu shortcuts for `FlowShot` (daemon) and `FlowShot (Capture)`, with an optional Desktop shortcut.
+- **Shortcuts**: Start Menu shortcut for `FlowShot` with our icon, and an optional Desktop shortcut.
 - **Startup Integration**: Optional "Launch FlowShot when Windows starts" task that writes to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
 - **Uninstallation**: Registered uninstaller in Windows *Installed Apps* / *Add or Remove Programs* with the FlowShot icon, version, publisher, and automatic daemon shutdown prior to file removal.
 
