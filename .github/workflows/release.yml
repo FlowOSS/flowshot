@@ -495,7 +495,7 @@ jobs:
     secrets: inherit
   sentry-release:
     name: Track Sentry Release Deployment
-    needs: [meta, release]
+    needs: [meta, release, aur-publish]
     # Mandatory for real tags: fails the workflow if Sentry release integration is broken or unconfigured.
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
