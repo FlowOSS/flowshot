@@ -1266,6 +1266,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "windows 0.62.2",
  "wiremock",
  "wl-clipboard-rs",
  "x11rb 0.14.0",
@@ -1312,6 +1313,20 @@ dependencies = [
  "wayland-protocols",
  "wayland-protocols-wlr",
  "zbus",
+]
+
+[[package]]
+name = "flowshot-capture-windows"
+version = "0.3.3"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "flowshot-capture",
+ "flowshot-core",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -1378,6 +1393,7 @@ dependencies = [
  "flowshot-actions",
  "flowshot-capture",
  "flowshot-capture-wayland",
+ "flowshot-capture-windows",
  "flowshot-capture-x11",
  "flowshot-core",
  "flowshot-ui",
@@ -1394,6 +1410,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "wgpu",
+ "windows 0.62.2",
  "winit",
  "wiremock",
  "zbus",
@@ -1411,7 +1428,6 @@ dependencies = [
  "egui-wgpu",
  "flowshot-actions",
  "flowshot-capture",
- "flowshot-capture-wayland",
  "flowshot-core",
  "futures",
  "image",
