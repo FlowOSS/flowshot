@@ -87,6 +87,10 @@ async fn attempt_registration(connection: &Connection, state: &DaemonState) {
         Err(error) => {
             state.set_tray(false);
             tracing::warn!(%error, "StatusNotifierWatcher registration failed; tray disabled (retrying on watcher changes)");
+            crate::telemetry::capture_error_tagged(
+                &error,
+                &[("component", "tray"), ("stage", "watcher_registration")],
+            );
         }
     }
 }

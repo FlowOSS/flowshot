@@ -170,7 +170,7 @@ toolbar_buttons = [
 
 | Key | Type | Default | Notes |
 |---|---|---|---|
-| `tray` | boolean | `false` | Show a system tray icon while the daemon runs. Needs an SNI host (waybar tray, Plasma tray, GNOME AppIndicator extension). |
+| `tray` | boolean | `true` | Show a system tray icon while the daemon runs. Needs an SNI host (Waybar tray, Plasma tray, Quickshell, GNOME AppIndicator extension, or Windows taskbar notification area). |
 | `notifications` | boolean | `true` | Desktop notifications for capture events. Gates every toast, including the one-time shortcut-registration nudge. |
 | `startup_launch` | boolean | `false` | Install an autostart entry that launches the daemon at login. |
 

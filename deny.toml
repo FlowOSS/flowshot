@@ -58,16 +58,18 @@ ignore = false
 # cargo-deny as "No safe upgrade is available!" on 2026-09-28). All are
 # transitive; ignoring them here keeps NEW advisories failing CI. Revisit
 # when the owning stacks move:
-# - RUSTSEC-2024-0436 (paste): via metal <- wgpu-hal, pulp <- exr <- image,
-#   rav1e <- ravif <- image. dtolnay archived it; wgpu/image have not moved.
 # - RUSTSEC-2026-0206 (rustybuzz): via usvg <- resvg (flowshot-ui BUILD dep,
 #   icon-atlas rasterization only - not in the runtime binary).
 # - RUSTSEC-2026-0192 (ttf-parser): via fontdb <- cosmic-text, ab_glyph <-
 #   epaint, rustybuzz <- usvg. Successor (skrifa) not yet adopted upstream.
+# - RUSTSEC-2026-0370, RUSTSEC-2026-0371, RUSTSEC-2026-0372 (zvariant, zbus_names):
+#   merged into zbus 6.0; ashpd 0.13 and notify-rust 4 still pin zbus 5.
 ignore = [
-    "RUSTSEC-2024-0436",
     "RUSTSEC-2026-0206",
     "RUSTSEC-2026-0192",
+    "RUSTSEC-2026-0370",
+    "RUSTSEC-2026-0371",
+    "RUSTSEC-2026-0372",
 ]
 
 [bans]

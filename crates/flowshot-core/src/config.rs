@@ -471,7 +471,7 @@ pub struct DaemonConfig {
 impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
-            tray: false,
+            tray: true,
             notifications: true,
             startup_launch: false,
         }
@@ -791,7 +791,7 @@ mod tests {
         assert_ne!(config.ui.toolbar_buttons, [] as [String; 0]);
 
         // [daemon]
-        assert!(!config.daemon.tray);
+        assert!(config.daemon.tray);
 
         // [telemetry] — opt-in: every consent flag defaults to false.
         assert!(!config.telemetry.enabled);
@@ -977,7 +977,7 @@ mod tests {
     #[test]
     fn daemon_config_defaults_are_correct() {
         let config = Config::default();
-        assert!(!config.daemon.tray);
+        assert!(config.daemon.tray);
         assert!(config.daemon.notifications);
         assert!(!config.daemon.startup_launch);
     }

@@ -36,6 +36,10 @@ struct Args {
     #[arg(long, value_name = "ADDRESS")]
     bus_address: Option<String>,
 
+    /// Probe the system tray and `StatusNotifierWatcher` on D-Bus and print diagnostic results.
+    #[arg(long)]
+    check_tray: bool,
+
     #[command(subcommand)]
     command: Option<Sub>,
 }
@@ -95,6 +99,12 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     let args = Args::parse();
+    if args.check_tray {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
+        return runtime.block_on(check_tray_diagnostics(args.config.as_deref()));
+    }
     if let Some(Sub::Session { spec }) = &args.command {
         let code = flowshot_daemon::execute::session::run_child(spec);
         std::process::exit(i32::from(code));
@@ -172,6 +182,80 @@ fn load_config(explicit: Option<&std::path::Path>) -> anyhow::Result<Config> {
             Ok(Config::default())
         }
     }
+}
+
+/// Probes the system tray and `StatusNotifierWatcher` on D-Bus and prints diagnostic results.
+#[expect(
+    clippy::print_stdout,
+    reason = "the diagnostic check command writes to stdout by contract"
+)]
+async fn check_tray_diagnostics(config_path: Option<&std::path::Path>) -> anyhow::Result<()> {
+    let config = load_config(config_path)?;
+    println!("FlowShot Tray Diagnostics");
+    println!("------------------------");
+    println!("1. Configuration: [daemon] tray = {}", config.daemon.tray);
+    if !config.daemon.tray {
+        println!(
+            "   WARNING: Tray is disabled in configuration. Enable it in ~/.config/flowshot/flowshot.toml via [daemon] tray = true"
+        );
+    }
+
+    #[cfg(windows)]
+    {
+        println!("2. Platform: Windows Notification Area (System Tray)");
+        println!("   Windows uses native Win32 Shell_NotifyIconW API.");
+        return Ok(());
+    }
+
+    #[cfg(unix)]
+    {
+        println!("2. Connecting to D-Bus session bus...");
+        let connection = zbus::Connection::session()
+            .await
+            .context("Could not connect to D-Bus session bus")?;
+        let unique_name = connection
+            .unique_name()
+            .map_or_else(|| "unknown".to_string(), ToString::to_string);
+        println!("   Connected to session bus as {unique_name}");
+
+        println!("3. Probing org.kde.StatusNotifierWatcher...");
+        let dbus = zbus::fdo::DBusProxy::new(&connection).await?;
+        let watcher_name = zbus::names::BusName::try_from("org.kde.StatusNotifierWatcher")?;
+        match dbus.get_name_owner(watcher_name).await {
+            Ok(owner) => {
+                println!("   StatusNotifierWatcher found! Owner: {owner}");
+            }
+            Err(e) => {
+                println!("   WARNING: org.kde.StatusNotifierWatcher is NOT owned on D-Bus: {e}");
+                println!(
+                    "   This means no active status bar / panel (Waybar, Quickshell, Plasma, etc.) is hosting the tray."
+                );
+                return Ok(());
+            }
+        }
+
+        println!("4. Testing RegisterStatusNotifierItem handshake...");
+        match connection
+            .call_method(
+                Some("org.kde.StatusNotifierWatcher"),
+                "/StatusNotifierWatcher",
+                Some("org.kde.StatusNotifierWatcher"),
+                "RegisterStatusNotifierItem",
+                &unique_name.as_str(),
+            )
+            .await
+        {
+            Ok(_) => {
+                println!("   SUCCESS: StatusNotifierWatcher accepted RegisterStatusNotifierItem.");
+                println!("   Registered item address: {unique_name}/StatusNotifierItem");
+            }
+            Err(error) => {
+                println!("   ERROR: StatusNotifierWatcher rejected registration: {error}");
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
