@@ -2,12 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ main, windows-support ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
   build:
+    name: Linux (x86_64)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +42,7 @@ jobs:
           command: check
 
   windows:
+    name: Windows (x86_64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
