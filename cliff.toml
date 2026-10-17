@@ -17,7 +17,18 @@ body = """
 - {{ commit.message | split(pat="\\n") | first | trim }}\
 {%- if commit.remote.pr_number %} ({{ commit.remote.pr_number }}){% endif %}
 {% endfor %}\
-{% endfor %}\n
+{% endfor %}\
+{% if version %}
+### Artifacts
+
+| Platform | Package | Description |
+|---|---|---|
+| **Windows** (Installer) | `flowshot-setup-{{ version | trim_start_matches(pat="v") }}-x86_64.exe` | Setup wizard (directory picker, Start Menu, optional startup) |
+| **Windows** (Portable) | `flowshot-{{ version | trim_start_matches(pat="v") }}-windows-x86_64.zip` | Standalone portable zip (`flowshot.exe` & `flowshot-daemon.exe`) |
+| **Debian / Ubuntu** | `flowshot_{{ version | trim_start_matches(pat="v") }}-1_amd64.deb` | Debian & Ubuntu binary package |
+| **Arch Linux** | `flowshot-{{ version | trim_start_matches(pat="v") }}-1-x86_64-Arch.pkg.tar.zst` | Native pacman package (also via `yay -S flowshot-bin`) |
+| **Linux (Generic)** | `flowshot-{{ version | trim_start_matches(pat="v") }}-x86_64-unknown-linux-gnu.tar.xz` | Precompiled FHS binary archive |
+{% endif %}\n
 """
 footer = ""
 trim = true
