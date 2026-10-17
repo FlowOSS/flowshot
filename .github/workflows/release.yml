@@ -285,7 +285,7 @@ jobs:
         run: |
           set -euo pipefail
           pacman -Syu --noconfirm --needed \
-            base-devel desktop-file-utils librsvg namcap pacman-contrib
+            base-devel desktop-file-utils librsvg namcap pacman-contrib git
           useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
           chmod 440 /etc/sudoers.d/builder
