@@ -31,6 +31,7 @@ env:
 
 jobs:
   meta:
+    name: Verify Release Version
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -39,8 +40,10 @@ jobs:
       arch_version: ${{ steps.meta.outputs.arch_version }}
       is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v4
-      - id: meta
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Parse and validate version tag
+        id: meta
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" != "push" ]]; then
@@ -68,24 +71,27 @@ jobs:
           esac
 
   changelog:
+    name: Generate Release Notes
     needs: meta
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository with full history
+        uses: actions/checkout@v4
         with:
-          # Full history: git-cliff grouping AND the Sentry set-commits
-          # contract both need it (shallow checkouts silently attach nothing).
           fetch-depth: 0
-      - uses: taiki-e/install-action@v2
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
         with:
           tool: git-cliff
-      - run: |
+      - name: Generate changelog and release notes
+        run: |
           set -euo pipefail
           git cliff --tag "v${{ needs.meta.outputs.version }}" --current --strip header -o release-notes.md
           git cliff --tag "v${{ needs.meta.outputs.version }}" -o CHANGELOG.md
-      - uses: actions/upload-artifact@v4
+      - name: Upload changelog artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: changelog
           path: |
@@ -94,6 +100,7 @@ jobs:
           if-no-files-found: error
 
   gate:
+    name: Quality & Security Gate
     needs: meta
     runs-on: ubuntu-24.04
     container:
@@ -104,28 +111,38 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Base deps
+      - name: Install base dependencies
         run: |
           set -euo pipefail
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential clang libclang-dev pkg-config libpipewire-0.3-dev \
             curl git ca-certificates jq mold
-      - uses: actions/checkout@v4
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - name: Restore dependency cache
+        uses: Swatinem/rust-cache@v2
         with:
           shared-key: release
-      - run: ./scripts/purity-gate.sh
-      - run: cargo fmt -- --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - name: Platform purity gate
+        run: ./scripts/purity-gate.sh
+      - name: Check code formatting
+        run: cargo fmt -- --check
+      - name: Run clippy linter
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Run workspace test suite
+        run: cargo test --workspace
+      - name: Audit dependencies and licenses (cargo-deny)
+        uses: EmbarkStudios/cargo-deny-action@v2
 
   build-linux:
+    name: Build Linux Binaries & Tarball
     needs: meta
     runs-on: ubuntu-24.04
     container:
@@ -138,7 +155,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - name: Base deps
+      - name: Install base dependencies
         run: |
           set -euo pipefail
           apt-get update
@@ -146,10 +163,14 @@ jobs:
             build-essential clang libclang-dev pkg-config libpipewire-0.3-dev \
             curl git ca-certificates jq binutils xz-utils \
             desktop-file-utils librsvg2-bin mold
-      - uses: actions/checkout@v4
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Restore dependency cache
+        uses: Swatinem/rust-cache@v2
         with:
           shared-key: release
       - name: Build (release, locked)
@@ -335,7 +356,8 @@ jobs:
 
 
   package-deb:
-    needs: [meta, build-linux]
+    name: Package Debian & Ubuntu (.deb)
+    needs: [meta, gate, build-linux]
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -343,17 +365,19 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Install packaging tools
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y librsvg2-bin clang mold pkg-config libpipewire-0.3-dev
-      - uses: actions/download-artifact@v4
+      - name: Download Linux binaries
+        uses: actions/download-artifact@v4
         with:
           name: binaries-x86_64-unknown-linux-gnu
           path: dist-binaries
-      - name: Stage downloaded binaries
+      - name: Stage binaries for packaging
         run: |
           set -euo pipefail
           mkdir -p target/release target/release/examples
@@ -362,33 +386,37 @@ jobs:
           find dist-binaries -type f -name man_pages -exec cp -v {} target/release/examples/man_pages \;
           chmod +x target/release/flowshot target/release/flowshot-daemon target/release/examples/man_pages
           ls -la target/release/ target/release/examples/
-      - uses: taiki-e/install-action@v2
+      - name: Install cargo-deb
+        uses: taiki-e/install-action@v2
         with:
           tool: cargo-deb
-      - name: Build Debian/Ubuntu package
+      - name: Build Debian package
         run: |
           set -euo pipefail
           ./packaging/debian/build-deb.sh
-      - uses: actions/upload-artifact@v4
+      - name: Upload Debian package artifact
+        uses: actions/upload-artifact@v4
         with:
           name: deb-package
           path: target/debian/*.deb
           if-no-files-found: error
 
   package-windows:
-    needs: [meta, changelog, gate]
+    name: Package Windows (Installer & Zip)
+    needs: [meta, gate]
     runs-on: windows-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust Windows target
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
-      - name: Build Windows release binaries
+      - name: Compile Windows release binaries
         run: cargo build --release --target x86_64-pc-windows-msvc -p flowshot-cli -p flowshot-daemon
-      - name: Stage Windows distribution
+      - name: Stage distribution and create portable zip
         shell: bash
         run: |
           set -euo pipefail
@@ -400,7 +428,7 @@ jobs:
           cp target/release/flowshot-daemon.exe target/windows-zip/flowshot/
           cp README.md LICENSE target/windows-zip/flowshot/
           (cd target/windows-zip && 7z a -tzip "../windows-dist/flowshot-${VER}-windows-x86_64.zip" flowshot)
-      - name: Build Inno Setup Installer
+      - name: Build Inno Setup installer wizard
         run: |
           $iscc = Get-Command iscc -ErrorAction SilentlyContinue
           if (-not $iscc) {
@@ -409,20 +437,23 @@ jobs:
               $isccPath = $iscc.Source
           }
           & $isccPath /DAppVersion=${{ needs.meta.outputs.version }} packaging/windows/flowshot.iss
-      - uses: actions/upload-artifact@v4
+      - name: Upload Windows package artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: windows-package
           path: target/windows-dist/*
           if-no-files-found: error
 
   release:
+    name: Publish GitHub Release & Checksums
     needs: [meta, changelog, gate, build-linux, package-arch, package-deb, package-windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
-      - name: Checksums
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+      - name: Verify and compute SHA-256 checksums
         run: |
           set -euo pipefail
           # Flat filenames in the sums file: users download assets side by
@@ -498,6 +529,7 @@ jobs:
       package: both
     secrets: inherit
   sentry-release:
+    name: Track Sentry Release Deployment
     needs: [meta, release]
     # Mandatory for real tags: fails the workflow if Sentry release integration is broken or unconfigured.
     if: github.event_name == 'push'
@@ -505,7 +537,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository with full history
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install pinned sentry-cli
