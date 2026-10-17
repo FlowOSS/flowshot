@@ -13,7 +13,9 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
+#[cfg(unix)]
 use wl_clipboard_rs::copy;
+#[cfg(unix)]
 use wl_clipboard_rs::paste;
 
 use super::ClipboardBackend;
@@ -45,21 +47,27 @@ impl WaylandClipboard {
 
 impl ClipboardBackend for WaylandClipboard {
     fn serve(&self, offer: ClipboardOffer) -> Result<(), ClipboardError> {
-        let sources = offer
-            .entries
-            .into_iter()
-            .map(|entry| copy::MimeSource {
-                source: copy::Source::Bytes(entry.data),
-                mime_type: copy::MimeType::Specific(entry.mime),
-            })
-            .collect();
-        let mut options = copy::Options::new();
-        // Unlimited + background: the offer is served by a thread in THIS
-        // process until another client takes the clipboard (daemon ownership).
-        options
-            .serve_requests(copy::ServeRequests::Unlimited)
-            .foreground(false);
-        Ok(copy::copy_multi(options, sources)?)
+        #[cfg(unix)]
+        {
+            let sources = offer
+                .entries
+                .into_iter()
+                .map(|entry| copy::MimeSource {
+                    source: copy::Source::Bytes(entry.data),
+                    mime_type: copy::MimeType::Specific(entry.mime),
+                })
+                .collect();
+            let mut options = copy::Options::new();
+            options
+                .serve_requests(copy::ServeRequests::Unlimited)
+                .foreground(false);
+            Ok(copy::copy_multi(options, sources)?)
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = offer;
+            Ok(())
+        }
     }
 }
 
@@ -115,7 +123,7 @@ impl MockClipboard {
 impl ClipboardBackend for MockClipboard {
     fn serve(&self, offer: ClipboardOffer) -> Result<(), ClipboardError> {
         if self.inner.failing.load(Ordering::SeqCst) {
-            return Err(ClipboardError::from(copy::Error::NoSeats));
+            return Err(ClipboardError::transport(std::io::Error::other("no seats")));
         }
         self.inner
             .offers
@@ -163,25 +171,29 @@ pub fn select_route(data_control_available: bool) -> ClipboardRoute {
 /// (or no compositor at all) means unavailable.
 #[must_use]
 pub fn probe_data_control() -> bool {
-    match paste::get_mime_types(paste::ClipboardType::Regular, paste::Seat::Unspecified) {
-        // Protocol round-trip succeeded; clipboard content state (empty,
-        // no seats) is irrelevant to availability.
-        Ok(_)
-        | Err(
-            paste::Error::NoSeats
-            | paste::Error::ClipboardEmpty
-            | paste::Error::NoMimeType
-            | paste::Error::SeatNotFound,
-        ) => true,
-        // No data-control protocol, or no compositor to ask.
-        Err(
-            paste::Error::MissingProtocol { .. }
-            | paste::Error::SocketOpenError(_)
-            | paste::Error::WaylandConnection(_)
-            | paste::Error::WaylandCommunication(_)
-            | paste::Error::PrimarySelectionUnsupported
-            | paste::Error::PipeCreation(_),
-        ) => false,
+    #[cfg(unix)]
+    {
+        match paste::get_mime_types(paste::ClipboardType::Regular, paste::Seat::Unspecified) {
+            Ok(_)
+            | Err(
+                paste::Error::NoSeats
+                | paste::Error::ClipboardEmpty
+                | paste::Error::NoMimeType
+                | paste::Error::SeatNotFound,
+            ) => true,
+            Err(
+                paste::Error::MissingProtocol { .. }
+                | paste::Error::SocketOpenError(_)
+                | paste::Error::WaylandConnection(_)
+                | paste::Error::WaylandCommunication(_)
+                | paste::Error::PrimarySelectionUnsupported
+                | paste::Error::PipeCreation(_),
+            ) => false,
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        false
     }
 }
 

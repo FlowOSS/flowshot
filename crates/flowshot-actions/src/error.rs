@@ -60,6 +60,7 @@ impl ClipboardError {
     }
 }
 
+#[cfg(unix)]
 impl From<wl_clipboard_rs::copy::Error> for ClipboardError {
     fn from(err: wl_clipboard_rs::copy::Error) -> Self {
         Self::transport(err)
@@ -138,6 +139,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn wayland_error_converts_without_display_loss() {
         let source = wl_clipboard_rs::copy::Error::NoSeats;
         let message = source.to_string();

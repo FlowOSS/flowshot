@@ -9,6 +9,9 @@ authors = ["FlowShot Contributors"]
 [lib]
 crate-type = ["rlib"]
 
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+
 [dependencies]
 flowshot-core = { path = "../flowshot-core" }
 serde = { workspace = true }
@@ -20,11 +23,13 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
+url = "2.5"
+
+[target.'cfg(unix)'.dependencies]
 wl-clipboard-rs = { workspace = true }
 # ashpd 0.13 gates every portal behind its own feature; this crate drives
 # OpenURI only (open-with action + Imgur delete URL).
 ashpd = { workspace = true, features = ["open_uri"] }
-url = "2.5"
 x11rb = { workspace = true }
 
 [dev-dependencies]

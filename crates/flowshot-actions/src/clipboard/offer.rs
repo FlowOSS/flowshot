@@ -111,26 +111,10 @@ pub fn image_and_path_offer(png: Vec<u8>, jpeg: Option<Vec<u8>>, path: &Path) ->
 /// Returns `None` for relative or non-UTF-8 paths.
 #[must_use]
 pub fn file_uri(path: &Path) -> Option<String> {
-    const HEX: &[u8; 16] = b"0123456789ABCDEF";
-    if !path.is_absolute() {
-        return None;
-    }
-    let text = path.to_str()?;
-    let mut uri = String::with_capacity(text.len() + "file://".len());
-    uri.push_str("file://");
-    for byte in text.as_bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
-                uri.push(char::from(*byte));
-            }
-            other => {
-                uri.push('%');
-                uri.push(char::from(HEX[usize::from(other >> 4)]));
-                uri.push(char::from(HEX[usize::from(other & 0x0f)]));
-            }
-        }
-    }
-    Some(uri)
+    path.to_str()?;
+    url::Url::from_file_path(path)
+        .ok()
+        .map(|url| url.to_string())
 }
 
 #[cfg(test)]
@@ -158,6 +142,7 @@ mod tests {
         assert_eq!(mimes, ["image/png", "image/jpeg"]);
     }
 
+    #[cfg(unix)]
     #[test]
     fn path_offer_puts_plain_before_uri_list() {
         let offer = path_offer(Path::new("/tmp/shot 1.png"));
@@ -170,6 +155,19 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn path_offer_puts_plain_before_uri_list() {
+        let offer = path_offer(Path::new(r"C:\tmp\shot 1.png"));
+        let mimes: Vec<&str> = offer.entries.iter().map(|e| e.mime.as_str()).collect();
+        assert_eq!(mimes, ["text/plain", "text/uri-list"]);
+        assert_eq!(offer.entries[0].data.as_ref(), br"C:\tmp\shot 1.png");
+        assert_eq!(
+            offer.entries[1].data.as_ref(),
+            b"file:///C:/tmp/shot%201.png\r\n"
+        );
+    }
+
     #[test]
     fn path_offer_relative_path_is_plain_only() {
         let offer = path_offer(Path::new("shots/x.png"));
@@ -177,6 +175,7 @@ mod tests {
         assert_eq!(offer.entries[0].mime, "text/plain");
     }
 
+    #[cfg(unix)]
     #[test]
     fn combined_offer_appends_path_after_images() {
         let offer = image_and_path_offer(vec![1], Some(vec![2]), Path::new("/tmp/s.png"));
@@ -187,6 +186,18 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn combined_offer_appends_path_after_images() {
+        let offer = image_and_path_offer(vec![1], Some(vec![2]), Path::new(r"C:\tmp\s.png"));
+        let mimes: Vec<&str> = offer.entries.iter().map(|e| e.mime.as_str()).collect();
+        assert_eq!(
+            mimes,
+            ["image/png", "image/jpeg", "text/plain", "text/uri-list"]
+        );
+    }
+
+    #[cfg(unix)]
     #[test]
     fn file_uri_percent_encodes_reserved_and_unicode() {
         assert_eq!(
@@ -201,6 +212,24 @@ mod tests {
         assert_eq!(
             file_uri(Path::new("/a-b_c.d~e/f")).as_deref(),
             Some("file:///a-b_c.d~e/f")
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn file_uri_percent_encodes_reserved_and_unicode() {
+        assert_eq!(
+            file_uri(Path::new(r"C:\a b\#?%.png")).as_deref(),
+            Some("file:///C:/a%20b/%23%3F%25.png")
+        );
+        assert_eq!(
+            file_uri(Path::new(r"C:\tmp\ünïcødé.png")).as_deref(),
+            Some("file:///C:/tmp/%C3%BCn%C3%AFc%C3%B8d%C3%A9.png")
+        );
+        // Unreserved set passes through.
+        assert_eq!(
+            file_uri(Path::new(r"C:\a-b_c.d~e\f")).as_deref(),
+            Some("file:///C:/a-b_c.d~e/f")
         );
     }
 
