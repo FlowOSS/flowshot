@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 //! The daemon silent-failure regression (the live-found defect's second
 //! half): a forwarded `flowshot capture` whose session child dies used to
 //! leave the CLI exiting 0 with no output - the failure existed only in

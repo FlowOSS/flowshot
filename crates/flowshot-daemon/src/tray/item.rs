@@ -1,3 +1,5 @@
+#![cfg_attr(windows, allow(dead_code))]
+
 //! The `org.kde.StatusNotifierItem` object (host-facing tray surface).
 //!
 //! Host-compatibility decisions (ksni-verified behaviors):

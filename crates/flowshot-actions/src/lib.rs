@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+#![cfg_attr(not(windows), forbid(unsafe_code))]
 #![warn(missing_docs)]
 
 //! Action handlers for `FlowShot`.

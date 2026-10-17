@@ -44,16 +44,19 @@ mod dbusmenu;
 mod item;
 mod shared;
 mod watcher;
+pub mod windows;
 
 pub use outputs::{OutputProbe, WaylandOutputProbe};
 
 use std::sync::Arc;
 
 use flowshot_core::Config;
+#[cfg(not(windows))]
 use tokio::runtime::Handle;
 use tokio::sync::Notify;
 use zbus::Connection;
 
+use self::windows::WindowsTray;
 use crate::command::CommandSink;
 use crate::lifecycle::Clock;
 use crate::notify::Notifier;
@@ -112,6 +115,7 @@ pub struct TrayHandle {
     state: Arc<DaemonState>,
     core: Option<Arc<TrayCore>>,
     watcher_task: Option<tokio::task::AbortHandle>,
+    win_tray: Option<WindowsTray>,
 }
 
 impl TrayHandle {
@@ -121,6 +125,7 @@ impl TrayHandle {
             state,
             core: None,
             watcher_task: None,
+            win_tray: None,
         }
     }
 
@@ -144,6 +149,9 @@ impl TrayHandle {
     /// Aborts the watcher task, removes the bus objects, and releases the
     /// tray persistence reason.
     pub async fn shutdown(self) {
+        if let Some(win_tray) = self.win_tray {
+            win_tray.shutdown();
+        }
         if let Some(task) = self.watcher_task {
             task.abort();
         }
@@ -173,6 +181,7 @@ impl TrayHandle {
 /// initial output probe, and spawns the watcher-registration task.
 /// Infallible by design - every failure degrades to an inert handle with
 /// a warn log ("absent SNI host -> zero daemon impact").
+#[cfg_attr(windows, allow(clippy::unused_async))]
 pub async fn start(options: &TrayOptions, wiring: TrayWiring) -> TrayHandle {
     let connection = wiring.connection.clone();
     let state = Arc::clone(&wiring.state);
@@ -181,58 +190,77 @@ pub async fn start(options: &TrayOptions, wiring: TrayWiring) -> TrayHandle {
         tracing::info!("tray disabled by the [daemon].tray config");
         return TrayHandle::inactive(connection, state);
     }
-    let Ok(runtime) = Handle::try_current() else {
-        tracing::warn!("no tokio runtime context; tray disabled");
-        state.set_tray(false);
-        return TrayHandle::inactive(connection, state);
-    };
-    let core = Arc::new(TrayCore::new(
-        wiring,
-        icon::icon_set(),
-        options
-            .probe
-            .clone()
-            .unwrap_or_else(|| Arc::new(WaylandOutputProbe)),
-        runtime,
-    ));
-    // The object-server borrow must END before the error arms move
-    // `connection` into the inert handle (scrutinee temporaries of an
-    // `if let` live through its body).
-    let item_registered = connection
-        .object_server()
-        .at(ITEM_PATH, StatusNotifierItem::new(Arc::clone(&core)))
-        .await;
-    if let Err(error) = item_registered {
-        tracing::warn!(%error, "could not register the StatusNotifierItem object; tray disabled");
-        state.set_tray(false);
-        return TrayHandle::inactive(connection, state);
-    }
-    let menu_registered = connection
-        .object_server()
-        .at(MENU_PATH, DbusMenu::new(Arc::clone(&core)))
-        .await;
-    if let Err(error) = menu_registered {
-        tracing::warn!(%error, "could not register the dbusmenu object; tray disabled");
-        let rolled_back = connection
-            .object_server()
-            .remove::<StatusNotifierItem, _>(ITEM_PATH)
-            .await;
-        if let Err(remove_error) = rolled_back {
-            tracing::warn!(%remove_error, "could not roll back the tray item object");
+    #[cfg(windows)]
+    {
+        let win = WindowsTray::spawn(
+            std::sync::Arc::clone(&wiring.sink),
+            std::sync::Arc::clone(&wiring.state),
+            std::sync::Arc::clone(&wiring.notifier),
+        );
+        TrayHandle {
+            connection,
+            state,
+            core: None,
+            watcher_task: None,
+            win_tray: Some(win),
         }
-        state.set_tray(false);
-        return TrayHandle::inactive(connection, state);
     }
-    core.refresh_outputs();
-    let task = tokio::spawn(watcher::registration_task(
-        connection.clone(),
-        Arc::clone(&state),
-    ));
-    tracing::info!(item = ITEM_PATH, menu = MENU_PATH, "tray host started");
-    TrayHandle {
-        connection,
-        state,
-        core: Some(core),
-        watcher_task: Some(task.abort_handle()),
+    #[cfg(not(windows))]
+    {
+        let Ok(runtime) = Handle::try_current() else {
+            tracing::warn!("no tokio runtime context; tray disabled");
+            state.set_tray(false);
+            return TrayHandle::inactive(connection, state);
+        };
+        let core = Arc::new(TrayCore::new(
+            wiring,
+            icon::icon_set(),
+            options
+                .probe
+                .clone()
+                .unwrap_or_else(|| Arc::new(WaylandOutputProbe)),
+            runtime,
+        ));
+        // The object-server borrow must END before the error arms move
+        // `connection` into the inert handle (scrutinee temporaries of an
+        // `if let` live through its body).
+        let item_registered = connection
+            .object_server()
+            .at(ITEM_PATH, StatusNotifierItem::new(Arc::clone(&core)))
+            .await;
+        if let Err(error) = item_registered {
+            tracing::warn!(%error, "could not register the StatusNotifierItem object; tray disabled");
+            state.set_tray(false);
+            return TrayHandle::inactive(connection, state);
+        }
+        let menu_registered = connection
+            .object_server()
+            .at(MENU_PATH, DbusMenu::new(Arc::clone(&core)))
+            .await;
+        if let Err(error) = menu_registered {
+            tracing::warn!(%error, "could not register the dbusmenu object; tray disabled");
+            let rolled_back = connection
+                .object_server()
+                .remove::<StatusNotifierItem, _>(ITEM_PATH)
+                .await;
+            if let Err(remove_error) = rolled_back {
+                tracing::warn!(%remove_error, "could not roll back the tray item object");
+            }
+            state.set_tray(false);
+            return TrayHandle::inactive(connection, state);
+        }
+        core.refresh_outputs();
+        let task = tokio::spawn(watcher::registration_task(
+            connection.clone(),
+            Arc::clone(&state),
+        ));
+        tracing::info!(item = ITEM_PATH, menu = MENU_PATH, "tray host started");
+        TrayHandle {
+            connection,
+            state,
+            core: Some(core),
+            watcher_task: Some(task.abort_handle()),
+            win_tray: None,
+        }
     }
 }

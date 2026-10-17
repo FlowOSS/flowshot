@@ -1,4 +1,5 @@
-#![forbid(unsafe_code)]
+#![cfg_attr(not(windows), forbid(unsafe_code))]
+#![cfg_attr(windows, allow(unsafe_code))]
 #![warn(missing_docs)]
 
 //! The `FlowShot` session daemon.
@@ -95,7 +96,7 @@ pub mod systemd;
 
 #[cfg(test)]
 mod logo_raster;
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod testsupport;
 
 pub use bus::{BusWiring, IFACE, OBJECT_PATH, SERVICE};

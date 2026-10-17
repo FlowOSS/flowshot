@@ -174,14 +174,19 @@ pub fn launcher_child(spec: &SessionSpec) -> SessionResult {
 fn probe_outputs() -> Vec<flowshot_core::geometry::OutputInfo> {
     use flowshot_actions::clipboard::{SessionKind, detect_session};
     match detect_session() {
+        #[cfg(unix)]
         Ok(SessionKind::X11) => probe_outputs_x11(),
-        // A Wayland session - or no session variable at all, where this leg
-        // keeps its existing warn-and-empty degradation (the UI gate errors
-        // first anyway; the execute/backend.rs routing precedent).
+        #[cfg(target_os = "windows")]
+        Ok(SessionKind::Windows) => {
+            flowshot_capture_windows::monitor::enumerate_monitors().unwrap_or_default()
+        }
+        #[cfg(unix)]
         Ok(SessionKind::Wayland) | Err(_) => probe_outputs_wayland(),
+        _ => Vec::new(),
     }
 }
 
+#[cfg(unix)]
 fn probe_outputs_wayland() -> Vec<flowshot_core::geometry::OutputInfo> {
     match flowshot_capture_wayland::CaptureThread::spawn() {
         Ok(thread) => thread.outputs().unwrap_or_else(|error| {
@@ -195,6 +200,7 @@ fn probe_outputs_wayland() -> Vec<flowshot_core::geometry::OutputInfo> {
     }
 }
 
+#[cfg(unix)]
 fn probe_outputs_x11() -> Vec<flowshot_core::geometry::OutputInfo> {
     use flowshot_capture::CaptureBackend;
     // The session child has no ambient executor; the X11 backend's worker

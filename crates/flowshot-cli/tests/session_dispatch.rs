@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 //! The session-child dispatch regression (the live-found defect): the
 //! hidden `session` verb used to dispatch INSIDE the CLI's tokio runtime,
 //! so the child leg's own `block_on` panicked with "Cannot start a runtime

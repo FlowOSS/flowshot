@@ -47,6 +47,7 @@ impl TrayCore {
     /// Groups the borrowed daemon pieces (`wiring`) with the tray-owned
     /// assets; four independent environment facts (see Smell-2 note: the
     /// wiring object already groups six).
+    #[cfg_attr(windows, allow(dead_code))]
     pub(super) fn new(
         wiring: TrayWiring,
         icons: IconSet,
@@ -251,6 +252,7 @@ fn pictures_dir() -> Result<PathBuf, String> {
 }
 
 /// Opens a directory via the XDG `OpenURI` portal.
+#[cfg_attr(windows, allow(clippy::unused_async))]
 async fn open_uri_portal(path: &PathBuf) -> Result<(), String> {
     // Verify it's a directory
     let metadata = std::fs::metadata(path).map_err(|e| format!("Failed to access path: {e}"))?;
@@ -258,27 +260,27 @@ async fn open_uri_portal(path: &PathBuf) -> Result<(), String> {
         return Err("Path is not a directory".to_owned());
     }
 
-    // Convert to file:// URI
-    let uri = format!(
-        "file://{}",
-        path.canonicalize()
-            .map_err(|e| format!("Failed to canonicalize path: {e}"))?
-            .display()
-    );
+    #[cfg(unix)]
+    {
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
+        let url = url::Url::from_file_path(&canonical)
+            .map_err(|()| format!("Failed to convert path {} to file URI", canonical.display()))?;
+        let portal_uri =
+            ashpd::Uri::parse(url.as_str()).map_err(|e| format!("Invalid URI {url}: {e}"))?;
 
-    // Parse URI (Url percent-encodes the raw path, e.g. spaces), then wrap
-    // in ashpd 0.13's own Uri type the portal call consumes.
-    let url = url::Url::parse(&uri).map_err(|e| format!("Invalid URI {uri}: {e}"))?;
-    let portal_uri =
-        ashpd::Uri::parse(url.as_str()).map_err(|e| format!("Invalid URI {uri}: {e}"))?;
+        // Open via portal
+        ashpd::desktop::open_uri::OpenFileRequest::default()
+            .send_uri(&portal_uri)
+            .await
+            .map_err(|e| format!("OpenURI portal call failed: {e}"))?;
 
-    // Open via portal
-    ashpd::desktop::open_uri::OpenFileRequest::default()
-        .send_uri(&portal_uri)
-        .await
-        .map_err(|e| format!("OpenURI portal call failed: {e}"))?;
-
-    Ok(())
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

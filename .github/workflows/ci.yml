@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: Linux (x86_64)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,3 +40,19 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+
+  windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Check clippy (Windows)
+        run: cargo clippy -p flowshot-core -p flowshot-capture -p flowshot-capture-windows -p flowshot-ui -p flowshot-actions -p flowshot-daemon -p flowshot-cli --lib --bins --tests -- -D warnings
+      - name: Run tests (Windows)
+        run: cargo test -p flowshot-core -p flowshot-capture -p flowshot-capture-windows -p flowshot-ui -p flowshot-actions -p flowshot-daemon -p flowshot-cli --lib --bins --tests
+      - name: Build Windows release binaries
+        run: cargo build -p flowshot-cli -p flowshot-daemon --release

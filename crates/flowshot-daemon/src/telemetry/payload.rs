@@ -50,28 +50,35 @@ fn probe_kernel_release() -> String {
 /// `CaptureThread` wayland connection, bounded by its internal deadlines,
 /// shut down immediately (no resident connection).
 fn probe_monitor_layout() -> Option<String> {
-    use std::fmt::Write as _;
-    let thread = flowshot_capture_wayland::CaptureThread::spawn().ok()?;
-    let outputs = thread.outputs().ok();
-    thread.shutdown();
-    let outputs = outputs.filter(|outputs| !outputs.is_empty())?;
-    let mut layout = String::new();
-    for (index, output) in outputs.iter().enumerate() {
-        if index > 0 {
-            layout.push_str(", ");
+    #[cfg(unix)]
+    {
+        use std::fmt::Write as _;
+        let thread = flowshot_capture_wayland::CaptureThread::spawn().ok()?;
+        let outputs = thread.outputs().ok();
+        thread.shutdown();
+        let outputs = outputs.filter(|outputs| !outputs.is_empty())?;
+        let mut layout = String::new();
+        for (index, output) in outputs.iter().enumerate() {
+            if index > 0 {
+                layout.push_str(", ");
+            }
+            // fmt::Write into a String cannot fail (it grows by allocation);
+            // `let _` is the idiom for the infallible case.
+            let _ = write!(
+                layout,
+                "{} {}x{}@{}",
+                output.connector,
+                output.physical_size.width.0,
+                output.physical_size.height.0,
+                output.scale
+            );
         }
-        // fmt::Write into a String cannot fail (it grows by allocation);
-        // `let _` is the idiom for the infallible case.
-        let _ = write!(
-            layout,
-            "{} {}x{}@{}",
-            output.connector,
-            output.physical_size.width.0,
-            output.physical_size.height.0,
-            output.scale
-        );
+        Some(layout)
     }
-    Some(layout)
+    #[cfg(not(unix))]
+    {
+        None
+    }
 }
 
 /// Reads the persisted install id, generating and persisting a fresh
@@ -102,12 +109,28 @@ fn install_id(path: &Path) -> Option<String> {
 /// for the daemon and the shape is ten lines.
 fn random_uuid_v4() -> Option<String> {
     use std::fmt::Write as _;
-    use std::io::Read;
     let mut bytes = [0u8; 16];
-    std::fs::File::open("/dev/urandom")
-        .ok()?
-        .read_exact(&mut bytes)
-        .ok()?;
+    #[cfg(unix)]
+    {
+        use std::io::Read;
+        std::fs::File::open("/dev/urandom")
+            .ok()?
+            .read_exact(&mut bytes)
+            .ok()?;
+    }
+    #[cfg(windows)]
+    {
+        use windows::Win32::Security::Cryptography::{
+            BCRYPT_USE_SYSTEM_PREFERRED_RNG, BCryptGenRandom,
+        };
+        if unsafe { BCryptGenRandom(None, &mut bytes, BCRYPT_USE_SYSTEM_PREFERRED_RNG).is_err() } {
+            return None;
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        return None;
+    }
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     let mut uuid = String::with_capacity(36);

@@ -26,19 +26,26 @@ pub struct WaylandOutputProbe;
 
 impl OutputProbe for WaylandOutputProbe {
     fn probe(&self) -> Vec<OutputInfo> {
-        let thread = match flowshot_capture_wayland::CaptureThread::spawn() {
-            Ok(thread) => thread,
-            Err(error) => {
-                tracing::warn!(%error, "output probe could not reach a compositor; submenu stays empty");
-                return Vec::new();
-            }
-        };
-        let outputs = thread.outputs().unwrap_or_else(|error| {
-            tracing::warn!(%error, "output probe failed; submenu stays empty");
+        #[cfg(unix)]
+        {
+            let thread = match flowshot_capture_wayland::CaptureThread::spawn() {
+                Ok(thread) => thread,
+                Err(error) => {
+                    tracing::warn!(%error, "output probe could not reach a compositor; submenu stays empty");
+                    return Vec::new();
+                }
+            };
+            let outputs = thread.outputs().unwrap_or_else(|error| {
+                tracing::warn!(%error, "output probe failed; submenu stays empty");
+                Vec::new()
+            });
+            thread.shutdown();
+            outputs
+        }
+        #[cfg(not(unix))]
+        {
             Vec::new()
-        });
-        thread.shutdown();
-        outputs
+        }
     }
 }
 

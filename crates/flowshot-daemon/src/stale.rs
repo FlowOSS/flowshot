@@ -31,6 +31,7 @@ use std::time::SystemTime;
 use tokio::sync::Notify;
 
 /// The running binary's magic link (Linux).
+#[cfg_attr(windows, allow(dead_code))]
 const PROC_SELF_EXE: &str = "/proc/self/exe";
 
 /// The suffix the kernel appends to `/proc/self/exe` when the running

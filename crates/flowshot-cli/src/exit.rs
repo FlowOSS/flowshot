@@ -101,9 +101,12 @@ fn exec_error_code(error: &ExecuteError) -> u8 {
     match error {
         ExecuteError::Usage(_) => USAGE,
         ExecuteError::Capture(_) if is_permission_denied(error) => PERMISSION_DENIED,
+        #[cfg(unix)]
         ExecuteError::Capture(_) | ExecuteError::Probe(_) | ExecuteError::Connect(_) => {
             CAPTURE_BACKEND
         }
+        #[cfg(not(unix))]
+        ExecuteError::Capture(_) => CAPTURE_BACKEND,
         ExecuteError::Export(_) | ExecuteError::Clipboard(_) => ACTION_EXPORT,
         ExecuteError::Child { exit_code, .. } => *exit_code,
         ExecuteError::Ui(_)
@@ -120,13 +123,17 @@ fn is_permission_denied(error: &ExecuteError) -> bool {
     let ExecuteError::Capture(capture) = error else {
         return false;
     };
-    let mut source = std::error::Error::source(capture);
-    while let Some(cause) = source {
-        if let Some(icc) = cause.downcast_ref::<flowshot_capture_wayland::IccError>() {
-            return matches!(icc, flowshot_capture_wayland::IccError::PermissionDenied);
+    #[cfg(unix)]
+    {
+        let mut source = std::error::Error::source(capture);
+        while let Some(cause) = source {
+            if let Some(icc) = cause.downcast_ref::<flowshot_capture_wayland::IccError>() {
+                return matches!(icc, flowshot_capture_wayland::IccError::PermissionDenied);
+            }
+            source = cause.source();
         }
-        source = cause.source();
     }
+    let _ = capture;
     false
 }
 

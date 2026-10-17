@@ -28,10 +28,12 @@ impl FileDialogSink for PicturesDirDialog {
     }
 }
 
+#[cfg(unix)]
 use ashpd::desktop::file_chooser::SelectedFiles;
 
 /// Requests a save path from the user via the XDG Desktop Portal `FileChooser`.
 /// Returns `None` if the user cancels the dialog.
+#[cfg(unix)]
 pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
     let request = match SelectedFiles::save_file()
         .title("Save Screenshot As")
@@ -59,6 +61,13 @@ pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
     let uri = files.uris().first()?;
     let url = url::Url::parse(uri.as_str()).ok()?;
     url.to_file_path().ok()
+}
+
+/// Fallback save path for non-Unix platforms.
+#[cfg(not(unix))]
+#[cfg_attr(windows, allow(clippy::unused_async))]
+pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
+    pictures_dir().ok().map(|dir| dir.join(default_name))
 }
 
 pub(crate) fn pictures_dir() -> Result<PathBuf, ExportError> {

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use flowshot_capture::BackendKind;
-use flowshot_capture_wayland::CapturedOutputs;
+use flowshot_capture::stitch::CapturedOutputs;
 use flowshot_core::Config;
 use flowshot_core::geometry::{LogicalPoint, LogicalRect, OutputLayout};
 use flowshot_ui::launcher::RegionGeometry;

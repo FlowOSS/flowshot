@@ -23,5 +23,8 @@ pub(crate) fn session_window_customizer(
             use winit::platform::wayland::WindowAttributesExtWayland;
             attributes.with_name(app_id, title)
         }),
+        Ok(SessionKind::Windows) => {
+            WindowCustomizer::new(move |attributes| attributes.with_title(title))
+        }
     }
 }

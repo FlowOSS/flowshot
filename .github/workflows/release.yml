@@ -375,8 +375,48 @@ jobs:
           path: target/debian/*.deb
           if-no-files-found: error
 
+  package-windows:
+    needs: [meta, changelog, gate]
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Build Windows release binaries
+        run: cargo build --release --target x86_64-pc-windows-msvc -p flowshot-cli -p flowshot-daemon
+      - name: Stage Windows distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ needs.meta.outputs.version }}"
+          mkdir -p target/release target/windows-dist target/windows-zip/flowshot
+          cp target/x86_64-pc-windows-msvc/release/flowshot.exe target/release/
+          cp target/x86_64-pc-windows-msvc/release/flowshot-daemon.exe target/release/
+          cp target/release/flowshot.exe target/windows-zip/flowshot/
+          cp target/release/flowshot-daemon.exe target/windows-zip/flowshot/
+          cp README.md LICENSE target/windows-zip/flowshot/
+          (cd target/windows-zip && 7z a -tzip "../windows-dist/flowshot-${VER}-windows-x86_64.zip" flowshot)
+      - name: Build Inno Setup Installer
+        run: |
+          $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+              $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          } else {
+              $isccPath = $iscc.Source
+          }
+          & $isccPath /DAppVersion=${{ needs.meta.outputs.version }} packaging/windows/flowshot.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: target/windows-dist/*
+          if-no-files-found: error
+
   release:
-    needs: [meta, changelog, gate, build-linux, package-arch, package-deb]
+    needs: [meta, changelog, gate, build-linux, package-arch, package-deb, package-windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -390,9 +430,11 @@ jobs:
           (cd tarball && sha256sum *.tar.xz) > sha256sums.txt
           (cd arch-package && sha256sum *.pkg.tar.zst) >> sha256sums.txt
           (cd deb-package && sha256sum *.deb) >> sha256sums.txt
+          (cd windows-package && sha256sum *.*) >> sha256sums.txt
           (cd tarball && sha256sum -c ../sha256sums.txt --ignore-missing)
           (cd arch-package && sha256sum -c ../sha256sums.txt --ignore-missing)
           (cd deb-package && sha256sum -c ../sha256sums.txt --ignore-missing)
+          (cd windows-package && sha256sum -c ../sha256sums.txt --ignore-missing)
       # Rehearsal mode (workflow_dispatch): publish NOTHING - no draft release,
       # no tag - just expose every built artifact for inspection.
       - name: Rehearsal - upload all artifacts, skip publishing
@@ -404,6 +446,7 @@ jobs:
             tarball/
             arch-package/
             deb-package/
+            windows-package/
             changelog/
             sha256sums.txt
           if-no-files-found: error
@@ -419,6 +462,7 @@ jobs:
             tarball/*.tar.xz
             arch-package/*.pkg.tar.zst
             deb-package/*.deb
+            windows-package/*
             sha256sums.txt
             changelog/CHANGELOG.md
       - name: Validate the published asset list, then undraft
@@ -433,6 +477,8 @@ jobs:
           for want in "flowshot-$VER-x86_64-unknown-linux-gnu.tar.xz" \
                       "flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
                       "flowshot_${VER}-1_amd64.deb" \
+                      "flowshot-setup-${VER}-x86_64.exe" \
+                      "flowshot-${VER}-windows-x86_64.zip" \
                       "sha256sums.txt" "CHANGELOG.md"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }

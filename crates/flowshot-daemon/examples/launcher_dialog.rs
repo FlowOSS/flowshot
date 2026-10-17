@@ -37,9 +37,22 @@ use flowshot_ui::launcher::{
     RegionGeometry,
 };
 
-mod common;
-
-use common::session_window_customizer;
+fn session_window_customizer(app_id: &'static str, title: &'static str) -> WindowCustomizer {
+    use flowshot_actions::clipboard::{SessionKind, detect_session};
+    match detect_session() {
+        Ok(SessionKind::X11) => WindowCustomizer::new(move |attributes| {
+            use winit::platform::x11::WindowAttributesExtX11;
+            attributes.with_name(app_id, title)
+        }),
+        Ok(SessionKind::Wayland) | Err(_) => WindowCustomizer::new(move |attributes| {
+            use winit::platform::wayland::WindowAttributesExtWayland;
+            attributes.with_name(app_id, title)
+        }),
+        Ok(SessionKind::Windows) => {
+            WindowCustomizer::new(move |attributes| attributes.with_title(title))
+        }
+    }
+}
 
 fn main() -> ExitCode {
     tracing_subscriber::fmt()

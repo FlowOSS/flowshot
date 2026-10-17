@@ -15,6 +15,3 @@
 #
 # QA-harness dev-dependency: examples/pin_window.rs bridges PinActionSink.
 flowshot-ui|[dev-dependencies]|flowshot-actions
-# QA-harness dev-dependency: examples/launcher_dialog.rs drives the live
-# session for the launcher acceptance (probe + capture_region assert).
-flowshot-ui|[dev-dependencies]|flowshot-capture-wayland

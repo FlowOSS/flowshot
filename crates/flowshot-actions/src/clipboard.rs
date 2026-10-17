@@ -55,6 +55,8 @@ mod backend;
 mod keepalive;
 mod offer;
 mod pipeline;
+mod windows;
+#[cfg(unix)]
 mod x11;
 
 pub use actions::{Action, LegacyFlags, effective_actions, execution_order};
@@ -67,7 +69,36 @@ pub use offer::{
     image_and_path_offer, image_mime, image_offer, path_offer,
 };
 pub use pipeline::{ActionOutcome, PostCapture, PostCaptureReport, run_post_capture};
+pub use windows::WindowsClipboard;
+#[cfg(unix)]
 pub use x11::X11Clipboard;
+
+#[cfg(not(unix))]
+/// Inert X11 clipboard stub for non-Unix platforms.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct X11Clipboard;
+
+#[cfg(not(unix))]
+impl X11Clipboard {
+    /// Creates an inert X11 clipboard backend.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+
+    /// Creates an inert X11 clipboard backend with a loss hook.
+    #[must_use]
+    pub fn with_loss_hook(_hook: Arc<dyn Fn() + Send + Sync>) -> Self {
+        Self
+    }
+}
+
+#[cfg(not(unix))]
+impl ClipboardBackend for X11Clipboard {
+    fn serve(&self, _offer: ClipboardOffer) -> Result<(), ClipboardError> {
+        Ok(())
+    }
+}
 
 use std::ffi::OsStr;
 use std::path::Path;
@@ -117,11 +148,14 @@ pub enum SessionKind {
     Wayland,
     /// An X11 session (`DISPLAY` set, no `WAYLAND_DISPLAY`).
     X11,
+    /// A Windows desktop session.
+    Windows,
 }
 
 /// The session routing rule with the environment values injectable
 /// (headless tests). Empty values count as unset. `WAYLAND_DISPLAY`
 /// wins: an `XWayland` session exports both.
+#[cfg_attr(windows, allow(dead_code))]
 fn session_from_env(
     wayland_display: Option<&OsStr>,
     display: Option<&OsStr>,
@@ -143,10 +177,17 @@ fn session_from_env(
 /// [`ClipboardError::NoSession`] when neither `WAYLAND_DISPLAY` nor
 /// `DISPLAY` is set (or both are empty).
 pub fn detect_session() -> Result<SessionKind, ClipboardError> {
-    session_from_env(
-        std::env::var_os("WAYLAND_DISPLAY").as_deref(),
-        std::env::var_os("DISPLAY").as_deref(),
-    )
+    #[cfg(windows)]
+    {
+        Ok(SessionKind::Windows)
+    }
+    #[cfg(not(windows))]
+    {
+        session_from_env(
+            std::env::var_os("WAYLAND_DISPLAY").as_deref(),
+            std::env::var_os("DISPLAY").as_deref(),
+        )
+    }
 }
 
 /// Clipboard facade used by the post-capture pipeline.
@@ -194,10 +235,24 @@ impl Clipboard {
     ///
     /// [`ClipboardError::NoSession`] when neither `WAYLAND_DISPLAY` nor
     /// `DISPLAY` is set.
+    /// The Windows clipboard backend.
+    #[must_use]
+    pub fn windows() -> Self {
+        Self::new(WindowsClipboard::new())
+    }
+
+    /// The backend for the current session: `WAYLAND_DISPLAY` set →
+    /// the Wayland backend; `DISPLAY` set → the X11 backend; on
+    /// Windows → the Windows clipboard backend.
+    ///
+    /// # Errors
+    ///
+    /// [`ClipboardError::NoSession`] on Linux when neither variable is set.
     pub fn for_session() -> Result<Self, ClipboardError> {
         Ok(match detect_session()? {
             SessionKind::Wayland => Self::wayland(),
             SessionKind::X11 => Self::x11(),
+            SessionKind::Windows => Self::windows(),
         })
     }
 
@@ -218,6 +273,7 @@ impl Clipboard {
         Ok(match detect_session()? {
             SessionKind::Wayland => Self::wayland(),
             SessionKind::X11 => Self::new(X11Clipboard::with_loss_hook(hook)),
+            SessionKind::Windows => Self::windows(),
         })
     }
 
@@ -360,6 +416,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn copy_file_path_offers_plain_and_uri_list() -> Result<(), ClipboardError> {
         let mock = MockClipboard::new();
@@ -371,6 +428,22 @@ mod tests {
         assert_eq!(
             offer.entries[1].data.as_ref(),
             b"file:///tmp/flowshot%20shot.png\r\n"
+        );
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn copy_file_path_offers_plain_and_uri_list() -> Result<(), ClipboardError> {
+        let mock = MockClipboard::new();
+        let clipboard = Clipboard::new(mock.clone());
+        clipboard.copy_file_path(Path::new(r"C:\tmp\flowshot shot.png"))?;
+        let offer = mock.last_offer().unwrap_or_default();
+        assert_eq!(mimes(&offer), [MIME_TEXT_PLAIN, MIME_URI_LIST]);
+        assert_eq!(offer.entries[0].data.as_ref(), br"C:\tmp\flowshot shot.png");
+        assert_eq!(
+            offer.entries[1].data.as_ref(),
+            b"file:///C:/tmp/flowshot%20shot.png\r\n"
         );
         Ok(())
     }
@@ -414,6 +487,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn copy_capture_and_path_builds_combined_offer() -> Result<(), ClipboardError> {
         let mock = MockClipboard::new();
@@ -432,6 +506,28 @@ mod tests {
         assert!(offer.entries[1].data.starts_with(&JPEG_MAGIC));
         assert_eq!(offer.entries[2].data.as_ref(), b"/tmp/s.png");
         assert_eq!(offer.entries[3].data.as_ref(), b"file:///tmp/s.png\r\n");
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn copy_capture_and_path_builds_combined_offer() -> Result<(), ClipboardError> {
+        let mock = MockClipboard::new();
+        let clipboard = Clipboard::new(mock.clone());
+        clipboard.copy_capture_and_path(
+            &DynamicImage::new_rgb8(3, 2),
+            &config(ClipboardFormat::Jpeg),
+            Path::new(r"C:\tmp\s.png"),
+        )?;
+        let offer = mock.last_offer().unwrap_or_default();
+        assert_eq!(
+            mimes(&offer),
+            [MIME_PNG, MIME_JPEG, MIME_TEXT_PLAIN, MIME_URI_LIST]
+        );
+        assert!(offer.entries[0].data.starts_with(&PNG_MAGIC));
+        assert!(offer.entries[1].data.starts_with(&JPEG_MAGIC));
+        assert_eq!(offer.entries[2].data.as_ref(), br"C:\tmp\s.png");
+        assert_eq!(offer.entries[3].data.as_ref(), b"file:///C:/tmp/s.png\r\n");
         Ok(())
     }
 

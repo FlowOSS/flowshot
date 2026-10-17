@@ -53,10 +53,10 @@ allowlist_file="$repo_root/scripts/purity-allowlist.txt"
 gated_crates=(flowshot-core flowshot-capture flowshot-ui)
 
 # Platform crates, Cargo.toml package-name form (hyphens).
-banned_deps_alt='wayland-client|wayland-protocols|wayland-protocols-wlr|wayland-backend|wayland-scanner|smithay-client-toolkit|sctk|calloop|calloop-wayland-source|wl-clipboard-rs|x11|x11rb|x11rb-protocol|xcb|xcap|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify-rust|nix|rustix|libc|memfd|pipewire|pipewire-sys|libspa|libspa-sys|fontconfig|flowshot-capture-wayland|flowshot-capture-x11|flowshot-actions'
+banned_deps_alt='wayland-client|wayland-protocols|wayland-protocols-wlr|wayland-backend|wayland-scanner|smithay-client-toolkit|sctk|calloop|calloop-wayland-source|wl-clipboard-rs|x11|x11rb|x11rb-protocol|xcb|xcap|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify-rust|nix|rustix|libc|memfd|pipewire|pipewire-sys|libspa|libspa-sys|fontconfig|flowshot-capture-wayland|flowshot-capture-x11|flowshot-capture-windows|flowshot-actions'
 
 # Same crates, Rust identifier form (underscores), import-shaped patterns.
-banned_ids_alt='wayland_[a-z_]+|wl_clipboard[a-z_]*|smithay[a-z_]*|sctk[a-z_]*|calloop[a-z_]*|x11[a-z_0-9]*|xcb|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify_rust|nix|rustix|libc|memfd|pipewire|libspa|fontconfig|flowshot_capture_wayland|flowshot_capture_x11|flowshot_actions'
+banned_ids_alt='wayland_[a-z_]+|wl_clipboard[a-z_]*|smithay[a-z_]*|sctk[a-z_]*|calloop[a-z_]*|x11[a-z_0-9]*|xcb|xkbcommon|zbus|zvariant|ashpd|ksni|dbus|notify_rust|nix|rustix|libc|memfd|pipewire|libspa|fontconfig|flowshot_capture_wayland|flowshot_capture_x11|flowshot_capture_windows|flowshot_actions'
 
 src_patterns=(
     "(^|[^A-Za-z0-9_])(pub[[:space:]]+)?(use|extern[[:space:]]+crate)[[:space:]]+(${banned_ids_alt})(::|[[:space:]]*;|[[:space:]]+as[[:space:]]|\\\{)"
@@ -134,6 +134,20 @@ for crate in "${gated_crates[@]}"; do
                 rm -f "$out"
             } | sort -u
     )
+done
+
+# 4. Cross-platform target graph purity check.
+# Asserts that building for Windows (target x86_64-pc-windows-msvc) does NOT pull any
+# Unix/Wayland/X11/PipeWire platform dependencies across our portable and shell crates.
+win_target_crates=(flowshot-core flowshot-capture flowshot-capture-windows flowshot-ui flowshot-actions flowshot-daemon flowshot-cli)
+banned_win_deps='wayland-sys|wayland-backend|wayland-client|ashpd|x11rb|pipewire|pipewire-sys|libspa|libspa-sys|wl-clipboard-rs'
+
+for c in "${win_target_crates[@]}"; do
+    win_leak="$(cargo tree --target x86_64-pc-windows-msvc -p "$c" --prefix none 2>/dev/null | grep -E "^(${banned_win_deps}) " || true)"
+    if [[ -n "$win_leak" ]]; then
+        printf 'VIOLATION   %s: platform dependency leaked into Windows target tree: %s\n' "$c" "$(echo "$win_leak" | head -n 1)"
+        violations=$((violations + 1))
+    fi
 done
 
 printf '\npurity-gate: %d crate(s) gated, %d violation(s), %d allowlisted hit(s)\n' \

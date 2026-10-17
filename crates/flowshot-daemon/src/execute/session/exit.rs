@@ -10,7 +10,10 @@ pub fn code_for(error: &ExecuteError) -> u8 {
     match error {
         ExecuteError::Usage(_) => 2,
         ExecuteError::Capture(_) if is_permission_denied(error) => 5,
+        #[cfg(unix)]
         ExecuteError::Capture(_) | ExecuteError::Probe(_) | ExecuteError::Connect(_) => 4,
+        #[cfg(not(unix))]
+        ExecuteError::Capture(_) => 4,
         ExecuteError::Export(_) | ExecuteError::Clipboard(_) => 6,
         ExecuteError::Child { exit_code, .. } => *exit_code,
         ExecuteError::Ui(_)
@@ -30,12 +33,16 @@ fn is_permission_denied(error: &ExecuteError) -> bool {
     let ExecuteError::Capture(capture) = error else {
         return false;
     };
-    let mut source = std::error::Error::source(capture);
-    while let Some(cause) = source {
-        if let Some(icc) = cause.downcast_ref::<flowshot_capture_wayland::IccError>() {
-            return matches!(icc, flowshot_capture_wayland::IccError::PermissionDenied);
+    #[cfg(unix)]
+    {
+        let mut source = std::error::Error::source(capture);
+        while let Some(cause) = source {
+            if let Some(icc) = cause.downcast_ref::<flowshot_capture_wayland::IccError>() {
+                return matches!(icc, flowshot_capture_wayland::IccError::PermissionDenied);
+            }
+            source = cause.source();
         }
-        source = cause.source();
     }
+    let _ = capture;
     false
 }

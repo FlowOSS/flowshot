@@ -159,7 +159,7 @@ impl FlowShotInterface {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::command::{ExecutionOutcome, ExecutionReceipt, RecordingSink};

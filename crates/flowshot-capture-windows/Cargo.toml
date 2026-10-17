@@ -1,0 +1,27 @@
+[package]
+name = "flowshot-capture-windows"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+repository = "https://github.com/flowoss/flowshot"
+authors = ["FlowShot Contributors"]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+flowshot-core = { path = "../flowshot-core" }
+flowshot-capture = { path = "../flowshot-capture" }
+async-trait = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
