@@ -127,6 +127,13 @@ fn report(error: &anyhow::Error) -> ExitCode {
         .downcast_ref::<CliError>()
         .map_or(exit::GENERIC, exit::exit_code);
     let _ = writeln!(std::io::stderr(), "flowshot: {error:#}");
+    #[cfg(unix)]
+    if let Some((raw, healed)) = flowshot_daemon::paths::check_and_heal_xdg_data_dirs() {
+        let _ = writeln!(
+            std::io::stderr(),
+            "flowshot note: your environment's XDG_DATA_DIRS is missing /usr/share or contains unexpanded tokens (raw='{raw}'); auto-healed to '{healed}'. Check your shell startup scripts (~/.profile, ~/.bashrc)."
+        );
+    }
     ExitCode::from(code)
 }
 

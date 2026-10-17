@@ -199,6 +199,15 @@ async fn check_tray_diagnostics(config_path: Option<&std::path::Path>) -> anyhow
             "   WARNING: Tray is disabled in configuration. Enable it in ~/.config/flowshot/flowshot.toml via [daemon] tray = true"
         );
     }
+    #[cfg(unix)]
+    if let Some((raw, healed)) = flowshot_daemon::paths::check_and_heal_xdg_data_dirs() {
+        println!("   WARNING: Incomplete or malformed XDG_DATA_DIRS detected!");
+        println!("   Raw value: {raw}");
+        println!("   Auto-healed: {healed}");
+        println!(
+            "   Note: Check your shell startup files (~/.profile or ~/.bashrc) for unexpanded XDG_DATA_DIRS variables."
+        );
+    }
 
     #[cfg(windows)]
     {

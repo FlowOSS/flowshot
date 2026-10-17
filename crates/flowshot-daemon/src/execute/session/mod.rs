@@ -205,6 +205,15 @@ pub async fn spawn(spec: SessionSpec) -> Result<SessionResult, ExecuteError> {
         if let Some(path) = &render_path {
             cmd.env("FLOWSHOT_RENDER_PATH", path);
         }
+        #[cfg(unix)]
+        if let Some((raw, healed)) = crate::paths::check_and_heal_xdg_data_dirs() {
+            tracing::warn!(
+                raw = %raw,
+                healed = %healed,
+                "malformed or incomplete XDG_DATA_DIRS detected; auto-healed for session child so Vulkan ICDs and desktop assets resolve"
+            );
+            cmd.env("XDG_DATA_DIRS", healed);
+        }
         cmd.status()
     })
     .await

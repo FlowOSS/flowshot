@@ -111,6 +111,52 @@ pub fn telemetry_id_path_in(data_home: &Path) -> PathBuf {
     data_home.join(CONFIG_DIR_NAME).join(TELEMETRY_ID_FILE_NAME)
 }
 
+/// Pure logic to heal a malformed or incomplete `XDG_DATA_DIRS` string.
+///
+/// Ensures `/usr/local/share` and `/usr/share` exist in the path list, and
+/// filters out unexpanded shell tokens like `$XDG_DATA_DIRS`.
+#[must_use]
+pub fn heal_xdg_data_dirs_str(raw: &str) -> Option<String> {
+    const STANDARD_DIRS: [&str; 2] = ["/usr/local/share", "/usr/share"];
+
+    let has_usr_share = raw
+        .split(':')
+        .any(|p| p == "/usr/share" || p == "/usr/share/");
+    let has_broken_var = raw.contains("$XDG_DATA_DIRS") || raw.contains("${XDG_DATA_DIRS}");
+
+    if has_usr_share && !has_broken_var && !raw.is_empty() {
+        return None;
+    }
+
+    let mut dirs: Vec<String> = raw
+        .split(':')
+        .map(str::trim)
+        .filter(|p| !p.is_empty() && !p.contains('$'))
+        .map(ToString::to_string)
+        .collect();
+
+    for std_dir in STANDARD_DIRS {
+        if !dirs.iter().any(|d| d == std_dir) {
+            dirs.push(std_dir.to_string());
+        }
+    }
+
+    Some(dirs.join(":"))
+}
+
+/// Inspects and self-heals `$XDG_DATA_DIRS` if it is missing, malformed, or
+/// lacks standard `/usr/share` system directories (e.g. from broken shell
+/// exports like `XDG_DATA_DIRS=$XDG_DATA_DIRS:...` with unexpanded quotes).
+///
+/// Returns `Some((raw, healed))` if an issue was detected and self-healed,
+/// or `None` if the environment was already healthy.
+#[cfg(unix)]
+#[must_use]
+pub fn check_and_heal_xdg_data_dirs() -> Option<(String, String)> {
+    let raw = std::env::var("XDG_DATA_DIRS").unwrap_or_default();
+    heal_xdg_data_dirs_str(&raw).map(|healed| (raw, healed))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,5 +176,35 @@ mod tests {
             Ok(dir) => assert!(dir.is_absolute() || dir.starts_with(".")),
             Err(error) => assert!(matches!(error, DaemonError::Env(_))),
         }
+    }
+
+    #[test]
+    fn xdg_data_dirs_heals_unexpanded_literal_tokens() {
+        let broken = "$XDG_DATA_DIRS:/var/lib/flatpak/exports/share:/home/user/.local/share";
+        let Some(healed) = heal_xdg_data_dirs_str(broken) else {
+            panic!("expected healed string");
+        };
+        assert_eq!(
+            healed,
+            "/var/lib/flatpak/exports/share:/home/user/.local/share:/usr/local/share:/usr/share"
+        );
+    }
+
+    #[test]
+    fn xdg_data_dirs_heals_missing_usr_share() {
+        let missing = "/var/lib/flatpak/exports/share";
+        let Some(healed) = heal_xdg_data_dirs_str(missing) else {
+            panic!("expected healed string");
+        };
+        assert_eq!(
+            healed,
+            "/var/lib/flatpak/exports/share:/usr/local/share:/usr/share"
+        );
+    }
+
+    #[test]
+    fn xdg_data_dirs_healthy_string_returns_none() {
+        let healthy = "/usr/local/share:/usr/share:/var/lib/flatpak/exports/share";
+        assert_eq!(heal_xdg_data_dirs_str(healthy), None);
     }
 }

@@ -150,6 +150,15 @@ fn plan_command(plan: &HelperPlan) -> Command {
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
+    #[cfg(unix)]
+    if let Some((raw, healed)) = flowshot_daemon::paths::check_and_heal_xdg_data_dirs() {
+        tracing::warn!(
+            raw = %raw,
+            healed = %healed,
+            "malformed or incomplete XDG_DATA_DIRS detected; auto-healed for helper daemon so Vulkan ICDs and desktop assets resolve"
+        );
+        command.env("XDG_DATA_DIRS", healed);
+    }
     command
 }
 
