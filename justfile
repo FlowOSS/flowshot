@@ -26,6 +26,16 @@ deny:
 check:
 	cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace && ./scripts/purity-gate.sh && cargo deny check
 
+# Typecheck Windows targets and assert pure Windows dependency graph
+check-windows:
+	cargo check --target x86_64-pc-windows-msvc -p flowshot-core -p flowshot-capture -p flowshot-capture-windows -p flowshot-ui
+	./scripts/purity-gate.sh
+
+# Install the Windows cross-compilation target via rustup
+target-windows:
+	rustup target add x86_64-pc-windows-msvc
+
+
 # Run the CLI with args (e.g. `just run capture full`, `just run -- --help`)
 run *ARGS:
 	cargo run -p flowshot-cli -- {{ARGS}}
