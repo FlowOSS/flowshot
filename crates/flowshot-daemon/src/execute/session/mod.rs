@@ -302,7 +302,24 @@ pub fn run_child(spec_path: &Path) -> u8 {
     // once (`ExecuteError::Child`), so one failure is one event.
     let config = load_config(spec.config_path.as_deref());
     let _telemetry = crate::telemetry::init(&config.telemetry, spec.kind.clone().into());
-    let result = dispatch_child(&spec);
+    let result =
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatch_child(&spec))) {
+            Ok(result) => result,
+            Err(payload) => {
+                let error = if let Some(msg) = payload.downcast_ref::<&str>() {
+                    (*msg).to_owned()
+                } else if let Some(msg) = payload.downcast_ref::<String>() {
+                    msg.clone()
+                } else {
+                    "unknown panic in session child".to_owned()
+                };
+                tracing::error!(%error, "session child panicked during execution");
+                SessionResult::Failed {
+                    error: format!("session child panicked: {error}"),
+                    exit_code: exit::exit_code_for_child_failure(),
+                }
+            }
+        };
     let code = match &result {
         SessionResult::Failed { exit_code, .. } => *exit_code,
         _ => 0,
@@ -310,12 +327,20 @@ pub fn run_child(spec_path: &Path) -> u8 {
     match serde_json::to_string(&result) {
         Ok(json) => {
             if let Err(error) = std::fs::write(&spec.result_path, json) {
-                eprintln!("flowshot session: result write failed: {error}");
+                use std::io::Write as _;
+                let _ = writeln!(
+                    std::io::stderr(),
+                    "flowshot session: result write failed: {error}"
+                );
                 return 1;
             }
         }
         Err(error) => {
-            eprintln!("flowshot session: result serialize failed: {error}");
+            use std::io::Write as _;
+            let _ = writeln!(
+                std::io::stderr(),
+                "flowshot session: result serialize failed: {error}"
+            );
             return 1;
         }
     }

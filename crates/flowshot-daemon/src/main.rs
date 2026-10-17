@@ -62,12 +62,36 @@ enum Sub {
 /// wgpu's NVIDIA present-mode/layer warnings (`wgpu_hal::vulkan`).
 const DEFAULT_LOG_FILTER: &str = "info,zbus::proxy=error,zbus::connection=error,wgpu_hal::vulkan::conv=error,wgpu_hal::vulkan::instance=error";
 
+/// A writer for `tracing_subscriber` that safely discards `BrokenPipe` errors
+/// instead of panicking when stderr is closed (e.g. when launching from a pipe
+/// or when a parent terminal closes).
+struct NonPanickingStderr;
+
+impl std::io::Write for NonPanickingStderr {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match std::io::stderr().write(buf) {
+            Ok(n) => Ok(n),
+            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(buf.len()),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match std::io::stderr().flush() {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
         )
+        .with_writer(|| NonPanickingStderr)
         .init();
 
     let args = Args::parse();

@@ -120,17 +120,37 @@ fn run_command(
 /// The single error boundary: typed errors map onto the exit-code table,
 /// anything else is the generic infrastructure code. Every non-zero exit
 /// reports the typed chain to telemetry first (no-op while disabled).
-#[expect(
-    clippy::print_stderr,
-    reason = "the binary's error boundary reports to stderr by contract"
-)]
 fn report(error: &anyhow::Error) -> ExitCode {
+    use std::io::Write as _;
     flowshot_daemon::telemetry::capture_error(&**error);
     let code = error
         .downcast_ref::<CliError>()
         .map_or(exit::GENERIC, exit::exit_code);
-    eprintln!("flowshot: {error:#}");
+    let _ = writeln!(std::io::stderr(), "flowshot: {error:#}");
     ExitCode::from(code)
+}
+
+/// A writer for `tracing_subscriber` that safely discards `BrokenPipe` errors
+/// instead of panicking when stderr is closed (e.g. when piped to another tool
+/// or when a parent terminal closes).
+struct NonPanickingStderr;
+
+impl std::io::Write for NonPanickingStderr {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match std::io::stderr().write(buf) {
+            Ok(n) => Ok(n),
+            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(buf.len()),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match std::io::stderr().flush() {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 /// Default tracing filter when `RUST_LOG` is unset (an explicit `RUST_LOG`
@@ -147,7 +167,7 @@ fn init_tracing() {
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
         )
-        .with_writer(std::io::stderr)
+        .with_writer(|| NonPanickingStderr)
         .init();
 }
 
