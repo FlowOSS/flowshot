@@ -107,21 +107,28 @@ pub fn settings_child(spec: &SessionSpec) -> SessionResult {
 /// (best-effort: no portal or no answer = the `ThemeMode` default).
 #[must_use]
 pub fn query_system_theme() -> ThemeMode {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build();
-    let Ok(runtime) = runtime else {
-        return ThemeMode::default();
-    };
-    runtime
-        .block_on(async {
-            let settings = ashpd::desktop::settings::Settings::new().await.ok()?;
-            settings.color_scheme().await.ok()
-        })
-        .map_or(ThemeMode::default(), |scheme| match scheme {
-            ashpd::desktop::settings::ColorScheme::PreferLight => ThemeMode::Light,
-            _ => ThemeMode::Dark,
-        })
+    #[cfg(unix)]
+    {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build();
+        let Ok(runtime) = runtime else {
+            return ThemeMode::default();
+        };
+        runtime
+            .block_on(async {
+                let settings = ashpd::desktop::settings::Settings::new().await.ok()?;
+                settings.color_scheme().await.ok()
+            })
+            .map_or(ThemeMode::default(), |scheme| match scheme {
+                ashpd::desktop::settings::ColorScheme::PreferLight => ThemeMode::Light,
+                _ => ThemeMode::Dark,
+            })
+    }
+    #[cfg(not(unix))]
+    {
+        ThemeMode::default()
+    }
 }
 
 /// The Ctrl+C/V bridge for the egui text fields: writes go through the

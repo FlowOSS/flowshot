@@ -35,16 +35,7 @@ flowshot-actions = { path = "../flowshot-actions" }
 # (lightweight workspace member; zero new external crates - all of its deps
 # are already in this crate's graph).
 flowshot-capture = { path = "../flowshot-capture" }
-# The tray's per-monitor submenu live-probes outputs through
-# `CaptureThread` (the registry probe - no GPU, no capture session;
-# a dedicated wayland connection bounded by 10 s deadlines). Workspace
-# member edge only: zero new external crates in the lock.
-flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
-# The session-routed X11 capture leg
-# (probe_x11 + X11Backend) in execute/backend.rs. Sibling of
-# flowshot-capture-wayland; workspace member edge only (x11rb is already
-# locked via flowshot-actions' X11 clipboard).
-flowshot-capture-x11 = { path = "../flowshot-capture-x11" }
+
 # Executor: the overlay/pin/launcher/settings window runtimes, the
 # completion export boundary, and the launch vocabulary. The daemon is the
 # platform-integration layer (it already carries the wayland capture crates),
@@ -82,7 +73,7 @@ notify-rust = { workspace = true }
 # session-bus connection is a process-global OnceLock singleton (proxy.rs
 # `static SESSION`) - correct in production, and the reason the stub-portal
 # test drives it through DBUS_SESSION_BUS_ADDRESS.
-ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings", "file_chooser"] }
+
 # Restore-data persistence (JSON in the config dir) + `StreamExt` for the
 # portal's Activated signal stream. Both pre-locked workspace deps.
 serde = { workspace = true }
@@ -126,5 +117,18 @@ resvg = { workspace = true }
 name = "e2e_headless"
 required-features = ["test-drive"]
 
+[[example]]
+name = "launcher_dialog"
+required-features = ["test-drive"]
+
 [lints]
 workspace = true
+
+[target.'cfg(unix)'.dependencies]
+flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
+flowshot-capture-x11 = { path = "../flowshot-capture-x11" }
+ashpd = { workspace = true, features = ["global_shortcuts", "open_uri", "settings", "file_chooser"] }
+
+[target.'cfg(windows)'.dependencies]
+flowshot-capture-windows = { path = "../flowshot-capture-windows" }
+windows = { workspace = true, features = ["Win32_Security_Cryptography"] }

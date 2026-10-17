@@ -138,9 +138,11 @@ pub enum ExecuteError {
     /// The capture ladder failed (backend or probe).
     #[error("capture failed: {0}")]
     Capture(#[from] CaptureError),
+    #[cfg(unix)]
     /// The Wayland session probe thread failed.
     #[error("session probe failed: {0}")]
     Probe(#[from] flowshot_capture_wayland::ProbeError),
+    #[cfg(unix)]
     /// The compositor connection failed.
     #[error("compositor connection failed: {0}")]
     Connect(#[from] flowshot_capture_wayland::ConnectError),
@@ -229,6 +231,7 @@ fn backend_tag(error: &ExecuteError) -> Option<String> {
             | CaptureError::Backend { backend, .. } => backend.to_string(),
             CaptureError::RegionOutsideLayout { .. } => "layout".to_owned(),
         }),
+        #[cfg(unix)]
         ExecuteError::Probe(_) | ExecuteError::Connect(_) => Some("probe".to_owned()),
         ExecuteError::Child { .. } => Some("session-child".to_owned()),
         ExecuteError::Usage(_)

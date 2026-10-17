@@ -19,19 +19,23 @@ use flowshot_ui::pins::zoom::ResizeAnchor;
 /// kept, since the UI's `require_display_server` gate rejects the window
 /// before any customizer runs anyway.
 #[must_use]
+#[cfg_attr(windows, allow(unused_variables))]
 pub(crate) fn session_window_customizer(
     app_id: &'static str,
     title: &'static str,
 ) -> WindowCustomizer {
     match detect_session() {
+        #[cfg(unix)]
         Ok(SessionKind::X11) => WindowCustomizer::new(move |attributes| {
             use winit::platform::x11::WindowAttributesExtX11;
             attributes.with_name(app_id, title)
         }),
+        #[cfg(unix)]
         Ok(SessionKind::Wayland) | Err(_) => WindowCustomizer::new(move |attributes| {
             use winit::platform::wayland::WindowAttributesExtWayland;
             attributes.with_name(app_id, title)
         }),
+        _ => WindowCustomizer::new(move |attributes| attributes.with_title(title)),
     }
 }
 
@@ -44,7 +48,7 @@ pub(crate) fn session_window_customizer(
 pub(crate) fn session_resize_anchor() -> ResizeAnchor {
     match detect_session() {
         Ok(SessionKind::X11) => ResizeAnchor::TopLeft,
-        Ok(SessionKind::Wayland) | Err(_) => ResizeAnchor::Center,
+        Ok(SessionKind::Wayland | SessionKind::Windows) | Err(_) => ResizeAnchor::Center,
     }
 }
 

@@ -1,3 +1,5 @@
+#![cfg_attr(windows, allow(dead_code))]
+
 //! The `com.canonical.dbusmenu` object: the tray menu served to the host
 //! (waybar renders it through libdbusmenu; the panel draws, the daemon
 //! only answers `GetLayout` / `Event` callbacks).

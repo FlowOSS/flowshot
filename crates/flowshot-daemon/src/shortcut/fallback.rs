@@ -381,7 +381,7 @@ mod tests {
         ] {
             assert_eq!(
                 bind_help(flavor, &specs),
-                golden,
+                golden.replace("\r\n", "\n"),
                 "golden mismatch for {}",
                 flavor.label()
             );

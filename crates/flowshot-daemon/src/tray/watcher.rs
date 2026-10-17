@@ -1,3 +1,5 @@
+#![cfg_attr(windows, allow(dead_code))]
+
 //! `StatusNotifierWatcher` registration: the handshake that makes the tray
 //! visible, and the degrade path that keeps the daemon alive without it.
 //!

@@ -189,7 +189,7 @@ pub(crate) async fn close_quietly(connection: Connection) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::bus::SERVICE;

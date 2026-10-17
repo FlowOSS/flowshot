@@ -33,8 +33,10 @@
 pub mod detect;
 pub mod fallback;
 pub mod persist;
+#[cfg(unix)]
 pub mod portal;
 pub mod spec;
+pub mod windows;
 
 pub use detect::{PortalMode, desktop_from_env, detect_desktop};
 pub use fallback::{CompositorFlavor, bind_help};
@@ -43,15 +45,22 @@ pub use spec::{ACTIVE_SCREEN, ShortcutSpec, default_shortcuts};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
+#[cfg(unix)]
+use std::time::SystemTime;
 
 use flowshot_capture::DesktopEnv;
+#[cfg(unix)]
 use tokio::sync::Notify;
+#[cfg(unix)]
 use tokio::task::{AbortHandle, JoinHandle};
 
 use crate::command::CommandSink;
+#[cfg(unix)]
 use crate::error::DaemonError;
-use crate::notify::{NotificationRecord, Notifier};
+#[cfg(unix)]
+use crate::notify::NotificationRecord;
+use crate::notify::Notifier;
 use crate::state::DaemonState;
 
 /// Budget for the portal registration sequence. A portal MAY show a
@@ -61,6 +70,7 @@ pub const DEFAULT_REGISTRATION_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Budget for the listener task to finish its graceful session close
 /// during shutdown before it is aborted.
+#[cfg(unix)]
 const LISTENER_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Everything the shortcut host borrows from the running daemon (grouped
@@ -135,6 +145,7 @@ pub struct FallbackInfo {
 }
 
 /// A live portal registration: the listener task plus its teardown gear.
+#[cfg(unix)]
 #[derive(Debug)]
 pub struct PortalRegistration {
     cancel: Arc<Notify>,
@@ -144,6 +155,7 @@ pub struct PortalRegistration {
     data: RestoreData,
 }
 
+#[cfg(unix)]
 impl PortalRegistration {
     /// The persisted registration record (the settings seam).
     #[must_use]
@@ -174,9 +186,13 @@ impl PortalRegistration {
 /// The outcome of the ladder.
 #[derive(Debug)]
 pub enum Registration {
+    #[cfg(unix)]
     /// Portal registration succeeded; the daemon holds the `shortcuts`
     /// persistence reason until [`PortalRegistration::shutdown`].
     Portal(PortalRegistration),
+    #[cfg(windows)]
+    /// Windows global hotkeys registration (`RegisterHotKey`).
+    Windows(windows::WindowsShortcuts),
     /// Portal absent/denied/masked: compositor snippets are the path.
     Fallback(FallbackInfo),
     /// Shortcuts are off (`ShortcutOptions::enabled == false`).
@@ -187,7 +203,14 @@ impl Registration {
     /// Whether the portal rung succeeded.
     #[must_use]
     pub const fn is_portal(&self) -> bool {
-        matches!(self, Self::Portal(_))
+        #[cfg(unix)]
+        {
+            matches!(self, Self::Portal(_))
+        }
+        #[cfg(not(unix))]
+        {
+            false
+        }
     }
 
     /// The fallback details when the ladder fell through.
@@ -195,14 +218,24 @@ impl Registration {
     pub const fn fallback(&self) -> Option<&FallbackInfo> {
         match self {
             Self::Fallback(info) => Some(info),
-            Self::Portal(_) | Self::Disabled => None,
+            #[cfg(unix)]
+            Self::Portal(_) => None,
+            #[cfg(windows)]
+            Self::Windows(_) => None,
+            Self::Disabled => None,
         }
     }
 
     /// Tears down a portal registration (no-op for the other rungs).
+    #[cfg_attr(windows, allow(clippy::unused_async, clippy::unused_async_trait_impl))]
     pub async fn shutdown(self) {
+        #[cfg(unix)]
         if let Self::Portal(portal) = self {
             portal.shutdown().await;
+        }
+        #[cfg(windows)]
+        if let Self::Windows(win) = self {
+            win.shutdown();
         }
     }
 }
@@ -211,15 +244,25 @@ impl Registration {
 /// next rung with a log line (the daemon must never die over shortcuts -
 /// the autostart-sync resilience rule).
 #[must_use]
+#[cfg_attr(windows, allow(clippy::unused_async))]
 pub async fn start(options: &ShortcutOptions, wiring: ShortcutWiring) -> Registration {
     if !options.enabled {
         return Registration::Disabled;
     }
+    #[cfg(windows)]
+    if options.desktop.is_none() && options.portal == PortalMode::Auto {
+        let win = windows::WindowsShortcuts::spawn(
+            std::sync::Arc::clone(&wiring.sink),
+            std::sync::Arc::clone(&wiring.state),
+        );
+        return Registration::Windows(win);
+    }
     let desktop = options.desktop.unwrap_or_else(detect_desktop);
-    let restore_path = restore_path(options);
-    let prior = restore_path.as_deref().and_then(RestoreData::load);
 
+    #[cfg(unix)]
     if options.portal == PortalMode::Auto {
+        let restore_path = restore_path(options);
+        let prior = restore_path.as_deref().and_then(RestoreData::load);
         match register_portal(options, &wiring).await {
             Ok(registration) => {
                 if first_registration(prior.as_ref()) {
@@ -268,6 +311,7 @@ pub async fn start(options: &ShortcutOptions, wiring: ShortcutWiring) -> Registr
 /// The portal rung: registration runs inside `tokio::spawn` (panic
 /// containment for ashpd's internal `assert_eq!` - module pins) under the
 /// registration budget; success spawns the `Activated` listener.
+#[cfg(unix)]
 async fn register_portal(
     options: &ShortcutOptions,
     wiring: &ShortcutWiring,
@@ -314,10 +358,12 @@ async fn register_portal(
 
 /// The pure one-time-notification decision: notify unless a prior restore
 /// record says the nudge already happened.
+#[cfg_attr(windows, allow(dead_code))]
 fn first_registration(prior: Option<&RestoreData>) -> bool {
     prior.is_none_or(|data| !data.first_registration_notified)
 }
 
+#[cfg(unix)]
 fn restore_path(options: &ShortcutOptions) -> Option<PathBuf> {
     if let Some(dir) = &options.config_dir {
         return Some(restore_path_in(dir));
