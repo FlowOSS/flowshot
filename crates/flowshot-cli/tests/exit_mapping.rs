@@ -4,6 +4,7 @@
 //! (`IccError::PermissionDenied` inside `CaptureError::Backend` -> 5).
 
 #![allow(clippy::unwrap_used)]
+#![cfg_attr(windows, allow(unused_imports))]
 
 use flowshot_cli::exit::{
     ACTION_EXPORT, CANCELLED, CAPTURE_BACKEND, OK, PERMISSION_DENIED, USAGE, exec_exit_u8,
@@ -14,6 +15,7 @@ fn code(result: &Result<ExecOutcome, ExecuteError>) -> u8 {
     exec_exit_u8(result)
 }
 
+#[cfg(unix)]
 #[test]
 fn permission_denied_chain_maps_to_five() {
     let error = ExecuteError::Capture(flowshot_capture::CaptureError::Backend {

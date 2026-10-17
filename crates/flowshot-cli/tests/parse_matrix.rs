@@ -3,7 +3,10 @@
 //! the typed resolution - no prose pinning.
 
 use std::ffi::OsString;
+#[cfg(unix)]
 use std::os::unix::ffi::OsStringExt;
+#[cfg(windows)]
+use std::os::windows::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
 
 use clap::Parser;
@@ -391,7 +394,10 @@ fn argv_tail_skips_the_program_name_and_rejects_non_unicode() {
         argv_tail(&argv).unwrap_or_else(|error| panic!("{error}")),
         vec!["capture".to_owned()]
     );
+    #[cfg(unix)]
     let broken = vec![OsString::from("flowshot"), OsString::from_vec(vec![0xff])];
+    #[cfg(windows)]
+    let broken = vec![OsString::from("flowshot"), OsString::from_wide(&[0xD800])];
     assert!(matches!(
         argv_tail(&broken),
         Err(CliError::NonUnicodeArg(_))

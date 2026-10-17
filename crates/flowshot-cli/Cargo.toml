@@ -24,9 +24,7 @@ flowshot-core = { path = "../flowshot-core" }
 # the instance handshake primitives, the Daemon composition root, paths,
 # and the bind-help source for --print-bind-help.
 flowshot-daemon = { path = "../flowshot-daemon" }
-# The exit-code table downcasts the capture error chain for the
-# protocol permission refusal (IccError::PermissionDenied -> exit 5).
-flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }
+
 # Same executor decision as the daemon crate: the CLI
 # drives zbus futures from its own tokio runtime, so its connections ride
 # zbus-5's tokio reactor; connections are still closed explicitly (the
@@ -90,3 +88,8 @@ assets = [
     ["../../target/debian-assets/completions/_flowshot", "usr/share/zsh/site-functions/_flowshot", "644"],
     ["../../target/debian-assets/completions/flowshot.fish", "usr/share/fish/vendor_completions.d/flowshot.fish", "644"],
 ]
+
+[target.'cfg(unix)'.dependencies]
+# The exit-code table downcasts the capture error chain for the
+# protocol permission refusal (IccError::PermissionDenied -> exit 5).
+flowshot-capture-wayland = { path = "../flowshot-capture-wayland" }

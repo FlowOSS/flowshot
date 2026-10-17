@@ -1,3 +1,5 @@
+#![cfg_attr(windows, allow(dead_code, unused_imports))]
+
 //! Command dispatch: the local surfaces (completions, bind help), the
 //! in-process one-shot seam, and the `D-Bus` handshake with the daemon
 //!.
@@ -74,6 +76,29 @@ pub async fn dispatch(
     bus_address: Option<&str>,
     argv_tail: &[String],
 ) -> Result<ExitCode, CliError> {
+    #[cfg(windows)]
+    {
+        let _ = (argv_tail, bus_address);
+        match invocation {
+            Invocation::Completions(shell) => {
+                completions::generate_to_stdout(*shell)?;
+                Ok(ExitCode::SUCCESS)
+            }
+            Invocation::PrintBindHelp => {
+                print_bind_help();
+                Ok(ExitCode::SUCCESS)
+            }
+            Invocation::Capture(capture) => one_shot_capture(capture).await,
+            Invocation::Launcher { .. } => one_shot_launcher().await,
+            Invocation::Settings => one_shot_settings().await,
+            Invocation::Daemon(run) => run_daemon(run, bus_address).await,
+            Invocation::Pin(_) | Invocation::Color => {
+                tracing::warn!("Pin/Color commands require a resident Wayland/X11 session");
+                Ok(ExitCode::SUCCESS)
+            }
+        }
+    }
+    #[cfg(not(windows))]
     match invocation {
         Invocation::Completions(shell) => {
             completions::generate_to_stdout(*shell)?;
@@ -152,6 +177,14 @@ async fn one_shot_capture(capture: &CaptureInvocation) -> Result<ExitCode, CliEr
 async fn one_shot_launcher() -> Result<ExitCode, CliError> {
     let ctx = ExecCtx::one_shot(None);
     let result = execute::launcher::run(&ctx, Instant::now()).await;
+    Ok(exit::exec_exit_code(&result))
+}
+
+/// The one-shot settings window for platforms without D-Bus.
+#[cfg_attr(not(windows), allow(dead_code))]
+async fn one_shot_settings() -> Result<ExitCode, CliError> {
+    let ctx = ExecCtx::one_shot(None);
+    let result = execute::settings::run(&ctx).await;
     Ok(exit::exec_exit_code(&result))
 }
 
