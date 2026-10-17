@@ -443,8 +443,6 @@ jobs:
             arch-package/
             deb-package/
             windows-package/
-            changelog/
-            sha256sums.txt
           if-no-files-found: error
       - uses: softprops/action-gh-release@v2
         if: github.event_name == 'push'
@@ -459,8 +457,6 @@ jobs:
             arch-package/*.pkg.tar.zst
             deb-package/*.deb
             windows-package/*
-            sha256sums.txt
-            changelog/CHANGELOG.md
       - name: Validate the published asset list, then undraft
         if: github.event_name == 'push'
         run: |
@@ -474,8 +470,7 @@ jobs:
                       "flowshot-$ARCH_VER-1-x86_64-Arch.pkg.tar.zst" \
                       "flowshot_${VER}-1_amd64.deb" \
                       "flowshot-setup-${VER}-x86_64.exe" \
-                      "flowshot-${VER}-windows-x86_64.zip" \
-                      "sha256sums.txt" "CHANGELOG.md"; do
+                      "flowshot-${VER}-windows-x86_64.zip"; do
             echo "$assets" | grep -qx "$want" || {
               echo "missing expected asset: $want" >&2; exit 1; }
           done
