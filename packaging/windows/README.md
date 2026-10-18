@@ -22,9 +22,9 @@ This directory contains the packaging specifications and branding assets for nat
    ```
 2. Compile with Inno Setup:
    ```cmd
-   iscc /DAppVersion=0.4.1 packaging/windows/flowshot.iss
+   iscc /DAppVersion=0.4.2 packaging/windows/flowshot.iss
    ```
 3. The setup executable will be generated at:
    ```
-   target/windows-dist/flowshot-setup-0.4.1-x86_64.exe
+   target/windows-dist/flowshot-setup-0.4.2-x86_64.exe
    ```
