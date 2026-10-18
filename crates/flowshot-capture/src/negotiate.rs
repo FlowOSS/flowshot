@@ -320,7 +320,10 @@ mod tests {
     fn force_roadmap_backend_is_rejected() {
         let err = negotiate(&hyprland_2026(), Some(BackendKind::Windows)).unwrap_err();
         assert!(matches!(err, CaptureError::NoBackendAvailable { .. }));
-        assert!(err.to_string().contains("Windows.Graphics.Capture"));
+        assert!(
+            err.to_string()
+                .contains(BackendKind::Windows.protocol_name())
+        );
     }
 
     #[test]

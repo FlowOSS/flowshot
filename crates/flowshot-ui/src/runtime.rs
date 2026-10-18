@@ -227,6 +227,7 @@ pub(crate) fn require_display_server() -> Result<(), UiError> {
     if has_display_server(
         std::env::var_os("WAYLAND_DISPLAY").as_deref(),
         std::env::var_os("DISPLAY").as_deref(),
+        std::env::var_os("SystemRoot").as_deref(),
     ) {
         Ok(())
     } else {
@@ -236,14 +237,15 @@ pub(crate) fn require_display_server() -> Result<(), UiError> {
 
 /// The gate rule with the environment values injectable (headless tests):
 /// either session variable set and non-empty means a display server is
-/// reachable. Empty values count as unset (the `flowshot-actions`
-/// `session_from_env` rule this gate mirrors).
+/// reachable (`SystemRoot` for native Windows). Empty values count as unset
+/// (the `flowshot-actions` `session_from_env` rule this gate mirrors).
 fn has_display_server(
     wayland_display: Option<&std::ffi::OsStr>,
     display: Option<&std::ffi::OsStr>,
+    system_root: Option<&std::ffi::OsStr>,
 ) -> bool {
     let set = |value: Option<&std::ffi::OsStr>| value.is_some_and(|value| !value.is_empty());
-    set(wayland_display) || set(display)
+    set(wayland_display) || set(display) || set(system_root)
 }
 
 #[cfg(test)]
@@ -253,19 +255,33 @@ mod tests {
 
     #[test]
     fn gate_passes_on_a_wayland_session_variable() {
-        assert!(has_display_server(Some(OsStr::new("wayland-0")), None));
+        assert!(has_display_server(
+            Some(OsStr::new("wayland-0")),
+            None,
+            None
+        ));
     }
 
     #[test]
     fn gate_passes_on_an_x11_display_variable_alone() {
-        assert!(has_display_server(None, Some(OsStr::new(":0"))));
+        assert!(has_display_server(None, Some(OsStr::new(":0")), None));
+    }
+
+    #[test]
+    fn gate_passes_on_windows_system_root() {
+        assert!(has_display_server(
+            None,
+            None,
+            Some(OsStr::new(r"C:\Windows"))
+        ));
     }
 
     #[test]
     fn gate_passes_on_an_xwayland_session_exporting_both() {
         assert!(has_display_server(
             Some(OsStr::new("wayland-0")),
-            Some(OsStr::new(":1"))
+            Some(OsStr::new(":1")),
+            None,
         ));
     }
 
@@ -275,20 +291,22 @@ mod tests {
         // carries the session (the empty=unset rule).
         assert!(has_display_server(
             Some(OsStr::new("")),
-            Some(OsStr::new(":0"))
+            Some(OsStr::new(":0")),
+            None,
         ));
     }
 
     #[test]
     fn gate_rejects_when_neither_variable_is_set() {
-        assert!(!has_display_server(None, None));
+        assert!(!has_display_server(None, None, None));
     }
 
     #[test]
     fn gate_rejects_when_both_variables_are_empty() {
         assert!(!has_display_server(
             Some(OsStr::new("")),
-            Some(OsStr::new(""))
+            Some(OsStr::new("")),
+            Some(OsStr::new("")),
         ));
     }
 }

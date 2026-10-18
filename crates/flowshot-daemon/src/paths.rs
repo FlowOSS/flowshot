@@ -33,9 +33,17 @@ pub fn xdg_config_home() -> Result<PathBuf, DaemonError> {
     {
         return Ok(PathBuf::from(dir));
     }
-    let home = std::env::var_os("HOME").ok_or(DaemonError::Env("HOME"))?;
+    #[cfg(windows)]
+    if let Some(appdata) = std::env::var_os("APPDATA")
+        && !appdata.is_empty()
+    {
+        return Ok(PathBuf::from(appdata));
+    }
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .ok_or(DaemonError::Env("HOME or USERPROFILE"))?;
     if home.is_empty() {
-        return Err(DaemonError::Env("HOME"));
+        return Err(DaemonError::Env("HOME or USERPROFILE"));
     }
     Ok(PathBuf::from(home).join(".config"))
 }
@@ -87,9 +95,17 @@ pub fn xdg_data_home() -> Result<PathBuf, DaemonError> {
     {
         return Ok(PathBuf::from(dir));
     }
-    let home = std::env::var_os("HOME").ok_or(DaemonError::Env("HOME"))?;
+    #[cfg(windows)]
+    if let Some(localappdata) = std::env::var_os("LOCALAPPDATA")
+        && !localappdata.is_empty()
+    {
+        return Ok(PathBuf::from(localappdata));
+    }
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .ok_or(DaemonError::Env("HOME or USERPROFILE"))?;
     if home.is_empty() {
-        return Err(DaemonError::Env("HOME"));
+        return Err(DaemonError::Env("HOME or USERPROFILE"));
     }
     Ok(PathBuf::from(home).join(".local").join("share"))
 }
