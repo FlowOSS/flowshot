@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 //! The consent session-child contract through the REAL binary and the
 //! REAL hidden `session` verb (the `session_dispatch.rs` pattern): the
 //! detached daemon spawn hands the child a lean `kind: "consent"` spec,
