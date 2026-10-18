@@ -72,7 +72,12 @@ pub async fn open_session_excluding(
 ) -> Result<CaptureSession, ExecuteError> {
     #[cfg(target_os = "windows")]
     {
-        let _ = exclude;
+        if exclude.contains(&flowshot_capture::BackendKind::Windows) {
+            return Err(flowshot_capture::CaptureError::NoBackendAvailable {
+                missing: vec![flowshot_capture::BackendKind::Windows],
+            }
+            .into());
+        }
         tracing::debug!(session = "windows", "capture session routing");
         let backend = flowshot_capture_windows::WindowsBackend::new();
         let outputs = backend.outputs().await?;

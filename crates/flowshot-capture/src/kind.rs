@@ -93,7 +93,7 @@ impl BackendKind {
             Self::PortalScreenCast => "org.freedesktop.portal.ScreenCast",
             Self::PortalScreenshot => "org.freedesktop.portal.Screenshot",
             Self::X11 => "X11 (xcb GetImage)",
-            Self::Windows => "Windows.Graphics.Capture (roadmap, not built in v1)",
+            Self::Windows => "Windows.Graphics.Capture",
             Self::MacOs => "ScreenCaptureKit (roadmap, not built in v1)",
         }
     }
