@@ -63,17 +63,112 @@ pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
     url.to_file_path().ok()
 }
 
-/// Fallback save path for non-Unix platforms.
-#[cfg(not(unix))]
-#[cfg_attr(windows, allow(clippy::unused_async))]
+/// Native save file dialog for Windows platforms.
+#[cfg(windows)]
+pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
+    let name = default_name.to_owned();
+    tokio::task::spawn_blocking(move || pick_save_file_windows_sync(&name))
+        .await
+        .ok()
+        .flatten()
+}
+
+#[cfg(windows)]
+#[expect(
+    clippy::similar_names,
+    clippy::cast_possible_truncation,
+    reason = "Win32 OPENFILENAMEW structure field names match Microsoft API specs"
+)]
+fn pick_save_file_windows_sync(default_name: &str) -> Option<PathBuf> {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    #[repr(C)]
+    struct OPENFILENAMEW {
+        l_struct_size: u32,
+        hwnd_owner: *mut std::ffi::c_void,
+        h_instance: *mut std::ffi::c_void,
+        lpstr_filter: *const u16,
+        lpstr_custom_filter: *mut u16,
+        n_max_cust_filter: u32,
+        n_filter_index: u32,
+        lpstr_file: *mut u16,
+        n_max_file: u32,
+        lpstr_file_title: *mut u16,
+        n_max_file_title: u32,
+        lpstr_initial_dir: *const u16,
+        lpstr_title: *const u16,
+        flags: u32,
+        n_file_offset: u16,
+        n_file_extension: u16,
+        lpstr_def_ext: *const u16,
+        l_cust_data: usize,
+        lpfn_hook: *mut std::ffi::c_void,
+        lp_template_name: *const u16,
+        pv_reserved: *mut std::ffi::c_void,
+        dw_reserved: u32,
+        flags_ex: u32,
+    }
+
+    #[link(name = "comdlg32")]
+    unsafe extern "system" {
+        fn GetSaveFileNameW(lpofn: *mut OPENFILENAMEW) -> i32;
+    }
+
+    let mut file_buf = [0u16; 1024];
+    let wide_name: Vec<u16> = default_name.encode_utf16().collect();
+    let copy_len = wide_name.len().min(file_buf.len() - 1);
+    file_buf[..copy_len].copy_from_slice(&wide_name[..copy_len]);
+
+    let filter: Vec<u16> = "PNG Image (*.png)\0*.png\0All Files (*.*)\0*.*\0\0"
+        .encode_utf16()
+        .collect();
+    let title: Vec<u16> = "Save Screenshot As\0".encode_utf16().collect();
+    let def_ext: Vec<u16> = "png\0".encode_utf16().collect();
+
+    let initial_dir_wide = pictures_dir().ok().map(|p| {
+        let mut v: Vec<u16> = p.as_os_str().encode_wide().collect();
+        v.push(0);
+        v
+    });
+
+    let mut ofn: OPENFILENAMEW = unsafe { std::mem::zeroed() };
+    ofn.l_struct_size = u32::try_from(std::mem::size_of::<OPENFILENAMEW>()).unwrap_or(0);
+    ofn.lpstr_filter = filter.as_ptr();
+    ofn.n_filter_index = 1;
+    ofn.lpstr_file = file_buf.as_mut_ptr();
+    ofn.n_max_file = u32::try_from(file_buf.len()).unwrap_or(0);
+    ofn.lpstr_title = title.as_ptr();
+    ofn.lpstr_def_ext = def_ext.as_ptr();
+    if let Some(ref dir) = initial_dir_wide {
+        ofn.lpstr_initial_dir = dir.as_ptr();
+    }
+    // OFN_OVERWRITEPROMPT (0x2) | OFN_NOCHANGEDIR (0x8) | OFN_PATHMUSTEXIST (0x800)
+    ofn.flags = 0x0000_0002 | 0x0000_0008 | 0x0000_0800;
+
+    let success = unsafe { GetSaveFileNameW(&mut ofn) };
+    if success != 0 {
+        let len = file_buf
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(file_buf.len());
+        Some(PathBuf::from(OsString::from_wide(&file_buf[..len])))
+    } else {
+        None
+    }
+}
+
+/// Fallback save path for non-Unix, non-Windows platforms.
+#[cfg(all(not(unix), not(windows)))]
 pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
     pictures_dir().ok().map(|dir| dir.join(default_name))
 }
 
 pub(crate) fn pictures_dir() -> Result<PathBuf, ExportError> {
     let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
-        .ok_or_else(|| ExportError::DirectoryNotFound(PathBuf::from("$HOME")))?;
+        .ok_or_else(|| ExportError::DirectoryNotFound(PathBuf::from("$HOME or $USERPROFILE")))?;
     let user_dirs = home.join(".config").join("user-dirs.dirs");
     if let Ok(contents) = std::fs::read_to_string(&user_dirs) {
         for line in contents.lines() {
