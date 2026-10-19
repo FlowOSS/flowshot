@@ -17,7 +17,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/flowoss/flowshot"
 authors = ["FlowShot Contributors"]
-version = "0.4.2"
+version = "0.4.3"
 
 [workspace.dependencies]
 # Windows platform stack (WGC + DXGI + GDI)
