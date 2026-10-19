@@ -5,7 +5,23 @@ use flowshot_core::geometry::OutputInfo;
 
 use crate::error::WindowsCaptureError;
 
-/// Captures a single monitor using DXGI Desktop Duplication.
+/// Whether a captured DXGI frame buffer is unpopulated or contains only zeros.
+#[must_use]
+pub fn is_unpopulated_or_blank(accumulated_frames: u32, data: &[u8]) -> bool {
+    accumulated_frames == 0 || data.iter().all(|&b| b == 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unpopulated_or_blank_identifies_fallthrough_conditions() {
+        assert!(is_unpopulated_or_blank(0, &[1, 2, 3]));
+        assert!(is_unpopulated_or_blank(1, &[0, 0, 0, 0]));
+        assert!(!is_unpopulated_or_blank(1, &[0, 0, 1, 0]));
+    }
+}
 ///
 /// # Errors
 ///
@@ -188,7 +204,7 @@ fn capture_monitor_dxgi_win32(
         let _ = dupl.ReleaseFrame();
     }
 
-    if frame_info.AccumulatedFrames == 0 || data.iter().all(|&b| b == 0) {
+    if is_unpopulated_or_blank(frame_info.AccumulatedFrames, &data) {
         return Err(WindowsCaptureError::Dxgi(
             "DXGI delivered unpopulated or all-zero frame; falling through to GDI BitBlt"
                 .to_string(),

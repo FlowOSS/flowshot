@@ -160,22 +160,31 @@ pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
 }
 
 pub(crate) fn pictures_dir() -> Result<PathBuf, ExportError> {
-    let home = std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(PathBuf::from)
+    pictures_dir_from(
+        std::env::var_os("HOME").as_deref().map(Path::new),
+        std::env::var_os("USERPROFILE").as_deref().map(Path::new),
+    )
+}
+
+fn pictures_dir_from(
+    home: Option<&Path>,
+    userprofile: Option<&Path>,
+) -> Result<PathBuf, ExportError> {
+    let base = home
+        .or(userprofile)
         .ok_or_else(|| ExportError::DirectoryNotFound(PathBuf::from("$HOME or $USERPROFILE")))?;
-    let user_dirs = home.join(".config").join("user-dirs.dirs");
+    let user_dirs = base.join(".config").join("user-dirs.dirs");
     if let Ok(contents) = std::fs::read_to_string(&user_dirs) {
         for line in contents.lines() {
             let Some(value) = line.strip_prefix("XDG_PICTURES_DIR=") else {
                 continue;
             };
             let trimmed = value.trim_matches('"');
-            let expanded = trimmed.replace("$HOME", &home.to_string_lossy());
+            let expanded = trimmed.replace("$HOME", &base.to_string_lossy());
             return Ok(PathBuf::from(expanded));
         }
     }
-    Ok(home.join("Pictures"))
+    Ok(base.join("Pictures"))
 }
 
 /// Bridges the actions-crate notification seam onto the daemon's
@@ -313,6 +322,26 @@ mod tests {
 
     use super::*;
     use std::time::Instant;
+
+    #[test]
+    fn pictures_dir_resolves_home_and_userprofile_fallbacks() {
+        let fake_home = Path::new("/custom/home");
+        assert_eq!(
+            pictures_dir_from(Some(fake_home), None).unwrap(),
+            PathBuf::from("/custom/home/Pictures")
+        );
+
+        let fake_profile = Path::new("/custom/profile");
+        assert_eq!(
+            pictures_dir_from(None, Some(fake_profile)).unwrap(),
+            PathBuf::from("/custom/profile/Pictures")
+        );
+
+        assert!(matches!(
+            pictures_dir_from(None, None),
+            Err(ExportError::DirectoryNotFound(_))
+        ));
+    }
 
     #[test]
     fn loss_hook_latches_and_releases_the_hold() {
