@@ -22,11 +22,16 @@ pub const OVERLAY_BACKENDS: wgpu::Backends = wgpu::Backends::PRIMARY;
 /// Khronos layer is not installed (benign - wgpu continues without it).
 #[must_use]
 pub fn new_instance() -> wgpu::Instance {
-    wgpu::Instance::new(wgpu::InstanceDescriptor {
+    let mut desc = wgpu::InstanceDescriptor {
         backends: OVERLAY_BACKENDS,
         flags: instance_flags(),
         ..wgpu::InstanceDescriptor::new_without_display_handle()
-    })
+    };
+    desc = desc.with_env();
+    if std::env::var_os("SystemRoot").is_some() {
+        desc.backend_options.dx12.presentation_system = wgpu::Dx12SwapchainKind::DxgiFromVisual;
+    }
+    wgpu::Instance::new(desc)
 }
 
 /// Validation layer ON in debug builds, OFF in release.

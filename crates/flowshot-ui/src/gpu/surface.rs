@@ -195,13 +195,27 @@ fn select_surface_format(
 /// late); `Fifo` is the guaranteed fallback.
 #[must_use]
 fn select_present_mode(supported: &[PresentMode]) -> PresentMode {
-    const PREFERENCE: [PresentMode; 3] = [
-        PresentMode::Mailbox,
-        PresentMode::FifoRelaxed,
-        PresentMode::Fifo,
-    ];
-    PREFERENCE
-        .into_iter()
+    select_present_mode_for(supported, std::env::var_os("SystemRoot").is_some())
+}
+
+#[must_use]
+fn select_present_mode_for(supported: &[PresentMode], is_windows: bool) -> PresentMode {
+    let preference = if is_windows {
+        &[
+            PresentMode::Fifo,
+            PresentMode::FifoRelaxed,
+            PresentMode::Mailbox,
+        ][..]
+    } else {
+        &[
+            PresentMode::Mailbox,
+            PresentMode::FifoRelaxed,
+            PresentMode::Fifo,
+        ][..]
+    };
+    preference
+        .iter()
+        .copied()
         .find(|mode| supported.contains(mode))
         // The WebGPU spec guarantees `Fifo` is always advertised, so the
         // fallback is unreachable; `Fifo` keeps the fn total (never panics).
@@ -288,7 +302,11 @@ mod tests {
             PresentMode::Mailbox,
             PresentMode::Immediate,
         ];
-        assert_eq!(select_present_mode(&supported), PresentMode::Mailbox);
+        assert_eq!(
+            select_present_mode_for(&supported, false),
+            PresentMode::Mailbox
+        );
+        assert_eq!(select_present_mode_for(&supported, true), PresentMode::Fifo);
     }
 
     #[test]
