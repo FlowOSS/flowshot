@@ -131,7 +131,7 @@ mod tests {
         );
         assert_eq!(
             frames[0].buffer.format,
-            flowshot_capture::FrameFormat::Argb8888
+            flowshot_capture::FrameFormat::Xrgb8888
         );
     }
 

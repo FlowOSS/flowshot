@@ -30,7 +30,7 @@ pub fn capture_monitor_gdi(
             width,
             height,
             stride: width * 4,
-            format: FrameFormat::Argb8888,
+            format: FrameFormat::Xrgb8888,
         };
         Ok(Frame {
             buffer,
@@ -194,7 +194,7 @@ fn capture_monitor_gdi_win32(
         width: u_width,
         height: u_height,
         stride,
-        format: FrameFormat::Argb8888,
+        format: FrameFormat::Xrgb8888,
     };
 
     Ok(Frame {

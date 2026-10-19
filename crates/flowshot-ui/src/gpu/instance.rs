@@ -15,18 +15,23 @@ pub const OVERLAY_BACKENDS: wgpu::Backends = wgpu::Backends::PRIMARY;
 /// Creates the wgpu instance for a flowshot GPU path (every window runtime
 /// and QA harness): [`OVERLAY_BACKENDS`] plus the explicit validation-flag
 /// choice below.
-///
-/// This is the single place the "`InstanceFlags::VALIDATION` requested, but
-/// unable to find layer: `VK_LAYER_KHRONOS_validation`" line in debug-build
-/// logs comes from: wgpu-hal warns when validation was requested and the
-/// Khronos layer is not installed (benign - wgpu continues without it).
 #[must_use]
 pub fn new_instance() -> wgpu::Instance {
-    wgpu::Instance::new(wgpu::InstanceDescriptor {
+    wgpu::Instance::new(descriptor_for(std::env::var_os("SystemRoot").is_some()))
+}
+
+#[must_use]
+fn descriptor_for(is_windows: bool) -> wgpu::InstanceDescriptor {
+    let mut desc = wgpu::InstanceDescriptor {
         backends: OVERLAY_BACKENDS,
         flags: instance_flags(),
         ..wgpu::InstanceDescriptor::new_without_display_handle()
-    })
+    };
+    desc = desc.with_env();
+    if is_windows {
+        desc.backend_options.dx12.presentation_system = wgpu::Dx12SwapchainKind::DxgiFromVisual;
+    }
+    desc
 }
 
 /// Validation layer ON in debug builds, OFF in release.
@@ -52,6 +57,20 @@ const fn instance_flags() -> wgpu::InstanceFlags {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn descriptor_for_windows_selects_dxgi_from_visual() {
+        let desc = descriptor_for(true);
+        assert_eq!(
+            desc.backend_options.dx12.presentation_system,
+            wgpu::Dx12SwapchainKind::DxgiFromVisual
+        );
+        let linux_desc = descriptor_for(false);
+        assert_eq!(
+            linux_desc.backend_options.dx12.presentation_system,
+            wgpu::Dx12SwapchainKind::DxgiFromHwnd
+        );
+    }
 
     #[test]
     fn flags_match_the_wgpu_build_config_default() {
