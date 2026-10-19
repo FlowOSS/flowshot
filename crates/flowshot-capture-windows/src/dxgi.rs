@@ -42,17 +42,17 @@ fn capture_monitor_dxgi_win32(
     use bytes::BytesMut;
     use flowshot_capture::{FrameBuffer, FrameFormat, OutputRef};
     use std::mem;
+    use windows::core::Interface;
     use windows::Win32::Graphics::Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_11_0};
     use windows::Win32::Graphics::Direct3D11::{
-        D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAP_READ,
-        D3D11_MAPPED_SUBRESOURCE, D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING, D3D11CreateDevice,
-        ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
+        D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
+        D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAPPED_SUBRESOURCE,
+        D3D11_MAP_READ, D3D11_TEXTURE2D_DESC, D3D11_USAGE_STAGING,
     };
     use windows::Win32::Graphics::Dxgi::{
-        DXGI_ERROR_WAIT_TIMEOUT, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter, IDXGIDevice, IDXGIOutput1,
-        IDXGIOutputDuplication, IDXGIResource,
+        IDXGIAdapter, IDXGIDevice, IDXGIOutput1, IDXGIOutputDuplication, IDXGIResource,
+        DXGI_ERROR_WAIT_TIMEOUT, DXGI_OUTDUPL_FRAME_INFO,
     };
-    use windows::core::Interface;
 
     let _ = paint_cursor;
     let mut device: Option<ID3D11Device> = None;
@@ -194,7 +194,7 @@ fn capture_monitor_dxgi_win32(
         width,
         height,
         stride: width * 4,
-        format: FrameFormat::Argb8888,
+        format: FrameFormat::Xrgb8888,
     };
     Ok(Frame {
         buffer,
