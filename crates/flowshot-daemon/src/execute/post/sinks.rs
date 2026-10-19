@@ -74,17 +74,12 @@ pub async fn pick_save_file_portal(default_name: &str) -> Option<PathBuf> {
 }
 
 #[cfg(windows)]
-#[expect(
-    clippy::similar_names,
-    clippy::cast_possible_truncation,
-    reason = "Win32 OPENFILENAMEW structure field names match Microsoft API specs"
-)]
 fn pick_save_file_windows_sync(default_name: &str) -> Option<PathBuf> {
     use std::ffi::OsString;
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
     #[repr(C)]
-    struct OPENFILENAMEW {
+    struct OpenFileNameW {
         l_struct_size: u32,
         hwnd_owner: *mut std::ffi::c_void,
         h_instance: *mut std::ffi::c_void,
@@ -112,7 +107,7 @@ fn pick_save_file_windows_sync(default_name: &str) -> Option<PathBuf> {
 
     #[link(name = "comdlg32")]
     unsafe extern "system" {
-        fn GetSaveFileNameW(lpofn: *mut OPENFILENAMEW) -> i32;
+        fn GetSaveFileNameW(lpofn: *mut OpenFileNameW) -> i32;
     }
 
     let mut file_buf = [0u16; 1024];
@@ -132,8 +127,8 @@ fn pick_save_file_windows_sync(default_name: &str) -> Option<PathBuf> {
         v
     });
 
-    let mut ofn: OPENFILENAMEW = unsafe { std::mem::zeroed() };
-    ofn.l_struct_size = u32::try_from(std::mem::size_of::<OPENFILENAMEW>()).unwrap_or(0);
+    let mut ofn: OpenFileNameW = unsafe { std::mem::zeroed() };
+    ofn.l_struct_size = u32::try_from(std::mem::size_of::<OpenFileNameW>()).unwrap_or(0);
     ofn.lpstr_filter = filter.as_ptr();
     ofn.n_filter_index = 1;
     ofn.lpstr_file = file_buf.as_mut_ptr();
@@ -146,7 +141,7 @@ fn pick_save_file_windows_sync(default_name: &str) -> Option<PathBuf> {
     // OFN_OVERWRITEPROMPT (0x2) | OFN_NOCHANGEDIR (0x8) | OFN_PATHMUSTEXIST (0x800)
     ofn.flags = 0x0000_0002 | 0x0000_0008 | 0x0000_0800;
 
-    let success = unsafe { GetSaveFileNameW(&mut ofn) };
+    let success = unsafe { GetSaveFileNameW(&raw mut ofn) };
     if success != 0 {
         let len = file_buf
             .iter()
