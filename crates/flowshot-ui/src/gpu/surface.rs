@@ -313,13 +313,18 @@ mod tests {
     fn present_mode_falls_back_to_fifo_relaxed_then_fifo() {
         let relaxed_only = [PresentMode::Fifo, PresentMode::FifoRelaxed];
         assert_eq!(
-            select_present_mode(&relaxed_only),
+            select_present_mode_for(&relaxed_only, false),
             PresentMode::FifoRelaxed,
             "no Mailbox -> the next non-blocking-capable mode"
         );
+        assert_eq!(
+            select_present_mode_for(&relaxed_only, true),
+            PresentMode::Fifo,
+            "on Windows, Fifo is preferred for DWM compositor stability"
+        );
         let fifo_only = [PresentMode::Fifo];
         assert_eq!(
-            select_present_mode(&fifo_only),
+            select_present_mode_for(&fifo_only, false),
             PresentMode::Fifo,
             "the WebGPU-guaranteed mode is always selectable"
         );
@@ -330,10 +335,11 @@ mod tests {
         // Immediate is not in the preference list (it tears unconditionally and
         // is often unavailable on Wayland), so it is skipped; an empty slice
         // still yields the total Fifo fallback rather than panicking.
+        let immediate_only = [PresentMode::Immediate];
         assert_eq!(
-            select_present_mode(&[PresentMode::Immediate]),
+            select_present_mode_for(&immediate_only, false),
             PresentMode::Fifo
         );
-        assert_eq!(select_present_mode(&[]), PresentMode::Fifo);
+        assert_eq!(select_present_mode_for(&[], false), PresentMode::Fifo);
     }
 }
