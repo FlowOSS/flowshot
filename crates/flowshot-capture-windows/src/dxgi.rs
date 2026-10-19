@@ -161,8 +161,6 @@ fn capture_monitor_dxgi_win32(
     unsafe {
         context.CopyResource(&staging, &desktop_texture);
     }
-    let _ = unsafe { dupl.ReleaseFrame() };
-
     let mut mapped: D3D11_MAPPED_SUBRESOURCE = unsafe { mem::zeroed() };
     unsafe {
         context
@@ -187,6 +185,14 @@ fn capture_monitor_dxgi_win32(
 
     unsafe {
         context.Unmap(&staging, 0);
+        let _ = dupl.ReleaseFrame();
+    }
+
+    if frame_info.AccumulatedFrames == 0 || data.iter().all(|&b| b == 0) {
+        return Err(WindowsCaptureError::Dxgi(
+            "DXGI delivered unpopulated or all-zero frame; falling through to GDI BitBlt"
+                .to_string(),
+        ));
     }
 
     let buffer = FrameBuffer {
