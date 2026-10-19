@@ -11,17 +11,6 @@ pub fn is_unpopulated_or_blank(accumulated_frames: u32, data: &[u8]) -> bool {
     accumulated_frames == 0 || data.iter().all(|&b| b == 0)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unpopulated_or_blank_identifies_fallthrough_conditions() {
-        assert!(is_unpopulated_or_blank(0, &[1, 2, 3]));
-        assert!(is_unpopulated_or_blank(1, &[0, 0, 0, 0]));
-        assert!(!is_unpopulated_or_blank(1, &[0, 0, 1, 0]));
-    }
-}
 ///
 /// # Errors
 ///
@@ -224,4 +213,16 @@ fn capture_monitor_dxgi_win32(
         scale: output.scale,
         transform: output.transform,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unpopulated_or_blank_identifies_fallthrough_conditions() {
+        assert!(is_unpopulated_or_blank(0, &[1, 2, 3]));
+        assert!(is_unpopulated_or_blank(1, &[0, 0, 0, 0]));
+        assert!(!is_unpopulated_or_blank(1, &[0, 0, 1, 0]));
+    }
 }
