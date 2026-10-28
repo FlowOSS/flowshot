@@ -1,6 +1,6 @@
 # crates/flowshot-daemon/src
 
-56 files / ~13k LOC, 9 module dirs. The crate root covers packaging,
+61 files / 15,200 raw lines (11,316 code), 9 module dirs. The crate root covers packaging,
 features and dependency pins; this covers the module map and the three seams
 every change has to respect.
 
@@ -58,9 +58,9 @@ keeps an auto-spawned daemon alive while a child is open.
 - Module-root style is mixed and stays mixed: `execute/mod.rs`,
   `telemetry/mod.rs` versus `notify.rs` + `notify/`, `shortcut.rs` +
   `shortcut/`, `tray.rs` + `tray/`. Match the neighbor.
-- Lint suppressions are `#[expect(clippy::…, reason = "…")]` — 67 of them, zero
-  `#[allow]` in this crate.
-- Tests are inline `#[cfg(test)] mod tests` (32 files); sibling `tests.rs` files
+- Lint suppressions are `#[expect(clippy::…, reason = "…")]` — 70 of them, with ONE stray
+  `#[allow]` left in this crate (measured 2026-10-28).
+- Tests are inline `#[cfg(test)] mod tests` (36 files); sibling `tests.rs` files
   are a `flowshot-ui` convention, not this one.
 - `paths.rs` confines environment reading to `xdg_config_home`; every consumer
   takes an injected base so tests never mutate process env (parallel-test race

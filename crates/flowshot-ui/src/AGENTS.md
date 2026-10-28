@@ -1,6 +1,6 @@
 # crates/flowshot-ui/src
 
-228 files, 17 module dirs (30 nested), 87 re-exports via `lib.rs`.
+229 Rust files, 16 top-level module dirs (30 module dirs total), 99 re-exports via `lib.rs`.
 The crate root covers packaging; this covers what breaks silently if guessed.
 
 ## OVERVIEW

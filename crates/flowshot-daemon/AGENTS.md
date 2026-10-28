@@ -1,7 +1,7 @@
 # crates/flowshot-daemon
 
-75 files / ~15.2k LOC, 13 dirs: the largest crate and the only one
-that may depend on `flowshot-ui`, `capture-wayland` and `actions` at once.
+74 Rust files / 15,200 raw lines, 9 module dirs under `src/`: the largest crate and the only one
+that may depend on `flowshot-ui`, `capture-wayland`, `capture-x11`, `capture-windows` and `actions` at once.
 
 ## OVERVIEW
 
@@ -14,7 +14,7 @@ opt-in telemetry, autostart, the smart idle lifecycle. Ships a lib plus a
 
 ```
 flowshot-daemon/
-├── src/        # 56 files — module map in src/AGENTS.md
+├── src/        # 61 files — module map in src/AGENTS.md
 ├── build.rs    # resvg at BUILD time: assets/logo.svg -> SNI ARGB32 pixmaps
 ├── examples/   # e2e_headless (needs test-drive), notify_qa, second_instance
 └── tests/      # broker, consent_session, portal_shortcuts, telemetry_*, tray_bus,
@@ -67,7 +67,7 @@ crate, whose determinism test re-rasterizes and compares the bytes.
 
 ```bash
 just daemon                                          # foreground daemon via the CLI
-cargo test -p flowshot-daemon                        # 32 inline suites + 7 integration tests
+cargo test -p flowshot-daemon                        # 36 inline suites + 8 integration test files
 cargo run -p flowshot-daemon --example e2e_headless --features test-drive
 ```
 

@@ -1,6 +1,6 @@
 # crates/flowshot-ui
 
-Crate boundary, distinct domain: 270 files, 5 top dirs, 89% Rust; `lib.rs` re-exports 87 symbols over 19 `pub mod`s.
+Crate boundary, distinct domain: 282 files, 5 top dirs, 89% Rust; `lib.rs` re-exports 99 symbols over 19 `pub mod`s.
 
 ## OVERVIEW
 
@@ -15,9 +15,9 @@ edition 2024, `#![forbid(unsafe_code)]` + `#![warn(missing_docs)]`.
 ```
 flowshot-ui/
 ├── src/       # everything — see src/AGENTS.md for the module map
-├── tests/     # parity.rs (1692 L, cross-rasterizer) + 4 offscreen suites
+├── tests/     # parity.rs (1,838 L, cross-rasterizer) + 4 offscreen suites
 ├── examples/  # 15 QA harnesses; 4 need --features test-drive
-├── icons/     # 23 source SVGs → build.rs rasterizes the atlas
+├── icons/     # 24 source SVGs → build.rs rasterizes the atlas
 ├── fonts/     # vendored Inter x3 — include_bytes! by egui_host/theme ONLY
 └── build.rs   # resvg at BUILD time; no runtime SVG stack
 ```
@@ -56,9 +56,9 @@ only shipped-code file with a file-scope `#![allow(clippy::unwrap_used, ...)]`.
   `std::env::var_os`) are invisible to the gate by construction — values and
   identifiers, not imports.
 - `flowshot-capture-wayland` and `flowshot-actions` are **dev-dependencies
-  only** (examples/tests composition; the two allowlist entries exist for
-  them). The lib talks to `flowshot-capture` — the contract crate — and never
-  to the platform crate.
+  only** (examples/tests composition; `scripts/purity-allowlist.txt` carries ONE
+  row, for the `flowshot-actions` dev-dep). The lib talks to `flowshot-capture` —
+  the contract crate — and never to the platform crate.
 - `tiny-skia` is BOTH the dev-only parity oracle (`tests/parity.rs`) and the
   runtime CPU raster backend behind `render/software` (ADR-007) — the
   `image` crate stays dev-only. The fallback never replaces the GPU path

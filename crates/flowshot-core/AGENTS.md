@@ -1,7 +1,7 @@
 # crates/flowshot-core
 
-Distinct domain: 13 files / 6.1k LOC, 6 `pub mod`s, imported by all
-six sibling crates. Purity-gated `rlib`, no build script.
+Distinct domain: 12 Rust files (11 under `src/`, plus `tests/doc_sync.rs`) / 6,085 raw lines, 6 `pub mod`s, imported by all
+eight sibling crates. Purity-gated `rlib`, no build script.
 
 ## OVERVIEW
 
@@ -46,8 +46,9 @@ flowshot-core/
   and asserts each appears backtick-quoted in `docs/config-reference.md`.
 - `proptest` (dev-dep) drives the geometry transform and scene round-trip
   properties. Narrow `#[allow(clippy::cast_*)]` with a trailing reason comment
-  marks the px/scale cast boundaries; in this subtree `core` is the only crate
-  still spelling those `#[allow]` rather than `#[expect(.., reason=)]`.
+  marks the px/scale cast boundaries. `core` is NOT the only `#[allow]` holder: measured 2026-10-28
+  there are 8 in `core`, 16 in `flowshot-ui/src`, 1 in `flowshot-daemon/src` (144 `#[expect]`
+  workspace-wide).
 
 ## ANTI-PATTERNS (THIS CRATE)
 
@@ -71,6 +72,6 @@ cargo test -p flowshot-core --test doc_sync  # the config<->doc gate alone
 - The lib-code outliers over the 250 pure-LOC ceiling all live here:
   `geometry.rs` (656), `scene.rs` (602), `config.rs` (435). The split precedent
   is `scene.rs` + `scene/`; extending it to geometry/config is open work.
-- `chrono`, `bytes` and `image` are declared in `Cargo.toml` but imported
-  nowhere in `src/` — dead dependency edges no gate currently catches.
+- `chrono`, `bytes` and `image` are NO LONGER declared in `Cargo.toml` — the phantom
+  edges were purged. Nothing here imports a platform crate, and no gate needs to catch it.
 - `#![warn(missing_docs)]` here, not `deny` (only `flowshot-capture` denies).

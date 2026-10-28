@@ -1,6 +1,6 @@
 # crates/flowshot-actions
 
-High complexity: 21 files / 3.4k LOC across 4 domains. NOT
+High complexity: 24 Rust files under `src/` (25 in the crate) / 5,095 raw lines across 5 dirs. NOT
 purity-gated: this crate is Wayland-native **by design** because it owns the
 clipboard offer, and the gate's scope note records that decision.
 
@@ -69,5 +69,5 @@ flowshot-actions/src/
 ## COMMANDS
 
 ```bash
-cargo test -p flowshot-actions   # 14 inline suites; wiremock serves the Imgur tests
+cargo test -p flowshot-actions   # 18 inline suites; wiremock serves the Imgur tests
 ```

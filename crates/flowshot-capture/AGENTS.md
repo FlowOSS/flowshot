@@ -1,6 +1,6 @@
 # crates/flowshot-capture
 
-Distinct domain: 9 files / 1.8k LOC, the smallest crate and the most
+Distinct domain: 10 Rust files / 2,544 raw lines (1,760 code), the smallest crate and the most
 load-bearing boundary: it owns the capture vocabulary and nothing else.
 Purity-gated `rlib`, `#![deny(missing_docs)]` (the only crate that denies).
 

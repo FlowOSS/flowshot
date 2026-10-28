@@ -1,6 +1,6 @@
 # crates/flowshot-capture-wayland
 
-High complexity: 57 files / ~14.8k LOC, 9 dirs. THE platform crate:
+High complexity: 55 Rust files / 13,301 raw lines, 7 module dirs. THE platform crate:
 every compositor- and D-Bus-facing line in the workspace lives here, and it is
 deliberately NOT purity-gated.
 
@@ -14,7 +14,7 @@ capability probing, output enumeration, cursor strategy, and region stitching.
 
 ```
 flowshot-capture-wayland/
-├── src/       # 49 files — module map in src/AGENTS.md
+├── src/       # 48 files — module map in src/AGENTS.md
 └── examples/  # probe, capture_icc, capture_screencopy, portal_capture,
                # cursor_pos, resolve_cursor (+ common/ shared harness)
 ```
@@ -58,7 +58,7 @@ code.
 
 ```bash
 just probe                                    # registry/capability dump on the live session
-cargo test -p flowshot-capture-wayland        # 29 inline suites + the kwin p2p stub tests
+cargo test -p flowshot-capture-wayland        # 30 inline suites + the kwin p2p stub tests
 cargo run -p flowshot-capture-wayland --example capture_icc   # live session required
 ```
 

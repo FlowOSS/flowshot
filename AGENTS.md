@@ -8,7 +8,7 @@
 
 FlowShot — screenshot + annotation for Linux/Wayland; Flameshot parity with the Wayland breakage
 fixed (multi-monitor spanning, cursor-aware capture, mixed-DPI correctness, reliable clipboard).
-Rust workspace, GPL-3.0-or-later, 8 crates. Brand `org.flowoss.FlowShot`, accent `#6366F1` /
+Rust workspace, GPL-3.0-or-later, 9 crates. Brand `org.flowoss.FlowShot`, accent `#6366F1` /
 contrast `#0F172A`. Stack: wgpu 30 + egui 0.36 + zbus 5 + ashpd 0.13 + reqwest 0.13, winit 0.30.
 The original 46-item build plan is COMPLETE except owner-gated packaging (AUR/.deb/AppImage + CI).
 
@@ -20,34 +20,38 @@ crates/
   flowshot-capture/          the contract: CaptureBackend, Frame, NEGOTIATION_LADDER, MockBackend
   flowshot-capture-wayland/  5 backends: ICC ext-image-copy-capture, wlr-screencopy, KWin ScreenShot2, portal
   flowshot-capture-x11/      the X11 rung: x11rb GetImage + MIT-SHM fd-passing, RANDR outputs, XFixes cursor
+  flowshot-capture-windows/  the Windows rung: WGC -> DXGI desktop duplication -> GDI BitBlt (Win7/RDP/VM)
   flowshot-ui/               winit+wgpu overlay, lyon renderer + the CPU raster fallback (render/software), cosmic-text atlas, selection, editor, egui_host
   flowshot-actions/          export (save/patterns/encode), daemon-owned clipboard, upload, pins
   flowshot-daemon/           zbus service, single-instance, executor, tray (SNI), shortcuts, notify, telemetry
   flowshot-cli/              the `flowshot` leaf binary: clap, D-Bus forwarding, exit codes 0-6, completions
 assets/ logo.svg (truth) + derived logo.png (2048, never hicolor)   scripts/ purity-gate.sh
-docs/ adr-001..007, setup-{gnome,hyprland,kde,sway}, config-reference, dbus-api, research/
+docs/ adr-001..007 + README, setup-{gnome,hyprland,kde,sway,x11}, config-reference, dbus-api,
+        verification (evidence classes + landed bundles), research/, codebase-comparison,
+        porting-roadmap, upgrade-evaluation, refactor-opportunities
 packaging/ flowshot.desktop.in + ICONS.md   tests/ parity_matrix.toml (F12, CI-validated)
 ```
 
-Dep graph: `core` ← everything; `capture` ← wayland/x11/cli/daemon/ui; `capture-x11` ← daemon only;
-`ui` ← daemon only; `cli` leaf.
-The daemon is the ONLY crate holding ui + capture-wayland + capture-x11 + actions — the platform-integration layer.
+Dep graph: `core` ← everything; `capture` ← wayland/x11/windows/cli/daemon/ui; `capture-x11` and
+`capture-windows` ← daemon only; `ui` ← daemon only; `cli` leaf.
+The daemon is the ONLY crate holding ui + capture-wayland + capture-x11 + capture-windows + actions —
+the platform-integration layer.
 
 ## WHERE TO LOOK
 
 | Task | Location | Notes |
 |------|----------|-------|
-| Per-crate / per-module rules | the 11 nested `AGENTS.md` | `flowshot-ui/src`, `capture-wayland/src`, `daemon/src` carry module maps |
+| Per-crate / per-module rules | the 11 nested `AGENTS.md` | `flowshot-ui/src`, `capture-wayland/src`, `daemon/src` carry module maps; `flowshot-capture-windows` has none yet |
 | Config + D-Bus surface | `core/src/config.rs`, `docs/config-reference.md`, `docs/dbus-api.md` | `CONFIG_VERSION` gates migration; exit-code table 0-6 lives in `flowshot-cli` |
 | Flameshot parity | `tests/parity_matrix.toml` (1220 L) | validated by `cli/tests/parity_matrix.rs`; CLI rows REFERENCE `cli/tests/cli_capability_map.toml`, never duplicate |
 | Icons / logo / desktop entry | `assets/logo.svg`, `ui/icons/*.svg`, `packaging/` | both `build.rs` rasterize via resvg; `ICONS.md` lists targets; `Icon=org.flowoss.FlowShot` |
-| Editor + renderer | `ui/src/editor` (53 files, ~14.6k LOC), `ui/src/render` | largest and most-referenced modules |
+| Editor + renderer | `ui/src/editor` (52 files, 10,854 code lines / 14,192 raw), `ui/src/render` | largest and most-referenced modules |
 | CPU raster fallback + its policy | `ui/src/render/software` (renderer + `Presenter`), `ui/src/adapter.rs` (`software_path_for`) | the second rasterizer behind the same `DisplayList`; see adr-007 |
 | History, rationale, QA evidence | `docs/architecture/` (ADRs), `docs/verification.md` | decisions + verification classes and landed-bundle records with inlined observed values |
 
 ## CODE MAP
 
-`flowshot-ui/src/lib.rs` re-exports exactly 87 symbols over 19 `pub mod`s.
+`flowshot-ui/src/lib.rs` re-exports 99 symbols over 19 `pub mod`s (counted 2026-10-28 — recount before quoting an exact number).
 
 | Symbol | Location | Role |
 |--------|----------|------|
@@ -63,20 +67,23 @@ The daemon is the ONLY crate holding ui + capture-wayland + capture-x11 + action
 
 - **Lints**: workspace `clippy::all` deny incl. `unwrap_used`/`expect_used` (tests included), pedantic
   warn. `thiserror` in libs, `anyhow` only at binary boundaries. Suppress via `#[expect(lint, reason = "…")]`
-  — daemon (67, zero `#[allow]`), cli, capture-wayland, actions; `core` still uses `#[allow]` (7).
+  — 144 `#[expect]` against 25 `#[allow]` workspace-wide (2026-10-28): `daemon` 70 expects but 1
+  `#[allow]`, `core` 8 allows, `flowshot-ui` 16 allows. `core` is NOT the only `#[allow]` holder.
   `#![forbid(unsafe_code)]` holds in **every** crate: capture-wayland's exemption is unused headroom
   (zero `unsafe` blocks, no SAFETY comments, no allow-list); buffers are `memfd` + readback, not mmap.
 - **Docs**: `//!` header on every module; `missing_docs` **deny on flowshot-capture only**, warn
   elsewhere; rustdoc builds with ZERO warnings.
 - **Size**: the 250 pure-LOC ceiling is a convention nothing in `just check` measures. Outliers:
   `core/geometry.rs` 656, `core/scene.rs` 602, `core/config.rs` 435, `daemon/tray/dbusmenu.rs` 257.
-- **Test placement**: inline `#[cfg(test)] mod tests` is the norm outside flowshot-ui (88 files);
+- **Test placement**: inline `#[cfg(test)] mod tests` is the norm outside flowshot-ui (111 files
+  counted 2026-10-28: core 8, capture 5, capture-wayland 30, capture-x11 8, capture-windows 2,
+  actions 18, daemon 36, cli 4 — `flowshot-ui/src` adds 75 more);
   `flowshot-ui/src` uses sibling `tests.rs` / `*_tests.rs`. Module-root style also varies per crate —
   never state either workspace-wide.
 - **Purity**: `scripts/purity-gate.sh` scans `src/` incl. inline tests for platform imports,
   `winit::platform::*`, `*ExtWayland`, any `cfg(target_*)`. Allowlist rows are
-  `crate|location|substring` triples, each needing a `#` WHY comment; the only two are flowshot-ui
-  dev-deps (`flowshot-actions`, `flowshot-capture-wayland`) for QA-harness composition.
+  `crate|location|substring` triples in `scripts/purity-allowlist.txt`, each needing a `#` WHY comment.
+  The file holds exactly ONE row today: `flowshot-ui|[dev-dependencies]|flowshot-actions`.
 - **Text/UI**: cosmic-text + swash through an in-crate atlas — **no glyphon** (no release pairs with
   the wgpu 30 pin). egui is a *guest* in the ui renderer (the Ruffle pattern), `egui-winit`
   absent from `Cargo.lock`; only `settings`, `launcher`, `consent` may use egui.
@@ -120,14 +127,16 @@ just check     # THE gate: fmt + clippy --workspace --all-targets -D warnings + 
 just gui       # interactive capture overlay (needs a Wayland session)
 just daemon    # foreground daemon (tray needs [daemon] tray = true)
 just settings  # settings window        just probe | pin | run
-cargo test -p <crate>                 # ~641 test fns outside flowshot-ui
+cargo test -p <crate>                 # 1,537 tests workspace-wide (measured 2026-10-28)
 cargo run -p flowshot-ui --example {e2e_headless,qa_bundle} --features test-drive  # headless QA
-# CI (.github/workflows/ci.yml, stable) is WEAKER: purity → fmt → clippy -D warnings (no --workspace/--all-targets) → test → deny.
+# CI (.github/workflows/ci.yml) is WEAKER in one specific way: purity runs FIRST, then fmt, then
+# clippy WITH --workspace/--all-targets, then `cargo test` WITHOUT --workspace, then cargo-deny via
+# the official action; a second Windows job typechecks a scoped -p list and builds release binaries.
 ```
 
 ## NOTES
 
-- **Gates**: ~1338 tests green; clippy/fmt/rustdoc-zero/purity/deny clean. Post-plan work landed:
+- **Gates**: 1,537 tests green (summed from `cargo test --workspace` on 2026-10-28); clippy/fmt/purity/deny clean.
   nested-runtime session fix, settings reworks x2, drag-freeze perf (Mailbox present +
   `pre_present_notify`), wheel-sizing feedback, rect size-slot fix, counter drag-aim pointer,
   discoverability (tooltip hotkeys + clickable aid chips), tray model (LMB captures / RMB menu + Open
@@ -137,12 +146,13 @@ cargo run -p flowshot-ui --example {e2e_headless,qa_bundle} --features test-driv
   `adapter.rs`, QA override `FLOWSHOT_RENDER_PATH=software|gpu`, a selection-attached
   `chrome/status` pill stating `GPU`/`CPU fallback` gone when no slot fits, and
   `ui/tests/parity.rs` rows holding the CPU path to the GPU path pixel for pixel).
+- **Landed after the plan**: pencil and filled rectangle as separate toolbar tools (`ToolKind::RectangleFill`, id `rectangle-filled`, unbound because its mnemonic F is the grid aid; `icons/square-filled.svg`; default toolbar now 14 buttons) and the `v3→v4` config migration that appends both ids to a pinned `toolbar_buttons` — a new default inside a user-pinned list is invisible to existing configs without such a step.
 - `ui/tests/parity.rs` SKIPS every test with a printed message when no GPU adapter exists (not even
   lavapipe) — a green headless CI run proves nothing about renderer pixel parity.
 - Load-sensitive, raised budgets: `daemon/tests/portal_shortcuts.rs` (30 s) and the KWin p2p stubs —
   both p2p sides must build CONCURRENTLY or the server blocks on the client's SASL handshake
   (`daemon/src/testsupport.rs`, `tests/broker.rs`). Raise budgets, never weaken assertions.
-  `proptest`: core geometry + scene, `cli/tests/wire_roundtrip.rs`. `wiremock`: Imgur + telemetry.
+  `proptest`: core (geometry, scene), `cli/tests/wire_roundtrip.rs`, actions, daemon. `wiremock`: Imgur + telemetry.
 - Dead deps: `core`'s phantom `chrono`, `bytes`, and `image` were purged (`actions`'s dead `rfd` and
   `capture-x11`'s phantom `x11rb-protocol` were removed earlier). `FileDialogSink`'s production impl is a
   pictures-directory stand-in in `daemon/src/execute/post/sinks.rs`.

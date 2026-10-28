@@ -1,6 +1,6 @@
 # crates/flowshot-cli
 
-Distinct domain: 24 files / 3.8k LOC: 12 in `src/`, 10 integration
+Distinct domain: 21 Rust files / 2,360 raw lines: 12 in `src/`, 9 integration
 tests, 1 example. The `flowshot` binary and the authoritative command surface.
 
 ## OVERVIEW

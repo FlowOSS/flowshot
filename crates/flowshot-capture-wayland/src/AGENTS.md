@@ -1,6 +1,6 @@
 # crates/flowshot-capture-wayland/src
 
-49 files / ~13.9k LOC, 7 module dirs. The crate root covers the
+48 files / 13,301 raw lines (9,351 code), 7 module dirs. The crate root covers the
 safety policy and dependency pins; this covers the module map and the one
 pattern every backend must follow.
 
@@ -51,7 +51,7 @@ root, so the public surface is the type list in `lib.rs` and nothing else.
   `KwinError`, `PortalScreenCastError`, `PortalScreenshotError`) implementing a
   shared `BackendError` contract so the worker bridge and deadline handling are
   backend-agnostic.
-- Tests are inline `#[cfg(test)] mod tests` (29 files); `kwin/tests.rs` is the
+- Tests are inline `#[cfg(test)] mod tests` (30 files); `kwin/tests.rs` is the
   one sibling-file exception because it drives the p2p stub.
 
 ## ANTI-PATTERNS (THIS DIRECTORY)
