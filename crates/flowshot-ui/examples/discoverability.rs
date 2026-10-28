@@ -76,7 +76,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let instance = new_instance();
     let gpu = GpuContext::new_headless(&instance)?;
 
-    // The default toolbar's first cell (arrow): plate x = 560+800-444,
+    // The pinned QA toolbar's first cell (arrow): plate x = 560+800-444,
     // cell center = plate + padding + half a 32px cell.
     let (cell_x, cell_y) = (940.0, 782.0);
 
@@ -270,7 +270,28 @@ fn build_scene(gpu: &GpuContext) -> Result<(Scene, Instant), Box<dyn std::error:
         scale: 1.0,
         origin: LogicalPoint::from_raw(0.0, 0.0),
     }));
-    core.configure_chrome(&flowshot_core::config::UiConfig::default());
+    // The QA plate pins the toolbar order rather than inheriting the shipped
+    // default: that default now leads with the freehand pencil and carries
+    // fourteen cells, while the fixed cell coordinates below assume the
+    // twelve-cell arrow-first bar this evidence was captured against.
+    let qa_ui_config = flowshot_core::config::UiConfig {
+        toolbar_buttons: [
+            "arrow",
+            "rectangle",
+            "circle",
+            "marker",
+            "text",
+            "pixelate",
+            "counter",
+            "copy",
+            "save",
+            "pin",
+            "upload",
+            "undo",
+        ],
+        ..flowshot_core::config::UiConfig::default()
+    };
+    core.configure_chrome(&qa_ui_config);
     core.selection_mut().retheme(&tokens);
     core.selection_mut().set_rect(Some(SELECTION));
 

@@ -275,6 +275,46 @@ fn rect_commits_radius_from_its_slot_and_stroke_from_config() {
 }
 
 #[test]
+fn filled_rect_commits_a_solid_rect_under_its_own_kind() {
+    let mut ed = editor();
+    let env = env_at(Instant::now());
+    ed.activate_tool(ToolKind::RectangleFill);
+    assert_eq!(ed.active_tool(), Some(ToolKind::RectangleFill));
+    stroke(&mut ed, &env, (100.0, 100.0), (300.0, 220.0));
+
+    // The committed object reports the FILLED token, which is what the layer
+    // list resolves its row icon through - the two rectangle tools must not
+    // look alike there.
+    let object = ed.scene().get_object(0).expect("object 0");
+    assert_eq!(object.type_id(), "rectangle-filled");
+    assert_eq!(
+        ToolKind::from_id(object.type_id()),
+        Some(ToolKind::RectangleFill)
+    );
+
+    let ToolObjectData::Rectangle(rect) = object.to_data() else {
+        panic!("the filled variant shares the rectangle scene type");
+    };
+    assert!(rect.filled, "the filled variant commits filled");
+    assert_eq!(rect.rect, SceneRect::new(100.0, 100.0, 200.0, 120.0));
+    // The paint path fills the bounds, so neither the corner radius nor the
+    // stroke width reaches the output and the tool carries neither.
+    assert_eq!(rect.corner_radius, 0.0);
+    assert_eq!(rect.stroke_width, 0.0);
+
+    // The outline sibling is untouched by the new kind.
+    let mut ed = editor();
+    ed.activate_tool(ToolKind::Rectangle);
+    stroke(&mut ed, &env, (0.0, 0.0), (40.0, 40.0));
+    let outline = ed.scene().get_object(0).expect("object 0");
+    assert_eq!(outline.type_id(), "rectangle");
+    let ToolObjectData::Rectangle(outline_rect) = outline.to_data() else {
+        panic!("rect object");
+    };
+    assert!(!outline_rect.filled, "the outline sibling stays stroked");
+}
+
+#[test]
 fn ellipse_commits_the_inscribed_bounds() {
     let mut ed = editor();
     let env = env_at(Instant::now());

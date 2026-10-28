@@ -22,7 +22,7 @@ It is hand-synced to the source; field names below are the exact TOML keys.
 
 | Key | Type | Default | Notes |
 |---|---|---|---|
-| `config_version` | integer | `3` | Schema version. Managed by FlowShot; do not edit. |
+| `config_version` | integer | `4` | Schema version. Managed by FlowShot; do not edit. |
 
 Migration history: v0 (unversioned legacy) gains the version stamp; v1 to v2
 renames `[save] filename_template` to `filename_pattern` (an explicit
@@ -161,10 +161,15 @@ Default `toolbar_buttons`:
 
 ```toml
 toolbar_buttons = [
-  "arrow", "rectangle", "circle", "marker", "text", "pixelate",
-  "counter", "copy", "save", "pin", "upload", "undo",
+  "pencil", "arrow", "rectangle", "rectangle-filled", "circle", "marker",
+  "text", "pixelate", "counter", "copy", "save", "pin", "upload", "undo",
 ]
 ```
+
+Tool identifiers: `pencil` (freehand), `line`, `arrow`, `selection`,
+`rectangle` (outline), `rectangle-filled` (solid), `circle`, `marker`, `text`,
+`counter`, `pixelate`, `blur`, `invert`, `move`, `eyedropper`. Action
+identifiers: `copy`, `save`, `pin`, `upload`, `undo`.
 
 ## `[daemon]`
 
@@ -236,7 +241,7 @@ What a fresh `flowshot.toml` contains after FlowShot first writes it
 (`last_region` appears only after a capture):
 
 ```toml
-config_version = 3
+config_version = 4
 
 [capture]
 hide_cursor = false
@@ -297,7 +302,7 @@ history_max = 25
 accent_color = "#6366F1"
 contrast_color = "#0F172A"
 dim_opacity = 190
-toolbar_buttons = ["arrow", "rectangle", "circle", "marker", "text", "pixelate", "counter", "copy", "save", "pin", "upload", "undo"]
+toolbar_buttons = ["pencil", "arrow", "rectangle", "rectangle-filled", "circle", "marker", "text", "pixelate", "counter", "copy", "save", "pin", "upload", "undo"]
 
 [daemon]
 tray = false

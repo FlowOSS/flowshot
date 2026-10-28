@@ -27,7 +27,7 @@ use thiserror::Error;
 use crate::tokens::{Palette, Typography};
 
 /// Current config schema version written by this build.
-pub const CONFIG_VERSION: u32 = 3;
+pub const CONFIG_VERSION: u32 = 4;
 
 /// TOML key holding the schema version.
 const VERSION_KEY: &str = "config_version";
@@ -435,11 +435,16 @@ impl Default for UiConfig {
     }
 }
 
-/// Default toolbar layout.
+/// Default toolbar layout. Drawing tools lead in the Flameshot
+/// `buttonTypeOrder` sense (`TYPE_PENCIL = 0` is the freehand tool), and the
+/// filled rectangle sits beside its outline parent so the two are one click
+/// apart.
 fn default_toolbar_buttons() -> Vec<String> {
     [
+        "pencil",
         "arrow",
         "rectangle",
+        "rectangle-filled",
         "circle",
         "marker",
         "text",
@@ -561,6 +566,7 @@ const MIGRATIONS: &[(u32, MigrationFn)] = &[
     (0, migrate_v0_to_v1),
     (1, migrate_v1_to_v2),
     (2, migrate_v2_to_v3),
+    (3, migrate_v3_to_v4),
 ];
 
 /// v0 (unversioned legacy files) -> v1: introduce `config_version`.
@@ -603,6 +609,35 @@ fn migrate_v2_to_v3(table: &mut toml::Table) -> Result<(), String> {
             telemetry.insert(key.to_owned(), toml::Value::Boolean(false));
         }
         table.insert("telemetry".to_owned(), toml::Value::Table(telemetry));
+    }
+    Ok(())
+}
+
+/// v3 -> v4: surface the toolbar tools that v4 introduces (freehand pencil
+/// and the solid rectangle).
+///
+/// A pinned `toolbar_buttons` list is a user customization, so the new tools
+/// are APPENDED in default order and the existing sequence is preserved -
+/// re-laying the bar out would silently undo a deliberate order. A config
+/// that omits the key is left alone: absence means "take the default", and
+/// the v4 default already lists both tools.
+#[allow(clippy::unnecessary_wraps)] // Uniform fallible signature for the registry.
+fn migrate_v3_to_v4(table: &mut toml::Table) -> Result<(), String> {
+    let pinned = table
+        .get_mut("ui")
+        .and_then(toml::Value::as_table_mut)
+        .and_then(|ui| ui.get_mut("toolbar_buttons"))
+        .and_then(toml::Value::as_array_mut);
+    if let Some(buttons) = pinned {
+        for id in ["pencil", "rectangle-filled"] {
+            let present = buttons.iter().any(|value| match value.as_str() {
+                Some(text) => text == id,
+                None => false,
+            });
+            if !present {
+                buttons.push(toml::Value::String(id.to_owned()));
+            }
+        }
     }
     Ok(())
 }
@@ -789,6 +824,26 @@ mod tests {
         assert_eq!(config.ui.contrast_color, palette.contrast);
         assert_eq!(config.ui.dim_opacity, 190);
         assert_ne!(config.ui.toolbar_buttons, [] as [String; 0]);
+        // The freehand and solid-fill tools are click-reachable out of the
+        // box: pencil leads the drawing tools (Flameshot `TYPE_PENCIL = 0`)
+        // and the filled rectangle sits beside its outline parent.
+        let toolbar = &config.ui.toolbar_buttons;
+        for id in ["pencil", "rectangle", "rectangle-filled"] {
+            assert!(
+                toolbar.iter().any(|button| button == id),
+                "{id} must ship on the default toolbar"
+            );
+        }
+        assert_eq!(toolbar[0], "pencil", "freehand leads the drawing tools");
+        let outline = toolbar.iter().position(|button| button == "rectangle");
+        let filled = toolbar
+            .iter()
+            .position(|button| button == "rectangle-filled");
+        assert_eq!(
+            filled,
+            outline.map(|index| index + 1),
+            "the filled rectangle sits directly beside its outline sibling"
+        );
 
         // [daemon]
         assert!(config.daemon.tray);
@@ -998,6 +1053,58 @@ mod tests {
         assert_eq!(config.config_version, CONFIG_VERSION);
         assert_eq!(config.telemetry, TelemetryConfig::default());
         assert!(config.daemon.tray);
+        Ok(())
+    }
+
+    #[test]
+    fn v3_config_gains_the_v4_toolbar_tools_on_migration() -> Result<(), ConfigError> {
+        // Given: a version-3 file pinning the pre-v4 twelve-button toolbar.
+        let v3 = r#"
+            config_version = 3
+
+            [ui]
+            toolbar_buttons = ["arrow", "rectangle", "circle", "marker", "text", "pixelate", "counter", "copy", "save", "pin", "upload", "undo"]
+        "#;
+        // When: it is loaded through the migration chain.
+        let config = Config::from_toml_str(v3)?;
+        // Then: the stamp advanced, the pinned order survived untouched at
+        // the front, and the two v4 tools were APPENDED rather than the bar
+        // being re-laid out around them.
+        assert_eq!(config.config_version, CONFIG_VERSION);
+        assert_eq!(config.ui.toolbar_buttons.len(), 14);
+        assert_eq!(
+            config.ui.toolbar_buttons[0], "arrow",
+            "the pinned order survived"
+        );
+        assert_eq!(config.ui.toolbar_buttons[12], "pencil", "v4 tools appended");
+        assert_eq!(config.ui.toolbar_buttons[13], "rectangle-filled");
+        Ok(())
+    }
+
+    #[test]
+    fn v4_toolbar_migration_is_idempotent_and_never_pins_a_missing_key() -> Result<(), ConfigError>
+    {
+        // Given: a v3 file that already lists both tools.
+        let already = r#"
+            config_version = 3
+
+            [ui]
+            toolbar_buttons = ["pencil", "arrow", "rectangle", "rectangle-filled"]
+        "#;
+        let config = Config::from_toml_str(already)?;
+        assert_eq!(config.ui.toolbar_buttons.len(), 4, "no duplicates appended");
+
+        // And: a v3 file with no pinned toolbar keeps the v4 default - the
+        // migration must NOT materialize the key, or a later default change
+        // would stop reaching this user.
+        let unpinned = r"
+            config_version = 3
+
+            [daemon]
+            tray = true
+        ";
+        let config = Config::from_toml_str(unpinned)?;
+        assert_eq!(config.ui.toolbar_buttons, default_toolbar_buttons());
         Ok(())
     }
 

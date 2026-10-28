@@ -53,13 +53,14 @@ pub use text::{TEXT_PADDING, TextTool};
 use super::kind::ToolKind;
 use super::registry::ToolRegistry;
 
-/// Registers all seven shape tools on `registry` (idempotent;
+/// Registers all eight shape tools on `registry` (idempotent;
 /// replaces any prior factory for the same kind).
 pub fn register_shape_tools(registry: &mut ToolRegistry) {
     registry.register(ToolKind::Pencil, || Box::new(PencilTool::default()));
     registry.register(ToolKind::Line, || Box::new(LineTool::default()));
     registry.register(ToolKind::Arrow, || Box::new(ArrowTool::default()));
     registry.register(ToolKind::Rectangle, || Box::new(RectTool::default()));
+    registry.register(ToolKind::RectangleFill, || Box::new(RectTool::filled()));
     registry.register(ToolKind::Circle, || Box::new(EllipseTool::default()));
     registry.register(ToolKind::Marker, || Box::new(MarkerTool::default()));
     registry.register(ToolKind::Invert, || Box::new(InvertTool::default()));

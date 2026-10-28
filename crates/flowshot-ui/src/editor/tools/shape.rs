@@ -29,27 +29,44 @@ use super::super::tool::{EditorContext, Tool};
 use super::geometry::{Constrain, TwoPoint, logical, paint_preview_dot};
 use crate::render::f32_from_u32;
 
-/// The rectangle outline tool (stroke + `[tools.rectangle].corner_radius`).
+/// The rectangle tool (stroke + `[tools.rectangle].corner_radius`), and its
+/// SOLID variant: [`RectTool::filled`] registers under
+/// [`ToolKind::RectangleFill`] as its own toolbar button and commits a
+/// `filled` [`RectObject`]. Both share one scene type and one serde tag -
+/// only the `filled` flag and the reported `type_id` differ.
 #[derive(Debug, Default)]
 pub struct RectTool {
     stroke: TwoPoint,
     color: SceneColor,
     thickness: f32,
+    filled: bool,
 }
 
 impl RectTool {
+    /// The solid-fill variant: its own toolbar button, shipped unbound (its
+    /// mnemonic `F` is the grid aid toggle) and rebindable from the settings
+    /// shortcut tab.
+    #[must_use]
+    pub fn filled() -> Self {
+        Self {
+            filled: true,
+            ..Self::default()
+        }
+    }
+
     fn corner_radius(ctx: &EditorContext<'_>) -> f32 {
         f32_from_u32(ctx.config.tools.rectangle.corner_radius)
     }
 
     fn shape(&self, ctx: &EditorContext<'_>, from: ScenePoint, to: ScenePoint) -> RectObject {
-        RectObject::new(
-            SceneRect::from_points(from, to),
-            self.color,
-            self.thickness,
-            false,
-        )
-        .with_corner_radius(Self::corner_radius(ctx))
+        let rect = SceneRect::from_points(from, to);
+        if self.filled {
+            // The fill paints the bounds, so the corner radius and the stroke
+            // width are both inert - carry neither.
+            return RectObject::new(rect, self.color, 0.0, true);
+        }
+        RectObject::new(rect, self.color, self.thickness, false)
+            .with_corner_radius(Self::corner_radius(ctx))
     }
 }
 
@@ -63,7 +80,11 @@ impl Tool for RectTool {
     }
 
     fn kind(&self) -> ToolKind {
-        ToolKind::Rectangle
+        if self.filled {
+            ToolKind::RectangleFill
+        } else {
+            ToolKind::Rectangle
+        }
     }
 
     fn draw_start(&mut self, _ctx: &EditorContext<'_>, at: LogicalPoint) {
@@ -107,7 +128,8 @@ impl Tool for RectTool {
         self.color = color;
     }
 
-    /// The rectangle's dispatched size is the stroke thickness (shared slot).
+    /// The rectangle's dispatched size is the stroke thickness (shared slot);
+    /// the filled variant records it too but its paint path ignores it.
     fn on_size_changed(&mut self, size: u32) {
         self.thickness = f32_from_u32(size);
     }

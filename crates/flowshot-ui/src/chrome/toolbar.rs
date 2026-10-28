@@ -232,6 +232,7 @@ pub fn icon_for_tool(kind: ToolKind) -> Icon {
         ToolKind::Arrow => Icon::ArrowUpRight,
         ToolKind::Selection => Icon::MousePointer2,
         ToolKind::Rectangle => Icon::Square,
+        ToolKind::RectangleFill => Icon::SquareFilled,
         ToolKind::Circle => Icon::Circle,
         ToolKind::Marker => Icon::Highlighter,
         ToolKind::Text => Icon::Type,

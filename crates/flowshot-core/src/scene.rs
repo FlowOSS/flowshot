@@ -316,6 +316,14 @@ pub struct RectObject {
 }
 
 impl RectObject {
+    /// The type token for the stroked (outline) rectangle.
+    pub const TYPE_ID: &'static str = "rectangle";
+
+    /// The type token for the FILLED rectangle. The fill is its own toolbar
+    /// tool, and [`ToolObject::type_id`] is the only per-object channel the
+    /// layer list has for choosing its row icon.
+    pub const FILLED_TYPE_ID: &'static str = "rectangle-filled";
+
     /// Creates a stroked rectangle annotation with sharp corners.
     #[must_use]
     pub fn new(rect: Rect, color: Color, stroke_width: f32, filled: bool) -> Self {
@@ -338,7 +346,13 @@ impl RectObject {
 
 impl ToolObject for RectObject {
     fn type_id(&self) -> &'static str {
-        "rectangle"
+        // Instance-dependent by design: the filled and stroked rectangles are
+        // two toolbar tools sharing one scene type and one serde tag.
+        if self.filled {
+            Self::FILLED_TYPE_ID
+        } else {
+            Self::TYPE_ID
+        }
     }
 
     fn bounding_rect(&self) -> Rect {

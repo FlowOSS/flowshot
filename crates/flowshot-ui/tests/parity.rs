@@ -1538,6 +1538,13 @@ fn rect_goldens() {
         ed.activate_tool(ToolKind::Rectangle);
         drag(ed, &ctrl(env), (120.0, 120.0), (400.0, 220.0));
     });
+    // The FILLED tool paints through fill_rect (a solid lyon tessellation vs
+    // skia's rect fill), so its edges are unmasked: the plain golden assert
+    // applies rather than the edge-masked one.
+    golden(&gpu, "rect-filled", Config::default(), |ed, env, _| {
+        ed.activate_tool(ToolKind::RectangleFill);
+        drag(ed, env, (120.0, 120.0), (520.0, 360.0));
+    });
 }
 
 #[test]

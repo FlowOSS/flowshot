@@ -289,7 +289,7 @@ fn toolbar_anchors_below_flips_above_and_stays_on_screen() {
 #[test]
 fn toolbar_tooltip_waits_the_delay_then_shows_the_active_binding() {
     let mut core = fixture();
-    let (x, y) = center(toolbar_buttons(&core, 0)); // default order: arrow
+    let (x, y) = center(toolbar_buttons(&core, 1)); // default order: pencil, arrow
     move_to(&mut core, x, y);
     let hovered = std::time::Instant::now();
 
@@ -340,7 +340,7 @@ fn toolbar_tool_button_activates_and_blocks_the_draw_underneath() {
     let mut core = fixture();
     tap(&mut core, KeyCode::KeyP);
     assert_eq!(core.editor().active_tool(), Some(ToolKind::Pencil));
-    let (x, y) = center(toolbar_buttons(&core, 0)); // default order: arrow
+    let (x, y) = center(toolbar_buttons(&core, 1)); // default order: pencil, arrow
     move_to(&mut core, x, y);
     click(&mut core, MouseButton::Left, true);
     assert!(
@@ -363,7 +363,7 @@ fn toolbar_undo_button_steps_the_journal() {
     let mut core = fixture();
     commit_rect(&mut core, 100.0, 200.0);
     assert_eq!(core.editor().scene().object_count(), 1);
-    let (x, y) = center(toolbar_buttons(&core, 11)); // default order: undo
+    let (x, y) = center(toolbar_buttons(&core, 13)); // default order: undo trails the 9 tools + 4 actions
     left_click_at(&mut core, x, y);
     assert_eq!(core.editor().scene().object_count(), 0);
 }
@@ -639,12 +639,15 @@ fn per_tool_control_visibility_table() {
     let mut core = fixture();
     open_panel(&mut core);
     // (kind, size slider, arrow rows, counter outline, pixelate mode)
-    let table: [(ToolKind, bool, bool, bool, bool); 13] = [
+    let table: [(ToolKind, bool, bool, bool, bool); 14] = [
         (ToolKind::Pencil, true, false, false, false),
         (ToolKind::Line, true, false, false, false),
         (ToolKind::Arrow, true, true, false, false),
         (ToolKind::Selection, false, false, false, false),
         (ToolKind::Rectangle, true, false, false, false),
+        // The filled rectangle owns NO size slot: its paint path fills the
+        // bounds, so neither a stroke width nor a corner radius reaches it.
+        (ToolKind::RectangleFill, false, false, false, false),
         (ToolKind::Circle, true, false, false, false),
         (ToolKind::Marker, true, false, false, false),
         (ToolKind::Text, true, false, false, false),

@@ -71,7 +71,9 @@ pub(super) fn toggle_track_width(tokens: &DesignTokens) -> f32 {
 /// "per-tool options (size sliders ...)" rule: `None` hides the slider (the
 /// selection/move/invert/eyedropper kinds have no size semantics; invert is
 /// a region effect). Rectangle's dispatched slot IS the corner radius (the
-/// Flameshot `drawRectangleSize` naming), text's IS the font size.
+/// Flameshot `drawRectangleSize` naming), text's IS the font size. The
+/// FILLED rectangle has no slot at all: its paint path fills the bounds, so
+/// neither a stroke width nor a corner radius reaches the output.
 #[must_use]
 pub fn size_label(kind: ToolKind) -> Option<&'static str> {
     match kind {
@@ -81,7 +83,11 @@ pub fn size_label(kind: ToolKind) -> Option<&'static str> {
         ToolKind::Text => Some("Font size"),
         ToolKind::Pixelate | ToolKind::Blur => Some("Block size"),
         ToolKind::Counter => Some("Counter size"),
-        ToolKind::Selection | ToolKind::Move | ToolKind::Invert | ToolKind::Eyedropper => None,
+        ToolKind::RectangleFill
+        | ToolKind::Selection
+        | ToolKind::Move
+        | ToolKind::Invert
+        | ToolKind::Eyedropper => None,
     }
 }
 

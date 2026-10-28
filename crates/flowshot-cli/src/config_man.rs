@@ -2,7 +2,7 @@
 //! pages via `clap_mangen` for `flowshot.1` + this file-format page for the
 //! TOML config). `examples/man_pages.rs` writes it next to the generated
 //! `flowshot.1`; the schema documented here mirrors `flowshot_core::config`
-//! (`config_version` 3).
+//! (`config_version` 4).
 
 /// The complete `flowshot-config.5` page.
 pub const FLOWSHOT_CONFIG_ROFF: &str = concat!(
@@ -22,7 +22,7 @@ below apply and a warning is logged. Unknown keys are ignored; missing keys
 fall back to their defaults. The top\-level
 .B config_version
 integer (currently
-.BR 3 )
+.BR 4 )
 drives forward migration of the grouped schema.
 .PP
 Configuration is owned by this file and the settings UI
@@ -177,8 +177,12 @@ Contrast color (FlowShot brand slate).
 Background dim opacity (0\-255).
 .TP
 .B toolbar_buttons
-Toolbar button order by tool identifier (default: arrow, rectangle, circle,
-marker, text, pixelate, counter, copy, save, pin, upload, undo).
+Toolbar button order by tool identifier (default: pencil, arrow, rectangle,
+rectangle\-filled, circle, marker, text, pixelate, counter, copy, save, pin,
+upload, undo). Tool identifiers: pencil (freehand), line, arrow, selection,
+rectangle (outline), rectangle\-filled (solid), circle, marker, text, counter,
+pixelate, blur, invert, move, eyedropper; the action identifiers are copy,
+save, pin, upload, undo.
 .SH "DAEMON GROUP \- [daemon]"
 .TP
 .BR tray " = " false

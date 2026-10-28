@@ -39,6 +39,7 @@ pub fn tool_blurb(kind: ToolKind) -> (&'static str, &'static str) {
         ToolKind::Arrow => ("Arrow", "pointed arrow"),
         ToolKind::Selection => ("Selection", "adjust the region"),
         ToolKind::Rectangle => ("Rectangle", "rectangle outline"),
+        ToolKind::RectangleFill => ("Filled rectangle", "solid rectangle"),
         ToolKind::Circle => ("Circle", "ellipse or circle"),
         ToolKind::Marker => ("Marker", "translucent highlight"),
         ToolKind::Text => ("Text", "text annotation"),
