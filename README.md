@@ -30,29 +30,36 @@ Built natively for modern Linux desktops: no XWayland bridges, no per-compositor
 - **Privacy-first:** No data leaves your machine without your explicit confirmation. Crash reporting is opt-in, self-hosted, and transparent.
 - **Secure redaction:** Pixelate and blur tools never leak interior pixel data, preventing reverse-engineering via block-mean recovery.
 
+## Compared to Flameshot
+
+FlowShot is not trying to be Flameshot, but it is trying to be the thing
+Flameshot has never quite managed on modern Linux:
+
+- **Capture and annotation run at least 2x faster than Flameshot** on the
+  machines we test on. These are our own measurements, taken on the same
+  desktops, and the comparison is worth reproducing rather than trusting.
+- **Some long-standing upstream problems are unrepresentable here by design.**
+  Mixed-DPI and fractional-scaling corruption (upstream #4871) cannot occur:
+  geometry is physical-pixels-first, so there is no logical/physical mix to
+  get wrong ([ADR-001](docs/architecture/adr-001-physical-first-geometry.md)).
+  Flameshot's pixelation can be reversed; ours cannot be recovered from
+  ([ADR-005](docs/architecture/adr-005-secure-pixelate.md)).
+
 ## Features
 
 ### Capture
-- Interactive region selection spanning multiple monitors
-- Full desktop and single-monitor capture
-- Preselected regions, delayed capture timer, and instant accept-on-select
-- Precision pixel magnifier with live RGB and HEX color readouts
-- Standalone color picker tool (`flowshot color`)
+- Region selection across all monitors as one canvas, plus full-desktop and single-monitor capture
+- Delayed capture, preselected regions, accept-on-select, and a precision magnifier with live RGB/HEX readouts
 
-### Annotation Suite
-- **Drawing:** Pencil, straight lines, highlighters, and rectangles with adjustable corner radii
-- **Smart arrows:** Straight or curved arrows with reversible heads
-- **Text:** Crisp typography with native IME support for international languages
-- **Step counters:** Auto-incrementing numbered bubbles that renumber automatically when deleted
-- **Redaction:** Secure pixelation and gaussian blur
-- **Controls:** Snapping grid, live geometry HUD, color palette editor, and full undo/redo
+### Annotation
+- Pencil, lines, arrows (straight and curved), rectangles — outlined and filled
+- Text with IME support, highlighter, auto-incrementing step counters
+- Secure pixelation and blur, snapping grid, geometry HUD, palette editor, undo/redo
 
-### Export & Sharing
-- Copy directly to clipboard (PNG / JPEG)
-- Save to disk with configurable patterns and image quality (PNG / JPEG / WebP)
-- **Pin to desktop:** Float screenshots as always-on-top reference windows with zoom, rotate, and opacity controls
-- Upload to Imgur with copyable links and deletion hashes
-- Open directly in external image viewers or editors
+### Export
+- Clipboard (PNG / JPEG), disk with configurable filename patterns and quality
+- Pin to desktop as always-on-top reference windows
+- Upload with copyable links, or open in an external viewer
 
 ## Installation
 
@@ -120,21 +127,36 @@ flowshot --print-bind-help
 
 | Desktop Environment | Capture Backend | Cursor Positioning | Status |
 |---|---|---|---|
-| **Hyprland** | ext-image-copy-capture | Native ICC cursor session + IPC | Fully supported (verified live) |
-| **Sway / wlroots** | ext-image-copy-capture / screencopy | Native ICC cursor session | Fully supported |
-| **KDE Plasma** | KWin ScreenShot2 D-Bus | Native cursor tracking | Fully supported |
-| **COSMIC** | ext-image-copy-capture | Native ICC cursor session | Supported |
-| **GNOME** | XDG Portal (ScreenCast / Screenshot) | Portal cursor support | Supported |
-| **X11 (i3, bspwm, XFCE)** | Native X11 (MIT-SHM fast path) | Native XFixes cursor | Fully supported (verified live) |
+| **Hyprland** | ext-image-copy-capture | Native ICC cursor session + IPC | Verified live |
+| **QuickShell (COSMIC)** | ext-image-copy-capture | Native ICC cursor session | Verified live |
+| **X11 (i3, bspwm, XFCE)** | Native X11 (MIT-SHM fast path) | Native XFixes cursor | Verified live (minor cosmetic issues) |
+| **Sway / wlroots** | ext-image-copy-capture / screencopy | Native ICC cursor session | Implemented, not verified by us |
+| **KDE Plasma** | KWin ScreenShot2 D-Bus | Native cursor tracking | Implemented, not verified by us |
+| **COSMIC** | ext-image-copy-capture | Native ICC cursor session | Implemented, not verified by us |
+| **GNOME** | XDG Portal (ScreenCast / Screenshot) | Portal cursor support | Implemented, not verified by us |
 
-FlowShot probes your live session automatically at runtime, picking the fastest available backend without requiring manual configuration.
+Three of these have been exercised on real hardware by the people who maintain
+this project: Hyprland, QuickShell, and X11. Everything below that line is
+implemented and covered by tests, but nobody here has run it on a real desktop
+yet: GNOME, COSMIC, Sway and KDE in particular. If you are on one of them, an
+issue naming your compositor and version is the most useful thing you can file
+here.
+
+FlowShot probes your live session automatically at runtime, picking the fastest
+available backend without requiring manual configuration.
+
+**Windows:** a native build exists and ships in the release artifacts, but no
+maintainer here runs Windows, so none of it has been exercised on real hardware.
+DXGI/WGC capture, the overlay, and the save dialog are implemented against the
+documented APIs. If you are a Windows user, telling us what works and what
+doesn't is the fastest way to make that build honest.
 
 ## Configuration
 
 Settings can be changed graphically in the settings window (`flowshot settings`) or in `~/.config/flowshot/flowshot.toml`.
 
 ```toml
-config_version = 3
+config_version = 4
 
 [save]
 path = ""                    # default: system Pictures directory
@@ -162,7 +184,7 @@ FlowShot is built with a privacy-first approach:
 ## Project Status
 
 FlowShot is under active development towards v1.0:
-- Native Wayland (ICC, screencopy, KWin) and native X11 backends are implemented and tested.
+- Native Wayland (ICC, screencopy, KWin) and native X11 backends are implemented; Hyprland, QuickShell and X11 are verified live.
 - GPU-accelerated rendering with automatic CPU fallback is active.
 - AUR packages (`flowshot-bin` and `flowshot-git`) are maintained.
 - Codebase maintains comprehensive test suites, platform purity checks, and strict formatting.
@@ -183,3 +205,9 @@ Architecture Decision Records: [docs/architecture/](docs/architecture/).
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE) for details. Third-party notices: [NOTICES](NOTICES).
+
+---
+
+## Disclaimer
+
+Written largely by a language model, like most code you'll open this year. What that sentence does not tell you is that someone here still maintains it: issues get a reply, reports get reproduced, and the ones that are real get fixed.
