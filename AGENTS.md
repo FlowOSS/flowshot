@@ -20,7 +20,7 @@ crates/
   flowshot-capture/          the contract: CaptureBackend, Frame, NEGOTIATION_LADDER, MockBackend
   flowshot-capture-wayland/  5 backends: ICC ext-image-copy-capture, wlr-screencopy, KWin ScreenShot2, portal
   flowshot-capture-x11/      the X11 rung: x11rb GetImage + MIT-SHM fd-passing, RANDR outputs, XFixes cursor
-  flowshot-capture-windows/  the Windows rung: WGC -> DXGI desktop duplication -> GDI BitBlt (Win7/RDP/VM)
+  flowshot-capture-windows/  the Windows backend: its OWN 3-tier ladder (WGC -> DXGI desktop duplication -> GDI BitBlt for Win7/RDP/VM); off the workspace ladder, picked by cfg(target_os)
   flowshot-ui/               winit+wgpu overlay, lyon renderer + the CPU raster fallback (render/software), cosmic-text atlas, selection, editor, egui_host
   flowshot-actions/          export (save/patterns/encode), daemon-owned clipboard, upload, pins
   flowshot-daemon/           zbus service, single-instance, executor, tray (SNI), shortcuts, notify, telemetry
@@ -57,7 +57,7 @@ the platform-integration layer.
 |--------|----------|------|
 | `OverlayCore` / `OverlayRuntime` / `OverlayHandle`, `render::Renderer` / `DisplayList` / `Command` | ui | headless state + `inject_event` vs. the winit shell; the batched 2D renderer |
 | `EditorState` / `Tool` / `ToolKind` / `ToolRegistry`, `SelectionState`, `ChromeState`, `InputRouter` / `WindowSlot`, `UiError` | ui | annotation framework, F27 selection spec, toolbar/wheel/HUD, coordinate mapping, typed errors |
-| `CaptureBackend`, `Frame` / `FrameBuffer` / `FrameFormat`, `NEGOTIATION_LADDER` / `negotiate` / `CapabilityProbe` / `DesktopEnv`, `MockBackend` | capture | the trait, frame vocabulary, the 5-rung ladder |
+| `CaptureBackend`, `Frame` / `FrameBuffer` / `FrameFormat`, `NEGOTIATION_LADDER` / `negotiate` / `CapabilityProbe` / `DesktopEnv`, `MockBackend` | capture | the trait, frame vocabulary, the 6-rung ladder (five Wayland + X11 last) |
 | `CaptureThread`, `SessionSnapshot`, `ProtocolGlobals`, `resolve_cursor_pos`, `CapturedOutputs`, `IccBackend` / `ScreencopyBackend` / `KwinScreenShot2Backend` / `PortalScreenCast`+`ScreenshotBackend` | capture-wayland | capture thread, protocol state, cursor strategy, the five backends |
 | `Config` / `CONFIG_VERSION`, `OutputLayout::crop_rects`, `Scene` / `UndoStack` / `ToolObject`, `DesignTokens` | core | config, mixed-DPI truth, scene graph, tokens |
 | `Daemon`, `DaemonCommand` / `CommandSink`, `acquire_or_forward`, `LifecyclePolicy`, `DaemonState` / `PersistenceReasons`, `Notifier`, `TrayHandle`, `ExecCtx` | daemon | service, single-instance, lifecycle, test seams |

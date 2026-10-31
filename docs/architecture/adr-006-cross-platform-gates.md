@@ -7,9 +7,14 @@ the detailed per-phase entry points live in
 **SHIPPED** via `flowshot-capture-x11`: the headless capture path
 (2026-10-04) and the interactive UI (Phase B, 2026-10-06); the
 verification records with inlined observed values live in
-[docs/verification.md](../verification.md). Platforms
-beyond Wayland and the X11 capture rung are **roadmap only: no code
-exists** for them and none is planned for the first release.
+[docs/verification.md](../verification.md). Windows (Phase 2) has **code but no
+verification**: `flowshot-capture-windows` exists (its own 3-tier WGC -> DXGI ->
+GDI ladder), is wired into the daemon under `cfg(target_os = "windows")` and is
+typechecked plus release-built by the CI Windows job, but no capture has been
+observed on real Windows hardware, and it stays out of `NEGOTIATION_LADDER`
+because `BackendKind::Windows.is_roadmap()` is still true. macOS remains
+**roadmap only: no code exists** for it and none is planned for the first
+release.
 
 ## Context
 

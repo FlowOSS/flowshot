@@ -4,8 +4,12 @@ Status: Phase 1 (X11) **SHIPPED** - headless capture 2026-10-04,
 interactive UI (Phase B) 2026-10-06 (`crates/flowshot-capture-x11`;
 verification records with inlined observed values:
 [verification.md](verification.md)).
-Every other platform remains roadmap only: **no code exists** for it and
-none is planned for the first release. This document is
+Phase 2 (Windows) has **code but no verification**: `crates/flowshot-capture-windows`
+(6 files / 803 raw lines, its own 3-tier WGC -> DXGI -> GDI ladder) is wired into the
+daemon under `cfg(target_os = "windows")` and is typechecked plus release-built by the
+CI Windows job, but nobody here runs Windows, so no capture has ever been observed -
+see the Windows paragraph in [README.md](../README.md). macOS remains roadmap only:
+**no code exists** for it. This document is
 the concrete entry-point map promised by
 [ADR-006](architecture/adr-006-cross-platform-gates.md) (draft findings
 F19/F20/F24). Crate versions were spot-checked against
@@ -35,11 +39,16 @@ Every capture phase below is the same shape:
   per block (engineering standard #4).
 - **The seam**: `flowshot-capture::CaptureBackend` is the only contract a
   platform crate must satisfy; `BackendKind` declares the roadmap
-  variants `Windows`, `MacOs` (documented, non-constructible in v1:
-  `is_roadmap()`, `CapabilityProbe::supports` reports `false`, forcing one
-  is a typed `CaptureError::NoBackendAvailable`). `X11` was promoted out of
+  variants `Windows`, `MacOs` (`is_roadmap()` is true for both, so
+  `CapabilityProbe::supports` reports `false` and neither ever enters
+  `NEGOTIATION_LADDER`; forcing one is a typed
+  `CaptureError::NoBackendAvailable`). Since Phase 2 that flag no longer means
+  "no code": `flowshot-capture-windows` ships a real `WindowsBackend` whose
+  `kind()` IS `BackendKind::Windows`, selected by the daemon under
+  `cfg(target_os = "windows")` in `execute/backend.rs::open_session_excluding`
+  instead of by negotiation. `X11` was promoted out of
   the roadmap set when Phase 1 shipped: on an X11 session the probe reports
-  it and it negotiates like any other rung.
+  it and it negotiates like any other rung (the ladder's sixth and last).
 - **Session model**: the CLI spawns a session child that owns the UI event
   loop on its main thread. That model is also the X11/macOS answer to
   main-thread windowing requirements — no re-architecture needed per port.
@@ -151,6 +160,11 @@ geometry rule (ADR-001) applies unchanged; no permission model
 (`request_permission` -> `NotRequired`).
 
 ## Phase 2 — Windows (WGC + DXGI)
+
+Status 2026-10-31: the crate below this line EXISTS and compiles in CI, but is
+UNVERIFIED - no capture has been observed on real Windows hardware. Treat the
+research notes that follow as the plan of record, not as a description of what
+ships.
 
 Crates (>=3, spot-checked):
 

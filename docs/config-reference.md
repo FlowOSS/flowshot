@@ -122,7 +122,7 @@ color_palette = [
 
 | Key | Type | Default | Notes |
 |---|---|---|---|
-| `corner_radius` | integer | `1` | Rectangle corner radius in pixels. |
+| `corner_radius` | integer | `1` | Rectangle corner radius in pixels. Outline tool (`rectangle`) only: the filled tool (`rectangle-filled`) paints a solid rect and carries neither a corner radius nor a stroke width. |
 
 ## `[tools.counter]`
 

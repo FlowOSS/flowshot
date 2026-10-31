@@ -74,6 +74,40 @@ temp artifacts are transient.
 
 ### Landed bundles
 
+- **Pencil and filled rectangle as toolbar tools, plus the v3->v4 toolbar
+  migration** (2026-10-28, **Unit-level** - no live-session run is claimed:
+  nobody drove a real capture through either tool, and the visible-overlay class
+  stays deferred under the policy below). What landed in `88b7cc6`:
+  `ToolKind::RectangleFill` (id `rectangle-filled`) as its OWN toolbar button
+  beside the outline rectangle, the freehand `pencil` id leading the drawing
+  tools, `icons/square-filled.svg` for the atlas, the default toolbar grown to
+  14 buttons, and a `CONFIG_VERSION` 3->4 step (`migrate_v3_to_v4`) that appends
+  both ids to a user-pinned `ui.toolbar_buttons`. Pinned by tests that landed
+  with it: `v3_config_gains_the_v4_toolbar_tools_on_migration` (a v3 table with
+  a pinned 12-button list gains both ids) and
+  `v4_toolbar_migration_is_idempotent_and_never_pins_a_missing_key` (a second
+  run changes nothing; a config with no `toolbar_buttons` key never materializes
+  one) in `flowshot-core`; `filled_rect_commits_a_solid_rect_under_its_own_kind`
+  in `flowshot-ui` (the committed object reports `type_id() ==
+  "rectangle-filled"`, round-trips through `ToolKind::from_id`, shares the
+  rectangle scene type with `filled == true` and `corner_radius == 0.0` /
+  `stroke_width == 0.0`, while the outline sibling stays `"rectangle"` with
+  `filled == false`). `ui/tests/parity.rs` gained a `rect-filled` golden row
+  (drag 120,120 -> 520,360 under `Config::default()`) on the plain assert rather
+  than the edge-masked one, because `fill_rect` edges are unmasked; per the rule
+  recorded below that row SKIPS on any host without a GPU adapter, so this
+  bundle claims NO GPU comparison for it. Gate evidence is CI, not a local run:
+  the feature push (`88b7cc6`, run 40713522594) passed the purity gate,
+  `cargo fmt --check`, `cargo clippy --workspace --all-targets -D warnings` and
+  `cargo test` on Linux and every Windows step (scoped clippy, scoped tests,
+  release build of cli+daemon), and failed ONLY at `Check dependencies` on
+  RUSTSEC-2026-0382/-0383/-0386. `49068df` (Cargo.lock only: tokio
+  1.53.1 -> 1.54.1, rustls-webpki 0.103.15 -> 0.103.16, webpki-root-certs
+  1.0.9 -> 1.0.11) cleared it - run 40716996231 green. The docs pushes after it
+  are green too: `ea8438d` + `b4a6b3d` in run 40739414577 (GitHub Actions runs
+  the head commit of a push only, so the README commit has no run of its own),
+  and `4b7a6fb` in run 40747262797 (Linux 5m24s, Windows 18m21s, both jobs
+  `success`). Workspace test total measured that day: 1,537; rustdoc warnings: 0.
 - **CPU raster fallback** (2026-10-10, **Unit-level** - the live fallback path
   is explicitly NOT claimed: neither QA box has a GPU-less or OOM-starved
   desktop, so the policy branch never took the CPU path in a live session).
