@@ -1139,4 +1139,170 @@ mod tests {
         assert_eq!(reloaded.to_toml_string()?, text);
         Ok(())
     }
+
+    // A real long-time user's file, last written by an old build: it still
+    // carries the pre-v2 `filename_template` key, has no `[telemetry]` group at
+    // all, and pins the pre-v4 twelve-button toolbar. Everything else is user
+    // content that must survive the walk untouched.
+    const LEGACY_USER_FILE: &str = r##"
+            [capture]
+            hide_cursor = false
+            save_last_region = true
+
+            [capture.last_region]
+            x = 4096
+            y = 53
+            width = 384
+            height = 121
+
+            [save]
+            path = "/home/user/Pictures"
+            path_fixed = false
+            extension = "png"
+            filename_template = "%Y-%m-%d_shot_%H%M%S"
+            jpeg_quality = 75
+            clipboard_format = "png"
+            actions = ["copy"]
+
+            [editor]
+            draw_color = "#FF0000"
+            draw_thickness = 3
+            font_family = "Noto Sans"
+            font_size = 8
+            magnifier = false
+            magnifier_shape = "square"
+            hud_position = 4
+            hud_hide_time = 3000
+            grid = false
+            undo_limit = 100
+            color_palette = ["#000000", "#7F7F7F", "#880015", "#ED1C24", "#FF7F27", "#FFF200", "#22B14C", "#00A2E8", "#3F48CC", "#A349A4", "#FFFFFF", "#C3C3C3", "#B97A57", "#FFAEC9", "#FFC90E", "#EFE4B0", "#B5E61D", "#99D9EA", "#7092BE", "#C8BFE7"]
+            double_click_copies = false
+            side_panel = true
+
+            [tools.arrow]
+            style = "straight"
+            reverse = false
+
+            [tools.marker]
+            size = 5
+
+            [tools.pixelate]
+            size = 2
+
+            [tools.rectangle]
+            corner_radius = 1
+
+            [tools.counter]
+            size = 1
+            outline = true
+
+            [pin]
+            min_size = 100
+
+            [upload]
+            provider = "imgur"
+            client_id = ""
+            without_confirmation = false
+            copy_url = true
+            history_max = 25
+
+            [ui]
+            accent_color = "#6366F1"
+            contrast_color = "#0F172A"
+            dim_opacity = 190
+            toolbar_buttons = ["arrow", "rectangle", "circle", "marker", "text", "pixelate", "counter", "copy", "save", "pin", "upload", "undo"]
+            cursor_style = "crosshair"
+
+            [daemon]
+            tray = true
+            notifications = true
+            startup_launch = false
+    "##;
+
+    // Every field the user set themselves, checked against the fixture above:
+    // a migration leg may only touch what it owns.
+    fn assert_the_users_own_content_survived(config: &Config) {
+        assert_eq!(
+            config.capture.last_region,
+            Some(Region {
+                x: 4096,
+                y: 53,
+                width: 384,
+                height: 121,
+            })
+        );
+        assert!(config.capture.save_last_region);
+        assert!(!config.capture.hide_cursor);
+        assert_eq!(config.save.path, "/home/user/Pictures");
+        assert!(!config.save.path_fixed);
+        assert_eq!(config.save.jpeg_quality, 75);
+        assert_eq!(config.save.actions, vec![SaveAction::Copy]);
+        assert_eq!(config.save.clipboard_format, ClipboardFormat::Png);
+        assert_eq!(config.editor.draw_color, "#FF0000");
+        assert_eq!(config.editor.font_family, "Noto Sans");
+        assert_eq!(config.editor.color_palette.len(), 20);
+        assert_eq!(config.editor.magnifier_shape, MagnifierShape::Square);
+        assert_eq!(config.editor.hud_hide_time, 3000);
+        assert_eq!(config.editor.undo_limit, 100);
+        assert!(config.editor.side_panel);
+        assert_eq!(config.tools.arrow.style, ArrowStyle::Straight);
+        assert_eq!(config.tools.marker.size, 5);
+        assert_eq!(config.tools.pixelate.size, 2);
+        assert_eq!(config.tools.rectangle.corner_radius, 1);
+        assert!(config.tools.counter.outline);
+        assert_eq!(config.pin.min_size, 100);
+        assert_eq!(config.upload.history_max, 25);
+        assert!(config.upload.copy_url);
+        assert_eq!(config.ui.accent_color, "#6366F1");
+        assert_eq!(config.ui.dim_opacity, 190);
+        assert_eq!(config.ui.cursor_style, CursorStyle::Crosshair);
+        assert!(config.daemon.tray);
+        assert!(config.daemon.notifications);
+        assert!(!config.daemon.startup_launch);
+    }
+
+    #[test]
+    fn a_long_time_users_file_walks_every_migration_leg() -> Result<(), ConfigError> {
+        // When: the same file arrives both ways a long-time user's can - never
+        // stamped, so all four legs run, and stamped at v1, so the last three do.
+        let from_v0 = Config::from_toml_str(LEGACY_USER_FILE)?;
+        let from_v1 = Config::from_toml_str(&format!("config_version = 1\n{LEGACY_USER_FILE}"))?;
+
+        // Then: both walked to the current version one leg at a time, and each
+        // leg did exactly its own job.
+        for config in [&from_v0, &from_v1] {
+            assert_eq!(config.config_version, CONFIG_VERSION);
+
+            // v1 -> v2: the user's own pattern survived under the new key.
+            // The value is deliberately NOT the default, so a leg that fails
+            // to rename shows up as a silent fallback instead of passing.
+            assert_eq!(config.save.filename_pattern, "%Y-%m-%d_shot_%H%M%S");
+
+            // v2 -> v3: the consent group exists and stayed opt-in - absence
+            // must never be read as consent. NOTE: this leg is NOT detectable
+            // by removal, because `TelemetryConfig` defaults to the same three
+            // false flags the leg inserts and serialization always writes the
+            // group; the assertion guards the contract against a future leg
+            // that would enable telemetry, not against a deleted one.
+            assert_eq!(config.telemetry, TelemetryConfig::default());
+            assert!(!config.telemetry.enabled);
+            assert!(!config.telemetry.include_technical_details);
+            assert!(!config.telemetry.asked_on_first_launch);
+
+            // v3 -> v4: the pinned order survived at the front and the two new
+            // tools were appended rather than woven into the user's layout.
+            assert_eq!(config.ui.toolbar_buttons.len(), 14);
+            assert_eq!(config.ui.toolbar_buttons[0], "arrow");
+            assert_eq!(config.ui.toolbar_buttons[11], "undo");
+            assert_eq!(config.ui.toolbar_buttons[12], "pencil");
+            assert_eq!(config.ui.toolbar_buttons[13], "rectangle-filled");
+
+            assert_the_users_own_content_survived(config);
+        }
+
+        // The entry version does not change the outcome: the chain converges,
+        // so an unstamped file and a v1 file resolve to identical bytes.
+        assert_eq!(from_v0.to_toml_string()?, from_v1.to_toml_string()?);
+        Ok(())
+    }
 }
