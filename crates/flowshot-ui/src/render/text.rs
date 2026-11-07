@@ -16,15 +16,15 @@
 
 use std::collections::HashMap;
 
-use cosmic_text::{
-    Attrs, Buffer, CacheKey, Family, FontSystem, Metrics, Shaping, SwashCache, SwashImage,
-};
+use cosmic_text::{Attrs, Buffer, CacheKey, Family, Metrics, Shaping, SwashCache, SwashImage};
 
 use super::atlas::{AtlasSlot, ShelfAtlas};
+use super::device_kit::DeviceKit;
+use super::fonts::with_font_system;
 use super::geometry::Point;
 use super::glyph::{GlyphPlacement, TextVertex, glyph_quad, glyph_rgba, tint_for};
 use super::list::{TextAnchor, TextCommand};
-use super::text_pipeline::{atlas_resources, text_pipeline};
+use super::text_pipeline::atlas_resources;
 
 /// The shaped block's extent (widest line x line-box height) - the
 /// [`TextAnchor::Center`] metrics, measured on the SAME buffer the glyphs
@@ -48,14 +48,13 @@ pub(crate) const GLYPH_PADDING: u32 = 1;
 
 /// The font stack, glyph atlas, and text pipeline.
 pub(crate) struct TextStack {
-    font_system: FontSystem,
     swash_cache: SwashCache,
     atlas: ShelfAtlas,
     slots: HashMap<CacheKey, AtlasSlot>,
     reset_this_frame: bool,
     atlas_texture: wgpu::Texture,
     bind_group: wgpu::BindGroup,
-    pipeline: wgpu::RenderPipeline,
+    kit: DeviceKit,
 }
 
 impl std::fmt::Debug for TextStack {
@@ -124,47 +123,22 @@ impl AtlasUpload<'_> {
 }
 
 impl TextStack {
-    pub(crate) fn new(
-        device: &wgpu::Device,
-        format: wgpu::TextureFormat,
-        sample_count: u32,
-    ) -> Self {
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("render-text-bindings"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
-        let (atlas_texture, bind_group) = atlas_resources(device, &bind_group_layout);
+    pub(crate) fn new(kit: &DeviceKit) -> Self {
+        let (atlas_texture, bind_group) =
+            atlas_resources(&kit.device, &kit.text_layout, &kit.glyph_sampler);
         Self {
-            font_system: FontSystem::new(),
             swash_cache: SwashCache::new(),
             atlas: ShelfAtlas::new(ATLAS_DIM, ATLAS_DIM),
             slots: HashMap::new(),
             reset_this_frame: false,
             atlas_texture,
             bind_group,
-            pipeline: text_pipeline(device, format, sample_count, &bind_group_layout),
+            kit: kit.clone(),
         }
     }
 
     pub(crate) const fn pipeline(&self) -> &wgpu::RenderPipeline {
-        &self.pipeline
+        &self.kit.text_pipeline
     }
 
     pub(crate) const fn bind_group(&self) -> &wgpu::BindGroup {
@@ -198,35 +172,7 @@ impl TextStack {
             );
             return;
         }
-        let mut buffer = Buffer::new(
-            &mut self.font_system,
-            Metrics::new(command.font_size, command.line_height),
-        );
-        if let Some(width) = command.max_width {
-            buffer.set_size(Some(width.max(0.0)), None);
-        }
-        let mut attrs = Attrs::new();
-        if let Some(family) = &command.family {
-            attrs = attrs.family(Family::Name(family.as_str()));
-        }
-        if command.bold {
-            attrs = attrs.weight(cosmic_text::Weight::BOLD);
-        }
-        buffer.set_text(&command.text, &attrs, Shaping::Advanced, None);
-        buffer.shape_until_scroll(&mut self.font_system, false);
-        let origin = match command.anchor {
-            TextAnchor::TopLeft => command.position,
-            TextAnchor::Center => {
-                let (width, height) = block_size(&buffer);
-                Point::new(
-                    command.position.x - width / 2.0,
-                    command.position.y - height / 2.0,
-                )
-            }
-        };
-
         let Self {
-            font_system,
             swash_cache,
             atlas,
             slots,
@@ -242,40 +188,67 @@ impl TextStack {
             reset_this_frame,
         };
         let tint = command.color.premultiplied_linear();
-        for run in buffer.layout_runs() {
-            for glyph in run.glyphs {
-                let physical = glyph.physical((origin.x, origin.y + run.line_y), 1.0);
-                let Some(image) = swash_cache
-                    .get_image(font_system, physical.cache_key)
-                    .as_ref()
-                else {
-                    continue;
-                };
-                if image.placement.width == 0 || image.placement.height == 0 {
-                    continue;
+        with_font_system(
+            |fonts| {
+                let mut buffer =
+                    Buffer::new(fonts, Metrics::new(command.font_size, command.line_height));
+                if let Some(width) = command.max_width {
+                    buffer.set_size(Some(width.max(0.0)), None);
                 }
-                let Some(slot) = upload.ensure_slot(physical.cache_key, image) else {
-                    continue;
+                let mut attrs = Attrs::new();
+                if let Some(family) = &command.family {
+                    attrs = attrs.family(Family::Name(family.as_str()));
+                }
+                if command.bold {
+                    attrs = attrs.weight(cosmic_text::Weight::BOLD);
+                }
+                buffer.set_text(&command.text, &attrs, Shaping::Advanced, None);
+                buffer.shape_until_scroll(fonts, false);
+                let origin = match command.anchor {
+                    TextAnchor::TopLeft => command.position,
+                    TextAnchor::Center => {
+                        let (width, height) = block_size(&buffer);
+                        Point::new(
+                            command.position.x - width / 2.0,
+                            command.position.y - height / 2.0,
+                        )
+                    }
                 };
-                let placement = GlyphPlacement {
-                    origin_x: physical.x,
-                    origin_y: physical.y,
-                    ink_left: image.placement.left,
-                    ink_top: image.placement.top,
-                    ink_width: image.placement.width,
-                    ink_height: image.placement.height,
-                    slot,
-                    slot_padding: GLYPH_PADDING,
-                    atlas_extent: ATLAS_DIM,
-                    tint: tint_for(image.content, tint),
-                };
-                let Some((quad, quad_indices)) = glyph_quad(&placement) else {
-                    continue;
-                };
-                let base = u32::try_from(vertices.len()).unwrap_or(u32::MAX);
-                vertices.extend_from_slice(&quad);
-                indices.extend(quad_indices.iter().map(|index| index + base));
-            }
-        }
+                for run in buffer.layout_runs() {
+                    for glyph in run.glyphs {
+                        let physical = glyph.physical((origin.x, origin.y + run.line_y), 1.0);
+                        let Some(image) = swash_cache.get_image(fonts, physical.cache_key).as_ref()
+                        else {
+                            continue;
+                        };
+                        if image.placement.width == 0 || image.placement.height == 0 {
+                            continue;
+                        }
+                        let Some(slot) = upload.ensure_slot(physical.cache_key, image) else {
+                            continue;
+                        };
+                        let placement = GlyphPlacement {
+                            origin_x: physical.x,
+                            origin_y: physical.y,
+                            ink_left: image.placement.left,
+                            ink_top: image.placement.top,
+                            ink_width: image.placement.width,
+                            ink_height: image.placement.height,
+                            slot,
+                            slot_padding: GLYPH_PADDING,
+                            atlas_extent: ATLAS_DIM,
+                            tint: tint_for(image.content, tint),
+                        };
+                        let Some((quad, quad_indices)) = glyph_quad(&placement) else {
+                            continue;
+                        };
+                        let base = u32::try_from(vertices.len()).unwrap_or(u32::MAX);
+                        vertices.extend_from_slice(&quad);
+                        indices.extend(quad_indices.iter().map(|index| index + base));
+                    }
+                }
+            },
+            (),
+        );
     }
 }
