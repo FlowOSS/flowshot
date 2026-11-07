@@ -17,28 +17,25 @@ use std::time::{Duration, Instant};
 
 use lyon::tessellation::VertexBuffers;
 
+use super::device_kit::DeviceKit;
 use super::frame_build::{FrameBuild, Step};
 use super::geometry::{f32_from_u32, ndc_transform};
 use super::glyph::TextVertex;
 use super::image::{ImageVertex, TextureStore};
 use super::list::DisplayList;
 use super::pass::{PipelineRefs, draw_step};
-use super::shadow::{ShadowPipeline, ShadowVertex};
+use super::shadow::ShadowVertex;
 use super::staging::{StagingBuffers, StagingData};
 use super::stats::{FrameStats, RenderTarget};
-use super::target::{FrameTarget, msaa_sample_count, validate_extent};
+use super::target::{FrameTarget, validate_extent};
 use super::tessellation::{FlatVertex, Tessellator};
 use super::text::TextStack;
-use super::vector::VectorPipelines;
 use crate::error::UiError;
 
 /// The batched 2D renderer.
 #[derive(Debug)]
 pub struct Renderer {
-    format: wgpu::TextureFormat,
-    sample_count: u32,
-    vector: VectorPipelines,
-    shadow: ShadowPipeline,
+    kit: DeviceKit,
     text: TextStack,
     textures: TextureStore,
     tessellator: Tessellator,
@@ -59,14 +56,18 @@ impl Renderer {
     /// for live overlays, an sRGB format for offscreen targets).
     #[must_use]
     pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, format: wgpu::TextureFormat) -> Self {
-        let sample_count = msaa_sample_count(device);
+        Self::with_kit(&DeviceKit::new(device, queue, format))
+    }
+
+    /// A renderer that draws with an already-built kit: the device half is not
+    /// rebuilt, only the per-window half (glyph atlas, texture entries, frame
+    /// target).
+    #[must_use]
+    pub(crate) fn with_kit(kit: &DeviceKit) -> Self {
         Self {
-            format,
-            sample_count,
-            vector: VectorPipelines::new(device, format, sample_count),
-            shadow: ShadowPipeline::new(device, format, sample_count),
-            text: TextStack::new(device, format, sample_count),
-            textures: TextureStore::new(device, queue, format, sample_count),
+            kit: kit.clone(),
+            text: TextStack::new(kit),
+            textures: TextureStore::new(kit),
             tessellator: Tessellator::new(),
             target: None,
             steps: Vec::new(),
@@ -84,7 +85,7 @@ impl Renderer {
     /// The color attachment format this renderer draws into.
     #[must_use]
     pub const fn format(&self) -> wgpu::TextureFormat {
-        self.format
+        self.kit.format
     }
 
     /// Read-only access to the uploaded image textures.
@@ -124,7 +125,7 @@ impl Renderer {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: self.format,
+            format: self.kit.format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         }))
@@ -147,8 +148,8 @@ impl Renderer {
         FrameTarget::for_size(
             &mut self.target,
             device,
-            self.format,
-            self.sample_count,
+            self.kit.format,
+            self.kit.sample_count,
             target.width,
             target.height,
         );
@@ -240,8 +241,7 @@ impl Renderer {
             shadow_indices,
             text_vertices,
             text_indices,
-            vector,
-            shadow,
+            kit,
             text,
             textures,
             target: frame_target,
@@ -262,8 +262,8 @@ impl Renderer {
             return;
         };
         let pipelines = PipelineRefs {
-            vector,
-            shadow,
+            vector: &kit.vector,
+            shadow: &kit.shadow,
             text,
             textures,
         };

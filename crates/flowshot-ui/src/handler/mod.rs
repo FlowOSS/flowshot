@@ -9,6 +9,7 @@
 
 mod events;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use winit::event_loop::ActiveEventLoop;
@@ -21,7 +22,7 @@ use crate::app::{OverlayApp, WindowEntry};
 use crate::error::UiError;
 use crate::gpu::GpuContext;
 use crate::monitor;
-use crate::render::{ImageSource, Presenter, Renderer, SoftwareRenderer};
+use crate::render::{DeviceKit, ImageSource, Presenter, Renderer, SoftwareRenderer};
 use crate::router::WindowSlot;
 use crate::surface::{SurfaceSpec, WindowSurface};
 
@@ -149,6 +150,9 @@ impl OverlayApp {
             ..
         } = self;
         let forced = render_path_override();
+        // One device kit per format: the pipelines, layouts, and samplers are
+        // built once and reused by every window that draws with them.
+        let mut kits: HashMap<wgpu::TextureFormat, DeviceKit> = HashMap::new();
         for (index, entry) in windows.iter_mut().enumerate() {
             let Some(surface) = entry.surface.as_ref() else {
                 continue;
@@ -206,7 +210,10 @@ impl OverlayApp {
                 }
                 continue;
             }
-            let mut renderer = Renderer::new(&gpu.device, &gpu.queue, surface.format());
+            let kit = kits
+                .entry(surface.format())
+                .or_insert_with(|| DeviceKit::new(&gpu.device, &gpu.queue, surface.format()));
+            let mut renderer = Renderer::with_kit(kit);
 
             let atlas_image = crate::render::RgbaImage {
                 width: crate::widgets::ATLAS_WIDTH,

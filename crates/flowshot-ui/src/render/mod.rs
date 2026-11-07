@@ -33,6 +33,9 @@
 
 mod atlas;
 mod color;
+mod device_kit;
+#[cfg(test)]
+mod device_kit_tests;
 mod fonts;
 mod frame_build;
 mod geometry;
@@ -54,6 +57,7 @@ mod text_pipeline;
 mod vector;
 
 pub use color::{Color, linear_to_srgb, srgb_to_linear};
+pub(crate) use device_kit::DeviceKit;
 pub(crate) use fonts::with_font_system;
 pub use geometry::{Point, Rect, Size};
 pub(crate) use geometry::{f32_from_f64, f32_from_i32, f32_from_u32};

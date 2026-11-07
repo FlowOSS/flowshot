@@ -9,9 +9,9 @@
 
 use std::collections::HashMap;
 
+use super::device_kit::DeviceKit;
 use super::geometry::Rect;
 pub(crate) use super::image_pipeline::ImageVertex;
-use super::image_pipeline::image_pipeline;
 use super::list::TextureId;
 use crate::error::UiError;
 
@@ -75,57 +75,16 @@ struct TextureEntry {
 pub struct TextureStore {
     entries: HashMap<TextureId, TextureEntry>,
     placeholder: TextureEntry,
-    pipeline: wgpu::RenderPipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
-    sampler: wgpu::Sampler,
-    max_texture_dimension_2d: u32,
+    kit: DeviceKit,
 }
 
 impl TextureStore {
-    pub(crate) fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        format: wgpu::TextureFormat,
-        sample_count: u32,
-    ) -> Self {
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("render-image-bindings"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
-        let pipeline = image_pipeline(device, format, sample_count, &bind_group_layout);
-        // Linear filtering, no mips: frozen frames draw 1:1 or magnified.
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("render-image-sampler"),
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            ..wgpu::SamplerDescriptor::default()
-        });
-        let max_texture_dimension_2d = device.limits().max_texture_dimension_2d;
+    pub(crate) fn new(kit: &DeviceKit) -> Self {
         let placeholder = upload(
-            device,
-            queue,
-            &bind_group_layout,
-            &sampler,
+            &kit.device,
+            &kit.queue,
+            &kit.image_layout,
+            &kit.image_sampler,
             &RgbaImage {
                 width: 1,
                 height: 1,
@@ -136,10 +95,7 @@ impl TextureStore {
         Self {
             entries: HashMap::new(),
             placeholder,
-            pipeline,
-            bind_group_layout,
-            sampler,
-            max_texture_dimension_2d,
+            kit: kit.clone(),
         }
     }
 
@@ -155,12 +111,12 @@ impl TextureStore {
         id: TextureId,
         image: &RgbaImage<'_>,
     ) -> Result<(), UiError> {
-        image.validate(self.max_texture_dimension_2d)?;
+        image.validate(self.kit.max_texture_dimension_2d)?;
         let entry = upload(
             device,
             queue,
-            &self.bind_group_layout,
-            &self.sampler,
+            &self.kit.image_layout,
+            &self.kit.image_sampler,
             image,
             "render-texture",
         );
@@ -197,7 +153,7 @@ impl TextureStore {
     }
 
     pub(crate) const fn pipeline(&self) -> &wgpu::RenderPipeline {
-        &self.pipeline
+        &self.kit.image_pipeline
     }
 }
 

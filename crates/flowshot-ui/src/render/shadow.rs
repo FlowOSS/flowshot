@@ -72,7 +72,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
 ";
 
 /// The shadow render pipeline.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ShadowPipeline {
     pub pipeline: wgpu::RenderPipeline,
 }
