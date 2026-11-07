@@ -74,6 +74,54 @@ temp artifacts are transient.
 
 ### Landed bundles
 
+- **Open-path instrumentation and the two render-side wins it revealed**
+  (2026-11-07, branch `perf/ui-open-latency`, **LIVE-verified** for the timings
+  — measured on the primary box (Hyprland 0.56.2, NVIDIA RTX 5060 Ti), 2 windows,
+  `empty_overlay` built `--features 'test-drive perf-trace'`, release, bounded
+  `timeout 25` runs that exit 124 — and **Unit-level** for the shared-kit contract,
+  which executes on the measuring machine and skips with a message on a host without an
+  adapter). What landed: `flowshot-ui/src/startup.rs` (`StartupClock`, always
+  compiled, `target: "flowshot_perf"`, one monotonic anchor at `OverlayApp::new`)
+  wired at `handler/mod.rs` (`perf.windows_ready`, `perf.gpu_instance`,
+  `perf.gpu_ready`, `perf.renderers_ready`) and at `app.rs`'s `render_window`
+  (`perf.ui_ready` only when the present succeeded); `render/fonts.rs` (one lazy
+  `FontSystem` per process thread behind `with_font_system`, with a re-entrancy
+  guard that falls back and logs instead of panicking); `render/device_kit.rs`
+  (`DeviceKit` — pipelines, bind group layouts, samplers, the MSAA sample count and
+  the texture limit built once per format and cloned into each window; the handler
+  holds one kit per format, so a CPU-lane child never pays for the render
+  pipelines, and the `Presenter`'s pipeline stays per window on purpose).
+  Pinned by tests that landed with the modules: `startup/tests.rs`
+  `milestones_emit_in_the_documented_order`,
+  `ready_milestone_fires_once_across_repeated_frames`,
+  `no_readiness_reported_before_any_present`; `render/fonts.rs` inline tests
+  `the_store_is_not_built_until_the_first_shape` and
+  `one_cell_per_thread_so_every_caller_aliases_the_same_store` (each on its own
+  thread, so they do not depend on test order); `render/device_kit_tests.rs`
+  `one_kit_is_reused_by_every_window_instead_of_rebuilt`, which is falsifiable by
+  construction — it asserts the equalities AND a control kit built on the same
+  device is a different pipeline and sampler, and that the glyph atlas bind group
+  stays per window.
+  Observed values (same harness, same box, legs are deltas of the cumulative
+  `elapsed_us`, anchor = `OverlayApp::new`). Before, recorded 2026-11-06:
+  warm 1.931 / +66.075 instance / +108.424 device / **+62.387 renderers** /
+  +13.685 frame+present => 260.6 ms, repeats 268.3 and 283.0; cold first run 7.179 /
+  +202.242 / +165.439 / **+445.239** / +4.785 => 824.9 ms. After, clean runs taken
+  with no other cargo process running: 8.259 / +201.229 / +149.184 /
+  **+16.999** / +17.608 => 393.325 ms; 1.783 / +66.846 / +107.877 / **+17.391** /
+  +39.679 => 233.580 ms; 1.381 / +55.486 / +116.230 / **+17.054** / +19.413 =>
+  209.764 ms. So the renderers leg is 17.0-17.4 ms against the 62.4 ms warm
+  baseline, and the warm child total is 209.8-233.6 ms against 260.6-283.0 ms.
+  Two caveats recorded as caveats: the before side is the 2026-11-06 measurement on
+  the same harness and box, not a same-session A/B (a controlled A/B would need
+  selectively reverting only the font and kit changes, since the milestones live in
+  the same handler file as the kit code); and six runs taken earlier in the same
+  measurement pass are not quotable — they ran while `cargo clippy`/`cargo test` competed for the
+  cores and came out at instance 0.51-2.35 s, device +2.2-6.9 s. The lazy store
+  moves the fontconfig load out of renderer construction into the first frame (the
+  frame+present leg rose to 39.7 ms on one clean run), so what is saved is the
+  duplicate work across windows, not the font build itself.
+
 - **Pencil and filled rectangle as toolbar tools, plus the v3->v4 toolbar
   migration** (2026-10-28, **Unit-level** - no live-session run is claimed:
   nobody drove a real capture through either tool, and the visible-overlay class

@@ -77,7 +77,7 @@ the platform-integration layer.
   `core/geometry.rs` 656, `core/scene.rs` 602, `core/config.rs` 435, `daemon/tray/dbusmenu.rs` 257.
 - **Test placement**: inline `#[cfg(test)] mod tests` is the norm outside flowshot-ui (111 files
   counted 2026-10-28: core 8, capture 5, capture-wayland 30, capture-x11 8, capture-windows 2,
-  actions 18, daemon 36, cli 4 — `flowshot-ui/src` adds 75 more);
+  actions 18, daemon 36, cli 4 — `flowshot-ui/src` adds 77 more (recounted 2026-11-07 with `grep -rl 'cfg(test)' crates/flowshot-ui/src`, 20 of them sibling files));
   `flowshot-ui/src` uses sibling `tests.rs` / `*_tests.rs`. Module-root style also varies per crate —
   never state either workspace-wide.
 - **Purity**: `scripts/purity-gate.sh` scans `src/` incl. inline tests for platform imports,
@@ -137,6 +137,18 @@ cargo run -p flowshot-ui --example {e2e_headless,qa_bundle} --features test-driv
 ## NOTES
 
 - **Gates**: 1,537 tests green (summed from `cargo test --workspace` on 2026-10-28); clippy/fmt/purity/deny clean.
+- **Test-target gap (measured 2026-11-07, cause not established)**: `cargo test --workspace`
+  compiles `flowshot-ui` but never executes its test targets — 19 of the 34 enumerated targets
+  ran, and the ui package's 6 (716 lib + 36 integration) executed only under
+  `cargo test -p flowshot-ui`. Reproduced four times, once after `cargo clean -p flowshot-ui`.
+  Run the ui suite explicitly; the 1,537 counted 2026-10-28 includes targets this command does
+  not execute today (747 executed + 752 ui = 1,499 measured 2026-11-07).
+- **Nondeterministic test (one occurrence, unattributed)**: `flowshot-ui`
+  `selection::tests::case34_esc_cascade_walks_all_six_stages_in_order` failed once in a full run,
+  then passed twice in full runs and 5/5 in isolation; its log buffer is thread-scoped
+  (`tracing::subscriber::with_default`), so cross-test pollution is not a plausible mechanism, and
+  the only load-sensitive input in that path is the wall-clock `now` the funnel hands the editor env
+  (`state/route.rs:190`).
   nested-runtime session fix, settings reworks x2, drag-freeze perf (Mailbox present +
   `pre_present_notify`), wheel-sizing feedback, rect size-slot fix, counter drag-aim pointer,
   discoverability (tooltip hotkeys + clickable aid chips), tray model (LMB captures / RMB menu + Open
