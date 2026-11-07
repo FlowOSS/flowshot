@@ -1,6 +1,6 @@
 # crates/flowshot-ui/src
 
-229 Rust files, 16 top-level module dirs (30 module dirs total), 99 re-exports via `lib.rs`.
+234 Rust files, 17 top-level module dirs (31 module dirs total), 99 re-exports via `lib.rs`.
 The crate root covers packaging; this covers what breaks silently if guessed.
 
 ## OVERVIEW
@@ -14,8 +14,8 @@ Two layers, split so the interesting logic never touches a GPU or a display: a
 | Layer | Modules | Owns |
 |-------|---------|------|
 | Headless core | `state`, `state/route`, `router`, `input`, `launch` | `OverlayCore`, coordinate mapping, the route funnel, preselect math |
-| Window shell | `runtime`, `app`, `handler/`, `surface`, `gpu/`, `monitor`, `adapter`, `crosshair` | winit loop, per-monitor windows, device/surface policy |
-| Renderer | `render/` (21 files) | `Renderer`, `DisplayList`, `Command`, `Color`, `TextureStore` |
+| Window shell | `runtime`, `app`, `handler/`, `surface`, `gpu/`, `monitor`, `adapter`, `crosshair`, `startup` | winit loop, per-monitor windows, device/surface policy, the startup-milestone clock (`perf.windows_ready` / `perf.gpu_instance` / `perf.gpu_ready` / `perf.renderers_ready` / the once-only `perf.ui_ready` on first present) |
+| Renderer | `render/` (24 files) | `Renderer`, `DisplayList`, `Command`, `Color`, `TextureStore`, `DeviceKit` (the device-scoped half built once per format and cloned into each window; the `Presenter`'s pipeline/layout/sampler deliberately stay per window, because a GPU-lane window would pay for a present pipeline it never uses and a CPU-lane window would pay for the render pipelines it never uses) |
 | CPU raster fallback | `render/software` (renderer + `Presenter`) | `SoftwareRenderer`, `ImageSource`, `Presenter` — same `DisplayList`, no GPU rasterizer; the framebuffer is premultiplied LINEAR light, sources decode at `upload`, and `surface.render_software` resizes it to the surface extent |
 | Status pill | `chrome/status` + `widgets/chip` (`StatusChip`) | the selection-attached badge stating `GPU` (quiet) or `CPU fallback` (accent); gone when no slot fits — decoration the funnel never hit-tests |
 | Frame build | `frame`, `backdrop/`, `export`, `completion` | the ONE paint path + frozen-frame pixel prep |

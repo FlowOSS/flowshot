@@ -35,7 +35,7 @@ use std::time::{Duration, Instant};
 
 use tiny_skia::{FillRule, Transform};
 
-use cosmic_text::{FontSystem, SwashCache};
+use cosmic_text::SwashCache;
 
 mod blit;
 mod buffer;
@@ -146,7 +146,7 @@ pub struct SoftwareRenderer {
     last_damage: Option<Region>,
     scene_key: Option<Vec<Command>>,
     clip: Vec<ClipMask>,
-    fonts: (FontSystem, SwashCache),
+    cache: SwashCache,
     images: HashMap<TextureId, ImageEntry>,
 }
 
@@ -166,7 +166,7 @@ impl SoftwareRenderer {
             last_damage: None,
             scene_key: None,
             clip: Vec::new(),
-            fonts: (FontSystem::new(), SwashCache::new()),
+            cache: SwashCache::new(),
             images: HashMap::new(),
         }
     }
@@ -373,7 +373,7 @@ impl SoftwareRenderer {
                 Self::paint_to(
                     &mut self.base,
                     &mut base_clip,
-                    &mut self.fonts,
+                    &mut self.cache,
                     &self.images,
                     cmd,
                 );
@@ -428,7 +428,7 @@ impl SoftwareRenderer {
                 Self::paint_to(
                     &mut self.base,
                     &mut base_clip,
-                    &mut self.fonts,
+                    &mut self.cache,
                     &self.images,
                     cmd,
                 );
@@ -474,7 +474,7 @@ impl SoftwareRenderer {
         Self::paint_to(
             &mut self.buffer,
             &mut self.clip,
-            &mut self.fonts,
+            &mut self.cache,
             &self.images,
             command,
         );
@@ -484,7 +484,7 @@ impl SoftwareRenderer {
     fn paint_to(
         fb: &mut buffer::SoftwareFramebuffer,
         clip: &mut Vec<ClipMask>,
-        fonts: &mut (FontSystem, SwashCache),
+        cache: &mut SwashCache,
         images: &HashMap<TextureId, ImageEntry>,
         command: &Command,
     ) {
@@ -506,7 +506,7 @@ impl SoftwareRenderer {
                 shadow(fb, clip, rect, *radius, spec);
             }
             Command::Text(command) => {
-                text(fb, clip, fonts, command);
+                text(fb, clip, cache, command);
             }
             Command::PushClip(clip_cmd) => {
                 if let Some(path) = clip_path(clip_cmd)

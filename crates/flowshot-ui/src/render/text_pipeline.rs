@@ -42,10 +42,12 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
 const TEXT_VERTEX_ATTRIBUTES: &[wgpu::VertexAttribute] =
     &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x2, 2 => Float32x4];
 
-/// The glyph atlas texture plus its sampler bind group.
+/// The per-window glyph atlas texture plus its bind group, on the kit's layout
+/// and sampler.
 pub(crate) fn atlas_resources(
     device: &wgpu::Device,
     bind_group_layout: &wgpu::BindGroupLayout,
+    sampler: &wgpu::Sampler,
 ) -> (wgpu::Texture, wgpu::BindGroup) {
     let atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("render-glyph-atlas"),
@@ -62,15 +64,6 @@ pub(crate) fn atlas_resources(
         view_formats: &[],
     });
     let view = atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-        label: Some("render-glyph-sampler"),
-        mag_filter: wgpu::FilterMode::Linear,
-        min_filter: wgpu::FilterMode::Linear,
-        mipmap_filter: wgpu::MipmapFilterMode::Nearest,
-        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        ..wgpu::SamplerDescriptor::default()
-    });
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("render-glyph-atlas-bindings"),
         layout: bind_group_layout,
@@ -81,7 +74,7 @@ pub(crate) fn atlas_resources(
             },
             wgpu::BindGroupEntry {
                 binding: 1,
-                resource: wgpu::BindingResource::Sampler(&sampler),
+                resource: wgpu::BindingResource::Sampler(sampler),
             },
         ],
     });

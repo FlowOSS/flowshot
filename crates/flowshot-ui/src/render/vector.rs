@@ -117,7 +117,7 @@ fn invert_blend() -> wgpu::BlendState {
 }
 
 /// The flat-color pipelines (content, clip push/pop, region invert).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct VectorPipelines {
     pub content: wgpu::RenderPipeline,
     pub clip_push: wgpu::RenderPipeline,

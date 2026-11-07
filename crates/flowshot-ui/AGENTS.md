@@ -1,6 +1,6 @@
 # crates/flowshot-ui
 
-Crate boundary, distinct domain: 282 files, 5 top dirs, 89% Rust; `lib.rs` re-exports 99 symbols over 19 `pub mod`s.
+Crate boundary, distinct domain: 287 files, 5 top dirs, 89% Rust; `lib.rs` re-exports 99 symbols over 19 `pub mod`s.
 
 ## OVERVIEW
 
