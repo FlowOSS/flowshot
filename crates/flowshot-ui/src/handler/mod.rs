@@ -84,6 +84,7 @@ impl OverlayApp {
                 presenter: None,
             });
         }
+        self.startup.record("perf.windows_ready");
         self.init_surfaces()?;
         if let Some(backdrop) = self.backdrop.as_ref() {
             for (connector, reason) in backdrop.missing() {
@@ -100,6 +101,7 @@ impl OverlayApp {
 
     fn init_surfaces(&mut self) -> Result<(), UiError> {
         let instance = crate::gpu::new_instance();
+        self.startup.record("perf.gpu_instance");
         let mut surfaces = Vec::with_capacity(self.windows.len());
         for entry in &self.windows {
             let surface = instance
@@ -112,6 +114,7 @@ impl OverlayApp {
         }
         let probe = surfaces.first().ok_or(UiError::NoMonitors)?;
         let gpu = GpuContext::new(&instance, probe)?;
+        self.startup.record("perf.gpu_ready");
         // Surfaces are created on Resumed - AFTER configure_core projected
         // the `[ui]` palette into the chrome tokens, so the crosshair
         // pipeline bakes the CONFIGURED accent (settings-apply theme pass).
@@ -226,6 +229,7 @@ impl OverlayApp {
             }
             entry.renderer = Some(renderer);
         }
+        self.startup.record("perf.renderers_ready");
         Ok(())
     }
 }

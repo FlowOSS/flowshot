@@ -73,6 +73,7 @@ mod monitor;
 #[cfg(feature = "perf-trace")]
 mod perf;
 mod runtime;
+mod startup;
 mod state;
 mod surface;
 

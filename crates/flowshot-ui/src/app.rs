@@ -70,6 +70,10 @@ pub(crate) struct OverlayApp {
     /// for `set_ime_cursor_area`, deduplicated so the compositor is not
     /// spammed on every event).
     pub ime_area: Option<(WindowSlot, [i32; 4])>,
+    /// The child's startup milestone clock: `perf.windows_ready`,
+    /// `perf.gpu_instance`, `perf.gpu_ready`, then the once-only `perf.ui_ready`
+    /// on the first successful present.
+    pub startup: crate::startup::StartupClock,
 }
 
 impl OverlayApp {
@@ -85,6 +89,7 @@ impl OverlayApp {
             cursor_style: flowshot_core::config::CursorStyle::default(),
             customizer: None,
             ime_area: None,
+            startup: crate::startup::StartupClock::start(),
         }
     }
 
@@ -290,6 +295,9 @@ impl OverlayApp {
         } else {
             surface.render(gpu, content, vertices)
         };
+        if presented.is_ok() {
+            self.startup.report_first_present();
+        }
         #[cfg(feature = "perf-trace")]
         let surface_total = surface_started.elapsed();
         match presented {
